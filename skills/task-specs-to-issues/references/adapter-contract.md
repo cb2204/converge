@@ -1,0 +1,71 @@
+# Adapter contract — the pluggable tracker backend
+
+The tracker is a **pluggable backend behind one CLI**. `register.sh` and the
+future Manager never speak GitHub, Linear, or Jira directly — they call
+`scripts/adapters/<tracker>.sh <verb> ...`. Swapping trackers is a `--tracker`
+flag, never a code change. This is the same "port with interchangeable adapters"
+shape the repo uses for `postgres → duckdb → dbt → MCP`: the seam is the
+contract, not the vendor.
+
+## The two-method spine (what the loop needs)
+
+The loop reads a board and writes a result. Everything else is registration
+plumbing. The irreducible surface is two methods:
+
+| Method | Who calls it | What it does |
+|--------|--------------|--------------|
+| **read ready** — `adapter list-ready` | the loop / Manager | emit the issues with **no open `blocked-by`** — the work that is safe to pull now. One id/number per line. |
+| **write result** — `adapter write-result --issue N --status pass\|fail [--pr URL] [--reason TEXT]` | Pass 8 `task-loop` | record the eval outcome: a green eval closes the issue (with the linked PR); a red eval leaves it open with a failure comment. |
+
+## The five verbs (registration adds three)
+
+Registration (`register.sh`) needs three more verbs on top of the spine. Every
+adapter implements the **same five**:
+
+| Verb | Signature | Contract |
+|------|-----------|----------|
+| `preflight` | `adapter preflight` | Assert the backend is reachable/authenticated. Exit `0` ok, `1` with a one-line remediation on failure. **Called before any write** so we never half-register. |
+| `upsert` | `adapter upsert --id ID --title T --body-file F [--label L ...]` | Find-by-id-key **else** create. Idempotent. Echoes the resulting issue number/id on stdout; human notes (`created …` / `updated …`) go to stderr. |
+| `link` | `adapter link --from ID --to ID` | Set a `blocked-by` from FROM's issue to TO's issue (resolving each spec id → issue). Idempotent — re-linking is a no-op. |
+| `list-ready` | `adapter list-ready` | (spine) issues with no open blocker. |
+| `write-result` | `adapter write-result --issue N --status pass\|fail …` | (spine) the loop's write side; **not used during registration**. |
+
+### stdout / stderr discipline
+
+- **stdout is the return channel.** `upsert` prints the issue id and nothing
+  else on stdout; `list-ready` prints ids one per line. `register.sh` captures
+  stdout, so any diagnostic MUST go to stderr.
+- **stderr is for humans + the run log.** Adapters emit `created #N (id)` /
+  `updated #N (id)` / `linked …` on stderr; `register.sh` greps its captured
+  adapter log for `^created `/`^updated ` to report the created-vs-updated split.
+- **Exit non-zero on any failure.** `register.sh` runs under `set -euo pipefail`
+  and aborts the whole run on the first adapter error — half a board is worse
+  than none.
+
+## Idempotency is per-adapter, keyed on the spec `id`
+
+Every verb that mutates keys on the spec `id`. See
+[`idempotency-keys.md`](./idempotency-keys.md) for how each backend carries it:
+
+- **github** — an HTML marker `<!-- task-spec: ID -->` in the issue body + a
+  `task-spec` label; lookup greps the marker.
+- **linear** — the native `externalId` field; lookup filters on it.
+- **jira** — a `task-spec:<id>` label + a `[task-spec:<id>]` summary tag; lookup
+  is JQL on the label.
+
+## Backend status
+
+| Adapter | preflight | upsert | link | list-ready | write-result | Notes |
+|---------|-----------|--------|------|------------|--------------|-------|
+| `github.sh` | live | live | live | live | live | pure `gh` + `jq`; blocked-by is a task-list line in a `### Blocked by` body section. |
+| `linear.sh` | live | live | live | live | live | GraphQL over `curl`; blocked-by is a native `issueRelation type: blocks`. All network calls isolated in `_linear_gql*`. |
+| `jira.sh` | live | **partial** | **partial** | **partial** | **partial** | REST v3 request shapes present; write verbs gated behind `TSI_JIRA_ENABLE=1` until validated. |
+
+## Why an adapter and not a library
+
+The spec is the floor; the board is a **shadow** of it (exactly as Postgres is
+the floor under `raw.*`). If the board and `tasks/*` ever disagree on what the
+work is, the spec wins and the board is re-registered — the projection is
+one-way. Because the board is disposable and re-derivable, the backend that
+holds it is a detail behind this contract, and the day the team moves trackers
+is the day someone writes one more `adapters/<new>.sh` with these five verbs.
