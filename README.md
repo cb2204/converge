@@ -330,7 +330,8 @@ Either path can reach the Dark Factory — only **Fork B** gets there
 
 ## 🗂 Skills Catalog
 
-Eleven skills: **nine passes** on the spine, plus a **harness engine** and
+Eleven skills: **nine that implement the spine** (eight passes + the fork's two
+branches + Register), plus a **harness engine** and
 **authoring tooling**. Every skill is self-contained (`SKILL.md` + `references/` +
 `scripts/`, with `runbooks/`, `templates/`, and `tests/` on the larger ones).
 
@@ -341,7 +342,7 @@ Eleven skills: **nine passes** on the spine, plus a **harness engine** and
 | [`reqs-to-swimlane-plans`](skills/reqs-to-swimlane-plans) | 3 | split into swimlane plans | *(single transform)* | `new-plan.sh` |
 | [`sketch-plans-adversarial-review`](skills/sketch-plans-adversarial-review) | 4 | a different model refutes; name the fork | `--adversary codex\|gemini\|gpt` | `check-consensus-gate.sh` |
 | [`plans-to-coherent-spec`](skills/plans-to-coherent-spec) | 5A | fuse plans → one coupled spec + e2e eval | `--framework speckit\|kiro\|openspec\|bmad` | `scaffold-e2e-eval.sh`, `check-coherent-spec.sh` |
-| [`task-spec`](skills/task-spec) | 5B | atomic, self-verifying **Task-Spec v3** units | severity-scaled eval thresholds | **22 scripts** + test suite (see below) |
+| [`task-spec`](skills/task-spec) | 5B | atomic, self-verifying **Task-Spec v3** units | severity-scaled eval thresholds | **20 scripts** + test suite (see below) |
 | [`task-specs-to-issues`](skills/task-specs-to-issues) | ① | project tasks onto a tracker | `--tracker github\|linear\|jira` (linear) | `register.sh`, `verify-registration.sh` |
 | [`stack-to-harness`](skills/stack-to-harness) | 6 | scaffold the control plane the stack needs | *(stack-derived)* | delegates to `agents-kbs-tech-stack` |
 | [`task-loop`](skills/task-loop) | 8 | one issue → green-eval PR | `--issue N` (req) · `--agent claude\|codex\|kimi` | `run-issue-eval.sh`, `open-issue-pr.sh` |
@@ -349,7 +350,7 @@ Eleven skills: **nine passes** on the spine, plus a **harness engine** and
 | [`skill-creator`](skills/skill-creator) | *tooling* | author, eval, and validate skills | — | `quick_validate.py`, `run_eval.py`, `run_loop.py` + eval-viewer |
 
 **By the numbers:** 11 skills · **53** shell scripts · **11** Python scripts · **41**
-reference docs · **21** runbooks · **8** test harnesses.
+reference docs · **21** runbooks · **8** test harnesses (all in `task-spec`).
 
 <details>
 <summary><b>The harness engine — <code>agents-kbs-tech-stack</code> (v0.3.0)</b></summary>
