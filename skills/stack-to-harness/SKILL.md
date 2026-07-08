@@ -12,8 +12,8 @@ The control-plane builder. It reads the system's tech stack — surfaced by the 
 
 ## Important
 
-- **Stack-derived, not task-derived.** The tasks only *scope* which techs are in play. The harness content comes from the **stack**. A dbt KB exists because the system uses dbt — not because one task named it. Scaffold the tech, not the task.
-- **Never scaffold speculatively.** Only build harness for techs the in-scope tasks actually touch. In this repo that is exactly four: `dbt`, `duckdb`, `fastapi`, `mcp`. If a tech is not named by any task, leave it out.
+- **Stack-derived, not task-derived.** The tasks only *scope* which techs are in play. The harness content comes from the **stack**. A tech gets its own KB because the system uses that tech — not because one task named it. (For example, in a dbt/warehouse project a dbt KB exists because the system runs dbt, not because a task mentioned it.) Scaffold the tech, not the task.
+- **Never scaffold speculatively.** Only build harness for techs the in-scope tasks actually touch. The scoped set is whatever the tasks reveal — it could be two techs or ten. If a tech is not named by any task, leave it out.
 - **Order matters: Tasking (5B) before Harness (6), on purpose.** The tasks are the requirements; the harness is fitted to what they need, never built ahead of them.
 - **Delegate; do not reimplement.** All scaffolding is done by the bundled `agents-kbs-tech-stack` skill via its scripts. This skill is the Converge-named wrapper that scopes the stack and drives that skill. Do not hand-write agents or KB files.
 - **Converged = the gate passed, not "feels done".** This pass converges when every in-play tech has its paired agents + grounded KB, the `quality-gate` lint is green, and the cross-tool mirrors are emitted. See the Gate below.
@@ -24,20 +24,20 @@ The control-plane builder. It reads the system's tech stack — surfaced by the 
 | | Artifact |
 |------|----------|
 | **IN** | The in-scope Task-Specs (`tasks/T-*.md`) — they reveal which techs are in play — plus the repo itself. |
-| **OUT** | `.claude/` — paired `<tech>-architect` + `<tech>-developer` agents, KB trees under `kb/<tech>/`, `kb/_index.yaml`, `doctrine.yaml`, `rules/`, and the three universal closers — plus emitted mirrors `AGENTS.md`, `.cursor/rules/`, `.github/copilot-instructions.md`. |
+| **OUT** | `.claude/` — paired `<tech>-architect` + `<tech>-developer` agents for each in-play tech, KB trees under `kb/<tech>/`, `kb/_index.yaml`, `doctrine.yaml`, `rules/`, and the three universal closers — plus emitted mirrors `AGENTS.md`, `.cursor/rules/`, `.github/copilot-instructions.md`. |
 | **GATE** | The control plane stands and is grounded: every tech the tasks touch has its architect + developer + KB, the three closers are wired via the closer-hook protocol, the `quality-gate` lint is green, and the cross-tool mirrors are emitted so every engine inherits one contract. |
 
 ## Instructions
 
 ### Step 1 — Scope the stack from the tasks
 
-Read `tasks/T-*.md` and detect exactly which techs the work touches. Use each spec's `title`, `touches_paths`, and body — not the `agent:` field, which is usually `any`. Map paths to techs: `models/` or dbt configs → `dbt`; DuckDB SQL / `warehouse.duckdb` / macros → `duckdb`; `api/` FastAPI routes → `fastapi`; MCP tool servers → `mcp`.
+Read `tasks/T-*.md` and detect exactly which techs the work touches. Use each spec's `title`, `touches_paths`, and body — not the `agent:` field, which is usually `any`. Map the paths a task touches to the tech that owns them: a directory of transform models to your transform tool, a data-store file or its query dialect to that store, service/route files to your serving framework, and so on. (For example, in a dbt/warehouse project you might see `models/` → `dbt`, warehouse SQL → the warehouse engine, `api/` routes → the serving framework, tool servers → `mcp` — but the mapping is whatever *your* stack uses.)
 
-For this repo the scoped set is `dbt duckdb fastapi mcp` (four techs). Record the set as `TECHS`. Do **not** add a tech no task names, and do **not** drop a tech a task needs. If the mapping is ambiguous, ask once before scaffolding — this is the one judgment call in the pass.
+Record the detected set as `TECHS`. Do **not** add a tech no task names, and do **not** drop a tech a task needs. If the mapping is ambiguous, ask once before scaffolding — this is the one judgment call in the pass.
 
 ### Step 2 — Confirm the stack is not already covered
 
-Check `.claude/agents/` and `.claude/kb/`. For each tech in `TECHS`, a paired `<tech>-architect.md` + `<tech>-developer.md` and a `kb/<tech>/` tree either exist or do not. The bundled scripts are idempotent (they refuse to clobber), so re-running is safe — but if all four techs are already covered and `quality-gate` is green, this pass is already converged; stop and report rather than re-scaffold.
+Check `.claude/agents/` and `.claude/kb/`. For each tech in `TECHS`, a paired `<tech>-architect.md` + `<tech>-developer.md` and a `kb/<tech>/` tree either exist or do not. The bundled scripts are idempotent (they refuse to clobber), so re-running is safe — but if every tech in `TECHS` is already covered and `quality-gate` is green, this pass is already converged; stop and report rather than re-scaffold.
 
 ### Step 3 — Scaffold each tech (delegate)
 
@@ -45,14 +45,17 @@ For each tech in `TECHS`, invoke the bundled skill's scaffold script. It renders
 
 ```bash
 SKILL=~/.claude/skills/agents-kbs-tech-stack
-for TECH in dbt duckdb fastapi mcp; do
+# TECHS is the set you scoped in Step 1 — your stack, not a fixed list.
+for TECH in $TECHS; do
   TARGET_REPO="$PWD" \
-  PROJECT_NAME="uc-postgres-duckdb-dbt-analytics" \
-  PROJECT_DESCRIPTION="Postgres→DuckDB landing with a dbt medallion served read-only over FastAPI + MCP" \
+  PROJECT_NAME="$PROJECT_NAME" \
+  PROJECT_DESCRIPTION="$PROJECT_DESCRIPTION" \
   TECH="$TECH" \
   bash "$SKILL/scripts/scaffold.sh"
 done
 ```
+
+`PROJECT_NAME` and `PROJECT_DESCRIPTION` describe *your* system (e.g. `my-analytics-service` and a one-line summary of what it does); they seed the generated agents so their grounding reads like your repo, not a template.
 
 The architect owns judgment (trade-off matrices, thresholds, decision frameworks) and has **no Bash**; the developer owns implementation (production patterns, tests) and **has Bash**. Both ground in the real `kb/<tech>/` tree — never a stub.
 
@@ -88,7 +91,7 @@ Walk the Gate checklist below. Report the scoped tech set, the agent/KB/closer c
 
 ## Gate — confirm before leaving this pass
 
-- [ ] Every tech the tasks touch (`dbt`, `duckdb`, `fastapi`, `mcp`) has a paired architect + developer agent.
+- [ ] Every tech the tasks touch (the set you scoped as `TECHS`) has a paired architect + developer agent.
 - [ ] Each agent is grounded in a real `kb/<tech>/` tree registered in `kb/_index.yaml`, not a stub.
 - [ ] The three universal closers are installed and wired to the tech KBs via the closer-hook protocol.
 - [ ] `doctrine.yaml` exists (the single numeric source of truth for the agents).
@@ -99,11 +102,11 @@ Walk the Gate checklist below. Report the scoped tech set, the agent/KB/closer c
 ## Examples
 
 **Example 1 — "Scaffold the harness for this stack."**
-Actions: Read `tasks/T-*.md`, detect `dbt duckdb fastapi mcp` (Step 1) → confirm none are already covered (Step 2) → loop `scaffold.sh` over the four techs (Step 3) → `install-closers.sh` (Step 4) → `quality-gate.sh --strict` (Step 5) → `emit-cross-tool.sh` (Step 6) → walk the Gate and report (Step 7).
-Result: `.claude/` holds 8 tech agents + 3 closers + 4 KB trees + doctrine; `AGENTS.md` / Cursor / Copilot emitted; gate green. Ready for the loop.
+Actions: Read `tasks/T-*.md`, detect the tech set the work touches (Step 1) → confirm none are already covered (Step 2) → loop `scaffold.sh` over each tech in `TECHS` (Step 3) → `install-closers.sh` (Step 4) → `quality-gate.sh --strict` (Step 5) → `emit-cross-tool.sh` (Step 6) → walk the Gate and report (Step 7).
+Result: `.claude/` holds a paired architect + developer + KB tree per scoped tech, plus the 3 closers and `doctrine.yaml`; `AGENTS.md` / Cursor / Copilot emitted; gate green. (For example, a four-tech stack yields 8 tech agents + 3 closers + 4 KB trees.) Ready for the loop.
 
-**Example 2 — "Harness pass, but a task only touches dbt and DuckDB."**
-Actions: Step 1 scopes `TECHS=dbt duckdb` — FastAPI and MCP have no task in scope, so they are **not** scaffolded. Run Steps 3–6 over the two techs only.
+**Example 2 — "Harness pass, but the tasks only touch two of the system's techs."**
+Actions: Step 1 scopes `TECHS` to just those two — the other techs have no task in scope, so they are **not** scaffolded. Run Steps 3–6 over the scoped two only.
 Result: A harness fitted to exactly the tasks in play — the moat, not a mall.
 
 **Example 3 — "Add a Kafka architect to the harness."**

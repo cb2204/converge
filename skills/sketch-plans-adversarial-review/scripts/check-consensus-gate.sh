@@ -3,9 +3,9 @@
 #
 # The pass is done only when the swimlane plans have been ATTACKED by a different
 # model, GROUNDED against the spec + ADRs, every objection is FIXED-or-ACCEPTED,
-# the cross-lane gold-table interface survived, and THE FORK is named at the top
-# of every plan. This script makes that machine-checkable — it does not sharpen
-# plans, it only refuses to let a soft pass slip through.
+# the cross-lane published-contract interface survived, and THE FORK is named at
+# the top of every plan. This script makes that machine-checkable — it does not
+# sharpen plans, it only refuses to let a soft pass slip through.
 #
 # Usage:
 #   check-consensus-gate.sh sketch/                 Gate every sketch/*.plan
@@ -163,15 +163,25 @@ if grep -qiE 'Accepted risk' $PLANS 2>/dev/null; then
 fi
 echo
 
-# ── Check 4 — the cross-lane gold-table interface survived scrutiny ───────────
-# The seam is the medallion->serving contract: gold.* consumed read-only, pinned
-# by a per-mart schema.yml, read against a single published _gold_run_id.
-echo "[4] cross-lane interface (medallion -> serving gold-table contract) survived"
+# ── Check 4 — the cross-lane published-contract interface survived scrutiny ───
+# The seam is the producer->consumer contract between lanes: a downstream lane
+# reads an upstream lane's output ONLY through a published contract layer, never
+# its internals. Three shape properties must hold, whatever the stack:
+#   (a) a published/output/contract layer is named as the interface,
+#   (b) that contract is pinned by a schema/contract file (so it can't drift), and
+#   (c) reads are against a single atomic-publish generation stamp / version, so
+#       a consumer never observes a half-written interface.
+# (Example — in a dbt/warehouse project the layer is `gold.*`, pinned by a per-mart
+#  `schema.yml`, read against a published `_gold_run_id`; those literals still match.)
+echo "[4] cross-lane published-contract interface survived"
 SEAM_RC=0
-grep -qiE 'gold\.\*|gold_[a-z]' $PLANS 2>/dev/null || { fail "no gold.* interface referenced"; SEAM_RC=1; }
-grep -qiE 'schema\.yml'         $PLANS 2>/dev/null || { fail "gold contract not pinned by a schema.yml"; SEAM_RC=1; }
-grep -qiE '_gold_run_id'        $PLANS 2>/dev/null || { fail "no atomic-publish generation stamp (_gold_run_id)"; SEAM_RC=1; }
-[ "$SEAM_RC" -eq 0 ] && pass "gold.* + schema.yml contract + _gold_run_id all present"
+grep -qiE '(published|output|contract|interface|gold)[[:space:]_-]*(layer|table|tables|mart|marts)?' $PLANS 2>/dev/null \
+  || { fail "no published/output/contract layer named as the cross-lane interface"; SEAM_RC=1; }
+grep -qiE '(schema|contract)[._-][a-z]+|schema\.yml|data[[:space:]-]*contract' $PLANS 2>/dev/null \
+  || { fail "cross-lane contract not pinned by a schema/contract file"; SEAM_RC=1; }
+grep -qiE '(run|batch|publish|snapshot|version|generation)[[:space:]_-]*(id|stamp|version)|_[a-z]*run_id' $PLANS 2>/dev/null \
+  || { fail "no atomic-publish generation stamp/version pinning the read"; SEAM_RC=1; }
+[ "$SEAM_RC" -eq 0 ] && pass "published-contract layer + pinned schema/contract + atomic-publish stamp all present"
 echo
 
 # ── Check 5 — THE FORK declared at the top of EVERY plan, with a reason ───────

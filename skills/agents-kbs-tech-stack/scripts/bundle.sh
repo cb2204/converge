@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # bundle.sh — Produce a portable tarball of the agents-kbs-tech-stack skill.
 #
-# IMPORTANT: this skill symlinks its KB templates from agents-kbs-fleet
-# (templates/kb-shared → ../../agents-kbs-fleet/templates/kb). The bundle
-# resolves and inlines those templates so the unpacked tarball is fully
-# self-contained — no v1 skill required at the target.
+# The KB templates live locally under templates/kb-shared/, so the tarball is
+# fully self-contained — no external skill required at the target.
 
 set -euo pipefail
 
@@ -18,14 +16,11 @@ mkdir -p "${DIST}"
 
 TARBALL="${DIST}/${SKILL_NAME}-v${VERSION}.tar.gz"
 
-# Stage the skill into a temp dir with the symlink replaced by a real copy.
+# Stage the skill into a temp dir (kb-shared is real files, copied as-is).
 STAGE="$(mktemp -d)"
-trap "rm -rf '${STAGE}'" EXIT
+trap 'rm -rf "${STAGE}"' EXIT
 
 cp -R "${SKILL_ROOT}" "${STAGE}/${SKILL_NAME}"
-# Replace symlink with concrete copy
-rm "${STAGE}/${SKILL_NAME}/templates/kb-shared"
-cp -R "${SKILL_ROOT}/templates/kb-shared/" "${STAGE}/${SKILL_NAME}/templates/kb-shared/"
 
 # Drop dist/ from the staged copy
 rm -rf "${STAGE}/${SKILL_NAME}/dist"

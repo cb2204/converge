@@ -7,7 +7,7 @@
 # invariant this pass enforces; --check is its deterministic guard.
 #
 # Usage:
-#   scaffold-adr.sh "payments join on order_id"     Create docs/adrs/NNNN-<slug>.md
+#   scaffold-adr.sh "orders join events on user_id"  Create docs/adrs/NNNN-<slug>.md
 #   scaffold-adr.sh --ground brownfield "context"   Set the Ground type in the record
 #   scaffold-adr.sh --status proposed "title"       Set the Status field (default: accepted)
 #   scaffold-adr.sh --dir path/to/adrs "title"      Override the ADR directory
@@ -139,14 +139,16 @@ cat > "$OUT" <<EOF
 
 ## Evidence
 
-<!-- The exact schema line / row count / Make target that makes this true.
-     e.g. src/db/01_schema.sql:  payments.order_id BIGINT NOT NULL REFERENCES orders(order_id)
-     e.g. make land → raw.raw_orders row count == public.orders row count -->
+<!-- The exact source line / row count / command output that makes this true.
+     Cite whatever your stack exposes — a schema definition, a config value, a
+     migration, a build/ingest command's result, an API contract.
+     e.g. <source schema file>:  child.parent_id <TYPE> NOT NULL REFERENCES parent(id)
+     e.g. <your build/ingest step> → output row count == source row count -->
 
 ## Consequences
 
 <!-- What downstream passes must respect. e.g. "Pass 3 plans must join
-     orders↔payments on order_id only; no other key exists." -->
+     A↔B on <key> only; no other key exists." -->
 EOF
 
 echo "Created $OUT"

@@ -34,9 +34,9 @@ stand on it.
 
 ## Important
 
-- **Terrain, not design.** An ADR records a **fact or constraint that already holds** and its evidence. The instant it says "build the gold mart that…" it has drifted into Pass 3 and must be split: the fact stays here, the design moves on. This no-drift invariant is the single failure mode of this pass and the only thing the gate truly enforces.
-- **Run the brownfield; do not assume it.** Grounding requires reading and *running* the real source, not summarizing a doc. Reconcile row parity into the warehouse before you write a word.
-- **Evidence over assertion.** Every ADR cites the line, count, or Make target that makes it true (e.g. `payments.order_id BIGINT NOT NULL REFERENCES orders(order_id)`), so the next engine trusts the file, not the author.
+- **Terrain, not design.** An ADR records a **fact or constraint that already holds** and its evidence. The instant it says "build the output table that…" it has drifted into Pass 3 and must be split: the fact stays here, the design moves on. This no-drift invariant is the single failure mode of this pass and the only thing the gate truly enforces.
+- **Run the brownfield; do not assume it.** Grounding requires reading and *running* the real source, not summarizing a doc. Reconcile the real state of your data store (row counts, contents, freshness) against what the spec assumed before you write a word.
+- **Evidence over assertion.** Every ADR cites the line, count, or command output that makes it true (for example, a schema constraint such as `payments.order_id ... REFERENCES orders(order_id)` in a relational project, or the equivalent grounding fact for your stack), so the next engine trusts the file, not the author.
 - **No engine/tracker flags.** The engine is fixed (Claude Code on the repo). There is no adversary and no tracker here; those bind in Pass 4 (`--adversary`) and the Fork B register (`--tracker`).
 
 ## Instructions
@@ -52,24 +52,25 @@ constraints the spec imposes) or **brownfield** (a working base exists; the ADRs
 record what is already true). Write it in the first record — `0000-context.md` or
 the first numbered ADR — so every later decision is anchored to known terrain.
 
-In this repo it is **brownfield**: a Postgres `public.*` source (customers,
-products, orders, payments), a correlated seeder, a 14-mode silent defect
-generator, and a read-only Postgres → DuckDB `raw.raw_*` landing that all run
-today. Name that explicitly; a reader must know what is *given* before reading
-what *must hold*.
+Inventory the *given* surface concretely: which sources, stores, build steps, and
+serving components already run today, and which the spec still asks to build.
+Example — a brownfield data project might be: a source database, a seeder, a
+read-only landing into a data store, and no transform or serving layer yet. Name
+your own given surface explicitly; a reader must know what is *given* before
+reading what *must hold*.
 
 ### Step 2 — Ground (check spec against the real system)
 
 Pressure-test the spec against reality — run it, do not read about it:
 
-- `make up && make seed && make land`, then confirm **row parity** from Postgres `public.*` into DuckDB `raw.raw_*`.
-- Confirm `raw.*` is the ONLY schema in the warehouse — no transform or serving layer exists yet (that is what later passes build).
-- Read `src/db/01_schema.sql` and interrogate the spec against it. Surface the 3–4 facts that would bite Pass 3 if assumed wrong:
-  - **Join:** how do orders and payments actually relate? (`payments.order_id BIGINT NOT NULL REFERENCES orders(order_id)`.)
-  - **Grain:** what is the real time grain? (`ordered_at` / `paid_at` are `TIMESTAMPTZ` — UTC.)
-  - **Metric:** what does "revenue" mean against the real `status` columns and the `_control` fence that never lands?
+- Run the project's data-prep / ingest step end to end, then confirm the real state matches what the spec assumed (e.g. row counts, freshness, or parity between a source and its landing).
+- Confirm the current shape of the terrain: which layers actually exist versus which the spec still asks later passes to build.
+- Read the source schema (or the equivalent contract for your stack) and interrogate the spec against it. Surface the 3–4 facts that would bite Pass 3 if assumed wrong. For example, in a relational/warehouse project these might be:
+  - **Join:** how do the core entities actually relate? (e.g. a foreign-key seam such as `payments.order_id ... REFERENCES orders(order_id)`.)
+  - **Grain:** what is the real time grain? (e.g. timestamp columns typed as `TIMESTAMPTZ` — UTC.)
+  - **Metric:** what does a key business term actually mean against the real columns and any facilitator data that must never leak into the pipeline?
 
-Every fact you intend to record must trace to a schema line, a row count, or a Make target you actually observed.
+Every fact you intend to record must trace to a schema line, a row count, or a command output you actually observed.
 
 ### Step 3 — Record (write the ADRs)
 
@@ -85,12 +86,15 @@ The script auto-increments `NNNN`, slugifies the title, stamps the date, and lay
 down a fixed ADR skeleton (Status / Ground type / Context / Decision / Evidence /
 Consequences). Fill it so each record states **what is** and **what must hold**,
 cites its evidence, and names its consequence for downstream passes — never a
-build instruction. Representative set for this repo:
+build instruction. Example — the representative set for a relational/warehouse
+project might be:
 
 - `0001-payments-join-on-order-id` — the only orders↔payments seam.
 - `0002-utc-date-grain` — all time columns are `TIMESTAMPTZ`; the date grain is UTC.
 - `0003-revenue-is-paid-only` — revenue counts paid payments, not order totals.
-- `0004-control-schema-never-lands` — `_control.*` is a facilitator fence; the pipeline only sees `public.*` / `raw.*`.
+- `0004-control-data-never-lands` — facilitator/test-only data is fenced out; the pipeline only sees production sources.
+
+Your set will name whatever seams, grains, and definitions your own terrain makes true.
 
 ## Gate — confirm before leaving this pass
 
@@ -101,49 +105,50 @@ bash .claude/skills/tech-req-to-adrs/scripts/scaffold-adr.sh --check
 ```
 
 - [ ] The terrain is **named** (greenfield or brownfield) in writing.
-- [ ] The brownfield was *run*, not assumed: `make up && make seed && make land` reconciled with row parity; `raw.*` confirmed as the only warehouse schema.
+- [ ] For brownfield, the base was *run*, not assumed: the project's data-prep/build step was executed and its real state reconciled against the spec's assumptions; the current layer inventory is confirmed.
 - [ ] Every grounding decision is its own `docs/adrs/NNNN-<slug>.md` file.
 - [ ] Each ADR records a **fact/constraint** with cited evidence — none says "build X" or designs a solution (`--check` greps for build-verbs and flags drift).
-- [ ] The join rule, the date grain, and the revenue definition are each pinned to a real schema/source line.
+- [ ] Every structural fact the spec leans on (join/relationship rules, grain, key business definitions) is pinned to a real schema/source line or command output.
 - [ ] A reader with no session context can reconstruct the given-vs-build picture from `docs/adrs/` alone.
 
 Converged = the checklist passes, not "feels done."
 
 ## Examples
 
-**Example 1 — "Run the structure pass on the analytical engine."**
-Actions: read `docs/tech-spec-analytical-engine.pdf`; `make up && make seed && make land`;
-diff Postgres `public.*` counts against DuckDB `raw.raw_*`; read `src/db/01_schema.sql`;
-scaffold `0000-context` (brownfield) + `0001`…`0004` for the join/grain/revenue/control
-facts; run `scaffold-adr.sh --check`.
-Result: `docs/adrs/` holds five records; `--check` is green; Pass 3 can read them.
+**Example 1 — "Run the structure pass on the service."**
+Actions: read the Pass 1 tech-spec (`docs/tech-spec-*.pdf|md`); run the project's
+data-prep/build step and reconcile its real output against the spec's assumptions;
+read the source schema (or equivalent contract); scaffold `0000-context`
+(green/brownfield) plus one numbered ADR per structural fact the spec leans on; run
+`scaffold-adr.sh --check`.
+Result: `docs/adrs/` holds the records; `--check` is green; Pass 3 can read them.
 
 **Example 2 — "Is this greenfield or brownfield, and what are we standing on?"**
-Actions: Step 1 only — write `docs/adrs/0000-context.md` naming it brownfield and
-listing the given surface (seeder, defect generator, `raw.raw_*` landing) vs. the
-build surface (transform + serving, not yet present).
+Actions: Step 1 only — write `docs/adrs/0000-context.md` naming it green/brownfield
+and listing the given surface (what runs today) vs. the build surface (what the spec
+still asks later passes to add).
 Result: the given-vs-build map is a file, not a memory.
 
-**Example 3 — "Ground the spec against the repo" but the draft ADR says "build a payments fact table keyed on order_id."**
-Actions: split it. Keep the fact (`0001-payments-join-on-order-id`: payments join
-orders on `order_id`); delete the build clause and hand the "fact table" design to
-Pass 3.
+**Example 3 — "Ground the spec against the repo" but the draft ADR says "build a fact table keyed on order_id."**
+Actions: split it. Keep the fact (e.g. `0001-payments-join-on-order-id`: payments
+join orders on `order_id`); delete the build clause and hand the "fact table" design
+to Pass 3.
 Result: the ADR passes `--check`; no design leaks into Pass 2.
 
 ## Troubleshooting
 
 - **`--check` fails: "build-verb detected in ADR".** → An ADR designs a solution (build/create/implement/add). → Split it: keep the fact, move the design to Pass 3 (`reqs-to-swimlane-plans`).
-- **Row counts differ between `public.*` and `raw.raw_*`.** → The landing was stale or a defect changed a row mid-run. → Re-run `make land`; if it persists, that discrepancy IS a grounding fact — record it (e.g. an ADR on which defect modes survive into `raw`).
+- **The real state disagrees with the spec (e.g. row counts differ between a source and its landing).** → The prep step was stale or something changed a record mid-run. → Re-run the project's data-prep step; if the discrepancy persists, it IS a grounding fact — record it (e.g. an ADR on which anomalies survive into the landing).
 - **No tech-spec exists.** → Pass 1 has not run. → Stop and run `brd-docs-to-tech-req` first; Pass 2 needs the spec as input.
 - **Tempted to write "build X".** → You have left terrain altitude. → Stop; that belongs to Pass 3. Pass 2 records only what *is* and what *must hold*.
-- **`_control.*` rows appear in the warehouse.** → The fence leaked. → That is a real defect and a grounding fact; record it and flag the landing, do not silently drop it.
+- **Facilitator/test-only data leaks into the pipeline.** → A fence that should exclude it failed. → That is a real defect and a grounding fact; record it and flag the leak, do not silently drop it.
 
 ## Handoff
 
 → **`reqs-to-swimlane-plans`** (Pass 3, DECOMPOSE) reads `docs/adrs/*.md` as its
-grounding inputs and splits the system at its real seam (transform vs. serving)
-into `sketch/*.plan` files. Every plan must trace back to a fact recorded here and
-may not contradict a recorded ADR.
+grounding inputs and splits the system at its real seams into `sketch/*.plan`
+files. Every plan must trace back to a fact recorded here and may not contradict
+a recorded ADR.
 
 ## References
 

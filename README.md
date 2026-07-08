@@ -5,51 +5,51 @@
 ### Compile a fuzzy brief into an autonomous, eval-gated system.
 
 A canonical, engine-agnostic **method** — eight passes, one fork, a closed loop —
-shipped as **11 Claude Code skills**. You don't write the system; you **compile
-intent into it**. You are converged when the eval passes, not when you feel done.
+shipped as **11 Claude Code skills**. You are converged when the eval passes,
+not when you feel done.
 
 <br/>
 
-![Passes](https://img.shields.io/badge/spine-8_passes_+_1_fork-1f6feb)
-![Skills](https://img.shields.io/badge/skills-11-8250df)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-skills-d4a72c)
-![Bash](https://img.shields.io/badge/bash-3.2%2B_(macOS_safe)-2da44e)
 ![Validator](https://img.shields.io/badge/Anthropic_validator-11%2F11_passing-2da44e)
+![Bash](https://img.shields.io/badge/bash-3.2%2B_(macOS_safe)-2da44e)
 ![License](https://img.shields.io/badge/license-MIT-24292f)
 ![Last commit](https://img.shields.io/github/last-commit/luanmorenommaciel/converge)
 
 **[The Method](#-the-method--the-spine)** ·
 **[Quickstart](#-quickstart)** ·
+**[Why not SpecKit / Kiro?](#-why-not-spec-kit--kiro--openspec--bmad)** ·
 **[The Eight Passes](#-the-eight-passes)** ·
 **[The Fork](#-the-fork--one-big-gate-or-many-small-ones)** ·
-**[Skills Catalog](#-skills-catalog)** ·
-**[The Two Moats](#-the-two-moats)**
+**[Skills](#-skills-catalog)**
+
+**Works with** · Claude Code (native skills) · Codex (`AGENTS.md`) · Kimi ·
+Cursor (`.cursor/rules`) · Copilot (instructions) — engines are **flags, never names**
 
 </div>
 
 ---
 
 Converge treats building software as a **compilation pipeline**. A requirement
-arrives fuzzy, and instead of holding "done" as private judgment — refined by
-taste, defended in review, never written down — you lower that requirement
-through a fixed descent of passes. Each pass is more precise than the last, each
-binds the right engine for its altitude, and each ends at a **gate** that must go
-green before the next pass runs. When the descent bottoms out, "done" is a
+arrives fuzzy, and instead of holding "done" as private judgment, you lower it
+through a fixed descent of passes — each more precise than the last, each
+binding the right engine for its altitude, each ending at a **gate** that must
+go green before the next pass runs. When the descent bottoms out, "done" is a
 machine-checkable condition an engine can satisfy unsupervised.
 
 > [!TIP]
-> **New here?** Read [`docs/cvg-aut-systems-spine-steps-v2.pdf`](docs/cvg-aut-systems-spine-steps-v2.pdf)
-> — the canonical blueprint — then jump to **[Quickstart](#-quickstart)** to wire
-> the skills into your own repo. This repo is the *portable method*, kept
-> independent of any single use-case so it can evolve on its own.
+> **New here?** Read [`docs/cvg-aut-systems-spine-steps-v3.pdf`](docs/cvg-aut-systems-spine-steps-v3.pdf)
+> — the canonical blueprint — and [`skills/README.md`](skills/README.md) for the
+> skill-by-skill map. This repo is the *portable method*, kept independent of
+> any single use-case so it can evolve on its own.
 
 <details>
 <summary><b>Table of contents</b></summary>
 
-- [Why Converge exists](#why-converge-exists)
-- [Positioning — vs raw Claude Code & the SDD field](#positioning--vs-raw-claude-code--the-sdd-field)
 - [🧭 The Method — the spine](#-the-method--the-spine)
 - [🚀 Quickstart](#-quickstart)
+- [Why Converge exists](#why-converge-exists)
+- [🥊 Why not Spec Kit / Kiro / OpenSpec / BMAD?](#-why-not-spec-kit--kiro--openspec--bmad)
 - [🪜 The Eight Passes](#-the-eight-passes)
 - [🍴 The Fork — one big gate, or many small ones?](#-the-fork--one-big-gate-or-many-small-ones)
 - [🗂 Skills Catalog](#-skills-catalog)
@@ -59,62 +59,11 @@ machine-checkable condition an engine can satisfy unsupervised.
 - [📐 The honest boundary](#-the-honest-boundary)
 - [🎬 The method, end to end on one feature](#-the-method-end-to-end-on-one-feature)
 - [📁 Repository layout](#-repository-layout)
+- [🧾 Status](#-status)
 - [❓ FAQ](#-faq)
 - [Provenance · Contributing · License](#provenance)
 
 </details>
-
----
-
-## Why Converge exists
-
-The old loop ran in your head. That loop does not scale to AI engines, because an
-engine cannot execute a standard it cannot read. The AI-native engineer inverts
-it: take a fuzzy requirement and lower it through a repeatable descent until
-"done" is a condition an engine satisfies on its own.
-
-- **Compile intent, don't write the system.** Each pass is a transformation with a
-  typed output and a gate — exactly how a compiler lowers source through
-  intermediate representations down to machine code. You specify the descent and
-  verify each lowering; the pipeline emits the system.
-- **Build the factory from day one.** Converge refuses the retrofit. It is
-  factory-shaped from Pass 1: every pass already ends in a gate, every task is
-  born with a runnable eval, and the harness is a control plane from the first
-  file. When you decide to step out, there is nothing to rewrite — the gates
-  already hold without you.
-- **The eval defines done, not you.** A loop that stops because it tried three
-  times has *not* converged; a loop that stops because the eval is green has.
-- **Engines are commodity slots.** Every engine and tracker is bound by a **flag,
-  never a name** — `--adversary codex`, `--tracker linear`, `--issue N`,
-  `--agent kimi`. Swap Claude, Codex, or Kimi freely; the gate is unmoved.
-- **One method, every discipline.** The loop never inspects *what* a task is — only
-  whether its eval is green. Data, software, DevOps, and AI engineering all ride
-  the same spine.
-
----
-
-## Positioning — vs raw Claude Code & the SDD field
-
-The canonical 2026 spec-driven pipeline is **Specify → Plan → Tasks → Implement**,
-punctuated by human checkpoints — Spec Kit, Kiro, OpenSpec, and BMAD all share
-that shape. Converge is a **loop-closed superset**: it adds the three things those
-frameworks lack — an adversarial **Consensus** pass, an explicit trust-boundary
-**Fork**, and a closed execution **Loop** that drives a whole fleet to green.
-
-| Capability | Raw Claude Code | SDD frameworks<br/>(SpecKit · Kiro · OpenSpec · BMAD) | **Converge** |
-|---|:---:|:---:|:---:|
-| Fuzzy brief → verifiable spec | manual | ✅ Specify | ✅ **Pass 1, gated** |
-| Grounding against the real repo (ADRs) | ad hoc | partial | ✅ **Pass 2** |
-| A *different model* attacks the plan | ❌ | ❌ | ✅ **Pass 4 · Consensus** |
-| Explicit trust-boundary fork | ❌ | ❌ | ✅ **The Fork** |
-| Self-verifying atomic units (eval = done) | ❌ | partial | ✅ **Task-Spec** |
-| Control plane / harness built for the stack | manual | ❌ | ✅ **Pass 6 · Harness** |
-| Closed loop → green-eval PR | ❌ | ❌ (stops at Implement) | ✅ **Pass 8 · The Loop** |
-| Vendor-portable (Claude / Codex / Kimi) | ❌ | vendor-specific | ✅ **engines are flags** |
-
-> The named frameworks stop at *Implement*, with a human standing at the
-> checkpoint. Converge keeps going — and it doesn't replace them: SpecKit / Kiro /
-> OpenSpec / BMAD are exactly the frameworks that host **Fork A** (see below).
 
 ---
 
@@ -158,11 +107,6 @@ writes ADRs only** (no code), **Pass 3 is plan-altitude only** (no tasks, no SQL
 and **the fork is an output of Pass 4** — never assumed earlier. **Pass 8 is the
 exception: it does not lower, it *closes*.**
 
-The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
-dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
-in-session skill. `task-loop` is the execution loop you build; you schedule the
-Manager around it later.
-
 ---
 
 ## 🚀 Quickstart
@@ -173,6 +117,7 @@ in a consuming repo, make them visible to Claude Code under that repo's
 
 ```bash
 # from your project root — symlink the whole chain (recommended)
+mkdir -p .claude/skills
 for s in /path/to/converge/skills/*/; do
   ln -s "$s" ".claude/skills/$(basename "$s")"
 done
@@ -182,8 +127,16 @@ cp -R /path/to/converge/skills/task-spec  .claude/skills/
 cp -R /path/to/converge/skills/task-loop  .claude/skills/
 ```
 
-Restart Claude Code, then drive the chain **one pass at a time** by its trigger
-phrases:
+**Verify the wiring** — you'll know it worked when:
+
+```bash
+python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
+# → Skill is valid!
+```
+
+…then restart Claude Code and type **"create a task-spec"** — if the
+`task-spec` skill triggers, the chain is wired. Drive the descent one pass at a
+time by its trigger phrases:
 
 ```text
 "turn this brief into a tech-spec"      → Pass 1  · brd-docs-to-tech-req
@@ -196,24 +149,77 @@ phrases:
 "run issue 41"                          → Pass 8  · task-loop
 ```
 
-> [!NOTE]
-> Every skill passes Anthropic's official validator
-> (`skills/skill-creator/scripts/quick_validate.py`) — **11 / 11**. Engines and
-> trackers are always **flags**, never baked into a skill's name.
-
 **Author + gate a single Task-Spec (the cornerstone unit), start to finish:**
 
 ```bash
-# 1 · GENERATE — scaffold a spec from intent
+# 0 · KEY (once per repo) — provision the HMAC signing key so the gate can seal
+#     specs for Tier-1 crypto trust (unsupervised dispatch). Skip it and the gate
+#     still runs, but only reaches Tier-2 (structural) → supervised dispatch only.
+bash .claude/skills/task-spec/configs/setup-taskspec-signing-key.sh
+
+# 1 · GENERATE — scaffold a spec from intent (fill the {{TODO}} stubs it leaves)
 bash .claude/skills/task-spec/scripts/generate-task-spec.sh <slug> <effort> [agent] [source]
 
-# 2 · VALIDATE — structural linter (does NOT stamp)
+# 2 · VALIDATE — structural linter (warns on unfilled stubs; does NOT stamp)
 bash .claude/skills/task-spec/scripts/validate-task-spec.sh tasks/T-<slug>.md
 
-# 3 · GATE — the autonomy contract; flips signed_off:true on structural + eval pass
+# 3 · GATE — the autonomy contract; flips signed_off:true on structural + eval pass,
+#     then seals the eval bodies in an HMAC envelope so hand-stamping is rejected
 bash .claude/skills/task-spec/scripts/safe-to-delegate.sh --stamp tasks/T-<slug>.md
 #    → VERDICT: DELEGATE   (the only path to a dispatchable spec)
 ```
+
+---
+
+## Why Converge exists
+
+The old loop ran in your head. That loop does not scale to AI engines, because an
+engine cannot execute a standard it cannot read. The AI-native engineer inverts
+it: take a fuzzy requirement and lower it through a repeatable descent until
+"done" is a condition an engine satisfies on its own.
+
+- **Compile intent, don't write the system.** Each pass is a transformation with a
+  typed output and a gate — exactly how a compiler lowers source through
+  intermediate representations down to machine code. You specify the descent and
+  verify each lowering; the pipeline emits the system.
+- **Build the factory from day one.** Converge refuses the retrofit. It is
+  factory-shaped from Pass 1: every pass already ends in a gate, every task is
+  born with a runnable eval, and the harness is a control plane from the first
+  file. When you decide to step out, there is nothing to rewrite — the gates
+  already hold without you.
+- **The eval defines done, not you.** A loop that stops because it tried three
+  times has *not* converged; a loop that stops because the eval is green has.
+- **Engines are commodity slots.** Every engine and tracker is bound by a **flag,
+  never a name** — `--adversary codex`, `--tracker linear`, `--issue N`,
+  `--agent kimi`. Swap Claude, Codex, or Kimi freely; the gate is unmoved.
+- **One method, every discipline.** The loop never inspects *what* a task is — only
+  whether its eval is green. Data, software, DevOps, and AI engineering all ride
+  the same spine.
+
+---
+
+## 🥊 Why not Spec Kit / Kiro / OpenSpec / BMAD?
+
+The canonical 2026 spec-driven pipeline is **Specify → Plan → Tasks → Implement**,
+punctuated by human checkpoints — Spec Kit, Kiro, OpenSpec, and BMAD all share
+that shape. Converge is a **loop-closed superset**: it adds the three things those
+frameworks lack — an adversarial **Consensus** pass, an explicit trust-boundary
+**Fork**, and a closed execution **Loop** that drives a whole fleet to green.
+
+| Capability | Raw Claude Code | SDD frameworks<br/>(SpecKit · Kiro · OpenSpec · BMAD) | **Converge** |
+|---|:---:|:---:|:---:|
+| Fuzzy brief → verifiable spec | manual | ✅ Specify | ✅ **Pass 1, gated** |
+| Grounding against the real repo (ADRs) | ad hoc | partial | ✅ **Pass 2** |
+| A *different model* attacks the plan | ❌ | ❌ | ✅ **Pass 4 · Consensus** |
+| Explicit trust-boundary fork | ❌ | ❌ | ✅ **The Fork** |
+| Self-verifying atomic units (eval = done) | ❌ | partial | ✅ **Task-Spec** |
+| Control plane / harness built for the stack | manual | ❌ | ✅ **Pass 6 · Harness** |
+| Closed loop → green-eval PR | ❌ | ❌ (stops at Implement) | ✅ **Pass 8 · The Loop** |
+| Vendor-portable (Claude / Codex / Kimi) | ❌ | vendor-specific | ✅ **engines are flags** |
+
+> The named frameworks stop at *Implement*, with a human standing at the
+> checkpoint. Converge keeps going — and it doesn't replace them: SpecKit / Kiro /
+> OpenSpec / BMAD are exactly the frameworks that host **Fork A** (see below).
 
 ---
 
@@ -233,6 +239,11 @@ and a machine-checkable **gate**. This is the whole method at a glance:
 | **①** | Register | `task-specs-to-issues` | board | `--tracker linear` | 1 spec = 1 issue · *the board is state* |
 | **6** | Harness | `stack-to-harness` | control layer | `agents-kbs-tech-stack` | `.claude/` + `AGENTS.md` · *control plane stands, grounded* |
 | **8** | The Loop | `task-loop` | runtime | `--issue N --agent claude` | branch → green eval → PR · *the eval is green, run not read* |
+
+The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
+dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
+in-session skill. `task-loop` is the execution loop you build; you schedule the
+Manager around it later ([`todo.md`](todo.md) tracks it as B-1, the P0 item).
 
 <details>
 <summary><b>Pass-by-pass — the steps inside each gate</b></summary>
@@ -323,17 +334,25 @@ paths, not two methods.*
 | **HITL posture** | one big gate, held longer | step out one gate at a time → **dark factory** |
 | **use when** | pieces only make sense together | work is loosely coupled and each unit stands alone |
 
-Either path can reach the Dark Factory — only **Fork B** gets there
-*incrementally*, removing the human one gate at a time instead of all at once.
+**The tie-breaker:** *if one unit passed its eval and the rest failed, would that
+be meaningful progress?* Yes → Fork B. If a lone green unit would mislead because
+the value only exists in the whole → Fork A. Either path can reach the Dark
+Factory — only **Fork B** gets there *incrementally*, removing the human one gate
+at a time instead of all at once.
 
 ---
 
 ## 🗂 Skills Catalog
 
 Eleven skills: **nine that implement the spine** (eight passes + the fork's two
-branches + Register), plus a **harness engine** and
-**authoring tooling**. Every skill is self-contained (`SKILL.md` + `references/` +
-`scripts/`, with `runbooks/`, `templates/`, and `tests/` on the larger ones).
+branches + Register), plus a **harness engine** and **authoring tooling**. Every
+skill is self-contained (`SKILL.md` + `references/` + `scripts/`, with
+`runbooks/`, `templates/`, and `tests/` on the larger ones).
+
+> 📖 **Deep dives:** [`skills/README.md`](skills/README.md) — the full
+> skill-by-skill guide · [`presentation/cvg-skills-v1.0.html`](presentation/cvg-skills-v1.0.html)
+> — the interactive chain walkthrough · [`presentation/task-spec-skill-anatomy-v3.2.0.html`](presentation/task-spec-skill-anatomy-v3.2.0.html)
+> — the cornerstone skill, dissected.
 
 | Skill | Pass | Role | Key flags (default) | Ships |
 |-------|:----:|------|---------------------|-------|
@@ -350,7 +369,7 @@ branches + Register), plus a **harness engine** and
 | [`skill-creator`](skills/skill-creator) | *tooling* | author, eval, and validate skills | — | `quick_validate.py`, `run_eval.py`, `run_loop.py` + eval-viewer |
 
 **By the numbers:** 11 skills · **53** shell scripts · **11** Python scripts · **41**
-reference docs · **21** runbooks · **8** test harnesses (all in `task-spec`).
+reference docs · **21** runbooks · full test + conformance suites in `task-spec`.
 
 <details>
 <summary><b>The harness engine — <code>agents-kbs-tech-stack</code> (v0.3.0)</b></summary>
@@ -393,7 +412,8 @@ format_version: 3
 effort: S
 touches_paths: [src/api/server.py, tests/test_health.py]
 depends_on: []
-signed_off: false          # only the gate flips this to true
+signed_off: false          # only the PRE-gate flips this to true
+accepted: false            # only the POST-gate flips this to true
 ---
 
 ## Behavior
@@ -410,21 +430,21 @@ eval_1
 ```
 ````
 
-| Zone | Holds | Why |
-|------|-------|-----|
-| **Frontmatter** | id · status · effort · touches_paths · depends_on · `signed_off` | atomic, trackable, gate-controlled |
-| **1 · Intent** | goal + why + bounded context | why the task exists |
-| **2 · Contract** | runnable evals + validation card + exit check | **self-verifying — the moat** |
-| **3 · Guardrails** | anti-patterns + do-not-touch | bound the blast radius |
-| **4 · Operations** | open questions | admit the unknowns |
+The **two gates are duals** — same evals, opposite expectations.
+`safe-to-delegate.sh --stamp` (PRE, Phase 7) certifies the *spec*: evals are
+well-formed bash, assertion failure expected, and an **HMAC-SHA256 envelope**
+seals the eval bodies so hand-stamping is rejected. `accept-task.sh --stamp`
+(POST, Phase 9) certifies the *work*: evals re-run from a clean checkout, the
+change set stayed inside the blast radius, the HMAC is intact — with an optional
+`--gold-sanity` Goodhart guard that blocks evals that also pass on the unpatched
+baseline. An **effort gate** routes work by size (XS–M → Task-Spec; L conditional
+on a long-horizon engine; XL and subjective work refused → SDD).
 
-The **sign-off envelope** is a key-optional **HMAC-SHA256** seal: `--stamp` writes
-`signed_off_sig` over a canonical payload and the validator recomputes it, so
-hand-stamping is rejected — the only path to the autonomy contract is the gate.
-Ships as a plugin at **v3.1.0** with a JSON Schema (Draft 2020-12), an L0/L1/L2
-conformance suite, and dispatch recipes for Claude Code, Codex, Kimi, Cursor,
-Gemini, taskship, and anthive. Full details:
-[`skills/task-spec/README.md`](skills/task-spec/README.md).
+Ships as a plugin at **v3.2.0** with a JSON Schema (Draft 2020-12), an L0/L1/L2
+executor-conformance suite, and dispatch recipes for Claude Code, Codex, Kimi,
+Cursor, Gemini, taskship, and anthive. Full details:
+[`skills/task-spec/README.md`](skills/task-spec/README.md) · deep-dive PDF:
+[`docs/task-spec-v3.2.0.pdf`](docs/task-spec-v3.2.0.pdf).
 
 ---
 
@@ -500,7 +520,7 @@ eval-verified, the human walked out at the gate.
 
 ```text
 converge/
-├── skills/                              # the Converge skill chain (11 skills)
+├── skills/                              # the 11-skill chain — see skills/README.md
 │   ├── brd-docs-to-tech-req/            # Pass 1  · Intent
 │   ├── tech-req-to-adrs/                # Pass 2  · Structure
 │   ├── reqs-to-swimlane-plans/          # Pass 3  · Decompose
@@ -512,15 +532,30 @@ converge/
 │   ├── task-loop/                       # Pass 8  · The Loop (execution)
 │   ├── agents-kbs-tech-stack/           # engine  · the scaffolder Pass 6 drives
 │   └── skill-creator/                   # tooling · skill authoring + validation
-└── docs/                                # canonical spine documentation (PDFs)
-    ├── cvg-aut-systems-spine-steps-v1.pdf   # v1 — the 7 passes as a document
-    └── cvg-aut-systems-spine-steps-v2.pdf   # v2 (current) — Pass 8, the fork, the moats, the worked example
+├── docs/                                # canonical blueprints + deep dives (PDF)
+├── presentation/                        # interactive HTML walkthroughs
+├── sketch/                              # Pass 3 swimlane plans land here (per run)
+├── tasks/                               # Pass 5B task-specs land here (per run)
+└── todo.md                              # the prioritized backlog (P0–P3)
 ```
 
 | Doc | What it is |
 |-----|------------|
-| [`cvg-aut-systems-spine-steps-v1.pdf`](docs/cvg-aut-systems-spine-steps-v1.pdf) | v1 blueprint — the seven passes as a document |
-| [`cvg-aut-systems-spine-steps-v2.pdf`](docs/cvg-aut-systems-spine-steps-v2.pdf) | **v2 (current)** — adds Pass 8 (The Loop), the fork, the two moats, and the end-to-end worked example |
+| [`docs/cvg-aut-systems-spine-steps-v3.pdf`](docs/cvg-aut-systems-spine-steps-v3.pdf) | **v3 (current)** — the canonical blueprint: the 8-pass descent, the fork with when-to-use, the runtime proven, the worked example |
+| [`docs/task-spec-v3.2.0.pdf`](docs/task-spec-v3.2.0.pdf) | the cornerstone skill, in depth — closed loop, dual gates, six zones, effort gate, conformance |
+| [`docs/cvg-aut-systems-spine-steps-v2.pdf`](docs/cvg-aut-systems-spine-steps-v2.pdf) · [`v1`](docs/cvg-aut-systems-spine-steps-v1.pdf) | historical records of the method's evolution |
+| [`presentation/cvg-skills-v1.0.html`](presentation/cvg-skills-v1.0.html) | the skill chain, interactive |
+| [`presentation/task-spec-skill-anatomy-v3.2.0.html`](presentation/task-spec-skill-anatomy-v3.2.0.html) | task-spec anatomy, interactive |
+
+---
+
+## 🧾 Status
+
+**Method v3** (blueprint PDF) · **task-spec plugin v3.2.0** · validator
+**11/11** · extracted from a production **postgres → duckdb → dbt → MCP** run.
+Next up ([`todo.md`](todo.md)): **P0** — the Manager (`fleet-loop`) and the CI
+eval-gate, the two items that make Pass 8's "fleet green, closed by evals" true
+end-to-end.
 
 ---
 
@@ -567,7 +602,7 @@ The Manager decides *which* issue runs, when, in parallel, and watches PRs — t
 an orchestration layer, and a Git-native world already provides most of it (GitHub
 Actions as scheduler, the PR as state settlement, branch protection as the gate).
 So Converge builds the execution **Loop** now and schedules the Manager around it
-later in CI/CD, rather than hand-rolling an in-session orchestrator.
+later in CI/CD — it's **B-1, the P0 item** in [`todo.md`](todo.md).
 </details>
 
 ---

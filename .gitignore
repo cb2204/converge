@@ -10,3 +10,10 @@ venv/
 
 # Editor
 *.swp
+
+# Converge runtime artifacts (derived from frontmatter/git — never committed)
+tasks/_state.yaml
+_fleet.jsonl
+
+# Build artifacts
+dist/

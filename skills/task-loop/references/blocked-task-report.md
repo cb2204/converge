@@ -23,11 +23,15 @@ no silent give-up. This report names exactly what failed and who owns the fix.
 
 ## Failing eval
 
-Which `eval_N()` / Exit Check assertion failed, and what it was asserting
-(e.g. `eval_2` — bronze row-count parity with `raw.*`; `eval_1` —
-`dbt build --select <model>` did not complete successfully; the FastAPI endpoint
-did not return the contracted 200; the MCP tool did not return the gold-backed
-payload).
+Which `eval_N()` / Exit Check assertion failed, and what it was asserting.
+Name the assertion in the project's own terms — a transform step that did not
+complete, an output/contract layer that failed a parity or shape check, a
+serving-layer response that did not match the contract, etc.
+
+> Example — a dbt/warehouse project: `eval_2` — bronze row-count parity with a
+> source table did not hold; `eval_1` — `dbt build --select <model>` did not
+> complete; the serving endpoint (API or MCP tool) did not return the contracted
+> payload. Adapt these to whatever build/transform/serve steps your stack uses.
 
 - **failing eval id:** _(e.g. `eval_2`)_
 - **what it asserts:** _(one line)_
@@ -36,7 +40,7 @@ payload).
 
 The verbatim tail of the last eval run — the real error, not a paraphrase.
 Include the failing command's stderr and any log tail the spec points to
-(e.g. `/tmp/bronze_build.log`).
+(e.g. a build log the eval writes under `/tmp/`).
 
 ```
 <paste the last eval output here>
@@ -47,15 +51,16 @@ Include the failing command's stderr and any log tail the spec points to
 Why this cannot be settled from inside `<task-id>`'s own `touches_paths`. Name
 the concrete missing/wrong thing, not just "it fails":
 
-- [ ] **Precondition unmet** — the pipeline state the eval assumes is absent
-      (e.g. `raw.*` not landed: run `make seed && make land`; the warehouse at
-      `src/warehouse/warehouse.duckdb` is missing or stale).
+- [ ] **Precondition unmet** — the state the eval assumes is absent: your
+      raw/source tables were never landed (the project's data-prep command has
+      not run), or your data store is missing or stale.
 - [ ] **A cited ADR is missing or wrong** — the spec references
       `docs/adrs/NNNN-*.md` that does not exist or decides the wrong thing.
 - [ ] **A dependency (`depends_on`) is not merged** — an upstream task-spec this
-      one builds on has not landed (e.g. gold needs silver; silver needs bronze).
+      one builds on has not landed (e.g. the output layer depends on a transform
+      step that itself depends on ingest, and that upstream step is not merged).
 - [ ] **The harness is missing** — no `.claude/` agent + KB for the tech this
-      task touches (dbt / DuckDB / FastAPI / MCP), so `--agent` cannot ground.
+      task touches, so `--agent` cannot ground.
 - [ ] **The eval itself is broken** — a syntax error / unbound variable in the
       task-spec's bash, not a real assertion failure. Do **not** hack the eval to
       pass; the fix belongs upstream in the task-spec.
@@ -68,7 +73,7 @@ Route the fix to the Converge pass that owns the gap — do not fix it here:
 
 | Suspected gap | Owning pass |
 |---|---|
-| Precondition / repo terrain wrong (raw not landed, warehouse stale) | operator / `make seed`+`make land` before re-dispatch |
+| Precondition / repo terrain wrong (source data not landed, data store stale) | operator / run the project's data-prep command before re-dispatch |
 | Missing or wrong cited ADR | **Pass 2** (`tech-req-to-adrs`) |
 | Wrong swimlane seam / build order | **Pass 3** (`reqs-to-swimlane-plans`) |
 | Eval broken / task under-specified / not atomic | **Pass 5B** (`task-spec`) |

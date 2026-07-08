@@ -5,9 +5,9 @@
 ## Prerequisites
 
 - Bash 3.2+ (macOS stock), `python3` with `pyyaml` installed (`pip install pyyaml`).
-- The skill installed: either via symlink from `ontolayer/skills/agents-kbs-tech-stack/` into `~/.claude/skills/`, or unpacked tarball at `<target>/.claude/skills/agents-kbs-tech-stack/`.
+- The skill installed: either via symlink from `<converge>/skills/agents-kbs-tech-stack/` into `~/.claude/skills/`, or unpacked tarball at `<target>/.claude/skills/agents-kbs-tech-stack/`.
 - Target repo writable.
-- `agents-kbs-fleet` (v1) **does not** need to be installed at the target — the bundle includes copies of the KB templates inlined.
+- No other skill needs to be installed at the target — the bundle ships its KB templates inline (`templates/kb-shared/`).
 
 ## Step 1 — Decide your stack
 
@@ -25,7 +25,7 @@ In a Claude Code session with the target repo as CWD:
 
 The skill enters Phase 1:
 
-1. Asks for `PROJECT_NAME` (e.g., `ontolayer`).
+1. Asks for `PROJECT_NAME` (e.g., `my-service`).
 2. Asks for `PROJECT_DESCRIPTION` (one sentence).
 3. Asks for `TARGET_REPO` (default: current dir).
 4. Presents the curated menu — pick 1–N techs via multi-select.
@@ -352,10 +352,10 @@ Existing closers and existing techs are detected and skipped with NOTE lines.
 ## Step 9 — Bundling for another repo
 
 ```bash
-bash ontolayer/skills/agents-kbs-tech-stack/scripts/bundle.sh
+bash skills/agents-kbs-tech-stack/scripts/bundle.sh
 ```
 
-Output: `dist/agents-kbs-tech-stack-v0.3.0.tar.gz` (under 100 KB). The bundle inlines the KB templates from v1 — drop-in is self-contained.
+Output: `dist/agents-kbs-tech-stack-v0.3.0.tar.gz` (~100 KB). The bundle ships its KB templates inline — the drop-in is self-contained.
 
 ## Troubleshooting
 

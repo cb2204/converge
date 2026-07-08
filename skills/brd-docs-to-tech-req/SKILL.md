@@ -12,13 +12,13 @@ metadata:
 > **Converge Pass:** 1 of 8 — Intent. First pass; descends from *the client's problem* to *our verifiable spec*.
 > **Engine/flags:** authoring engine is a flag (default: Claude CoWork project, conversational, no repo). No tracker — Pass 1 produces a consensus doc, not issues.
 
-Pass 1 is the highest-altitude pass in Converge. It turns a client's Business Requirements Document — prose pains, unquantified goals, fuzzy scope — into a **tech-spec**: a document where every requirement is falsifiable and every success metric traces to one of the client's own KPIs. It answers exactly one question: **what are we building, and how will we know it works** — never *how* it is built. The stack (here: postgres → duckdb → dbt → MCP) is decided in Pass 3, not here.
+Pass 1 is the highest-altitude pass in Converge. It turns a client's Business Requirements Document — prose pains, unquantified goals, fuzzy scope — into a **tech-spec**: a document where every requirement is falsifiable and every success metric traces to one of the client's own KPIs. It answers exactly one question: **what are we building, and how will we know it works** — never *how* it is built. The stack (data store, transform tooling, serving layer — whatever the project uses) is decided in Pass 3, not here.
 
 ## Important
 
 - **The gate is falsifiability, not completeness.** A requirement belongs in the spec only if a future eval could pass or fail it. A requirement that cannot be made falsifiable goes to the open-assumptions list with a named owner — it does not get softened into the spec.
 - **Brief-in, spec-out — never blur them.** The BRD is the client's, in the client's words. The tech-spec is ours. The entire job of Pass 1 is the translation between them. Do not paraphrase the BRD and call it a spec.
-- **No premature technology.** No schema, no `src/db/01_schema.sql`, no DuckDB, no dbt, no MCP, no framework names. Describe WHAT the engine must do and HOW WELL. Naming a technology here is the most common Pass 1 failure.
+- **No premature technology.** No schema file, no data store, no transform tooling, no serving layer, no framework names. Describe WHAT the engine must do and HOW WELL. Naming a technology here is the most common Pass 1 failure.
 - **Converged = the gate passed**, not "feels done." Even at this altitude the discipline holds: "verifiable" means a future eval could decide it.
 
 ## Instructions
@@ -29,7 +29,7 @@ Read the BRD (`docs/brd-*.pdf`, e.g. `docs/brd-analytical-backbone.pdf`) as the 
 
 - Find the **real pain**: who feels it, when, and what it costs — financial, operational, strategic — in the client's own numbers.
 - Separate **symptoms from the underlying problem**. A brief that asks for "a dashboard" usually has a decision the client can't make underneath it.
-- Name the **data the engine will act on** at the problem level — the shape of the source, not its schema (here: order, payment, customer, and product records that land as `raw.*` in the warehouse).
+- Name the **data the engine will act on** at the problem level — the shape of the source, not its schema (for example, in an analytics engagement: order, payment, customer, and product records arriving as raw source tables — described as business entities, not as a physical schema).
 - Close by writing, in **one paragraph**, what "solved" looks like from the client's seat. This paragraph is half the gate — write it before you write anything else.
 
 ### Step 2 — Interrogate (turn a vague brief into a buildable one)
@@ -68,7 +68,7 @@ bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-sp
 - [ ] Scope (in / out) is explicit at the **problem level** — what the engine does and how well, not which stack does it.
 - [ ] **Every requirement is verifiable** — a future eval could pass or fail it.
 - [ ] Success metrics trace to the BRD's KPIs (**current → target**).
-- [ ] The **data the engine acts on is named** (the source `raw.*` shape at the problem level).
+- [ ] The **data the engine acts on is named** (the source records/entities at the problem level, not a physical schema).
 - [ ] **Open assumptions are recorded**, each with a named owner.
 - [ ] **No premature technology** — no schema, no engine, no framework. The stack is Pass 3's.
 
@@ -100,14 +100,14 @@ Result: A signable tech-spec where every requirement is falsifiable and no techn
 User points at a brief and asks what it really means. Actions: run Understand + Interrogate only; return the one-paragraph restatement plus the 2–3 highest-leverage questions. Result: shared clarity before any spec is committed — the buildable version of the brief.
 
 **Example 3 — premature-stack request (negative).**
-User: *"Write the tech-spec — it should use DuckDB and dbt with a star schema."* Actions: accept the intent, but keep the stack out of the spec; record it as an open assumption for Pass 3. Result: the spec says the engine must "model orders and payments into query-ready facts within N seconds," not "use dbt." Technology is deferred, not adopted.
+User: *"Write the tech-spec — it should use \<some specific database\> and \<some transform tool\> with a star schema."* Actions: accept the intent, but keep the stack out of the spec; record it as an open assumption for Pass 3. Result: the spec says the engine must "model orders and payments into query-ready facts within N seconds," not "use \<transform tool\>." Technology is deferred, not adopted.
 
 ## Troubleshooting
 
 | Error / symptom | Cause | Solution |
 |---|---|---|
 | A requirement can't be eval'd | It's a wish, not a spec line ("make it fast") | Rewrite as current → target with a measurable threshold, or move it to open-assumptions with an owner. See [references/falsifiable-requirements.md](references/falsifiable-requirements.md). |
-| The spec names DuckDB / dbt / a schema | Descended into Pass 3 altitude | Strip the technology; restate as a WHAT/HOW-WELL requirement. The stack is decided in Pass 3. |
+| The spec names a specific database / transform tool / physical schema | Descended into Pass 3 altitude | Strip the technology; restate as a WHAT/HOW-WELL requirement. The stack is decided in Pass 3. |
 | Can't restate the problem in one paragraph | Understand step was skipped or the BRD is genuinely ambiguous | Re-read for the real pain and its cost; if still ambiguous, that's the top Interrogate question — assign it an owner. |
 | Success metrics have targets but no baselines | KPI baseline not pulled from the BRD | Every metric is current → target; if current is unknown, record it as an assumption owned by the client. |
 | No BRD exists | Pass 1 needs a client problem document as input | Do not invent one. Get the brief first; Pass 1 does not fabricate intent. |

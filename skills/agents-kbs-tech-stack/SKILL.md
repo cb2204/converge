@@ -9,10 +9,10 @@ description: |
   emission step that publishes AGENTS.md + Cursor rules + Copilot instructions
   alongside .claude/, and a tunable doctrine.yaml that captures portable
   defaults (Bash boundary, threshold floors, closer-hook protocol) so other
-  tools (Codex, Cursor, Copilot) inherit the same agent contract. Sibling to
-  agents-kbs-fleet — that one scaffolds project-specific specialists, this one
-  scaffolds portable tech specialists. Use when bootstrapping a new repo's
-  technology coverage or adding a new tech to an existing fleet.
+  tools (Codex, Cursor, Copilot) inherit the same agent contract. Scaffolds
+  portable tech specialists (as opposed to project-specific domain specialists).
+  Use when bootstrapping a new repo's technology coverage or adding a new tech
+  to an existing fleet.
 ---
 
 # agents-kbs-tech-stack — Build Tech-Stack Agent Layers
@@ -63,11 +63,11 @@ Trigger conditions:
 - User asks to "scaffold tech specialists", "add a React architect", "build the agent fleet for this stack"
 - User is starting a new repo and wants the tech-coverage layer from day one
 - User wants to add a tech to an existing repo's fleet (the skill is additive)
-- The skill performs a quick repo-shape check first and may suggest a sibling skill (`agents-kbs-fleet`, `caw-scaffold`) if the repo looks code-light — you can override.
+- The skill performs a quick repo-shape check first and may suggest `caw-scaffold` if the repo looks code-light — you can override.
 
 Skip if:
 
-- User wants project-domain specialists (e.g., `graph-builder` for *this specific* graph view) — use `agents-kbs-fleet` (v1) instead.
+- User wants project-domain specialists (e.g., `graph-builder` for *this specific* graph view) — that is domain-coupled work, not portable tech coverage; scaffold those specialists directly rather than from the tech menu.
 - User wants a single Skill + Agent + MCP capability — use `caw-scaffold`.
 - The desired tech is not in `menu/techs.yaml` — first add it to the menu (see `references/tech-menu-curation.md`), then run the skill.
 
@@ -82,11 +82,11 @@ Before asking about tech picks, run `scripts/detect-code-light.sh` against `TARG
 - **CODE_HEAVY (default case, ~95%)**: proceed silently to Phase 1. Do not mention the check to the user — there is nothing interesting to say.
 - **CODE_LIGHT (<30% code files among classifiable files)**: surface ONE `AskUserQuestion` with the stats line in the prompt and four options, before showing the menu:
   1. **Proceed anyway** — "I'm scaffolding for code I'll write soon" (this is option 1 by design — the knowing user picks instantly).
-  2. **Use `agents-kbs-fleet` instead** — for project-specific specialists (KB-shaped repos).
+  2. **Scaffold project-specific specialists instead** — for domain-coupled work in a KB-shaped repo (not portable tech coverage).
   3. **Use `caw-scaffold` instead** — for a single Skill + Agent + MCP capability.
   4. **Abort** — no scaffolding wanted.
 
-  Options 2/3/4 exit the skill cleanly with a one-line invocation hint for the chosen sibling. Option 1 continues to Phase 1 with no further friction.
+  Options 2/3/4 exit the skill cleanly with a one-line hint for the chosen path. Option 1 continues to Phase 1 with no further friction.
 
 The detector NEVER blocks. If it fails to run (no python3, permission errors), the skill proceeds as if CODE_HEAVY. Phase 0 only ever speaks up when there's a real signal — silent on the 95%, helpful on the 5%.
 
@@ -235,13 +235,13 @@ KB SILENT           │ MCP-ONLY: 0.85 │ N/A            │ LOW: 0.50      │
 
 ## Relationship to other skills
 
-| Skill | Unit of scaffolding | When |
+| Scaffolding layer | Unit of scaffolding | When |
 |-------|---------------------|------|
 | `caw-scaffold` | One Skill + One Agent + One MCP (a Triad) | New reusable capability |
-| `agents-kbs-fleet` (v1) | Project-specific specialist (e.g., `payments-parser`, `graph-builder`) | Domain-coupled work in this repo |
+| project-specific specialists | Domain specialist (e.g., `payments-parser`, `graph-builder`) | Domain-coupled work in a given repo |
 | `agents-kbs-tech-stack` (this) | Tech specialist pair (architect + developer) + universal closers | Stack coverage portable across projects |
 
-Most real projects end up with all three layers. Use them together.
+Most real projects end up with all three layers.
 
 ---
 
@@ -252,11 +252,6 @@ Most real projects end up with all three layers. Use them together.
 - [`references/tech-menu-curation.md`](references/tech-menu-curation.md) — how to add a new tech to the menu
 - [`runbooks/pick-your-stack.md`](runbooks/pick-your-stack.md) — end-to-end walkthrough (v0.3.0)
 - [`runbooks/upgrade-v02-to-v03.md`](runbooks/upgrade-v02-to-v03.md) — migrating an existing v0.2 scaffold to v0.3.0
-
-External (linked, not duplicated):
-
-- v1's [`agent-anatomy.md`](../agents-kbs-fleet/references/agent-anatomy.md) — universal section rationale
-- v1's [`kb-taxonomy.md`](../agents-kbs-fleet/references/kb-taxonomy.md) — concepts/patterns/reference/quick-reference taxonomy
 
 ---
 

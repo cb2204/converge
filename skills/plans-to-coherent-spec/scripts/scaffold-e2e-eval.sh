@@ -4,17 +4,19 @@
 #
 # Fork A's unit of trust is the WHOLE system, not a task. So this pass produces
 # exactly ONE eval, at specs/e2e-eval.sh, that drives the real flow end to end:
-#     make seed  →  make land  →  dbt build  →  query gold.*  →  hit serving
-# and asserts the FAR END: a known seed yields the expected gold shape AND the
-# expected API/MCP answer. This script writes a runnable, repo-grounded skeleton
-# of that eval (real Make targets, the real warehouse path, the real read-only
-# connection contract); the author then fills in the concrete assertions once the
-# frozen E4 gold contract is pinned.
+#     prep/seed  →  transform  →  assert output/contract  →  hit serving
+# and asserts the FAR END: a known input yields the expected output shape AND the
+# expected served answer. This script writes a runnable, stack-agnostic skeleton
+# of that eval — a generic PREP → TRANSFORM → ASSERT-OUTPUT → SERVE spine with
+# clearly-marked TODO(author) stages. The author wires each stage to THEIR stack
+# (whatever build/ingest command, transform pipeline, output store, and serving
+# layer the project uses) and fills the concrete assertions once the output
+# contract is frozen.
 #
-# The skeleton is deliberately RED until the medallion (dbt) and serving
-# (src/serving) layers exist — that is correct for Fork A: the eval is the single
+# The skeleton is deliberately RED until each stage is wired and the transform
+# and serving layers exist — that is correct for Fork A: the eval is the single
 # artifact Execution (Pass 8 · The Loop) drives to GREEN. Each stage prints a
-# precise, actionable reason when it is not yet built, so a RED run names the gap.
+# precise, actionable reason when it is not yet wired, so a RED run names the gap.
 #
 # Usage:
 #   scaffold-e2e-eval.sh                       Write specs/e2e-eval.sh
@@ -26,14 +28,14 @@
 # Exit:     0 = written; 1 = usage error / refused to clobber
 #
 # bash 3.2-safe (runs on macOS system /bin/bash). No associative arrays, no
-# mapfile. Mirrors the style of .claude/skills/task-spec/scripts/_lib.sh.
+# mapfile. Mirrors the style of the task-spec skill's scripts/_lib.sh.
 
 set -euo pipefail
 
 SPECS_DIR="specs"
 FORCE=false
 
-usage() { sed -n '2,25p' "$0"; }
+usage() { sed -n '2,29p' "$0"; }
 
 die() {
   echo "ERROR: $*" >&2
@@ -70,18 +72,21 @@ cat > "$OUT" <<'EOF'
 #!/usr/bin/env bash
 # e2e-eval.sh — THE single end-to-end eval for the coherent spec (Converge 5A).
 #
-# The unit of trust is the WHOLE system: sources -> gold -> serving answers.
-# This eval drives the REAL flow and asserts the FAR END. Done = this is GREEN.
+# The unit of trust is the WHOLE system: source input -> transform -> output
+# contract -> serving answers. This eval drives the REAL flow and asserts the
+# FAR END. Done = this is GREEN.
 #
-#   make seed   -> generate a known, deterministic dataset in Postgres
-#   make land   -> Postgres -> raw.* in the DuckDB warehouse (read-only ATTACH)
-#   dbt build   -> raw.* -> bronze.* -> silver.* -> gold.*  (+ dbt tests)
-#   query gold  -> the expected gold shape for the known seed
-#   serving     -> the FastAPI endpoint + MCP tool return the expected answer
+# Generic spine (wire each stage to YOUR stack):
+#   PREP     -> establish a known, deterministic input (your build/ingest step)
+#   TRANSFORM-> run the project's transform pipeline over that input
+#   ASSERT   -> the transform emitted the expected OUTPUT/contract shape
+#   SERVE    -> the serving layer (API, MCP tool, CLI, etc.) returns the expected
+#               answer, and that answer matches the output shape asserted above
 #
-# One eval, end to end, unambiguous pass/fail. It is RED until the medallion and
-# serving layers are built — that is by design: Execution (Pass 8) drives it to
-# GREEN. Each stage below prints a precise reason when its layer is not yet built.
+# One eval, end to end, unambiguous pass/fail. It is RED until each stage is
+# wired and the transform + serving layers are built — that is by design:
+# Execution (Pass 8) drives it to GREEN. Each stage below prints a precise reason
+# when it is not yet wired or its layer is not yet built.
 #
 # Run from the repo root:  bash specs/e2e-eval.sh
 # bash 3.2-safe. No associative arrays, no mapfile.
@@ -92,18 +97,20 @@ set -uo pipefail   # NB: not -e — we want to run every stage and report all ga
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# Canonical warehouse path (env override wins; matches src/warehouse/paths.py).
-WAREHOUSE="${DUCKDB_DATABASE:-src/warehouse/warehouse.duckdb}"
-# The .venv python the repo standardizes on (uv-managed).
-PYBIN="${PYBIN:-.venv/bin/python}"
-[ -x "$PYBIN" ] || PYBIN="python3"
+# TODO(author): point these at YOUR stack. These are placeholders, not defaults
+# for any particular tool. Prefer env overrides so CI and local runs agree.
+#   DATA_STORE  — where the transform writes its output (a db file, a schema, a
+#                 directory of artifacts, an API base URL, ...). Your read path.
+#   PREP_CMD    — the project's data-prep / ingest command (produces known input).
+#   TRANSFORM_CMD — the project's transform step (input -> output/contract layer).
+DATA_STORE="${DATA_STORE:-}"       # e.g. the project's warehouse / output store
+PREP_CMD="${PREP_CMD:-}"           # e.g. "make seed" or your ingest script
+TRANSFORM_CMD="${TRANSFORM_CMD:-}" # e.g. your transformation pipeline command
 
-# Deterministic seed knobs — a KNOWN input is what makes the far-end assertion
-# meaningful. Keep these fixed so the expected gold shape is reproducible.
+# Deterministic input knobs — a KNOWN input is what makes the far-end assertion
+# meaningful. Keep whatever knobs your prep step takes fixed so the expected
+# output shape is reproducible. SEED is the canonical example of such a knob.
 SEED="${SEED:-42}"
-CUSTOMERS="${CUSTOMERS:-500}"
-PRODUCTS="${PRODUCTS:-200}"
-ORDERS="${ORDERS:-5000}"
 
 FAILS=0
 pass() { printf '  PASS  %s\n' "$1"; }
@@ -111,118 +118,108 @@ fail() { printf '  FAIL  %s\n' "$1" >&2; FAILS=$((FAILS + 1)); }
 note() { printf '  ....  %s\n' "$1"; }
 stage() { printf '\n== %s ==\n' "$1"; }
 
-# Run a read-only SQL scalar against the warehouse; echoes the value or "" on
-# error. Uses the repo's own connect_read_only() contract via a tiny python
-# shim so the eval honors the SAME read-only invariant the serving layer must.
-gold_scalar() {
-  # $1 = SQL returning exactly one scalar column, one row.
-  "$PYBIN" - "$1" <<'PY' 2>/dev/null
-import sys
-from src.warehouse.connection import connect_read_only
-sql = sys.argv[1]
-con = connect_read_only()
-try:
-    row = con.execute(sql).fetchone()
-    print("" if row is None or row[0] is None else row[0])
-finally:
-    con.close()
-PY
+# read_output — read one scalar fact from the output/contract layer; echo the
+# value or "" on error. This is the eval's single READ PATH: implement it ONCE
+# against your output store (a SQL query, a jq over a JSON artifact, an HTTP GET,
+# a file read, ...) so every assertion below reads the far end the same way and
+# honors the SAME read invariant (e.g. read-only) your serving layer must.
+read_output() {
+  # $1 = a query/selector meaningful to YOUR output store; echo one scalar.
+  # TODO(author): implement your read path. Examples (pick/replace, don't keep):
+  #   - SQL warehouse:  your_sql_client --scalar "$1"
+  #   - JSON artifact:  jq -r "$1" path/to/output.json 2>/dev/null
+  #   - HTTP endpoint:  curl -fsS "$DATA_STORE/$1" 2>/dev/null
+  :
 }
 
-# Does a schema.table exist in the warehouse?  echoes "1" / "0".
-gold_has_table() {
-  # $1 = schema, $2 = table
-  gold_scalar "SELECT count(*) FROM information_schema.tables \
-               WHERE table_schema='$1' AND table_name='$2'"
-}
-
-# ── Stage 1 — SEED (known, deterministic source) ─────────────────────────────
-stage "seed — deterministic Postgres source"
-if make seed CUSTOMERS="$CUSTOMERS" PRODUCTS="$PRODUCTS" ORDERS="$ORDERS" SEED="$SEED" >/dev/null 2>&1; then
-  pass "make seed (seed=$SEED, orders=$ORDERS)"
+# ── Stage 1 — PREP (known, deterministic input) ──────────────────────────────
+# Establish a KNOWN input so the far-end output is reproducible. Wire PREP_CMD to
+# the project's data-prep/ingest step (for example, in a Make-based project this
+# might be a `make seed`-style target that generates a fixed dataset).
+stage "prep — deterministic known input"
+if [ -z "$PREP_CMD" ]; then
+  fail "PREP_CMD not set — wire the project's data-prep/ingest step (produces a known input). \
+Cannot establish a known input, so the far-end assertion has no meaning yet."
+elif ( eval "$PREP_CMD" ) >/dev/null 2>&1; then
+  pass "prep step ($PREP_CMD, seed=$SEED)"
 else
-  fail "make seed failed — is Postgres up? (make up) — cannot establish a known input"
+  fail "prep step failed ($PREP_CMD) — is its backing service up? — cannot establish a known input"
 fi
 
-# ── Stage 2 — LAND (Postgres -> raw.* ; the single crossing) ─────────────────
-stage "land — Postgres -> raw.* in DuckDB (read-only ATTACH bridge)"
-if make land >/dev/null 2>&1; then
-  pass "make land"
-  RAW_ORDERS="$(gold_scalar "SELECT count(*) FROM raw.raw_orders")"
-  if [ -n "$RAW_ORDERS" ] && [ "$RAW_ORDERS" -gt 0 ] 2>/dev/null; then
-    pass "raw.raw_orders landed ($RAW_ORDERS rows)"
-  else
-    fail "raw.raw_orders is empty after land — the source floor is missing"
-  fi
+# ── Stage 2 — TRANSFORM (input -> output/contract layer) ─────────────────────
+# Run the project's transform pipeline. It is the component that turns the known
+# input into the published output/contract layer the serving half binds to. It
+# is not scaffolded until Execution builds it; until TRANSFORM_CMD is wired and
+# succeeds, this stage reports the gap precisely (RED), which is the correct
+# Fork-A signal, not a false green.
+# (For example, in a dbt/warehouse project the transform step is `dbt build` over
+# a medallion of models; wire TRANSFORM_CMD to whatever YOUR project uses.)
+stage "transform — project transform pipeline (input -> output layer)"
+if [ -z "$TRANSFORM_CMD" ]; then
+  fail "TRANSFORM_CMD not set — the transform pipeline is not wired/built yet. \
+Execution must build the transform layer and wire this command; then this stage runs it."
+elif ( eval "$TRANSFORM_CMD" ) >/dev/null 2>&1; then
+  pass "transform step ($TRANSFORM_CMD) succeeded (models + tests green)"
 else
-  fail "make land failed — Postgres -> raw.* bridge did not run"
+  fail "transform step failed ($TRANSFORM_CMD) — a model or data test is RED (run it directly to see which)"
 fi
 
-# ── Stage 3 — dbt build (raw -> bronze -> silver -> gold + tests) ────────────
-# The medallion is Component A. It is not scaffolded until Execution builds it;
-# until a dbt project exists, this stage reports the gap precisely (RED), which
-# is the correct Fork-A signal, not a false green.
-stage "dbt build — medallion raw.* -> gold.* (+ dbt tests)"
-DBT_PROJECT="$(ls dbt_project.yml */dbt_project.yml 2>/dev/null | head -1 || true)"
-if [ -z "$DBT_PROJECT" ]; then
-  fail "no dbt_project.yml found — the medallion (Component A) is not built yet. \
-Execution must scaffold dbt and the bronze/silver/gold models; then this stage runs 'dbt build'."
-elif command -v dbt >/dev/null 2>&1; then
-  DBT_DIR="$(dirname "$DBT_PROJECT")"
-  if ( cd "$DBT_DIR" && dbt build >/dev/null 2>&1 ); then
-    pass "dbt build (models + tests green)"
-  else
-    fail "dbt build failed — a model or dbt test is RED (run 'dbt build' in $DBT_DIR to see which)"
-  fi
-else
-  fail "dbt not on PATH — install dbt-duckdb (uv add dbt-duckdb) to run the medallion build"
-fi
+# ── Stage 3 — ASSERT OUTPUT (the internal contract) ──────────────────────────
+# Assert the OUTPUT/contract shape the serving half binds to, for the known
+# input. This is the frozen contract between the transform half and the serving
+# half. Fill in the exact facts (existence of published tables/artifacts, row
+# counts, totals, ...) once the output contract is pinned.
+stage "output — the internal contract (published output shape for the known input)"
+# TODO(author): assert each published output your contract promises. For each
+# one, check it exists AND assert its FAR-END shape for the known input. Example
+# skeleton (replace the selectors/expected values with YOURS):
+#   for name in <your published output names>; do
+#     EXISTS="$(read_output "<exists-check for $name>")"
+#     if [ "$EXISTS" = "1" ]; then
+#       pass "output '$name' present"
+#       VAL="$(read_output "<a scalar fact about $name for the known input>")"
+#       [ "$VAL" = "<expected-for-seed-$SEED>" ] && pass "$name value" || fail "$name value ($VAL)"
+#     else
+#       fail "output '$name' missing — the transform half has not emitted this (frozen contract)"
+#     fi
+#   done
+# Atomic-publish invariant: if your contract promises all outputs come from ONE
+# generation, assert a single generation id is visible across them, e.g.:
+#   GENS="$(read_output "<count of distinct publish/run ids across all outputs>")"
+#   [ "$GENS" = "1" ] && pass "single publish generation" || fail "half-published output ($GENS ids)"
+fail "output-contract assertions not yet filled — spec is not converged until they are"
 
-# ── Stage 4 — GOLD shape (the internal contract, owned by Component A) ────────
-# Assert the gold-table interface the serving half binds to. Fill in the exact
-# columns/counts once the frozen E4 gold schema.yml is committed by Component A.
-stage "gold — the internal contract (gold.* shape for the known seed)"
-for tbl in gold_revenue_by_category gold_customer_segments gold_order_health \
-           gold_payment_reconciliation gold_freshness; do
-  if [ "$(gold_has_table gold "$tbl")" = "1" ]; then
-    pass "gold.$tbl exists"
-    # TODO(author): assert the FAR-END shape for the known seed, e.g.:
-    #   REV="$(gold_scalar "SELECT round(sum(revenue),2) FROM gold.gold_revenue_by_category")"
-    #   [ "$REV" = "<expected-for-seed-42>" ] && pass "revenue total" || fail "revenue total ($REV)"
-  else
-    fail "gold.$tbl missing — Component A has not emitted this mart (frozen E4 contract)"
-  fi
-done
-# Atomic-publish invariant (Codex C5): every gold mart shares ONE _gold_run_id.
-# TODO(author): once gold exists, assert a single generation is visible:
-#   RUNIDS="$(gold_scalar "SELECT count(DISTINCT _gold_run_id) FROM ( \
-#     SELECT _gold_run_id FROM gold.gold_revenue_by_category UNION ALL \
-#     SELECT _gold_run_id FROM gold.gold_order_health )")"
-#   [ "$RUNIDS" = "1" ] && pass "single _gold_run_id" || fail "half-published gold ($RUNIDS ids)"
-
-# ── Stage 5 — SERVING (the far end: endpoint + MCP tool answer) ──────────────
-# Component B is read-only over gold.*. Assert that the SAME frozen question is
-# answered identically by the FastAPI endpoint and the MCP tool (same B1 core =>
-# same answer), and that the answer matches the gold shape asserted above.
-stage "serving — FastAPI endpoint + MCP tool answer the frozen question"
-if [ -d src/serving ]; then
-  pass "src/serving present"
-  # TODO(author): start the API (or import the query core) and assert the answer.
-  # Endpoint parity example (fill the expected value for the known seed):
-  #   ANS="$("$PYBIN" -m src.serving.query core revenue_by_category 2>/dev/null || true)"
-  #   [ -n "$ANS" ] && pass "revenue_by_category answered" || fail "no serving answer"
-  # MCP/endpoint parity: the MCP tool MUST return the same value as its endpoint.
-  note "fill the endpoint+MCP answer assertions (must equal the gold shape above)"
+# ── Stage 4 — SERVE (the far end: the served answer) ─────────────────────────
+# The serving layer is read-only over the output/contract layer. Assert that the
+# frozen question is answered as expected, and — if more than one surface serves
+# it (e.g. an API endpoint AND an MCP tool over the same core) — that every
+# surface returns the SAME answer, and that answer matches the output shape
+# asserted above.
+stage "serve — the serving layer answers the frozen question"
+# TODO(author): detect that YOUR serving layer exists (a source dir, a running
+# process, an importable module, ...), then invoke it and assert the answer.
+# Replace this presence check with one meaningful to your stack:
+SERVING_PRESENT=false   # e.g. [ -d src/serving ] && SERVING_PRESENT=true
+if [ "$SERVING_PRESENT" = true ]; then
+  pass "serving layer present"
+  # TODO(author): invoke the serving layer (start the API / import the query
+  # core / run the CLI) and assert the answer for the known input. If multiple
+  # surfaces serve the same core, assert they return the SAME value (parity), and
+  # that the value equals the output shape asserted in Stage 3. Example:
+  #   ANS="$(<invoke your serving layer for the frozen question> 2>/dev/null || true)"
+  #   [ -n "$ANS" ] && pass "frozen question answered" || fail "no serving answer"
+  note "fill the serving answer assertions (must equal the output shape above)"
   fail "serving answer assertions not yet filled — spec is not converged until they are"
 else
-  fail "src/serving missing — the serving layer (Component B) is not built yet. \
-Execution must add the read-only query core + endpoints + MCP tools over gold.*."
+  fail "serving layer not present/detected — the serving layer is not built yet. \
+Execution must add the read-only serving layer (API, MCP tool, CLI, etc.) over the output layer, \
+then wire the presence check above."
 fi
 
 # ── Verdict ──────────────────────────────────────────────────────────────────
 stage "verdict"
 if [ "$FAILS" -eq 0 ]; then
-  echo "GREEN — the whole system is converged: seed -> land -> gold -> serving all pass."
+  echo "GREEN — the whole system is converged: prep -> transform -> output -> serve all pass."
   exit 0
 else
   echo "RED — $FAILS check(s) failed. The coherent spec is not yet done." >&2
@@ -234,5 +231,6 @@ EOF
 chmod +x "$OUT"
 
 echo "Created $OUT (executable)."
-echo "Next: freeze the E4 gold contract, then fill the FAR-END assertions marked TODO(author)."
+echo "Next: wire each stage to your stack (PREP_CMD, TRANSFORM_CMD, read path, serving check),"
+echo "freeze the output contract, then fill the FAR-END assertions marked TODO(author)."
 echo "Syntax check: bash -n $OUT"

@@ -8,11 +8,18 @@ the spec you write passes the gate and Execution can drive it to green.
 
 > **One document. One boundary. One eval.**
 
-The two hardened swimlane plans — `sketch/duckdb-dbt-med-arch.plan` (the shaping
-half: `raw.* → bronze → silver → gold`) and `sketch/fast-api-mcp.plan` (the
-exposing half: FastAPI/MCP over `gold.*`) — become a **single coherent spec**
-whose boundary wraps the **whole system**: `sources → gold → serving answers`.
-The unit of trust is that whole, not a layer and not a task.
+Two (or more) hardened swimlane plans — typically one that *shapes* the data or
+core state and one that *exposes* it — become a **single coherent spec** whose
+boundary wraps the **whole system**: `sources → outputs → served answers`. The
+unit of trust is that whole, not a layer and not a task.
+
+> **Example — a dbt/warehouse project.** A shaping plan
+> (`raw/source tables → transform pipeline → published tables`) and an exposing
+> plan (a serving layer over the published tables) fuse into one spec whose
+> boundary is `sources → published tables → serving answers`. This is *one shape
+> the method takes*, not the only one — a service project might fuse a
+> domain-model plan with an API plan; a pipeline project might fuse ingest with a
+> report. The invariant is the same: one boundary over the coupled whole.
 
 If you find yourself writing one spec per layer, you are on the wrong fork — stop
 and switch to Fork B (`task-spec`).
@@ -37,41 +44,46 @@ changes the spec's shape, never the eval.
 A single narrative, resolved (not two plans stapled together). At minimum:
 
 1. **Problem & boundary** — one paragraph restating what the system does, and an
-   explicit statement that the boundary wraps `sources → gold → serving answers`.
-   This is the unit of trust.
+   explicit statement that the boundary wraps `sources → outputs → served
+   answers`. This is the unit of trust.
 
-2. **The one-way dependency, stated as an invariant.** Postgres is the source
-   floor, DuckDB the analytical store, the **read-only `ATTACH`** (the `make land`
-   bridge) the single crossing. Everything reads from `raw.*` upward; **nothing
-   writes back down.** State it as a directed chain the gate can find:
+2. **The one-way dependency, stated as an invariant.** Name the source floor, the
+   store or state it lands in, and the **single crossing** between them.
+   Everything reads from the source layer upward; **nothing writes back down.**
+   State it as a directed chain the gate can find, for example:
 
    ```
-   Postgres → DuckDB (raw.*) → bronze → silver → gold → serving
-   (source)   (read-only land)                    (= seam)  (read-only)
+   source → store (raw/ingested) → transform stages → output/contract layer → serving
+   (source)  (single read path)                        (= seam)               (read-only)
    ```
 
-3. **The two halves, fused at the gold seam.**
-   - *Shaping half* (from the medallion plan): `raw.* → bronze (views) → silver
-     (tables, the trust boundary, 14 defects neutralized + quarantine) → gold
-     (serving-ready marts)`.
-   - *Exposing half* (from the serving plan): a read-only query core over
-     `gold.*` via `connect_read_only()`, one FastAPI endpoint and one MCP tool per
-     frozen question.
-   - The **gold-table interface is the seam** where they join — see below.
+   > **Example — a warehouse stack.** `Postgres → DuckDB (raw.*) → bronze →
+   > silver → gold → serving`, where the read-only `ATTACH` performed by the
+   > project's data-prep command is the single crossing and `gold` is the seam.
+   > Substitute your own source, store, transform, and output names.
 
-4. **The gold-table interface — named as the internal contract.** The medallion
-   half *owns* it (each mart ships a dbt `schema.yml` declaring columns, types,
-   nullability, grain). The serving half *binds* to it and never redefines it. A
-   gold column does not exist for serving until it exists in a committed
-   `schema.yml`. Candidate marts (final list gated on the frozen E4 set):
-   `gold_revenue_by_category`, `gold_customer_segments`, `gold_order_health`,
-   `gold_payment_reconciliation`, `gold_freshness`.
+3. **The two halves, fused at the output seam.**
+   - *Shaping half* (from the shaping plan): source/raw data → intermediate
+     stages → a **trust boundary** where defects are neutralized or quarantined →
+     an **output/contract layer** of serving-ready results.
+   - *Exposing half* (from the exposing plan): a read-only access core over the
+     output/contract layer, plus one serving entry point (API endpoint, MCP tool,
+     etc.) per frozen question.
+   - The **output-layer interface is the seam** where they join — see below.
+
+4. **The output-layer interface — named as the internal contract.** The shaping
+   half *owns* it (each output declares its columns/fields, types, nullability,
+   and grain in a committed contract — for example a dbt `schema.yml` in a
+   warehouse project). The exposing half *binds* to it and never redefines it. An
+   output field does not exist for serving until it exists in a committed
+   contract. List the candidate outputs (final list gated on the frozen question
+   set), each named as a contract rather than as SQL or handler code.
 
 5. **Carried-forward risks & open questions — verbatim.** Every accepted risk and
    open question the Pass-4 adversary surfaced moves into the spec unchanged.
-   Nothing raised may be silently dropped in the lift. (E.g. the E4 question set
-   is still owner-gated; `event_to_reportable_lag` is the real E3 instrument, not
-   bare land cadence; the single `_gold_run_id` atomic-publish invariant.)
+   Nothing raised may be silently dropped in the lift. (For example: an
+   owner-gated question set; the real latency/freshness instrument rather than a
+   proxy; any atomic-publish invariant.)
 
 6. **The definition of done** — a pointer to `specs/e2e-eval.sh`: done is that
    eval green, never "looks done."
@@ -81,41 +93,41 @@ A single narrative, resolved (not two plans stapled together). At minimum:
 These are the load-bearing statements the spec must make explicit, because they
 are what makes the two halves ONE system:
 
-- **Single crossing, one direction.** The only Postgres→DuckDB path is the
-  read-only `ATTACH` in `make land`. Serving reads `gold.*` only, through
-  `connect_read_only()` — never `silver.*`, `bronze.*`, `raw.*`, or Postgres. This
-  is what makes storefront isolation (E1) true *by construction*.
-- **The gold seam is a versioned contract, owned upstream.** Serving compiles
-  against the medallion's `schema.yml`; a new answer needs a **new gold mart**,
-  never a deeper read.
-- **Atomic gold generation.** Every gold mart carries a shared `_gold_run_id`;
-  serving binds to the latest fully-published run id, so a mid-`dbt` run never
+- **Single crossing, one direction.** There is exactly one path from source to
+  store, and it runs one way. Serving reads the **output/contract layer only** —
+  never the intermediate stages, the raw layer, or the upstream source. This is
+  what makes isolation of the source system true *by construction*.
+- **The output seam is a versioned contract, owned upstream.** Serving compiles
+  against the shaping half's published contract; a new answer needs a **new
+  output**, never a deeper read into intermediate layers.
+- **Atomic output generation.** Every output carries a shared run/version id;
+  serving binds to the latest fully-published id, so a mid-transform run never
   exposes a half-published mix. State it as an invariant, not a lock.
-- **Single-writer warehouse.** `make land` then `dbt`, serialized — one writer at
-  a time; readers (serving) run concurrently read-only. This matches
-  `src/warehouse/connection.py`'s concurrency contract.
+- **Single-writer store.** The build/ingest step then the transform step,
+  serialized — one writer at a time; readers (serving) run concurrently
+  read-only. Match whatever concurrency contract your store provides.
 
 ## New architecture choices become ADRs
 
 Where coupling forces a decision (full-refresh vs. incremental, single-writer
-DuckDB, read-only gold reader, the order-health status→rate map), record it as an
+store, read-only output reader, any status→derived-value mapping), record it as an
 ADR under `--adrs-dir` (`docs/adrs/NNNN-*.md`), **append-only**, so the record of
 *why* is never lost. Do not reopen questions Pass 4 already settled — lifting must
 not add scope.
 
 ## Altitude
 
-Spec altitude throughout: the system's **shape and contract**, not its SQL or
-handler code. Naming `gold_revenue_by_category(category, day, revenue,
-order_count)` as a contract is spec altitude; writing the `SELECT` that fills it
-is Execution (Pass 8 · The Loop). Drift below this line means you have started
-building, not specifying.
+Spec altitude throughout: the system's **shape and contract**, not its query or
+handler code. Naming an output such as `revenue_by_category(category, day,
+revenue, order_count)` as a contract is spec altitude; writing the transform that
+fills it is Execution (Pass 8 · The Loop). Drift below this line means you have
+started building, not specifying.
 
 ## The gate
 
 Run `scripts/check-coherent-spec.sh --specs-dir specs/`. It mechanically checks
-the structural items (spec present, one-way invariant stated, gold seam named,
+the structural items (spec present, one-way invariant stated, output seam named,
 `e2e-eval.sh` present + executable + valid bash + drives the real flow, no Fork-B
 drift). The judgment items (⊙) — one narrative not two, boundary wraps the whole,
-every serving read maps to an emitted gold column, every Pass-4 risk carried
+every serving read maps to an emitted output field, every Pass-4 risk carried
 forward, done = eval green — you confirm by eye.

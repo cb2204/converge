@@ -4,7 +4,7 @@ description: The single execution loop for Converge Pass 8 (The Loop). Takes ONE
 metadata:
   version: "0.2.0"
 license: MIT
-compatibility: "Converge chain Pass 8; consumes tasks/T-*.md + docs/adrs/*.md + .claude/ harness; postgres to duckdb to dbt to MCP repo"
+compatibility: "Converge chain Pass 8; consumes tasks/T-*.md + docs/adrs/*.md + .claude/ harness; any stack"
 ---
 
 # task-loop — Pass 8 · The Loop (the execution loop)
@@ -31,14 +31,14 @@ There is **no separate Manager / fleet-orchestrator skill**, and this skill refe
 | **OUT** | A Pull Request that closes the issue (branch + diff + green eval in the body), OR an explicit blocked-task report | PR on a `task/<id>-<slug>` branch |
 | **GATE** | The task's own eval is **GREEN** — the exact `eval_N()` / Exit Check command from the spec exits 0, run not read | `bash`-run eval from `tasks/T-<id>.md` |
 
-On this repo the eval assumes the real pipeline: `make seed → make land → dbt build --select <model> → query gold` over `raw.*` in `src/warehouse/warehouse.duckdb`, plus the FastAPI/MCP layer over gold. The task-spec already ships this eval as runnable bash; you run it, you do not re-invent it.
+The eval is whatever the task-spec ships — it is written for *your* stack, not assumed to be any particular one. It typically drives the project end-to-end (prep/ingest → transform → assert the output/contract layer → optionally exercise the serving layer) and asserts the far end. The task-spec already ships this eval as runnable bash; you run it, you do not re-invent it. (For example, in a dbt/warehouse project the eval might run the project's build step, then the transform step, then query the published tables — but any stack's eval works the same way: run it, do not read it.)
 
 ## Flags
 
 | Flag | Values | Default | Meaning |
 |------|--------|---------|---------|
 | `--issue N` | issue id / task id | **required** | The single issue this loop owns. No default — absence is an error. You do not re-pick it. |
-| `--agent` | `claude` \| `codex` \| `kimi` | `claude` | The coding engine that ACTS. `kimi` for mechanical tightly-specced models (bronze/silver over `raw.*`); `claude` for judgment work (gold marts, FastAPI/MCP contracts); `codex` when passed. |
+| `--agent` | `claude` \| `codex` \| `kimi` | `claude` | The coding engine that ACTS. `kimi` for mechanical, tightly-specced work; `claude` for judgment work (contract/interface design); `codex` when passed. |
 
 The engine is a flag, never baked into the skill name. Whoever passes `--issue N` may also pin `--agent`; the loop does not change the issue.
 
@@ -55,7 +55,7 @@ Stop conditions (do not code, emit a blocked report instead):
 
 ### Step 2 — ACT (cut a branch, write the code)
 
-Cut a fresh branch `task/<id>-<slug>` off the default branch — never commit to `main`. Hand the spec + ADRs + harness to `--agent` and write code for THIS task only, staying inside `touches_paths` and honoring `do-not-touch`. Concretely on this repo: a dbt bronze/silver model over `raw.*`, a gold mart, or a FastAPI/MCP endpoint over gold — shaped by `src/db/01_schema.sql` (customers, products, orders, payments) and the landing contract `make land` produces.
+Cut a fresh branch `task/<id>-<slug>` off the default branch — never commit to `main`. Hand the spec + ADRs + harness to `--agent` and write code for THIS task only, staying inside `touches_paths` and honoring `do-not-touch`. The shape of the code is whatever the task calls for — a transform, an output/contract table, a serving-layer endpoint (API, MCP tool, etc.) — constrained by the spec's `touches_paths` and the contracts the harness and cited ADRs pin down. (For example, in a dbt/warehouse project this might be a transform model over your source tables, a published mart, or an endpoint over those published tables — but the loop is the same for any stack.)
 
 ### Step 3 — EVAL (run the task's own eval)
 
@@ -65,7 +65,7 @@ Run the exact eval the spec carries, in a clean subshell, via the bundled runner
 bash .claude/skills/task-loop/scripts/run-issue-eval.sh --issue <id>
 ```
 
-It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each under `set -euo pipefail`, and reports **GREEN** (Exit Check exits 0) or **RED** (with the failing eval's output). A dbt model is green when `dbt build --select <model>` and its schema tests pass; a gold mart when the DuckDB query returns the contracted shape; a FastAPI endpoint on a contracted 200; an MCP tool when it returns the expected gold-backed payload. Run it — do not eyeball the diff.
+It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each under `set -euo pipefail`, and reports **GREEN** (Exit Check exits 0) or **RED** (with the failing eval's output). What "green" means is whatever the spec's eval asserts for your stack — a transform passing its tests, an output table returning the contracted shape, a serving endpoint returning the contracted response, etc. (For example, in a dbt/warehouse project: the transform step and its schema tests pass, a published table query returns the contracted shape, an API endpoint returns a contracted 200.) Run it — do not eyeball the diff.
 
 ### Step 4 — SETTLE (RED → revise locally · GREEN → open the PR)
 
@@ -85,13 +85,13 @@ When these hold, the issue has converged: green eval, branch, PR.
 
 ## Examples
 
-**Example 1 — "run issue T-20260625-bronze-views"**
-Read the spec (bronze views over `raw.*`, `touches_paths: transform/models/bronze`), read cited ADRs, confirm the dbt harness. Branch `task/bronze-views`. `--agent kimi` writes the four bronze view models. Run `run-issue-eval.sh --issue T-20260625-bronze-views` → RED (row parity off by defect rows). Feed the output back, fix the pass-through of tagged defect rows, re-run → GREEN. Open a PR closing the issue with the eval output in the body. → **Result:** one PR, green eval, no other task touched.
+**Example 1 — "run issue T-20260625-staging-views" (illustrated with a dbt/warehouse stack)**
+Read the spec (staging views over your source tables, `touches_paths: transform/models/staging`), read cited ADRs, confirm the harness. Branch `task/staging-views`. `--agent kimi` writes the staging view models. Run `run-issue-eval.sh --issue T-20260625-staging-views` → RED (row parity off by tagged rows). Feed the output back, fix the pass-through of tagged rows, re-run → GREEN. Open a PR closing the issue with the eval output in the body. → **Result:** one PR, green eval, no other task touched. (The stack here is just illustrative — the same READ → ACT → EVAL → SETTLE loop runs for any stack the spec targets.)
 
 **Example 2 — "execute this task" with no issue given**
 No `--issue N`. → **Result:** stop and report that the loop never picks a task; a human or CI must pass `--issue N` (choosing which issue is the future CI/CD Manager's job).
 
-**Example 3 — "build task T-...-gold-marts" but its ADR is missing**
+**Example 3 — "build task T-...-published-tables" but its ADR is missing**
 Spec cites an ADR that does not exist under `docs/adrs/`. → **Result:** emit a blocked-task report naming the missing ADR (a Pass 2 gap) — do not guess the decision.
 
 ## Troubleshooting

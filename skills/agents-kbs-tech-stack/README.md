@@ -148,15 +148,15 @@ calls. Drop the bundle in offline, run offline.
 
 ---
 
-## When to reach for a sibling instead
+## When to reach for a different layer instead
 
 |You want…|Use|
 |---|---|
 |Portable tech specialists (architect + developer) per stack|**`agents-kbs-tech-stack`** (this skill)|
-|Project-specific specialists coupled to *this* repo's domain|`agents-kbs-fleet`|
+|Project-specific specialists coupled to *this* repo's domain|scaffold domain specialists directly (not from the tech menu)|
 |One reusable Skill + Agent + MCP capability (a Triad)|`caw-scaffold`|
 
-Most real projects end up with all three layers. Use them together.
+Most real projects end up with all three layers.
 
 ---
 

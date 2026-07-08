@@ -22,9 +22,9 @@ Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan defa
 
 | | Artifact |
 |------|----------|
-| **IN** | The swimlane plans (`sketch/*.plan`, e.g. `sketch/duckdb-dbt-med-arch.plan`, `sketch/fast-api-mcp.plan`) + the tech-spec (`docs/tech-spec-*.pdf`) + the ADRs (`docs/adrs/*.md`) as ground truth. |
+| **IN** | The swimlane plans (`sketch/*.plan`, one per lane of your system) + the tech-spec (`docs/tech-spec-*.pdf`) + the ADRs (`docs/adrs/*.md`) as ground truth. |
 | **OUT** | The **same plans, sharpened in place** (`sketch/*.plan` — the diff is the record) + a short open-questions list + **THE FORK named at the top of every plan**. No new files. |
-| **GATE** | Every logged objection is FIXED in a plan or ACCEPTED with a named owner, **AND** the fork is declared at the top of every plan (Fork A whole-system, plan-driven / Fork B per-unit, task-driven) with a reason. Falsifiable — see Step 5. |
+| **GATE** | A *different* model attacked the plans default-to-refuted; every logged objection is FIXED in a plan or ACCEPTED with a named owner; every cross-lane interface (the contract one lane hands to the next) survived scrutiny or was corrected; **AND** the fork is declared at the top of every plan (Fork A whole-system, plan-driven / Fork B per-unit, task-driven) with a reason. Falsifiable — see Step 5. |
 
 ## Flags
 
@@ -36,7 +36,7 @@ No `--tracker` flag: this pass registers nothing and produces no issues. It shar
 
 ## Instructions
 
-Run the four core steps in order, then the gate. This is Pattern 5 (domain-intelligence): the pass carries the knowledge of *what bites this stack at build time* — the `raw.*` contract from `make land`, DuckDB single-writer, the medallion→serving gold-table interface — and applies it as the lens the adversary attacks through.
+Run the four core steps in order, then the gate. This is Pattern 5 (domain-intelligence): the pass carries the knowledge of *what bites your stack at build time* — the real contracts, constraints, and cross-lane interfaces of the system being built — and applies it as the lens the adversary attacks through. (Example — in a dbt/warehouse project the bites might be the raw/source table contract produced by the ingest step, a single-writer data store, and the published-table interface the serving lane reads; in another stack they will be different seams. Name your own.)
 
 ### Step 1 — ATTACK (refute as a skeptic who didn't write it)
 
@@ -44,10 +44,10 @@ Hand the plans to the `--adversary` engine, framed as a skeptical principal engi
 
 - **One plan at a time.** Refutation is per-plan and ranked by build-time damage so the cheapest-to-kill wrong idea dies first, at the plan, before any model/mart/endpoint exists.
 - **Default to refuted.** Merely plausible is not enough; the adversary must say why a step might be wrong.
-- Hunt the build-time bites, using the stack's real seams:
-  - **Brownfield assumptions** — where a plan assumes something unproven about the `raw.*` contract produced by `make land`, the stamp/audit columns, or DuckDB's single-writer constraint.
-  - **Build order** — gold before silver, an endpoint before the mart it reads, a dbt model before its source lands.
-  - **Cross-lane interface** — an FastAPI/MCP endpoint that needs a gold column the medallion lane never emits.
+- Hunt the build-time bites, using your stack's real seams:
+  - **Unverified assumptions about existing state** — where a plan assumes something unproven about the shape of a source/input contract, required audit/lineage columns, or a data-store constraint (e.g. single-writer, transaction limits).
+  - **Build order** — a downstream artifact before the upstream it depends on: an output layer before the intermediate it derives from, an endpoint before the table it reads, a transform before its source is available.
+  - **Cross-lane interface** — a consumer in one lane needs a field or contract that the producing lane never emits. (For example, in a warehouse-plus-serving project: a serving endpoint reads a column the transform lane never publishes.)
 - Demand the **5–7 highest-leverage objections**, ranked by build-time damage, each citing a specific plan section.
 
 ### Step 2 — GROUND (check drift vs. tech-spec + ADRs)
@@ -56,7 +56,7 @@ The plans answer to the spec and the ADRs, not to the author model's memory of t
 
 - Claims a requirement it does not actually cover.
 - Contradicts the spec's scope (builds something marked out-of-scope, or a metric never asked for).
-- Violates a recorded ADR decision (e.g. an ADR pinning DuckDB single-writer, or the medallion layering).
+- Violates a recorded ADR decision (e.g. an ADR pinning a data-store constraint, or the chosen layering/architecture).
 - Disagrees on a number (freshness target, latency budget, success metric).
 
 List each drift as `plan section ↔ spec/ADR section ↔ the conflict`, citing **both** sides. No hand-waving — this catches silent drift where a plan *sounds* right but quietly contradicts the agreed source of truth. If `docs/adrs/` is empty, ground against the tech-spec alone and log "ADRs absent" as an open question — do not invent ADR content.
@@ -68,7 +68,7 @@ Back with the author model (Claude), take every objection from Steps 1–2 and d
 - **FIX** — revise the relevant plan **in place** to resolve it.
 - **ACCEPT** — record it as a known risk with a **named owner** and the reason to proceed.
 
-The cross-lane interface (medallion→serving gold-table contract) must survive scrutiny or be corrected. Finish with a short **open-questions list**: each remaining item, its owner, and whether it blocks the build. Nothing may be silently dropped.
+Every cross-lane interface (the contract each lane hands to the next) must survive scrutiny or be corrected. Finish with a short **open-questions list**: each remaining item, its owner, and whether it blocks the build. Nothing may be silently dropped.
 
 ### Step 4 — DECIDE THE FORK (name the trust boundary)
 
@@ -92,7 +92,7 @@ It fails (exit 1) unless all hold:
 - [ ] A *different* engine (`--adversary`, default codex) attacked the plans — not the author self-reviewing.
 - [ ] Plans were grilled against the tech-spec AND the ADRs for drift, each conflict citing both sides.
 - [ ] Every logged objection is FIXED in a plan or ACCEPTED with a named owner — grep finds one resolution per objection.
-- [ ] The cross-lane interface (medallion→serving gold-table contract) survived scrutiny or was corrected.
+- [ ] Every cross-lane interface (the contract each lane hands to the next) survived scrutiny or was corrected.
 - [ ] **The fork is declared at the top of every plan** — Fork A or Fork B — with a reason.
 - [ ] An open-questions list exists; blockers are flagged.
 
@@ -101,13 +101,13 @@ When the gate is green, hand off per the fork (see Examples).
 ## Examples
 
 **Example 1 — "attack the plans"**
-User says *"have Codex refute the swimlane plans."* → Run Step 1 with `--adversary codex` against `sketch/duckdb-dbt-med-arch.plan` then `sketch/fast-api-mcp.plan`, one at a time, default-to-refuted. Codex returns 6 ranked objections, top one: *"the serving lane reads `gold.customer_revenue` but the medallion plan only emits `gold.orders_daily` — interface gap."* → Result: objection logged with a plan-section citation, ready for Step 3.
+User says *"have Codex refute the swimlane plans."* → Run Step 1 with `--adversary codex` against each `sketch/*.plan`, one at a time, default-to-refuted. The adversary returns 6 ranked objections, top one being a cross-lane interface gap — *a consumer lane reads a field the producing lane never emits* (for example, in a warehouse-plus-serving project: a serving endpoint reads a published column the transform lane never emits). → Result: objection logged with a plan-section citation, ready for Step 3.
 
 **Example 2 — "consensus pass" end-to-end**
-User says *"run the consensus pass and decide the fork."* → Steps 1–2 surface 7 objections + 2 drifts (a freshness number that contradicts the tech-spec). Step 3 FIXes 6 in place, ACCEPTs 1 to owner `data-eng` (DuckDB single-writer under concurrent load), reconciles the freshness number to the spec. Step 4: every layer and endpoint has a cheap eval → **Fork B (task-driven)** written to the top of both plans with the reason. Step 5 gate is green. → Hand off to `task-spec --tracker repo` (Pass 5B).
+User says *"run the consensus pass and decide the fork."* → Steps 1–2 surface 7 objections + 2 drifts (e.g. a freshness or latency number that contradicts the tech-spec). Step 3 FIXes 6 in place, ACCEPTs 1 to a named owner (a data-store constraint under concurrent load), reconciles the drifting number to the spec. Step 4: every lane and endpoint has a cheap, runnable eval → **Fork B (task-driven)** written to the top of every plan with the reason. Step 5 gate is green. → Hand off to `task-spec --tracker repo` (Pass 5B).
 
 **Example 3 — decide Fork A**
-Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 records **Fork A (plan-driven)** at the top of both plans with the reason. → Hand off to `plans-to-coherent-spec` (Pass 5A), which fuses the sharpened plans into one coherent, coupled spec with a single end-to-end eval.
+Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 records **Fork A (plan-driven)** at the top of every plan with the reason. → Hand off to `plans-to-coherent-spec` (Pass 5A), which fuses the sharpened plans into one coherent, coupled spec with a single end-to-end eval.
 
 ## Troubleshooting
 
@@ -120,6 +120,6 @@ Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 rec
 
 ## References
 
-- `references/attack-playbook.md` — the refutation prompt for the adversary, the "default to refuted" framing, and the stack-specific bite list (raw.* contract, DuckDB single-writer, build order, cross-lane gold-table interface).
+- `references/attack-playbook.md` — the refutation prompt for the adversary, the "default to refuted" framing, and how to derive your stack's build-time bite list (source/input contracts, data-store constraints, build order, cross-lane interfaces).
 - `references/the-fork.md` — Fork A vs. Fork B decision rubric, the trust-boundary framing, and how each fork feeds Pass 5A / 5B.
 - `scripts/check-consensus-gate.sh` — the falsifiable gate (see Step 5).

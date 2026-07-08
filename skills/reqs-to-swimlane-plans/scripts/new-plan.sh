@@ -9,9 +9,9 @@
 # pass enforces; --check is its deterministic guard.
 #
 # Usage:
-#   new-plan.sh "duckdb dbt med arch"              Create sketch/<slug>.plan (a lane)
+#   new-plan.sh "transform lane"                   Create sketch/<slug>.plan (a lane)
 #   new-plan.sh --component "A · Transform" "..."  Set the identity line's component
-#   new-plan.sh --consumes gold "fast api mcp"     Mark a DOWNSTREAM lane + its seam
+#   new-plan.sh --consumes <seam> "serve lane"     Mark a DOWNSTREAM lane + its seam
 #   new-plan.sh --dir path/to/sketch "..."         Override the sketch directory
 #   new-plan.sh --check                            Lint sketch/*.plan for altitude-drift
 #   new-plan.sh --help
@@ -119,7 +119,7 @@ while [ $# -gt 0 ]; do
     --check)     DO_CHECK=true; shift ;;
     --dir)       SKETCH_DIR="${2:?--dir needs a path}"; shift 2 ;;
     --component) COMPONENT="${2:?--component needs a label, e.g. \"A · Transform\"}"; shift 2 ;;
-    --consumes)  CONSUMES="${2:?--consumes needs an upstream seam, e.g. gold}"; shift 2 ;;
+    --consumes)  CONSUMES="${2:?--consumes needs an upstream seam, e.g. the output/contract layer}"; shift 2 ;;
     --)          shift; TITLE="${1:-}"; break ;;
     -*)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
     *)           TITLE="$1"; shift ;;
@@ -132,7 +132,7 @@ if [ "$DO_CHECK" = true ]; then
 fi
 
 if [ -z "$TITLE" ]; then
-  echo "Error: lane title required (e.g. \"duckdb dbt med arch\")." >&2
+  echo "Error: lane title required (e.g. \"transform lane\")." >&2
   usage >&2
   exit 1
 fi
@@ -156,18 +156,19 @@ CONSUMED_BLOCK=""
 if [ -n "$CONSUMES" ]; then
   CONSUMED_BLOCK="## The interface this lane consumes (the seam — hard boundary)
 
-This lane reads **only \`$CONSUMES.*\`**, and never reaches below it. Name the exact
-upstream tables and columns each piece consumes, so the seam is explicit. If an
-answer needs data not in \`$CONSUMES\`, the fix is a **new mart upstream**, never a
-deeper read here.
+This lane reads **only the \`$CONSUMES\` contract**, and never reaches below it. Name
+the exact upstream fields each piece consumes, so the seam is explicit. If an answer
+needs something not in \`$CONSUMES\`, the fix is a **new addition to the upstream
+contract**, never a deeper read here.
 
-| upstream table | columns consumed | read by (this lane's piece) |
+| upstream unit | fields consumed | read by (this lane's piece) |
 |---|---|---|
-| \`$CONSUMES.<table>\` | <col, col, …> | <endpoint / tool / model> |
+| \`$CONSUMES\` <unit> | <field, field, …> | <endpoint / tool / model> |
 
-<!-- One row per table this lane reads. Never list a column the upstream lane has
-     not committed to producing (its schema/contract). A missing column is a new
-     upstream mart request, not a deeper read. -->
+<!-- One row per upstream unit this lane reads (e.g. a published table, an API
+     resource, an event topic). Never list a field the upstream lane has not
+     committed to producing (its schema/contract). A missing field is a new
+     upstream-contract request, not a deeper read. -->
 
 ---
 
@@ -196,10 +197,11 @@ model SQL, no handler code, no atomic tasks.
 ## Features / components
 
 <!-- The pieces INSIDE this lane and what each is responsible for — component
-     level, never the SQL or the handler body. e.g. bronze/silver/gold layers, or
-     query-core / FastAPI transport / MCP transport. State each piece's
-     RESPONSIBILITY in prose (e.g. "dedup duplicate_order by business signature,
-     quarantine the rest"), not its implementation. -->
+     level, never the SQL or the handler body. For example: staged transform
+     layers in a warehouse project, or query-core / API transport / MCP transport
+     in a serving lane. State each piece's RESPONSIBILITY in prose (e.g. "dedup
+     duplicate records by business signature, quarantine the rest"), not its
+     implementation. -->
 
 - **<piece>** — <what it does / what it is responsible for>.
 - **<piece>** — <what it does / what it is responsible for>.
@@ -221,8 +223,9 @@ ${CONSUMED_BLOCK}## Dependencies
 
 ## Build order
 
-<!-- A sane sequence. Call out the GATING input explicitly (in this repo the
-     frozen E4 question set gates gold and the final serving surface). -->
+<!-- A sane sequence. Call out the GATING input explicitly — the frozen decision or
+     upstream contract that nothing downstream can finish until it is settled (for
+     example, a frozen requirement set gating the output layer and serving surface). -->
 
 1. <first buildable piece — why it unblocks the rest>.
 2. <next>.

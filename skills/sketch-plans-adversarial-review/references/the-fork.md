@@ -29,35 +29,37 @@ Ask, per system:
 
 | Question | Points to A | Points to B |
 |---|---|---|
-| Does any single layer/endpoint verify **in isolation**? | No — only the whole thing proves out | Yes — each unit has a cheap, runnable eval |
+| Does any single unit verify **in isolation**? | No — only the whole thing proves out | Yes — each unit has a cheap, runnable eval |
 | Is the system **small and tightly coupled**? | Yes — the parts don't stand alone | No — clean seams between units |
 | Can a human hold **one** end-to-end gate cheaply? | Yes | The gate is naturally per-unit |
 | Is the cheapest wrong idea killed by a **whole-run** or a **per-unit** check? | Whole-run | Per-unit |
 
 **Decide on the evals, not the line count.** The deciding test is: *does every
-layer and endpoint have a cheap, runnable eval?* If yes, task-by-task
-convergence beats one big autonomous run → **Fork B**. If nothing verifies in
-isolation and the system only makes sense as a whole → **Fork A**.
+unit — each stage, module, or endpoint — have a cheap, runnable eval?* If yes,
+task-by-task convergence beats one big autonomous run → **Fork B**. If nothing
+verifies in isolation and the system only makes sense as a whole → **Fork A**.
 
-## How this repo forks (worked example)
+## Worked example — a data/warehouse project forks
 
-This stack — Postgres → DuckDB → dbt medallion → FastAPI + MCP — lands on
-**Fork B**, and both `sketch/*.plan` say so at the top, because:
+*This is one concrete example, not the required shape.* Consider a project whose
+pipeline runs an ingest step into a data store, a multi-stage transform (for
+example, a dbt medallion: bronze → silver → gold), then a serving layer (an API,
+an MCP tool, or both). Such a system lands on **Fork B**, and both `sketch/*.plan`
+say so at the top, because:
 
-- The medallion is a **deterministic, layered DAG**: bronze → silver → gold.
-  Each dbt model has a known input, a known output, and dbt schema/data tests
-  that pass or fail **in isolation**. One model + its tests = one atomic,
-  self-checking task.
+- The transform is a **deterministic, layered DAG**. Each stage has a known
+  input, a known output, and stage-scoped tests that pass or fail **in
+  isolation**. One stage + its tests = one atomic, self-checking task.
 - The serving layer is a **thin, stateless surface over a frozen contract**: one
-  query-core function per mart, one endpoint and one MCP tool per question — each
-  independently testable (contract test, endpoint test, tool-vs-endpoint parity,
-  read-only/gold-only isolation check).
+  query-core function per published table, one endpoint and one tool per
+  question — each independently testable (contract test, endpoint test,
+  tool-vs-endpoint parity, read-only isolation check).
 - Because every unit has a cheap eval, a whole-spec autonomous run would only
-  *blur* the layer boundaries, hide which step regressed, and make the per-layer
-  evals unenforceable. Task-driven keeps each defect-handling rule, each mart,
-  and each endpoint behind its own green check.
+  *blur* the stage boundaries, hide which step regressed, and make the per-stage
+  evals unenforceable. Task-driven keeps each defect-handling rule, each output
+  table, and each endpoint behind its own green check.
 
-A system that instead had *no* per-unit eval — where the medallion and serving
+A system that instead had *no* per-unit eval — where the transform and serving
 only prove out end-to-end and are too coupled to split — would be **Fork A**:
 one coherent spec, one end-to-end eval, one human gate.
 
