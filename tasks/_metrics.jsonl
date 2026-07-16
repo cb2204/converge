@@ -1,0 +1,6 @@
+{"schema_version":1,"ts":"2026-07-16T23:11:06Z","task":"T-20260716-build-gold-daily-revenue","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
+{"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-build-category-share","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
+{"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-build-daily-totals","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
+{"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-build-revenue-report","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
+{"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-add-quality-check","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
+{"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-impossible-control-sum","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}

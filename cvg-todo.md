@@ -72,15 +72,18 @@ commit (`cvg: <milestone.step> <what>`), and stop for the user's go.
   - **Prove:** fresh clone → `bash seed.sh && bash evals/smoke.sh` exits 0 in
     < 60 s; `evals/red.sh` exits 1.
 
-- [ ] **0.2 · Fixture backlog** — 6 Task-Specs with a diamond dependency
-  - Build: in the fixture, author T1 (root) · T2, T3 (depend on T1) · T4
-    (depends on T2+T3) · T5 (independent) · T6 (designed to exhaust
-    `budget_iterations` — an unsatisfiable eval). Real runnable evals against
-    the seeded DB. Wire `depends_on`; give T2/T3 disjoint `touches_paths` and
-    T4 an overlap with T3 (to later test serialization).
-  - **Prove:** `safe-to-delegate.sh --stamp` → 6/6 DELEGATE;
-    `lint-backlog.sh` clean (no cycles, overlap detected and listed);
-    `validate-task-spec.sh` green on all.
+- [x] **0.2 · Fixture backlog** — 6 Task-Specs with a diamond dependency ✅ 2026-07-16
+  - Build: in `tasks/` (git-root-anchored by the tooling — one repo, one
+    queue), author T1 (root) · T2, T3 (depend on T1) · T4 (depends on T2+T3)
+    · T5 (independent) · T6 (designed to exhaust `budget_iterations` — an
+    unsatisfiable eval). Real runnable evals against the seeded DB. Wire
+    `depends_on`; give T2/T3 disjoint blast radii and T4 an overlap with T3.
+  - **Prove (amended to match linter reality):** `safe-to-delegate.sh --stamp`
+    → 6/6 DELEGATE + HMAC-sealed; `validate-task-spec.sh` green on all 6;
+    `lint-backlog.sh` reports **exactly one** issue — the deliberate T3↔T4
+    overlap, listed with both ids (exit 1 is expected: overlaps are issues by
+    design, and that listing is the Manager's serialization input) — and no
+    cycles, duplicates, or dangling deps.
 
 ---
 
@@ -185,6 +188,10 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
     unattended with T6 force-failed → parked + reported; T4 provably waited
     for the T3 overlap; `check-fleet-green.sh` exits 0 only when every task is
     closed by a green eval.
+  - *Note from 0.2:* the T3↔T4 overlap is also dependency-ordered, so deps
+    alone would serialize it — to prove the overlap rule specifically, this
+    step must add one **no-dependency** overlap pair to the fixture backlog
+    (two ready tasks sharing a path) and show the Manager runs them serially.
 
 - [ ] **4.3 · Routing v1** — `cvg route [--explain]`
   - Build: pin (`execution_backend`) → rules (effort × severity → engine
@@ -259,3 +266,4 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
 - 2026-07-16 · **housekeeping** · fixture renamed `examples/toy-revenue/` → `tests/e2e-test-engine/` (proof re-run green from new path); `cvg-kickoff-prompt.md` deleted — its bootstrap content folded into this file ("Fresh session? Start here"). One contract file from here on.
+- 2026-07-16 · **0.2** · 6 specs authored via `generate-task-spec.sh` + filled; `validate-task-spec.sh` 6/6 OK; `safe-to-delegate.sh --stamp` 6/6 DELEGATE (Tier-1 HMAC, key 1f197c76); `lint-backlog.sh` → exactly 1 issue: overlap on `build_daily_totals.sh` between T-…-build-daily-totals and T-…-build-revenue-report, exit 1 (deliberate). **Findings paid for:** (1) overlap detection is touches_paths-only — a file created by task A and modified by task B must be redundantly declared in B's *and A's* touches+creates to be machine-visible (convention adopted); (2) editing sealed frontmatter invalidates the envelope → re-stamp is the only path (proved on T3, new sig minted); (3) the tooling anchors `tasks/` at git root — fixture backlog lives in the repo's single queue, which is what the Manager wants anyway. Dogfood note: the step's deliverable IS task-specs, so the ceremony (generate→validate→gate) was intrinsic.
