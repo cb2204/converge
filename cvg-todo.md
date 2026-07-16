@@ -63,6 +63,11 @@ commit (`cvg: <milestone.step> <what>`), and stop for the user's go.
    (`uc-postgres-duckdb-dbt-analytics`) validates the *method*.
 8. **Gold-sanity always. Evals must discriminate** — an eval that passes on the
    unbuilt baseline is a bug in the step, not a pass.
+9. **Skill changes ship through skill-creator discipline.** Every edit to a
+   `skills/*/SKILL.md`: `quick_validate.py` green before commit, version bump
+   in frontmatter, gate-script changes proven against BOTH a passing and a
+   failing synthetic spec (discriminating, per rule 8) — including at least
+   one from a NON-data domain (the universality check).
 
 ---
 
@@ -96,9 +101,12 @@ complete vertical slice. The five beats, in order, never bundled:
 > then move); later passes get their detail when they become current.
 
 - [ ] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req`
-  - [ ] R1.U understand — audit the skill vs DGE's `dge-design` (gap register,
-    one-question-at-a-time grilling, prior-art survey, rendered brief at the
-    gate); hardening list → user approval
+  - [x] R1.U understand + harden ✅ 2026-07-16 — audited skill vs DGE's
+    `dge-design`; applied H1–H7 to SKILL.md (v0.3.0) + H1/H4/H6 to
+    check-tech-spec.sh (v0.3.0). Gate proven discriminating on two synthetic
+    specs (passing DevOps spec exit 0 / same spec with one open blocker gap
+    exit 1) — H6 universality confirmed (a non-data domain passes the
+    de-biased "data named" check). `quick_validate.py` green.
   - [ ] R1.R run — the pass on `docs/brd-analytical-backbone.pdf` in the UC
     repo; user answers the interrogation, judges the tech-spec
   - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**
@@ -331,5 +339,6 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
 - 2026-07-16 · **housekeeping** · fixture renamed `examples/toy-revenue/` → `tests/e2e-test-engine/` (proof re-run green from new path); `cvg-kickoff-prompt.md` deleted — its bootstrap content folded into this file ("Fresh session? Start here"). One contract file from here on.
+- 2026-07-16 · **R1.U** · Pass 1 skill `brd-docs-to-tech-req` hardened v0.2.0→v0.3.0. SKILL.md gained: Step 1.5 prior-art (problem-level only), one-question-at-a-time interrogation protocol with typed gap register (blocker gaps fail the gate), Confirmed-decisions recap before Crystallize, prioritized requirements (must/should/could/wont), TL;DR discipline. check-tech-spec.sh gained: Check 7 (unresolved blocker gaps → FAIL, awk-paired severity/resolution), Check 8 (priority differentiation warn), and de-biased "data named" (dropped hardcoded order/payment/customer nouns → domain-universal). Proof: passing DevOps fixture exit 0 (10/10 checks), same fixture w/ one open blocker gap exit 1 (fails only Check 7). Rule 9 satisfied incl. non-data domain. Rule 0/8/9 all honored.
 - 2026-07-16 · **restructure** · Operating model agreed: five beats per pass (UNDERSTAND → RUN → CANONIZE → IMPLEMENT → PROVE), Track R (method, pass-by-pass vertical slices on the UC repo) now CURRENT; Track M (machine) parked at Milestone 0-done, resumes ~R8. CLI subcommands are built per pass, thin, against the manual golden run.
 - 2026-07-16 · **0.2** · 6 specs authored via `generate-task-spec.sh` + filled; `validate-task-spec.sh` 6/6 OK; `safe-to-delegate.sh --stamp` 6/6 DELEGATE (Tier-1 HMAC, key 1f197c76); `lint-backlog.sh` → exactly 1 issue: overlap on `build_daily_totals.sh` between T-…-build-daily-totals and T-…-build-revenue-report, exit 1 (deliberate). **Findings paid for:** (1) overlap detection is touches_paths-only — a file created by task A and modified by task B must be redundantly declared in B's *and A's* touches+creates to be machine-visible (convention adopted); (2) editing sealed frontmatter invalidates the envelope → re-stamp is the only path (proved on T3, new sig minted); (3) the tooling anchors `tasks/` at git root — fixture backlog lives in the repo's single queue, which is what the Manager wants anyway. Dogfood note: the step's deliverable IS task-specs, so the ceremony (generate→validate→gate) was intrinsic.

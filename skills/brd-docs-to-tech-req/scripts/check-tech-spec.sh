@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-CHECK_TECH_SPEC_VERSION="0.2.0"
+CHECK_TECH_SPEC_VERSION="0.3.0"
 
 # ---------------------------------------------------------------------------
 # Error / warning helpers (arrays + explicit counters so `set -u` stays happy
@@ -171,11 +171,14 @@ fi
 
 # ---------------------------------------------------------------------------
 # Check 5 — Data named (the source records the engine consumes)
+# Domain-neutral by design: any discipline's spec passes with a Data section
+# naming ITS entities (orders, tickets, configs, components, prompts, ...).
+# Judging whether the right entities are named is the human gate's job.
 # ---------------------------------------------------------------------------
-if has_any '^#+.*data' '\bdata named\b' '\bsource\b.*\brecord' 'raw\.' '\border' '\bpayment' '\bcustomer' '\bproduct'; then
-  ok "Source data named (the records the engine acts on)"
+if has_any '^#+.*data' '\bdata named\b' '\bsource\b.*\b(record|entit|event|system)' 'inputs? the (engine|system) (consumes|acts on|reads)'; then
+  ok "Source data named (a Data section / source entities at the problem level)"
 else
-  err "The data the engine acts on is not named — name the source records at the problem level (order, payment, customer, product ...)"
+  err "The data the engine acts on is not named — add a Data section naming the source records/entities at the problem level (whatever this domain's inputs are)"
 fi
 
 # ---------------------------------------------------------------------------
@@ -192,6 +195,39 @@ elif [[ $HAS_ASSUMP -eq 1 && $HAS_OWNER -eq 0 ]]; then
   err "Open assumptions listed but no owner named — every assumption needs a named owner (a client stakeholder)"
 else
   err "Missing an Open assumptions section (each with a named owner)"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 7 — No unresolved BLOCKER gaps (the gap register has teeth)
+# Convention (SKILL.md Step 2): a gap record carries `severity:` and
+# `resolution:`; unresolved is written `resolution: (open)`. A blocker left
+# open FAILS the gate — the spec cannot descend carrying a fatal unknown.
+# awk keeps severity/resolution paired per record (records start at "- id:").
+# ---------------------------------------------------------------------------
+NBLOCKER_OPEN=$(awk '
+  { line = tolower($0) }
+  line ~ /-[[:space:]]*id:/                                   { inblk = 0 }
+  line ~ /severity:[[:space:]]*blocker/                       { inblk = 1 }
+  inblk && line ~ /resolution:[[:space:]]*(\(open\)|\(none\)|null|tbd)/ { n++; inblk = 0 }
+  END { print n + 0 }
+' "$SPEC")
+
+if [[ "$NBLOCKER_OPEN" -gt 0 ]]; then
+  err "$NBLOCKER_OPEN unresolved BLOCKER gap(s) — resolve each (chase the named owner, fill 'resolution:') before the spec can descend to Pass 2"
+else
+  ok "No unresolved blocker gaps (register clean or all blockers resolved)"
+fi
+
+# ---------------------------------------------------------------------------
+# Check 8 — Priorities differentiated (warn-only)
+# A spec where everything is 'must' has not made a scoping decision yet.
+# ---------------------------------------------------------------------------
+NMUST=$(count_matches '\bmust\b')
+NTIER=$(count_matches '\b(should|could|wont)\b')
+if [[ "$NMUST" -gt 0 && "$NTIER" -eq 0 ]]; then
+  warn "every requirement reads as 'must' with no should/could/wont — differentiate priorities (must = the outcome fails without it)"
+else
+  ok "Requirement priorities differentiated ($NMUST must / $NTIER should-could-wont line(s))"
 fi
 
 # ---------------------------------------------------------------------------

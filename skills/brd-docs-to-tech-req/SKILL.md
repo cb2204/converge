@@ -1,8 +1,8 @@
 ---
 name: brd-docs-to-tech-req
-description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", "what are we building", or "what are we actually building here". Runs the Understand / Interrogate / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable, success metrics traced to the BRD's KPIs. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3) or when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs). Engine/format bound via flags, never baked into the name.
+description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", "what are we building", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (one question at a time, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3) or when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs). Engine/format bound via flags, never baked into the name.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # brd-docs-to-tech-req — Converge Pass 1 (Intent)
@@ -32,26 +32,77 @@ Read the BRD (`docs/brd-*.pdf`, e.g. `docs/brd-analytical-backbone.pdf`) as the 
 - Name the **data the engine will act on** at the problem level — the shape of the source, not its schema (for example, in an analytics engagement: order, payment, customer, and product records arriving as raw source tables — described as business entities, not as a physical schema).
 - Close by writing, in **one paragraph**, what "solved" looks like from the client's seat. This paragraph is half the gate — write it before you write anything else.
 
-### Step 2 — Interrogate (turn a vague brief into a buildable one)
+### Step 1.5 — Prior art (problem level only)
 
-Surface the **2–3 questions that would most change what gets built**. Draw them from three places:
+Before interrogating, survey what already exists **at the problem level** —
+prior tech-specs under `docs/`, past learnings, earlier engagement documents.
+Do **not** open the codebase, schemas, or configs — that is Pass 2's altitude.
+For each hit, note: reuse, extend, or supersede (with one line of why). If
+nothing exists, say so explicitly — that statement is the evidence you looked.
+Prior art feeds the recommendations you offer in Step 2.
 
-1. **Scope** — what is in, what is explicitly out, where the boundary is genuinely unclear.
-2. **Definition of done** — what the client will point at to say "yes, this works."
-3. **Any soft number or claim** — every KPI, threshold, or "fast/reliable/accurate" that isn't yet measurable.
+### Step 2 — Interrogate (one question at a time, gaps as records)
 
-For each question: give **your best default answer** so momentum holds, and **name the client stakeholder** who owns the real answer when it is above the engagement's pay grade. Record these as open assumptions with owners — do not stall waiting for perfect answers, and do not silently invent them.
+Surface the questions that would most change what gets built. Draw them from:
+**scope** (in / out / genuinely unclear boundary), **definition of done** (what
+the client points at to say "yes, this works"), **soft numbers** (every KPI,
+threshold, or "fast/reliable/accurate" not yet measurable), and **failure
+expectations** (what should happen when input data is missing, late, or wrong
+— a WHAT/HOW-WELL question, still above the stack).
+
+Run the interrogation as a protocol, not a checklist dump:
+
+1. **Announce the map first** — "here is what I want to pin down" — then walk
+   it branch by branch so the client can see progress and steer.
+2. **Ask ONE question and wait.** Never batch.
+3. With every question, **offer your best default answer** (grounded in the
+   BRD and Step 1.5's prior art) so momentum holds: *"My recommendation: X —
+   because Y. Confirm or redirect."*
+4. If the answer is **vague, incomplete, or contradictory**, push back exactly
+   once with a concrete follow-up ("give me a number — how many is 'a lot'?").
+5. If the answer is **concrete**, lock it in by restating: *"Locked: <decision>."*
+6. If the client **cannot resolve it**, it becomes a gap record — never a
+   silently-assumed answer.
+
+Record every unresolved item in the spec's **gap register** (inside the Open
+assumptions section) as a typed record:
+
+```yaml
+- id: GAP-001
+  type: scope | definition | number | data
+  severity: blocker | minor        # blocker = the spec cannot be signed without it
+  question: "..."
+  blocks: "which requirement(s) this holds hostage"
+  owner: "named client stakeholder"
+  resolution: (open)               # replaced with the answer when resolved
+```
+
+A **blocker** gap left `(open)` fails the Pass 1 gate — the spec cannot
+descend to Pass 2 carrying a fatal unknown. Minor gaps may ride along with
+their owner named. Do not stall waiting for perfect answers, and do not
+silently invent them — the register is the honest middle.
 
 ### Step 3 — Crystallize (write the signable tech-spec)
 
+**Before writing anything: replay the Confirmed decisions recap.** List every
+`Locked:` decision from Step 2 back to the client and give them one last
+chance to correct a misread. Only then write — every requirement must trace
+to a locked decision or a BRD line, never to an assumed answer.
+
 Write the deliverable back to the client at `docs/tech-spec-*` (e.g. `docs/tech-spec-analytical-engine.pdf`). Structure it:
 
-1. **Problem restated** — one paragraph, plain language, from the client's seat (Step 1's paragraph, sharpened).
-2. **Scope** — in / out, explicit, at the problem level.
-3. **Requirements** — each one **verifiable** and tied to a client KPI. Phrase every requirement so an eval could pass or fail it (see the falsifiability rewrite in [references/falsifiable-requirements.md](references/falsifiable-requirements.md)).
-4. **Success metrics** — as **current → target**, each traced to a KPI in the BRD.
-5. **Data named** — the source records the engine consumes, at the problem level.
-6. **Open assumptions** — each with a named owner (from Step 2).
+1. **TL;DR** — one line at the top (≤ 25 words: what gets built and why); the
+   outcome statement below it holds to **at most 3 sentences** — detail
+   belongs in requirements, not in a wall-of-text outcome.
+2. **Problem restated** — one paragraph, plain language, from the client's seat (Step 1's paragraph, sharpened).
+3. **Scope** — in / out, explicit, at the problem level.
+4. **Requirements** — each one **verifiable**, tied to a client KPI, and
+   **prioritized**: `must` only for what the stated outcome fails without;
+   nice-to-haves are `should`/`could`; deliberate exclusions recorded as
+   `wont` or scope-out. Phrase every requirement so an eval could pass or fail it (see the falsifiability rewrite in [references/falsifiable-requirements.md](references/falsifiable-requirements.md)).
+5. **Success metrics** — as **current → target**, each traced to a KPI in the BRD.
+6. **Data named** — the source records the engine consumes, at the problem level.
+7. **Open assumptions & gap register** — the typed records from Step 2, each with a named owner; blockers resolved or the gate stays shut.
 
 Emit per `--out-format`: `pdf` while the spec is a consensus object the client reads and signs; `md` once locked, so Pass 2 can read it. Stay above the stack throughout.
 
@@ -67,9 +118,11 @@ bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-sp
 - [ ] The tech-spec **answers the brief** — every client pain maps to at least one requirement.
 - [ ] Scope (in / out) is explicit at the **problem level** — what the engine does and how well, not which stack does it.
 - [ ] **Every requirement is verifiable** — a future eval could pass or fail it.
+- [ ] **Every requirement traces to a locked decision or a BRD line** (the Confirmed decisions recap ran before writing).
+- [ ] **Priorities are differentiated** — not everything is `must`; deliberate exclusions are `wont` or scope-out.
 - [ ] Success metrics trace to the BRD's KPIs (**current → target**).
 - [ ] The **data the engine acts on is named** (the source records/entities at the problem level, not a physical schema).
-- [ ] **Open assumptions are recorded**, each with a named owner.
+- [ ] **Open assumptions & gaps are recorded as typed records**, each with a named owner — and **no blocker gap is `(open)`**.
 - [ ] **No premature technology** — no schema, no engine, no framework. The stack is Pass 3's.
 
 ## Inputs / Outputs / Gate
@@ -110,6 +163,7 @@ User: *"Write the tech-spec — it should use \<some specific database\> and \<s
 | The spec names a specific database / transform tool / physical schema | Descended into Pass 3 altitude | Strip the technology; restate as a WHAT/HOW-WELL requirement. The stack is decided in Pass 3. |
 | Can't restate the problem in one paragraph | Understand step was skipped or the BRD is genuinely ambiguous | Re-read for the real pain and its cost; if still ambiguous, that's the top Interrogate question — assign it an owner. |
 | Success metrics have targets but no baselines | KPI baseline not pulled from the BRD | Every metric is current → target; if current is unknown, record it as an assumption owned by the client. |
+| Gate fails on an open blocker gap | A fatal unknown was recorded but never resolved | Chase the named owner for the answer, write it into `resolution:`, re-run the gate. Downgrading a blocker to minor requires the client's explicit say-so — never yours. |
 | No BRD exists | Pass 1 needs a client problem document as input | Do not invent one. Get the brief first; Pass 1 does not fabricate intent. |
 | A signed-off spec already exists | You're re-running a completed pass | Skip to Pass 2 (`tech-req-to-adrs`) unless the brief materially changed. |
 
