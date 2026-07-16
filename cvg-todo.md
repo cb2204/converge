@@ -66,6 +66,64 @@ commit (`cvg: <milestone.step> <what>`), and stop for the user's go.
 
 ---
 
+## The operating model — five beats per pass (agreed 2026-07-16)
+
+Track R validates the method **one pass at a time**, and each pass is a
+complete vertical slice. The five beats, in order, never bundled:
+
+1. **UNDERSTAND** — read the pass's skill + references + check script end to
+   end; compare against the field (DGE etc.); deliver a hardening list for
+   the user's approval. Analysis only, no edits.
+2. **RUN** — execute the pass **for real** on the proving ground
+   (`uc-postgres-duckdb-dbt-analytics`, staged: BRD + signed-off base). The
+   user judges every output; hardening list gets applied along the way.
+3. **CANONIZE** — iterate skill + artifact until the user calls it canonical.
+   Deliverable: the updated SKILL.md (the blueprint) + the pass's artifact
+   approved at its gate. Blueprints are **canonical v0** — a later pass may
+   send a retro-edit back (compound loop; logged, expected).
+4. **IMPLEMENT** — the `cvg` subcommand for this pass: frame → dispatch →
+   collect → gate, thin by design. Shared plumbing (bin/cvg entrypoint,
+   engine adapter) is born once in R1's beat 4 and only reused after.
+5. **PROVE** — re-run the pass through the CLI on the same input; artifacts
+   and gate verdicts must match the canonical manual run (the golden
+   reference). Nothing to trust, only to diff.
+
+---
+
+## Track R — validate the method, pass by pass ⟵ CURRENT
+
+> Detailed beats are written only for the CURRENT pass (understand deeply,
+> then move); later passes get their detail when they become current.
+
+- [ ] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req`
+  - [ ] R1.U understand — audit the skill vs DGE's `dge-design` (gap register,
+    one-question-at-a-time grilling, prior-art survey, rendered brief at the
+    gate); hardening list → user approval
+  - [ ] R1.R run — the pass on `docs/brd-analytical-backbone.pdf` in the UC
+    repo; user answers the interrogation, judges the tech-spec
+  - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**
+  - [ ] R1.I implement — `bin/cvg` entrypoint (absorbs Milestone 1.1's
+    skeleton) + `cvg intent` subcommand
+  - [ ] R1.P prove — `cvg intent` re-run matches the manual golden run
+- [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
+- [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
+- [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
+  real `--adversary`; **Gate H2 + the fork** (five beats)
+- [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
+- [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
+- [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)
+- [ ] **R8 · Pass 8 The Loop** — `task-loop --issue N` by hand, one issue at a
+  time; this is where Track M (worker/Manager/board) wakes up (five beats)
+
+---
+
+## Track M — the execution machine (fixture-tested; resumes at/around R8)
+
+Milestone 0 below is **done** — it is Track M's test floor and it waits.
+Milestone 1.1's entrypoint is absorbed into R1.I; the remaining machine
+milestones (CI gate, worker, Manager, board, verification depth) activate
+when Track R reaches the Loop and real execution begins.
+
 ## Milestone 0 — the test bed (implements B-9)
 
 *You cannot test a factory without a floor. Build the floor first.*
@@ -273,4 +331,5 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
 - 2026-07-16 · **housekeeping** · fixture renamed `examples/toy-revenue/` → `tests/e2e-test-engine/` (proof re-run green from new path); `cvg-kickoff-prompt.md` deleted — its bootstrap content folded into this file ("Fresh session? Start here"). One contract file from here on.
+- 2026-07-16 · **restructure** · Operating model agreed: five beats per pass (UNDERSTAND → RUN → CANONIZE → IMPLEMENT → PROVE), Track R (method, pass-by-pass vertical slices on the UC repo) now CURRENT; Track M (machine) parked at Milestone 0-done, resumes ~R8. CLI subcommands are built per pass, thin, against the manual golden run.
 - 2026-07-16 · **0.2** · 6 specs authored via `generate-task-spec.sh` + filled; `validate-task-spec.sh` 6/6 OK; `safe-to-delegate.sh --stamp` 6/6 DELEGATE (Tier-1 HMAC, key 1f197c76); `lint-backlog.sh` → exactly 1 issue: overlap on `build_daily_totals.sh` between T-…-build-daily-totals and T-…-build-revenue-report, exit 1 (deliberate). **Findings paid for:** (1) overlap detection is touches_paths-only — a file created by task A and modified by task B must be redundantly declared in B's *and A's* touches+creates to be machine-visible (convention adopted); (2) editing sealed frontmatter invalidates the envelope → re-stamp is the only path (proved on T3, new sig minted); (3) the tooling anchors `tasks/` at git root — fixture backlog lives in the repo's single queue, which is what the Manager wants anyway. Dogfood note: the step's deliverable IS task-specs, so the ceremony (generate→validate→gate) was intrinsic.
