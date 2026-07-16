@@ -44,7 +44,7 @@
 
 *You cannot test a factory without a floor. Build the floor first.*
 
-- [ ] **0.1 · Golden fixture repo** — `examples/toy-revenue/`
+- [x] **0.1 · Golden fixture repo** — `examples/toy-revenue/` ✅ 2026-07-16
   - Build: tiny seeded SQLite (or DuckDB) repo — `orders`, `payments`,
     `products` tables, a `seed.sh`, a trivial transform script, and
     `evals/smoke.sh` (one passing eval) + `evals/red.sh` (a deliberately
@@ -237,4 +237,4 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 > Append one line per completed step: date · step · proof command · result.
 
-*(empty — the factory floor is clean)*
+- 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
