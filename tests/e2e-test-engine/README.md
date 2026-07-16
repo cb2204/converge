@@ -1,4 +1,4 @@
-# toy-revenue — the cvg golden fixture (B-9)
+# e2e-test-engine — the cvg golden fixture (B-9)
 
 The tiny, deterministic test bed every `cvg` piece is proven on
 (see [`cvg-todo.md`](../../cvg-todo.md), Milestone 0). A brownfield-shaped

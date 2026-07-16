@@ -13,6 +13,23 @@
 
 ---
 
+## Fresh session? Start here
+
+This file is the complete contract — assume no prior conversation. **cvg** is a
+multi-harness CLI that automates the Converge method (eight passes, fuzzy brief
+→ eval-gated system; see `readme.md`). The CLI is the **referee, never a
+player**: it frames prompts, dispatches engine CLIs headlessly, and gates their
+outputs with the existing check scripts — zero model credentials, no LLM calls
+of its own. Before writing code, read: this file top to bottom →
+`skills/task-spec/SKILL.md` + its `scripts/` (you WRAP these, never rewrite:
+`safe-to-delegate.sh`, `accept-task.sh`, `run-task-spec.sh --ci`,
+`validate-task-spec.sh`, `lint-backlog.sh`, `transition-status.sh`,
+`conformance-check.sh`, `ref-executor.sh`) → the presentation deck. Then find
+the first unchecked step below, do ONLY that step, prove its gate, log it,
+commit (`cvg: <milestone.step> <what>`), and stop for the user's go.
+
+---
+
 ## Rules of engagement (read every session)
 
 1. **One step at a time.** Never start step N+1 before step N's gate is proven
@@ -33,8 +50,10 @@
    as a Task-Spec first (`skills/task-spec`), gated with
    `safe-to-delegate.sh --stamp`, and accepted with `accept-task.sh --stamp
    --gold-sanity` when done. Trivial steps (XS) may skip the ceremony — note it.
-7. **Fixture-first testing.** Every piece is proven on `examples/toy-revenue/`
-   (Milestone 0), never only on the converge repo itself.
+7. **Fixture-first testing.** Every piece is proven on
+   `tests/e2e-test-engine/` (Milestone 0), never only on the converge repo
+   itself. The fixture tests the *machine*; the real proving ground
+   (`uc-postgres-duckdb-dbt-analytics`) validates the *method*.
 8. **Gold-sanity always. Evals must discriminate** — an eval that passes on the
    unbuilt baseline is a bug in the step, not a pass.
 
@@ -44,7 +63,8 @@
 
 *You cannot test a factory without a floor. Build the floor first.*
 
-- [x] **0.1 · Golden fixture repo** — `examples/toy-revenue/` ✅ 2026-07-16
+- [x] **0.1 · Golden fixture repo** — `tests/e2e-test-engine/` ✅ 2026-07-16
+  *(created as `examples/toy-revenue/`, renamed 2026-07-16)*
   - Build: tiny seeded SQLite (or DuckDB) repo — `orders`, `payments`,
     `products` tables, a `seed.sh`, a trivial transform script, and
     `evals/smoke.sh` (one passing eval) + `evals/red.sh` (a deliberately
@@ -238,3 +258,4 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 > Append one line per completed step: date · step · proof command · result.
 
 - 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
+- 2026-07-16 · **housekeeping** · fixture renamed `examples/toy-revenue/` → `tests/e2e-test-engine/` (proof re-run green from new path); `cvg-kickoff-prompt.md` deleted — its bootstrap content folded into this file ("Fresh session? Start here"). One contract file from here on.
