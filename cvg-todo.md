@@ -32,6 +32,13 @@ commit (`cvg: <milestone.step> <what>`), and stop for the user's go.
 
 ## Rules of engagement (read every session)
 
+0. **Go slow and teach.** This CLI is the user's de-facto engine for building
+   anything from scratch — their understanding of every piece is a deliverable
+   equal to working code. Every step: (a) BEFORE building, explain in plain
+   terms what the step is, why it exists, and how it fits the machine;
+   (b) AFTER proving, walk through what was built and hand the user runnable
+   commands to verify and explore it themselves; (c) never bundle steps, never
+   rush past a concept the user hasn't confirmed they own.
 1. **One step at a time.** Never start step N+1 before step N's gate is proven
    green in this file. Check the box, paste the proof command + output summary
    under the step, commit, then move on.
