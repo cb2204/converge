@@ -343,6 +343,25 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 ---
 
+## Parked — do later, out of Track R's way
+
+- [ ] **P-1 · Chain-level versioning policy** *(agreed in principle 2026-07-17;
+  implement between passes, not during one)*. Per-skill semver is heavy at
+  current change velocity and the chain is the real unit of coherence
+  (handoffs name skills, Pass 0/1 protocols must match, `pass-to-lesson`
+  encodes every pass's outputs). Adopt: (a) **one Converge release version**
+  — git tag + root `CHANGELOG.md` entry per release; (b) per-skill
+  `metadata.version` becomes a **contract marker** — bump only when a skill's
+  gate, flags, or IN/OUT artifacts change, never for wording/examples (so
+  `task-spec` v3.x keeps meaning); (c) **no lockstep stamping** of all skills
+  at release; (d) state the policy in `skills/README.md`; (e) **amend rule 9
+  above** (currently: bump on every SKILL.md edit) to match; (f) optional: a
+  check that warns when a diff touches Gate/Flags/IN-OUT lines without a
+  version bump. Gate: first tagged chain release + policy paragraph in
+  README + rule 9 consistent with it.
+
+---
+
 ## Progress log
 
 > Append one line per completed step: date · step · proof command · result.
