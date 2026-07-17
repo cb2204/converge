@@ -6,24 +6,20 @@ analytical lane does NOT exist yet — Converge builds it, pass by pass.
 
 ## The single home: `converge/`
 
-Everything Converge touches in this project lives under **`converge/`** —
-the Converge workspace root. Skill-conventional paths (`docs/brd-*`,
-`sketch/*.plan`, `brain/`) are relative to it. The split inside:
+Everything Converge touches lives under **`converge/`** — the workspace
+root. Skill-conventional paths (`docs/brd-*`, `sketch/*.plan`, `brain/`)
+are relative to it. [`converge/INDEX.md`](converge/INDEX.md) is the front
+door — the full folder map, lifecycles, and current pass state. The one-
+breath version:
 
-- **`converge/brain/`** — user-generated inputs: transcripts, notes,
-  definitions, refs, decisions. [`brain/INDEX.md`](converge/brain/INDEX.md)
-  is the tidy front door — read it before grilling the owner; index
-  anything you add. Anything indexed is a question the grill never asks.
-- **`converge/docs/`** — cvg-generated consensus artifacts (gate-contract
-  paths; never mix inputs in):
-  - `docs/brd-analytical-backbone.md` — the brief (Pass 0, gate green
-    2026-07-17, re-proven after the move). Stack preferences live in its
-    open questions, NOT as decisions.
-  - `docs/adrs/`, `docs/lessons/`, `docs/CONTEXT.md` — born in later passes.
-- **`converge/sketch/`** — swimlane plans (born at Pass 3).
-- Task-specs are the one exception: the tooling anchors `tasks/` at git
-  root (currently the converge repo root; moves here if this project ever
-  becomes its own repo).
+**brain feeds → docs agree → sketch explores → tasks execute → receipts prove.**
+
+- `brain/` — user-generated inputs (second brain). **Read
+  `brain/INDEX.md` before grilling the owner**; index anything you add —
+  anything indexed is a question the grill never asks.
+- `docs/` · `sketch/` · `tasks/` · `receipts/` — cvg-generated; gate-
+  contract paths, never mix inputs in. (`tasks/` is git-root anchored
+  today — see its README.)
 
 Everything OUTSIDE `converge/` is the product itself: `src/` (schema, seed,
 chaos generator), `Makefile` (`make help`), `docker-compose.yml`.

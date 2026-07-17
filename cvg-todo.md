@@ -373,9 +373,17 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   Shipped: root `MAP.md`; `tests/uc-analytics/converge/{docs,brain}/`
   (brain = transcripts/notes/definitions/refs/decisions + INDEX.md front
   door; BRD moved in, gate re-proven exit 0 post-move);
-  `tests/uc-analytics/CLAUDE.md` states the split. Exception: `tasks/`
-  stays git-root anchored (tooling finding from 0.2) until the project
-  is its own repo. Remaining below: grounding-receipt skill enhancement
+  `tests/uc-analytics/CLAUDE.md` states the split. **Full org finalized +
+  skeleton shipped in advance (Luan's call, 2026-07-17):** five folders,
+  one kind of knowledge each — brain (inputs, append-only) → docs
+  (agreements, gated) → sketch (drafts, transient) → tasks (sealed units)
+  → receipts (evidence, write-once; P-5's SHOW home) — each with a
+  self-describing README stub; `converge/INDEX.md` is the workspace front
+  door with the lifecycle table + current pass state. `brain/` kept over
+  `store/` (collides with "analytical store" domain vocabulary).
+  Exception: `tasks/` stays git-root anchored (tooling finding from 0.2)
+  until the project is its own repo — workspace `tasks/README.md` marks
+  it reserved. Remaining below: grounding-receipt skill enhancement
   + memory-tooling evaluation.
   One organized root per consuming project for everything the
   chain generates and consumes, so learning scales instead of scattering:
