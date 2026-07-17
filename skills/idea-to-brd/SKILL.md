@@ -1,8 +1,8 @@
 ---
 name: idea-to-brd
-description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a hallway conversation, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged. Use when someone says "I have an idea", "capture this idea", "no BRD exists", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (one question at a time, facts looked up, decisions asked) / Draft / Self-review and gates on the pain carrying a number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
+description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a hallway conversation, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into an honest no-go record when the grill shows the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "no BRD exists", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (one question at a time, facts looked up, decisions asked, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -21,6 +21,8 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 - **Facts vs decisions.** If a fact can be found by exploring the environment — the repo, prior docs, past engagements — look it up rather than asking. The *decisions* are the owner's: put each one to them and wait. Never burn a question on something a file can answer.
 - **One question at a time.** Announce the map of what you want to pin down, then walk it branch by branch. Batching questions is bewildering; momentum comes from offering your best default with each question.
 - **"Too small for a BRD" is the anti-pattern.** Every idea goes through this — a one-tool utility, a single report, a config-sized product. Small ideas are where unexamined assumptions cost the most. The BRD can be short (half a page for a truly small idea), but it must exist and pass the gate.
+- **Pass 0 is allowed to say "don't build it."** The pass has two honest exits: a gated BRD, or a **no-go record**. If the grill shows the cost of doing nothing is tolerable, the correct output is a short parked note — not a strained BRD. Killing an idea here is the cheapest kill in the whole descent; a gate that can only pass or "not yet" pressures the interview to manufacture numbers, and the no-go exit removes that pressure.
+- **Numbers carry provenance.** Every number in the BRD is tagged `(measured)`, `(estimated)`, or `(guessed)`. A guessed number is not a fact — it spawns an open question to verify it, with an owner. A fabricated figure that looks load-bearing is worse than an honest unknown; the tags keep Pass 1 honest about which metrics it can trace and which it must re-interrogate.
 - **Converged = the gate passed**, not "feels captured." The gate is falsifiable: a number in the pain, a KPI in the owner's terms, scope boundaries with entries, owners on every open question.
 
 ## Inputs / Outputs / Gate
@@ -28,8 +30,8 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 | | Artifact |
 |------|----------|
 | **IN** | A raw idea with no BRD — a conversation, a voice-note transcript, a whiteboard photo, a half-page of notes. The owner is in the room (or reachable). |
-| **OUT** | A BRD at `docs/brd-<slug>.md` (or `.pdf`) in the owner's voice — the same artifact shape a client engagement would hand Pass 1. |
-| **GATE** | The pain is stated with a number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears. |
+| **OUT** | A BRD at `docs/brd-<slug>.md` (or `.pdf`) in the owner's voice — the same artifact shape a client engagement would hand Pass 1. **Or**, when the pain doesn't clear the bar: a no-go record at `docs/no-go-<slug>.md` (the idea, the date, why it didn't clear, what would reopen it). |
+| **GATE** | *(BRD exit)* The pain is stated with a provenance-tagged number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears. *(No-go exit)* The record states why and what would reopen it — a parked idea, not a deleted one. |
 
 ## Flags
 
@@ -52,17 +54,36 @@ Then explore what the environment already knows: prior BRDs and tech-specs under
 
 Announce the map — "here is what I want to pin down" — then walk it. The branches, in order of leverage:
 
-1. **The pain** — who feels it, when, and what it costs. Push for a number: hours lost, money leaked, decisions delayed. "A lot" is not a cost.
-2. **The goal** — what changes if this exists, in the owner's own metric. This becomes the KPI Pass 1 traces success metrics to.
-3. **Scope boundary** — what is explicitly in, what is explicitly out, and which boundary is genuinely undecided.
-4. **Success, from the owner's seat** — what will they point at in three months to say "this worked"?
-5. **Constraints** — business constraints only (budget, deadline, compliance, people). Technology is not a Pass 0 topic; if the owner names a stack, record it as a *preference* under open questions, never as a decision.
+1. **The pain** — who feels it, when, and what it costs. Push for a number: hours lost, money leaked, decisions delayed. "A lot" is not a cost. Tag every number's provenance: `(measured)`, `(estimated)`, or `(guessed)` — a guessed number spawns an owned open question to verify it. Never squeeze until a fiction pops out; an honest `(guessed)` beats a confident invention.
+2. **The do-nothing test** — *"what happens if we build nothing?"* If the honest answer is "not much," stop here and take the **no-go exit** (see below): the pain isn't real enough yet. This one question is the cheapest kill in the entire descent.
+3. **The goal** — what changes if this exists, in the owner's own metric. This becomes the KPI Pass 1 traces success metrics to.
+4. **Scope boundary** — what is explicitly in, what is explicitly out, and which boundary is genuinely undecided.
+5. **Success, from the owner's seat** — what will they point at in three months to say "this worked"?
+6. **Constraints** — business constraints only (budget, deadline, compliance, people). Technology is not a Pass 0 topic; if the owner names a stack, record it as a *preference* under open questions, never as a decision.
+7. **The pre-mortem** — *"it's six months from now, this shipped, and it failed — what killed it?"* The other branches all ask about success; this is the one question that reaches the assumptions they structurally can't. Answers land as risks or owned open questions. It is also the closest thing Pass 0 has to an adversary while staying a twenty-minute conversation.
 
 Protocol per question: offer your best default answer grounded in Step 1's findings (*"My recommendation: X — because Y. Confirm or redirect."*); push back exactly once on a vague answer ("give me a number"); lock concrete answers by restating (*"Locked: <answer>."*). What the owner cannot resolve becomes an **open question with a named owner** — never a silently-assumed answer. If the named owner is not in the room, the open-questions section doubles as a questionnaire to send them.
 
+### Step 2b — The no-go exit (when the grill says don't)
+
+If the do-nothing test (branch 2) shows tolerable inaction — no real cost, no
+real urgency, success indistinguishable from today — do **not** draft a BRD.
+Write `docs/no-go-<slug>.md` instead: the idea in two lines, the date, why it
+didn't clear the bar (the do-nothing answer, verbatim), and **what would
+reopen it** (the condition or number that, if it changed, makes this worth
+revisiting). Parked, not deleted — a no-go record is a searchable memory that
+prevents re-litigating the same idea from scratch. Then stop; there is no
+handoff from a no-go.
+
 ### Step 3 — Draft (write the BRD in the owner's voice)
 
-Write `docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Constraints · Open questions · Source. Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
+Write `docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source. Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
+
+Three drafting rules from the grill carry into the document:
+
+- **Every number keeps its provenance tag** — `(measured)`, `(estimated)`, or `(guessed)` — and every `(guessed)` number has a matching open question to verify it.
+- **When more than one stakeholder is named, name the decider** — the one person who breaks ties when stakeholders disagree. A BRD with two owners and no decider ships its first conflict downstream to Pass 1's gap register.
+- **Pre-mortem answers land under Risks** — each one either accepted in writing or converted to an owned open question.
 
 ### Step 4 — Self-review, then gate
 
@@ -79,10 +100,12 @@ Then run the gate checker and walk the checklist:
 bash .claude/skills/idea-to-brd/scripts/check-brd.sh docs/brd-<slug>.md
 ```
 
-- [ ] The **pain carries a number** — cost, count, or frequency, in the Problem section.
+- [ ] The **pain carries a number** — cost, count, or frequency, in the Problem section — and **every number carries a provenance tag**; every `(guessed)` one has a matching open question to verify it.
+- [ ] The **do-nothing test was asked** — and its answer justifies building (otherwise you should be on the no-go exit, not here).
 - [ ] **At least one KPI** is named in the owner's terms under Goals.
 - [ ] **Scope in and out** each have at least one entry; the undecided boundary (if any) is an open question.
-- [ ] **Every open question has a named owner.**
+- [ ] **The pre-mortem ran** — its answers sit under Risks, each accepted or converted to an owned open question.
+- [ ] **Every open question has a named owner**, and if more than one stakeholder is named, **the decider is named**.
 - [ ] The BRD is in the **owner's voice** — no requirement, no solution shape, no technology decision.
 - [ ] **Definition of success** is written from the owner's seat.
 
@@ -97,12 +120,17 @@ User describes a platform with ingestion, chat, billing, and analytics. Actions:
 **Example 3 — a BRD already exists (negative).**
 User: *"Capture this idea"* but `docs/brd-analytical-backbone.pdf` covers it. Actions: point at the existing brief and route to Pass 1 (`brd-docs-to-tech-req`); Pass 0 does not duplicate a landed brief. Result: no second BRD; the chain enters at the right pass.
 
+**Example 4 — the no-go exit.**
+User: *"I want an internal tool that auto-formats our meeting notes."* The grill reaches the do-nothing test: *"what happens if we build nothing?"* — honest answer: "nothing, really; formatting takes two minutes and nobody has complained." Actions: stop the grill; write `docs/no-go-meeting-notes-formatter.md` — the idea, the date, the do-nothing answer verbatim, and the reopen condition ("revisit if note volume grows past ~20/week or someone downstream actually consumes them"). Result: idea killed for the price of four questions — the cheapest kill in the descent — and parked where it can be found instead of re-pitched from scratch.
+
 ## Troubleshooting
 
 | Symptom | Cause | Solution |
 |---------|-------|----------|
 | The BRD reads like a spec (requirements, "the system shall") | Altitude leak into Pass 1 | Rewrite in the owner's voice: pains, goals, success — Pass 1 owns the translation to requirements. |
-| Gate fails: no number in the Problem section | The pain was accepted as "a lot" / "too slow" | Re-ask with a forced quantifier: hours per week, dollars per month, incidents per quarter. If the owner truly doesn't know, the number becomes an owned open question. |
+| Gate fails: no number in the Problem section | The pain was accepted as "a lot" / "too slow" | Re-ask with a forced quantifier: hours per week, dollars per month, incidents per quarter. If the owner truly doesn't know, record it as `(guessed)` with an owned open question to verify — or ask the do-nothing test: a pain nobody can quantify may not clear it. |
+| The number feels invented under pressure | The gate's demand for a digit squeezed out a fiction | Tag it `(guessed)` and spawn the verification question — never launder a guess into a `(measured)`-looking fact. If most numbers are guessed, consider whether the do-nothing test was answered honestly. |
+| Every idea that enters becomes a BRD | The no-go exit is never taken | Suspicious — run the do-nothing test earlier and harder. A capture pass that never says "don't" is decorating ideas, not evaluating them. |
 | The owner keeps naming technologies | Enthusiasm for the how before the what | Record each as a *preference* under open questions ("owner prefers X — revisit at Pass 3"); keep the body technology-free. |
 | Questions stall — the owner can't answer | The named owner of that branch isn't in the room | Record it as an open question with the right owner named; the section doubles as a questionnaire to send them. Don't invent the answer. |
 | The idea keeps growing mid-grill | Scope-check was skipped or too gentle | Return to Step 1: re-slice, park the growth as new one-line stubs, finish the first slice's BRD. |
@@ -119,5 +147,5 @@ User: *"Capture this idea"* but `docs/brd-analytical-backbone.pdf` covers it. Ac
 
 ## References
 
-- `references/brd-template.md` — the BRD section skeleton (Problem · Goals & KPIs · Scope · Definition of success · Stakeholders · Constraints · Open questions · Source) with per-section guidance.
-- `scripts/check-brd.sh` — the falsifiable gate (sections present, pain quantified, KPIs named, open questions owned).
+- `references/brd-template.md` — the BRD section skeleton (Problem · Goals & KPIs · Scope · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source) with per-section guidance, plus the no-go record shape.
+- `scripts/check-brd.sh` — the falsifiable gate (sections present, pain quantified, provenance tags present, KPIs named, open questions owned).

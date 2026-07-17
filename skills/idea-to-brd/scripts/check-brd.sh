@@ -34,7 +34,7 @@ section() {
 }
 
 # 1 — required sections
-for SEC in "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Constraints" "Open questions" "Source"; do
+for SEC in "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Risks" "Constraints" "Open questions" "Source"; do
   if grep -qiE "^## +.*${SEC}" "$FILE"; then
     pass "section present: $SEC"
   else
@@ -81,7 +81,20 @@ else
   fail "Open questions: $Q_COUNT record(s) but only $O_COUNT owner line(s) — every question needs a named owner"
 fi
 
-# 6 — altitude warnings (advisory only; the human judges)
+# 6 — number provenance (advisory: tags keep Pass 1 honest about traceability)
+PG_BODY="$(section "Problem"; section "Goals")"
+if printf '%s\n' "$PG_BODY" | grep -qE '[0-9]'; then
+  if printf '%s\n' "$PG_BODY" | grep -qE '\((measured|estimated|guessed)\)'; then
+    pass "numbers carry provenance tags ((measured)/(estimated)/(guessed))"
+  else
+    warn "numbers in Problem/Goals carry no provenance tag — tag each (measured), (estimated), or (guessed)"
+  fi
+fi
+if grep -qE '\(guessed\)' "$FILE"; then
+  warn "(guessed) number(s) present — each needs a matching open question to verify it"
+fi
+
+# 7 — altitude warnings (advisory only; the human judges)
 if grep -qiE '\b(the system shall|must implement|architecture|schema|database|endpoint|framework)\b' "$FILE"; then
   warn "possible solution-shape leak (requirement/tech language found) — keep the BRD in the owner's voice"
 fi
