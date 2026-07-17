@@ -2,7 +2,7 @@
 name: sketch-plans-adversarial-review
 description: Runs the Pass 3 swimlane plans through a different model as adversary, sharpens them in place, and decides THE FORK (whole-system plan-driven vs. per-unit task-driven). Implements Converge Pass 4 (Consensus). Use when the user says "adversarial review", "consensus pass", "attack the plans", "have Codex refute this", "find what bites us at build time", or "decide the fork". Engine-agnostic via flags — the adversary is --adversary codex|gemini|gpt (default codex), never baked into the name; no tracker. Do NOT use to write new plans (that is Pass 3 reqs-to-swimlane-plans) or to cut a spec or tasks (that is Pass 5A plans-to-coherent-spec or Pass 5B task-spec) — this pass only hardens existing plans and names the fork.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 compatibility: "Converge chain Pass 4 · Consensus. Runs after Pass 3 (reqs-to-swimlane-plans), before the Pass 5 fork (5A plans-to-coherent-spec / 5B task-spec). Engine/tracker-agnostic."
 ---
 
@@ -67,6 +67,18 @@ Back with the author model (Claude), take every objection from Steps 1–2 and d
 
 - **FIX** — revise the relevant plan **in place** to resolve it.
 - **ACCEPT** — record it as a known risk with a **named owner** and the reason to proceed.
+
+**When argument can't settle an objection, settle it with a throwaway prototype.**
+Some objections are empirical — "that join explodes at this volume", "that state
+model can't express refunds" — and arguing them in prose just trades opinions.
+Build the smallest disposable artifact that answers the question (a query
+against real data, a 30-line state machine, a mocked contract), run it, and let
+the result decide FIX or ACCEPT. The prototype is *evidence, not deliverable*:
+throw it away afterwards. If it produced a snippet that encodes the decision
+more precisely than prose can (a schema shape, a state machine, a contract),
+inline just the decision-rich part into the plan and note it came from a
+prototype — never the working demo itself, and never as implementation code
+(the altitude rule still holds; the snippet records a *decision*).
 
 Every cross-lane interface (the contract each lane hands to the next) must survive scrutiny or be corrected. Finish with a short **open-questions list**: each remaining item, its owner, and whether it blocks the build. Nothing may be silently dropped.
 

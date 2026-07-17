@@ -2,7 +2,7 @@
 name: task-specs-to-issues
 description: Register a backlog of signed-off Task-Specs (tasks/T-*.md) as tracker issues — one issue per task-spec, with blocked-by links carrying the dependency graph — so the execution loop reads a board instead of repo files. Implements the Converge REGISTER bridge (Fork B into the Loop). The tracker is a pluggable backend behind a two-method adapter (read ready issues, write result), selected by --tracker github|linear|jira (default linear), never baked into the name. Use when the user says register the tasks, push tasks to Linear, push tasks to GitHub issues, task-specs to issues, or bridge the backlog onto a tracker. Not for authoring tasks (that is Pass 5B task-spec) and not for running them (that is Pass 8 task-loop).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 license: Apache-2.0
 ---
 
@@ -72,6 +72,14 @@ Run `scripts/verify-registration.sh --tracker <tracker>`. It confirms, and you m
 - [ ] **Adapter contract live** — `adapter list-ready` returns the root(s) (specs with no open blocker) and only a green eval marks done.
 
 When these hold, the board IS the backlog the loop reads — repo files and board agree, edge for edge. Report: issues created vs updated, links set, specs skipped (un-gated), and the ready set.
+
+**The ready set is the frontier.** Because `blocked-by` is the tracker's
+*native* dependency relationship, the board renders the frontier — open,
+unblocked issues — visually in the tracker's own UI: a human sees what is
+takeable without reading `tasks/` or the map. Every green-eval PR that closes
+an issue advances the frontier automatically; that visual edge-of-the-known is
+what the future Manager dispatches against, and it exists only if Step 4
+mirrored the edges exactly.
 
 ## Examples
 

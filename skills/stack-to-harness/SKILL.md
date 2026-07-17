@@ -3,7 +3,7 @@ name: stack-to-harness
 description: |
   Implements Converge Pass 6 (Harness). Reads the tech stack the in-scope Task-Specs put in play and scaffolds the control plane fitted to exactly that stack: paired architect and developer agents per tech, grounded KBs, a doctrine, rules, and cross-tool mirrors (.claude/ plus AGENTS.md, Cursor, Copilot). This is the quality moat that makes any commodity coding agent succeed. Thin orchestration over the bundled agents-kbs-tech-stack skill; stack-derived, engine-agnostic, no tracker. Use when the user says "scaffold the harness", "build the agents and KBs", "harness pass", "Converge Pass 6", or after Tasking (5B) and before the execution loop. Do NOT use to author tasks (that is task-spec), to run a task (that is task-loop), or to add one tech to an already-standing harness (call agents-kbs-tech-stack directly).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # stack-to-harness — Converge Pass 6 · Harness
@@ -84,6 +84,24 @@ TARGET_REPO="$PWD" bash "$SKILL/scripts/emit-cross-tool.sh"
 ```
 
 This publishes `AGENTS.md` (repo root), `.cursor/rules/*.mdc`, and `.github/copilot-instructions.md` from the canonical `.claude/` surface + `doctrine.yaml`. Emission is idempotent and additive: if a mirror was hand-edited, the emitter writes a `.proposed` sibling and prints a NOTE rather than clobbering. This is what makes Claude, Codex, Cursor, and Copilot read **one** agent contract.
+
+### Step 6.5 — Wire the glossary and wizard-ize the manual steps
+
+Two finishing moves that make the harness complete:
+
+- **Point every agent at the glossary.** If `docs/CONTEXT.md` exists (Pass 2's
+  domain glossary), confirm the emitted `AGENTS.md` and doctrine direct agents
+  to use its canonical terms — the harness enforces one vocabulary the same
+  way it enforces one contract. If the mirror does not mention it, add the
+  pointer; do not duplicate the glossary's content into the harness.
+- **A manual step deserves a wizard, not prose.** Where the harness meets a
+  step only a human can do — third-party auth, secret provisioning, a one-off
+  console migration — scaffold a small interactive script under
+  `.claude/scripts/` that walks the human through it (open the URL, capture
+  the value, confirm, write the `.env`/secret), instead of a doc that says
+  "go configure X". A wizard is checkable and repeatable; prose instructions
+  rot. Only for steps the tasks actually need — the never-speculative rule
+  applies here too.
 
 ### Step 7 — Confirm the gate and report
 

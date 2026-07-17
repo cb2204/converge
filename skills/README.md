@@ -1,13 +1,17 @@
 # The Converge Skill Chain
 
-Eleven self-contained Claude Code skills that implement the Converge method —
-**nine spine skills** (eight passes + the fork's two branches + Register), one
-**harness engine**, and one **authoring tool**. Every skill passes Anthropic's
-official validator (**11/11**, checked with
+Twelve self-contained Claude Code skills that implement the Converge method —
+**ten spine skills** (the passes + the fork's two branches + the two optional
+bridges, Capture ⓪ and Register ①), one **harness engine**, and one
+**authoring tool**. Every skill passes Anthropic's official validator
+(**12/12**, checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
 and every engine or tracker is bound by a **flag, never a name**.
 
 ```text
+idea ──▶ 0 Capture (optional — when no BRD exists)
+              │
+              ▼
 BRD ──▶ 1 Intent ──▶ 2 Structure ──▶ 3 Decompose ──▶ 4 Consensus ──▶ ◆ THE FORK
                                                                         │
                                         ┌───────────────────────────────┴──────┐
@@ -20,6 +24,7 @@ BRD ──▶ 1 Intent ──▶ 2 Structure ──▶ 3 Decompose ──▶ 4 C
 
 | Pass | Skill | One line |
 |:--:|-------|----------|
+| 0 | [`idea-to-brd`](idea-to-brd/) | raw idea → BRD in the owner's voice · *optional on-ramp* |
 | 1 | [`brd-docs-to-tech-req`](brd-docs-to-tech-req/) | fuzzy BRD → verifiable tech-spec |
 | 2 | [`tech-req-to-adrs`](tech-req-to-adrs/) | ground the spec against the real repo → ADRs |
 | 3 | [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | cut the work along its natural seams → swimlane plans |
@@ -44,6 +49,18 @@ done
 
 ## The spine skills, one by one
 
+### 0 · `idea-to-brd` — no brief? capture one (optional)
+
+The on-ramp for non-client work. When there is no client BRD — an internal
+idea, a founder thought — this pass grills the *stakeholder's* questions (what
+hurts, what it costs, what success looks like), one question at a time with a
+recommended default per question, looking up facts in the environment and
+asking only the decisions. It drafts the BRD in the owner's voice, self-reviews
+it (placeholders, consistency, ambiguity, altitude), and stops at the brief —
+never the spec. Client work with a real brief skips this pass entirely.
+**Ships:** `check-brd.sh` (the gate linter), `references/brd-template.md`. **Flags:** `--out-format md|pdf`, `--questions one|batch`.
+**Gate:** the pain carries a number, at least one KPI is in the owner's terms, scope in/out are non-empty, every open question has a named owner.
+
 ### 1 · `brd-docs-to-tech-req` — the client hands you the problem; you produce the spec
 
 Reads a client BRD like a senior engineer, not a stenographer: finds the real
@@ -58,9 +75,12 @@ the whole descent.
 
 Names the ground (brownfield = a system you didn't write), opens the system end
 to end, reconciles the spec against real schemas, sources, and jobs, and records
-each grounding decision as a numbered ADR under `docs/adrs/`. ADRs record what
-is *true* — never how to build; the moment an ADR says "build X", you've
-drifted into planning.
+each grounding decision as a numbered ADR under `docs/adrs/` — each one passing
+the three-condition worthiness test (hard to reverse · stood on downstream ·
+could have been otherwise). Domain terms are pinned in a `docs/CONTEXT.md`
+glossary as they crystallize, so every later pass speaks one vocabulary. ADRs
+record what is *true* — never how to build; the moment an ADR says "build X",
+you've drifted into planning.
 **Ships:** `scaffold-adr.sh`. **Engine:** fixed — Claude Code on the repo.
 **Gate:** terrain understood, every grounding decision recorded durably.
 
@@ -92,7 +112,7 @@ binds a single end-to-end eval that defines done for the whole.
 **Ships:** `scaffold-e2e-eval.sh`, `check-coherent-spec.sh`.
 **Gate:** one coherent spec, the whole system as its unit of trust, one e2e eval runs.
 
-### 5B · `task-spec` — Fork B · the cornerstone unit (task-driven) · v3.2.0
+### 5B · `task-spec` — Fork B · the cornerstone unit (task-driven) · v3.3.0
 
 The deepest skill in the chain: atomic, vendor-neutral, **self-verifying**
 Task-Spec v3 units. Each `tasks/T-*.md` carries YAML frontmatter + six zones +
@@ -167,7 +187,7 @@ structure (`quick_validate.py` — the check every skill in this folder passes).
 
 ## Compliance & conventions
 
-- **Validator:** all 11 skills pass `quick_validate.py` (frontmatter schema —
+- **Validator:** all 12 skills pass `quick_validate.py` (frontmatter schema —
   only `name/description/license/allowed-tools/metadata/compatibility` keys;
   naming; description present and bounded).
 - **Anatomy:** every skill is `SKILL.md` + `references/` + `scripts/`, with
@@ -181,7 +201,7 @@ structure (`quick_validate.py` — the check every skill in this folder passes).
   `python3 skills/skill-creator/scripts/quick_validate.py <skill-dir>`; add
   concepts under `references/concepts/`, playbooks under `runbooks/`.
 
-**By the numbers:** 11 skills · 53 shell scripts · 11 Python scripts ·
-41 reference docs · 21 runbooks · full test + conformance suites in `task-spec`.
+**By the numbers:** 12 skills · 54 shell scripts · 11 Python scripts ·
+42 reference docs · 21 runbooks · full test + conformance suites in `task-spec`.
 
 > *"You are converged when the eval passes — not when you feel done."*

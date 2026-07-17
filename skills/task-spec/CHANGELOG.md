@@ -16,6 +16,30 @@ falls back to a legacy top-level `version:` for older specs.
 
 ---
 
+## [3.3.0] — 2026-07-17
+
+The **decomposition shape** release (MINOR — additive guidance; `format_version: 3`
+unchanged, every existing spec validates identically). Field-tested patterns from
+external best-of-breed skills, absorbed into the authoring workflow.
+
+### Added
+
+- **Vertical-slice rule ("cut tracer bullets, not layers").** Feature atoms prefer a
+  narrow but complete path through every layer over a horizontal slice of one layer —
+  the eval defines *done*, the vertical cut defines *worth doing alone*.
+- **Context-window sizing ceiling.** An atom must fit — spec, cited ADRs, touched
+  files, working diff — in one fresh executor session; if not, split and wire
+  `depends_on`.
+- **Breakdown quiz before stub generation.** Present the proposed atoms (title,
+  edges, end-to-end deliverable) and confirm granularity/edges/merges with the user
+  BEFORE `batch-generate.sh` — regenerating stubs is cheap, re-cutting a half-built
+  backlog is not.
+- **Expand–contract sequencing for wide refactors.** Mechanical whole-codebase
+  changes (rename, retype) are cut as expand → migrate-in-batches → contract atoms
+  instead of being forced into a tracer bullet.
+
+---
+
 ## [3.2.0] — 2026-07-06
 
 The **size-aware routing** release (MINOR — additive; `format_version: 3` unchanged, every

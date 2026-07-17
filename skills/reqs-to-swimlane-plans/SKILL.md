@@ -3,7 +3,7 @@
 name: reqs-to-swimlane-plans
 description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs under docs/adrs/ plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "break it into plans", "find the seams", or "one plan per lane". Each plan lists features, dependencies, build order, and inherits the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Do not use for atomic tasks or implementation code — that is Pass 5 (task-spec), not this pass.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
 ---
 
@@ -43,6 +43,9 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 - Name each seam and the **dependency direction** between the resulting groups. Do not plan the contents yet.
 - The seam itself is an **interface**, and it must be nameable. *Example — a data pipeline whose upstream inputs are already fixed:* the seam falls cleanly above those inputs — a **transform** lane that shapes the data (Component A) and a **serve** lane that exposes it (Component B), with the **published-output contract** (the tables/columns A produces and B consumes) as the interface between them. Your seams will follow your own system's real boundaries.
 - If a boundary is fuzzy, that is signal: either it is a real seam (name the interface) or a false one (fold the lanes back together).
+- **Prefer the highest seam, and the fewest.** Cut at the highest point the architecture allows — above implementation detail, at the published contract — and resist adding seams: every seam is an interface someone must freeze, attack (Pass 4), and honor (Pass 5). The fewer seams across the system, the better; the ideal number is the smallest that still separates genuinely independent work.
+- **The deep-lane test.** For each proposed lane you should be able to answer, without reading its internals: *what does it do, how do you use it (its interface), and what does it depend on?* If a lane can't be understood from its interface alone — if a consumer would need to see inside it — the boundary is wrong: move it or fold the lane.
+- **Use the canonical vocabulary.** Name lanes, interfaces, and components with the terms pinned in `docs/CONTEXT.md` (Pass 2's glossary). A plan that invents a synonym for a defined term creates drift the adversary then has to catch.
 
 ### Step 2 — SWIMLANE: one plan per seam
 

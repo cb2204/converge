@@ -1,8 +1,8 @@
 ---
 name: brd-docs-to-tech-req
-description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", "what are we building", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (one question at a time, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3) or when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs). Engine/format bound via flags, never baked into the name.
+description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", "what are we building", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (one question at a time, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # brd-docs-to-tech-req — Converge Pass 1 (Intent)
@@ -50,6 +50,13 @@ threshold, or "fast/reliable/accurate" not yet measurable), and **failure
 expectations** (what should happen when input data is missing, late, or wrong
 — a WHAT/HOW-WELL question, still above the stack).
 
+**Facts vs decisions — the question budget rule.** If a *fact* can be found by
+exploring the environment (the repo, `docs/`, prior engagements, the BRD
+itself), look it up rather than asking — Step 1.5 exists so no question is
+spent on what a file can answer. The *decisions*, though, are the client's:
+put each one to them and wait. Never silently decide for them, and never ask
+them to recall what you could read.
+
 Run the interrogation as a protocol, not a checklist dump:
 
 1. **Announce the map first** — "here is what I want to pin down" — then walk
@@ -82,6 +89,13 @@ descend to Pass 2 carrying a fatal unknown. Minor gaps may ride along with
 their owner named. Do not stall waiting for perfect answers, and do not
 silently invent them — the register is the honest middle.
 
+**When the owner is not in the room, export the gaps as a questionnaire.**
+A gap register full of `(open)` records addressed to an absent stakeholder
+goes nowhere by itself. Render the open records as a fillable questionnaire —
+one question per record, your recommended default pre-filled, a blank for
+their answer — and send it to each named owner. Their returned answers land
+in `resolution:` verbatim; the register converges instead of aging.
+
 ### Step 3 — Crystallize (write the signable tech-spec)
 
 **Before writing anything: replay the Confirmed decisions recap.** List every
@@ -105,6 +119,14 @@ Write the deliverable back to the client at `docs/tech-spec-*` (e.g. `docs/tech-
 7. **Open assumptions & gap register** — the typed records from Step 2, each with a named owner; blockers resolved or the gate stays shut.
 
 Emit per `--out-format`: `pdf` while the spec is a consensus object the client reads and signs; `md` once locked, so Pass 2 can read it. Stay above the stack throughout.
+
+**Self-review before the gate.** Re-read the drafted spec with fresh eyes and
+fix inline — no re-review loop, just fix and move on:
+
+1. **Placeholder scan** — any TBD, TODO, or section written as filler? Fix it or move it to the gap register.
+2. **Internal consistency** — do requirements contradict each other or the scope? Does every metric's target match the restated problem?
+3. **Ambiguity** — could any requirement be read two different ways? Pick one reading and make it explicit.
+4. **Altitude** — did a schema, engine, or framework name leak in? Strip it; the stack is Pass 3's.
 
 ### Step 4 — Gate (confirm before leaving this pass)
 
@@ -164,12 +186,13 @@ User: *"Write the tech-spec — it should use \<some specific database\> and \<s
 | Can't restate the problem in one paragraph | Understand step was skipped or the BRD is genuinely ambiguous | Re-read for the real pain and its cost; if still ambiguous, that's the top Interrogate question — assign it an owner. |
 | Success metrics have targets but no baselines | KPI baseline not pulled from the BRD | Every metric is current → target; if current is unknown, record it as an assumption owned by the client. |
 | Gate fails on an open blocker gap | A fatal unknown was recorded but never resolved | Chase the named owner for the answer, write it into `resolution:`, re-run the gate. Downgrading a blocker to minor requires the client's explicit say-so — never yours. |
-| No BRD exists | Pass 1 needs a client problem document as input | Do not invent one. Get the brief first; Pass 1 does not fabricate intent. |
+| No BRD exists | Pass 1 needs a client problem document as input | Do not invent one. For client work, get the brief. For an internal idea with no client, run **Pass 0 (`idea-to-brd`)** — it captures the idea as a BRD this pass consumes unchanged. Pass 1 does not fabricate intent. |
 | A signed-off spec already exists | You're re-running a completed pass | Skip to Pass 2 (`tech-req-to-adrs`) unless the brief materially changed. |
 
 ## Notes
 
-- **Altitude.** Pass 1 is the highest pass: problem → verifiable spec. It comprehends the *what/why* and produces the *how-well*. Every later pass lowers altitude from here, so ambiguity left here is inherited by all of them.
+- **Altitude.** Pass 1 is the highest *required* pass: problem → verifiable spec. It comprehends the *what/why* and produces the *how-well*. Every later pass lowers altitude from here, so ambiguity left here is inherited by all of them.
+- **Upstream.** When no client BRD exists (an internal idea, a founder thought), the optional **Pass 0 (`idea-to-brd`)** captures it as a BRD in the owner's voice. This pass consumes that BRD exactly as it would a client's — Pass 0 asks the stakeholder's questions, Pass 1 asks the engineer's; the brief/spec boundary holds either way.
 - **Why this order.** No ADR, plan, task, or eval can be trusted if the problem it serves is unstated or unverifiable. Pass 2 checks this spec against the real repo; a soft Pass 1 makes every pass below it soft. Gate first, descend second.
 
 ## Handoff

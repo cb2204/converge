@@ -11,7 +11,7 @@ description: |
   runbooks/dispatch-recipes/) or manual execution. Best for S/M-effort work with
   a machine-checkable done-condition; L runs on GLM (one coherent goal), routes XL or subjective work to SDD.
 metadata:
-  version: "3.2.0"
+  version: "3.3.0"
 ---
 
 # task-spec — Cornerstone CAW for Task-Spec v3
@@ -139,6 +139,22 @@ then fill in:
 | Zone 4 | Observability Hooks (or `(none)`) |
 | Zone 5 | Anti-patterns + do-not-touch list |
 | Zone 6 | Open questions (or `(none)`) |
+
+**Two shape rules govern every atom:**
+
+- **Cut tracer bullets, not layers.** For feature work, prefer a **vertical
+  slice** — a narrow but COMPLETE path through every layer the feature
+  touches (schema → transform → serving → test), demoable or verifiable on
+  its own — over a horizontal slice of one layer. A horizontal atom ("all the
+  models", "all the endpoints") passes its own eval while proving nothing
+  end-to-end; a tracer bullet's eval exercises the seam the system actually
+  ships through. The eval defines *done*; the vertical cut defines *worth
+  doing alone*.
+- **Size to one fresh context window.** An atom must fit — spec, cited ADRs,
+  touched files, and the working diff — inside a single fresh executor
+  session. If holding the task means the executor must page out what it read,
+  the atom is too big: split it and wire `depends_on`. This is the practical
+  ceiling under the XS/S/M effort classes, not a new class.
 
 **Layered policy (legacy tolerance):** `format_version` is `3` for new specs (the template's default; see `templates/task-spec.md.tpl`). Tasks created before 2026-05-27 (or explicitly marked `format_version: 0`, `1`, or `2`) are treated as legacy. The validator accepts legacy v0/v1/v2 tasks with warnings rather than hard failures, and the `migrate-legacy-task.sh` script converts legacy markdown checklists into runnable eval stubs.
 
@@ -313,6 +329,29 @@ an atom with an open hole is NOT safe-to-delegate. Encode the hole as
 `input-required` via `ts_a2a_state()`) plus a non-`(none)` `## Open Questions`
 zone. A `blocked` atom is not `ready`, so it never reaches the safe-to-delegate
 gate until the question is answered and it transitions to `ready`.
+
+**Quiz the user before generating stubs.** Present the proposed breakdown as a
+numbered list — per atom: title, `depends_on` edges, and what it delivers
+end-to-end — and ask three things: does the granularity feel right (too
+coarse / too fine)? are the edges correct (each atom depends only on atoms
+that genuinely gate it)? should any be merged or split? Iterate until approved,
+*then* run `batch-generate.sh`. Regenerating stubs is cheap; re-cutting a
+half-built backlog is not.
+
+**Wide refactors are the exception to vertical slicing.** A **wide refactor**
+is one mechanical change — rename a column, retype a shared symbol — whose
+blast radius fans across the whole codebase, so no vertical slice can land
+green on its own. Don't force it into a tracer bullet; sequence it as
+**expand–contract** atoms:
+
+1. **Expand** — add the new form beside the old so nothing breaks (one atom).
+2. **Migrate** — move call sites over in batches sized by blast radius (per
+   package, per directory), each batch its own atom with `depends_on: [expand]`,
+   staying green because the old form still exists.
+3. **Contract** — delete the old form once no caller remains (one atom,
+   `depends_on` every migrate batch).
+
+Each atom still carries its own eval; the shape of the cut is what changes.
 
 See [runbooks/decomposing-intent.md](runbooks/decomposing-intent.md) for the
 step-by-step method and [references/concepts/decomposition.md](references/concepts/decomposition.md)

@@ -6,12 +6,13 @@ description: >-
   terrain, never solution design. Use when the user says "structure pass",
   "write the ADRs", "ground the spec against the repo", "is this greenfield or
   brownfield", or "start Pass 2 / Converge Structure". Names the ground, runs the
-  brownfield to verify, and records each grounding decision as a numbered ADR that
-  Pass 3 can stand on. NOT for solution design or "build X" statements — that is
-  Pass 3 planning; stay at terrain altitude.
+  brownfield to verify, records each grounding decision as a numbered ADR that
+  Pass 3 can stand on, and pins the domain vocabulary in a docs/CONTEXT.md
+  glossary as terms crystallize. NOT for solution design or "build X" statements
+  — that is Pass 3 planning; stay at terrain altitude.
   Engine is Claude Code on the repo; engine/tracker-agnostic, no baked names.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   converge_pass: 2
   pass_name: structure
 license: Complete terms in LICENSE
@@ -29,7 +30,7 @@ stand on it.
 
 - **Converge pass:** 2 of 8 — STRUCTURE.
 - **In:** the Pass 1 tech-spec (`docs/tech-spec-*.pdf|md`) + the real repo.
-- **Out:** `docs/adrs/NNNN-<slug>.md`, one grounding decision per file.
+- **Out:** `docs/adrs/NNNN-<slug>.md`, one grounding decision per file, plus `docs/CONTEXT.md` — the domain glossary, updated as terms crystallize.
 - **Gate:** the terrain is *named* and every grounding fact is recorded as an ADR a stranger can reconstruct — with no "build X" in any of them.
 
 ## Important
@@ -96,6 +97,26 @@ project might be:
 
 Your set will name whatever seams, grains, and definitions your own terrain makes true.
 
+**Not every fact deserves an ADR.** Write one only when all three hold:
+(1) **hard to reverse** — assuming it wrong would cost real rework downstream;
+(2) **downstream passes stand on it** — a plan, task, or eval will cite it;
+(3) **it could plausibly have been otherwise** — a genuine ambiguity was
+resolved, not a triviality restated. A fact that fails the test is a line in
+the glossary or the context record, not its own numbered file — ADR inflation
+buries the four decisions that matter under twenty that don't.
+
+**Pin the vocabulary as it crystallizes (`docs/CONTEXT.md`).** Grounding is
+where fuzzy business words meet real columns — "revenue", "active", "order"
+stop being prose and start being definitions. The moment a term is resolved
+(e.g. *revenue = sum of paid payments, not order totals*), write it into
+`docs/CONTEXT.md` right there — don't batch it. The glossary holds **terms
+only**: canonical name, one-line meaning, the evidence line it traces to.
+No implementation details, no build notes — it is a dictionary, not a spec.
+When a term in the tech-spec conflicts with how the data actually behaves,
+that conflict is itself a grounding fact: resolve it, record the winner in
+the glossary, and cite the evidence. Downstream passes (plans, task-specs,
+harness KBs) use these canonical terms instead of re-deriving them.
+
 ## Gate — confirm before leaving this pass
 
 Run the checker, then eyeball the invariant:
@@ -109,6 +130,8 @@ bash .claude/skills/tech-req-to-adrs/scripts/scaffold-adr.sh --check
 - [ ] Every grounding decision is its own `docs/adrs/NNNN-<slug>.md` file.
 - [ ] Each ADR records a **fact/constraint** with cited evidence — none says "build X" or designs a solution (`--check` greps for build-verbs and flags drift).
 - [ ] Every structural fact the spec leans on (join/relationship rules, grain, key business definitions) is pinned to a real schema/source line or command output.
+- [ ] Every ADR passes the three-condition worthiness test (hard to reverse · stood on downstream · could have been otherwise) — no ADR inflation.
+- [ ] Every business term the spec leans on that could be misread ("revenue", "active", "order") is pinned in `docs/CONTEXT.md` — terms only, each tracing to its evidence.
 - [ ] A reader with no session context can reconstruct the given-vs-build picture from `docs/adrs/` alone.
 
 Converged = the checklist passes, not "feels done."
@@ -147,8 +170,8 @@ Result: the ADR passes `--check`; no design leaks into Pass 2.
 
 → **`reqs-to-swimlane-plans`** (Pass 3, DECOMPOSE) reads `docs/adrs/*.md` as its
 grounding inputs and splits the system at its real seams into `sketch/*.plan`
-files. Every plan must trace back to a fact recorded here and may not contradict
-a recorded ADR.
+files. Every plan must trace back to a fact recorded here, may not contradict
+a recorded ADR, and uses the canonical terms pinned in `docs/CONTEXT.md`.
 
 ## References
 

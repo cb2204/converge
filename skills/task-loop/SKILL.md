@@ -2,7 +2,7 @@
 name: task-loop
 description: The single execution loop for Converge Pass 8 (The Loop). Takes ONE issue (--issue N passed by a human or CI), reads its task-spec plus the cited ADRs and the grounded harness, cuts a branch, writes code, and runs the task's own eval in a tight local refinement loop until GREEN, then opens a PR that closes the issue. Use when a user or CI says "run issue N", "execute this task", "build task T-...", "work the loop", or "drive this issue to a green-eval PR". Knows one task deeply and never picks which task to run. Engine-agnostic via flags (--issue N required, --agent claude|codex|kimi). Do NOT use to choose or fan out across tasks — dispatch and PR-watching are a future CI/CD Manager pass, not this skill.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 license: MIT
 compatibility: "Converge chain Pass 8; consumes tasks/T-*.md + docs/adrs/*.md + .claude/ harness; any stack"
 ---
@@ -70,6 +70,7 @@ It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each
 ### Step 4 — SETTLE (RED → revise locally · GREEN → open the PR)
 
 - **RED:** feed the exact eval output back to `--agent`, revise inside `touches_paths`, and re-run Step 3. This is the bounded local refinement loop (Pattern 3) — it never leaves this issue and never touches another task. Respect the spec's `budget_iterations`; if the budget is exhausted or the failure is an upstream gap, stop and emit a **blocked-task report** (what failed, the last eval output, the suspected upstream gap).
+- **RED twice with the same failure → stop patching, start diagnosing.** Two consecutive REDs on the same assertion with no new hypothesis means the loop is guessing, and guessing burns `budget_iterations` without converging. Switch modes inside the same budget: (1) **reproduce minimally** — isolate the smallest input/command that shows the failure; (2) **hypothesize** — state in one sentence *why* it fails; (3) **verify the hypothesis** — with a read or an instrumented run, *before* writing the fix; (4) fix once, re-run the eval. A fix applied to a confirmed cause converges in one iteration; a fix applied to a guess converges by accident.
 - **GREEN:** open a PR on the `task/<id>-<slug>` branch that closes the issue, with the green eval output pasted into the body. The PR is the unit of merge; only a green eval earns it. Then stop — merge order and dependency settling are the future CI/CD Manager's job, not this loop's.
 
 ## Gate — confirm before leaving this pass

@@ -2,7 +2,7 @@
 name: plans-to-coherent-spec
 description: Converge Pass 5A (Specify, Fork A — plan-driven). Fuses the two hardened swimlane plans into ONE coherent, coupled spec governed by a single end-to-end eval — the whole system as the unit of trust, not a backlog of atomic tasks. Use on the plan-driven fork when the system is small and tightly coupled and a human will hold one big gate. Trigger phrases include "plan-driven", "one coherent spec", "whole system as one unit", "single end-to-end eval", "Fork A", "speckit spec", "openspec", "bmad". Engine-agnostic via --framework {speckit|kiro|openspec|bmad}, default speckit; no tracker binding. Do NOT use for the task-driven fork (per-unit atomic specs with an eval each) — that is Pass 5B task-spec.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 compatibility: ">=claude-code@1.0"
 ---
 
@@ -55,7 +55,7 @@ Whatever the framework's filenames, the invariant holds: **one document, one bou
 
 ## Instructions
 
-Three steps: **LIFT → COUPLE → BIND EVAL.** Hold spec altitude throughout — the system's shape and contract, not its SQL.
+Four steps: **LIFT → COUPLE → BIND EVAL → SELF-REVIEW.** Hold spec altitude throughout — the system's shape and contract, not its SQL.
 
 ### Step 1 — LIFT (two plans into one spec)
 
@@ -81,6 +81,16 @@ Write exactly ONE end-to-end eval at `specs/e2e-eval.sh` and make it the definit
 - **It must assert the far end:** a known input produces the expected output shape AND the expected served answer. One eval, end to end, unambiguous pass/fail.
 - **This is the single artifact the shared Execution gate drives to green.** If you cannot write this eval, the spec is not yet coherent enough to leave this pass — go back to Step 2.
 - Run `scripts/scaffold-e2e-eval.sh --specs-dir specs/` to stamp a runnable, repo-grounded skeleton, then fill the assertions.
+
+### Step 4 — Self-review (fresh eyes, fix inline)
+
+Before the gate, re-read the fused spec as if you had not written it, and fix
+what you find inline — no re-review loop:
+
+1. **Placeholder scan** — any TBD, TODO, or section that trails off? Fill it or return it to the open-questions list with its owner.
+2. **Internal consistency** — do the shaping half and the exposing half agree, section by section? Does the e2e eval actually assert what the spec promises?
+3. **Staple check** — does any section still read as "Plan A says… / Plan B says…"? That is a staple, not a lift; rewrite it as one narrative around the seam.
+4. **Ambiguity** — could the contract layer be read two ways by the two halves? Pick one reading and pin it.
 
 ## Gate — confirm before leaving this pass
 
