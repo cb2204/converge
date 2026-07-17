@@ -114,6 +114,8 @@ Result: *"7 issues (created 0, updated 1), links unchanged."*
 
 The board this skill registers is the exact surface the execution loop reads. A human or CI passes one ready issue to **`task-loop --issue N`** (Pass 8): it reads that issue's linked task-spec + the ADRs + the harness, cuts a branch, runs the eval to GREEN, and opens a PR that closes the issue. Only a green eval moves the issue to done — the same close condition every Converge pass enforces. The Manager that watches the board, picks which ready issue runs (and how many in parallel), and reacts to merged PRs is **future CI/CD (GitHub Actions), not an in-session skill** — it consumes the read side of this same `--tracker` adapter.
 
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+
 ## References
 
 - `references/adapter-contract.md` — the two-method adapter contract (read-ready / write-result) plus the `upsert` / `link` / `preflight` verbs every backend implements.

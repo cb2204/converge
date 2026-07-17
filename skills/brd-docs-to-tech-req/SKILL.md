@@ -1,8 +1,8 @@
 ---
 name: brd-docs-to-tech-req
-description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", "what are we building", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (one question at a time, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
+description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (frontier rounds with recommended defaults, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # brd-docs-to-tech-req — Converge Pass 1 (Intent)
@@ -41,7 +41,7 @@ For each hit, note: reuse, extend, or supersede (with one line of why). If
 nothing exists, say so explicitly — that statement is the evidence you looked.
 Prior art feeds the recommendations you offer in Step 2.
 
-### Step 2 — Interrogate (one question at a time, gaps as records)
+### Step 2 — Interrogate (frontier rounds, gaps as records)
 
 Surface the questions that would most change what gets built. Draw them from:
 **scope** (in / out / genuinely unclear boundary), **definition of done** (what
@@ -59,17 +59,26 @@ them to recall what you could read.
 
 Run the interrogation as a protocol, not a checklist dump:
 
-1. **Announce the map first** — "here is what I want to pin down" — then walk
-   it branch by branch so the client can see progress and steer.
-2. **Ask ONE question and wait.** Never batch.
-3. With every question, **offer your best default answer** (grounded in the
-   BRD and Step 1.5's prior art) so momentum holds: *"My recommendation: X —
-   because Y. Confirm or redirect."*
-4. If the answer is **vague, incomplete, or contradictory**, push back exactly
-   once with a concrete follow-up ("give me a number — how many is 'a lot'?").
-5. If the answer is **concrete**, lock it in by restating: *"Locked: <decision>."*
-6. If the client **cannot resolve it**, it becomes a gap record — never a
-   silently-assumed answer.
+1. **Announce the map first** — "here is what I want to pin down" — so the
+   client can see progress and steer. Treat the questions as a design tree:
+   a question whose answer depends on another still-open question belongs to
+   a *later round*.
+2. **Ask the whole frontier as one numbered round** (default,
+   `--questions batch`) — every question whose prerequisites are settled,
+   each with **your best default answer** (grounded in the BRD and Step
+   1.5's prior art): *"My recommendation: X — because Y. Confirm or
+   redirect."* Then wait; the client answers the round in a single reply
+   (voice/dictation-friendly). Pass 1's interrogation is typically 2–3
+   questions, so this often collapses to one round. With `--questions one`,
+   walk the same tree one question per turn.
+3. If an answer is **vague, incomplete, or contradictory**, push back exactly
+   once with a concrete follow-up in the next round ("give me a number — how
+   many is 'a lot'?").
+4. If an answer is **concrete**, lock it in by restating: *"Locked: <decision>."*
+   Settled answers unblock the next round's questions; recompute the frontier
+   until it is empty.
+5. If the client **cannot resolve it** (or a question survives two rounds
+   unanswered), it becomes a gap record — never a silently-assumed answer.
 
 Record every unresolved item in the spec's **gap register** (inside the Open
 assumptions section) as a typed record:
@@ -161,6 +170,7 @@ bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-sp
 |------|---------|--------|
 | `--engine NAME` | `cowork` | Authoring engine. `cowork` = Claude CoWork project (conversational, no repo, no code) — the canonical Pass 1 engine. Swappable; the gate is engine-invariant. |
 | `--out-format md\|pdf` | `pdf` | Deliverable format. `pdf` while the spec is a consensus object the client approves; `md` once locked so the build can read it. |
+| `--questions batch\|one` | `batch` | Interrogation mode. `batch` (canonical) = frontier rounds: each round asks every question whose prerequisites are settled, numbered, with recommended defaults — one reply answers the round. `one` = strict one-question-at-a-time. |
 
 No tracker flag — Pass 1 emits a single consensus document, not a registered work set. Tracker binding starts at Pass 5B / register.
 
@@ -198,4 +208,6 @@ User: *"Write the tech-spec — it should use \<some specific database\> and \<s
 ## Handoff
 
 → **`tech-req-to-adrs`** (Converge Pass 2) consumes this tech-spec (`docs/tech-spec-*`), reconciles it against the real repo, and records the binding technology decisions as ADRs under `docs/adrs/`.
+
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 ```

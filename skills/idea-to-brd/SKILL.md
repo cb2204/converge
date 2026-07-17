@@ -1,8 +1,8 @@
 ---
 name: idea-to-brd
-description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a hallway conversation, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into an honest no-go record when the grill shows the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "no BRD exists", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (one question at a time, facts looked up, decisions asked, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
+description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -19,7 +19,7 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 
 - **The output is the brief, never the spec.** A BRD states what hurts, who feels it, what it costs, and what success looks like — in the owner's words. The moment it states a requirement, a solution shape, or a technology, it has jumped to Pass 1 altitude (or worse, Pass 3). Pass 0 asks the stakeholder's questions; Pass 1 asks the engineer's.
 - **Facts vs decisions.** If a fact can be found by exploring the environment — the repo, prior docs, past engagements — look it up rather than asking. The *decisions* are the owner's: put each one to them and wait. Never burn a question on something a file can answer.
-- **One question at a time.** Announce the map of what you want to pin down, then walk it branch by branch. Batching questions is bewildering; momentum comes from offering your best default with each question.
+- **Rounds, not turns.** The grill is a design tree worked in **frontier rounds**: each round asks every question whose prerequisites are already settled — numbered, each with a recommended default — then waits for one reply. Answers reshape the tree, the frontier is recomputed, the next round goes out. One reply answers a whole round, which is what makes the grill dictation-friendly: the owner talks through the block instead of ping-ponging twenty turns. (`--questions one` keeps strict one-at-a-time for owners who prefer turns.)
 - **"Too small for a BRD" is the anti-pattern.** Every idea goes through this — a one-tool utility, a single report, a config-sized product. Small ideas are where unexamined assumptions cost the most. The BRD can be short (half a page for a truly small idea), but it must exist and pass the gate.
 - **Pass 0 is allowed to say "don't build it."** The pass has two honest exits: a gated BRD, or a **no-go record**. If the grill shows the cost of doing nothing is tolerable, the correct output is a short parked note — not a strained BRD. Killing an idea here is the cheapest kill in the whole descent; a gate that can only pass or "not yet" pressures the interview to manufacture numbers, and the no-go exit removes that pressure.
 - **Numbers carry provenance.** Every number in the BRD is tagged `(measured)`, `(estimated)`, or `(guessed)`. A guessed number is not a fact — it spawns an open question to verify it, with an owner. A fabricated figure that looks load-bearing is worse than an honest unknown; the tags keep Pass 1 honest about which metrics it can trace and which it must re-interrogate.
@@ -38,7 +38,7 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 | Flag | Default | Effect |
 |------|---------|--------|
 | `--out-format md\|pdf` | `md` | BRD format. `md` is the default (Pass 1 reads it directly); `pdf` when the brief is itself a consensus object others sign. |
-| `--questions one\|batch` | `one` | Interrogation mode. `one` = one question at a time (canonical). `batch` = each round asks every open frontier question at once — for an owner who prefers rounds over turns. |
+| `--questions batch\|one` | `batch` | Interrogation mode. `batch` (canonical) = frontier rounds: each round asks every question whose prerequisites are settled, numbered, each with a recommended default — one reply answers the whole round (voice/dictation-friendly). `one` = strict one-question-at-a-time, for owners who prefer turns. |
 
 No `--engine` beyond the session and no tracker — Pass 0 emits one document.
 
@@ -50,9 +50,9 @@ Before asking anything, assess the idea's shape. If it describes multiple indepe
 
 Then explore what the environment already knows: prior BRDs and tech-specs under `docs/`, related repos, earlier notes. Every fact found here is a question you don't ask.
 
-### Step 2 — Grill (the stakeholder's questions, one at a time)
+### Step 2 — Grill (the stakeholder's questions, in frontier rounds)
 
-Announce the map — "here is what I want to pin down" — then walk it. The branches, in order of leverage:
+Map the grill as a **design tree**: every branch below breaks into the questions that hang off it, and a question whose answer depends on another still-open question belongs to a *later round*, not this one. Announce the map — "here is what I want to pin down" — then work the tree. The branches, in order of leverage:
 
 1. **The pain** — who feels it, when, and what it costs. Push for a number: hours lost, money leaked, decisions delayed. "A lot" is not a cost. Tag every number's provenance: `(measured)`, `(estimated)`, or `(guessed)` — a guessed number spawns an owned open question to verify it. Never squeeze until a fiction pops out; an honest `(guessed)` beats a confident invention.
 2. **The do-nothing test** — *"what happens if we build nothing?"* If the honest answer is "not much," stop here and take the **no-go exit** (see below): the pain isn't real enough yet. This one question is the cheapest kill in the entire descent.
@@ -62,7 +62,16 @@ Announce the map — "here is what I want to pin down" — then walk it. The bra
 6. **Constraints** — business constraints only (budget, deadline, compliance, people). Technology is not a Pass 0 topic; if the owner names a stack, record it as a *preference* under open questions, never as a decision.
 7. **The pre-mortem** — *"it's six months from now, this shipped, and it failed — what killed it?"* The other branches all ask about success; this is the one question that reaches the assumptions they structurally can't. Answers land as risks or owned open questions. It is also the closest thing Pass 0 has to an adversary while staying a twenty-minute conversation.
 
-Protocol per question: offer your best default answer grounded in Step 1's findings (*"My recommendation: X — because Y. Confirm or redirect."*); push back exactly once on a vague answer ("give me a number"); lock concrete answers by restating (*"Locked: <answer>."*). What the owner cannot resolve becomes an **open question with a named owner** — never a silently-assumed answer. If the named owner is not in the room, the open-questions section doubles as a questionnaire to send them.
+**Round protocol** (default, `--questions batch`):
+
+1. **Open with the whole first frontier** — every question askable now with no settled prerequisite (typically the pain, the do-nothing test, and the goal). Number each and attach your best default grounded in Step 1's findings (*"My recommendation: X — because Y. Confirm or redirect."*). Then wait for one reply.
+2. **The owner answers the round in a single message** — by voice or text, in any order, skipping what they can't answer yet.
+3. **Recompute the frontier.** Lock concrete answers by restating (*"Locked: 1 — <answer>. 3 — <answer>."*); settled answers unblock the next round's questions (scope and success hang off the goal; the pre-mortem goes last, once there is a shape to kill). Push back exactly once per vague answer — "give me a number" — as a numbered item in the next round. Carry unanswered questions forward; after two carries, convert each to an owned open question instead of nagging.
+4. **Facts never enter a round.** A question that a file, prior doc, or lookup can answer is your job, not the owner's — look it up (dispatch a sub-agent if it's slow) and only hold back the questions downstream of a still-running lookup; ask the rest of the frontier now.
+5. **The do-nothing test rides in round one.** If its answer is "not much," cancel the remaining rounds and take the no-go exit (Step 2b).
+6. The grill is done when **the frontier is empty** — every branch visited, nothing silently assumed.
+
+With `--questions one`, walk the same tree one question per turn. Either mode: what the owner cannot resolve becomes an **open question with a named owner** — never a silently-assumed answer. If the named owner is not in the room, the open-questions section doubles as a questionnaire to send them.
 
 ### Step 2b — The no-go exit (when the grill says don't)
 
@@ -112,7 +121,7 @@ bash .claude/skills/idea-to-brd/scripts/check-brd.sh docs/brd-<slug>.md
 ## Examples
 
 **Example 1 — the canonical trigger.**
-User: *"I have an idea — grill me and write the brief."* Actions: scope-check (one idea, no prior art under `docs/`) → grill the five branches one question at a time, offering defaults → draft `docs/brd-cost-dashboard.md` in the owner's voice → self-review, strip a leaked "use DuckDB" into a recorded preference → `check-brd.sh` green. Result: a BRD Pass 1 consumes exactly as it would a client's.
+User: *"I have an idea — grill me and write the brief."* Actions: scope-check (one idea, no prior art under `docs/`) → grill the branches in frontier rounds — round one asks the pain, the do-nothing test, and the goal in one numbered block with defaults; the owner answers in one voice reply; two more rounds close the tree → draft `docs/brd-cost-dashboard.md` in the owner's voice → self-review, strip a leaked "use DuckDB" into a recorded preference → `check-brd.sh` green. Result: a BRD Pass 1 consumes exactly as it would a client's.
 
 **Example 2 — the idea is really four ideas.**
 User describes a platform with ingestion, chat, billing, and analytics. Actions: stop at Step 1 — flag the decomposition, help pick the first slice (ingestion), capture only that BRD; the other three become one-line stubs in a parking list. Result: one gated BRD, not a four-headed brief no pass can consume.
@@ -133,6 +142,8 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 | Every idea that enters becomes a BRD | The no-go exit is never taken | Suspicious — run the do-nothing test earlier and harder. A capture pass that never says "don't" is decorating ideas, not evaluating them. |
 | The owner keeps naming technologies | Enthusiasm for the how before the what | Record each as a *preference* under open questions ("owner prefers X — revisit at Pass 3"); keep the body technology-free. |
 | Questions stall — the owner can't answer | The named owner of that branch isn't in the room | Record it as an open question with the right owner named; the section doubles as a questionnaire to send them. Don't invent the answer. |
+| The owner answers only half a round | Normal — a round is an offer, not a form | Lock what came back, carry the rest to the next frontier; after two carries, convert each leftover to an owned open question. |
+| A round mixes questions that depend on each other | Frontier computed wrong | A question whose answer depends on another question in the same round belongs to a later round — re-split and re-send only the independent ones. |
 | The idea keeps growing mid-grill | Scope-check was skipped or too gentle | Return to Step 1: re-slice, park the growth as new one-line stubs, finish the first slice's BRD. |
 | "This is too small to need a BRD" | The anti-pattern | Write the half-page version anyway — the gate still runs. Small ideas hide the costliest assumptions. |
 
@@ -140,10 +151,13 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 
 - **Why a separate pass, not a Pass 1 mode.** Pass 0 and Pass 1 both interrogate, but they ask different questions: Pass 0 asks the *stakeholder's* (what hurts, what does it cost), Pass 1 asks the *engineer's* (definition of done, soft numbers made measurable, failure expectations). Collapsing them produces a document that is neither a clean brief nor a falsifiable spec — the exact blur Pass 1's first rule forbids.
 - **Optional by design.** Like Register ①, this pass is taken only when its precondition holds (no BRD exists). The spine's numbering and story are unchanged; client engagements never see this pass.
+- **Provenance of the rounds protocol.** The frontier-rounds grill adapts Matt Pocock's `batch-grill-me` skill (github.com/mattpocock/skills): the design tree, the per-round frontier, and facts-never-block-the-round are his; Pass 0 adds the fixed branch map, the no-go exit, provenance tags, and the gate.
 
 ## Handoff
 
 → **`brd-docs-to-tech-req`** (Converge Pass 1, Intent) consumes this BRD exactly as it would a client's — reads it like the engineer who must deliver it, interrogates the engineering questions, and crystallizes the falsifiable tech-spec. Nothing downstream knows or cares that the brief was captured rather than handed over.
+
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 
 ## References
 

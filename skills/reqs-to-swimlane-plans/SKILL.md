@@ -116,3 +116,5 @@ User proposes three lanes where two of them are just two transports (say, an HTT
 ## Handoff
 
 → **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `sketch/*.plan` files produced here and attacks them **one at a time** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, and any altitude leak into task or code detail — sharpens them in place (the diff is the record), and names **THE FORK**: whole-system plan-driven (Pass 5A, `plans-to-coherent-spec`) or per-unit task-driven (Pass 5B, `task-spec`).
+
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.

@@ -108,7 +108,7 @@ It fails (exit 1) unless all hold:
 - [ ] **The fork is declared at the top of every plan** — Fork A or Fork B — with a reason.
 - [ ] An open-questions list exists; blockers are flagged.
 
-When the gate is green, hand off per the fork (see Examples).
+When the gate is green, hand off per the fork (see Examples). *Optional debrief:* **`pass-to-lesson`** teaches what this pass just sharpened — the surviving objections, the fork and why it won — before the descent continues.
 
 ## Examples
 

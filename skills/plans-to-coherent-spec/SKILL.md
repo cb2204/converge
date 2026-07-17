@@ -147,3 +147,5 @@ Result: one OpenSpec change, one eval, one gate.
 → Enters the shared **Execution** gate (Pass 8 · The Loop): `task-loop --issue N` drives the **single end-to-end eval** (`specs/e2e-eval.sh`) to green — read the spec → act → run the eval → RED: feed the failure back and revise (local loop) → GREEN: open a PR. On Fork A the runner converges the whole coupled system against that one eval rather than closing tasks one by one.
 
 There is **no separate Manager skill.** The fan-out concern (which issue, when, in parallel, watching PRs) is a **future, separate CI/CD concern** configured in GitHub Actions, not an in-session skill. A human or CI hands `task-loop` its `--issue N`; the runner never picks which issue to run. Execution closes the gate when the e2e eval passes — it does not lower altitude further.
+
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.

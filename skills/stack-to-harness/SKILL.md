@@ -147,6 +147,8 @@ Result: Correct altitude; Pass 6 is reserved for scoping the harness to the task
 
 The **Manager** — which issue runs, when, in parallel, watching PRs — is a **future, separate concern configured in CI/CD (GitHub Actions), not an in-session skill.** There is no `fleet-orchestrator`. A human or CI passes `--issue N` to the loop; the harness must simply stand before the loop starts.
 
+*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+
 ## References
 
 - Bundled skill: `agents-kbs-tech-stack` (`~/.claude/skills/agents-kbs-tech-stack/`) — owns the menu, templates, and all four scripts (`scaffold.sh`, `install-closers.sh`, `quality-gate.sh`, `emit-cross-tool.sh`).

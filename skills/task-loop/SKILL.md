@@ -82,6 +82,8 @@ It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each
 - [ ] The diff stays inside `touches_paths` and respects `do-not-touch`.
 - [ ] Output is either a PR that closes the issue (green eval in the body) OR an explicit blocked-task report.
 
+*Optional debrief:* **`pass-to-lesson`** teaches the PR — what changed, the decision each hunk encodes, what the eval actually proved — before the owner reviews or merges it.
+
 When these hold, the issue has converged: green eval, branch, PR.
 
 ## Examples

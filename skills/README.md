@@ -1,10 +1,10 @@
 # The Converge Skill Chain
 
-Twelve self-contained Claude Code skills that implement the Converge method —
+Thirteen self-contained Claude Code skills that implement the Converge method —
 **ten spine skills** (the passes + the fork's two branches + the two optional
-bridges, Capture ⓪ and Register ①), one **harness engine**, and one
-**authoring tool**. Every skill passes Anthropic's official validator
-(**12/12**, checked with
+bridges, Capture ⓪ and Register ①), one **teaching companion**, one **harness
+engine**, and one **authoring tool**. Every skill passes Anthropic's official
+validator (**13/13**, checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
 and every engine or tracker is bound by a **flag, never a name**.
 
@@ -34,6 +34,7 @@ BRD ──▶ 1 Intent ──▶ 2 Structure ──▶ 3 Decompose ──▶ 4 C
 | ① | [`task-specs-to-issues`](task-specs-to-issues/) | one spec = one tracked issue · the board is state |
 | 6 | [`stack-to-harness`](stack-to-harness/) | scaffold the control plane the stack needs · the quality moat |
 | 8 | [`task-loop`](task-loop/) | one issue → green-eval PR · the execution loop |
+| — | [`pass-to-lesson`](pass-to-lesson/) | *companion* — after any pass, teach the owner what was built and why · *optional* |
 | — | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | *engine* — the scaffolder Pass 6 drives |
 | — | [`skill-creator`](skill-creator/) | *tooling* — author, evaluate, and validate skills |
 
@@ -53,22 +54,26 @@ done
 
 The on-ramp for non-client work. When there is no client BRD — an internal
 idea, a founder thought — this pass grills the *stakeholder's* questions (what
-hurts, what it costs, what success looks like), one question at a time with a
-recommended default per question, looking up facts in the environment and
-asking only the decisions. It drafts the BRD in the owner's voice, self-reviews
-it (placeholders, consistency, ambiguity, altitude), and stops at the brief —
-never the spec. Client work with a real brief skips this pass entirely.
-**Ships:** `check-brd.sh` (the gate linter), `references/brd-template.md`. **Flags:** `--out-format md|pdf`, `--questions one|batch`.
-**Gate:** the pain carries a number, at least one KPI is in the owner's terms, scope in/out are non-empty, every open question has a named owner.
+hurts, what it costs, what success looks like) in **frontier rounds**: each
+round asks every question whose prerequisites are settled, numbered, each with
+a recommended default, and one reply answers the whole round — looking up
+facts in the environment and asking only the decisions. It drafts the BRD in
+the owner's voice, self-reviews it (placeholders, consistency, ambiguity,
+altitude), and stops at the brief — never the spec. When the do-nothing test
+shows tolerable inaction it takes the no-go exit instead (`docs/no-go-*.md`).
+Client work with a real brief skips this pass entirely.
+**Ships:** `check-brd.sh` (the gate linter), `references/brd-template.md`. **Flags:** `--out-format md|pdf`, `--questions batch|one`.
+**Gate:** the pain carries a provenance-tagged number, at least one KPI is in the owner's terms, scope in/out are non-empty, every open question has a named owner.
 
 ### 1 · `brd-docs-to-tech-req` — the client hands you the problem; you produce the spec
 
 Reads a client BRD like a senior engineer, not a stenographer: finds the real
 problem underneath the ask, grills the 2–3 questions whose answers most change
-the build, and crystallizes one tech-spec with falsifiable requirements and
+the build (frontier rounds, recommended defaults — one reply answers the
+round), and crystallizes one tech-spec with falsifiable requirements and
 metrics traced to the BRD's KPIs. Ambiguity killed here is the cheapest kill in
 the whole descent.
-**Ships:** `check-tech-spec.sh` (the gate linter). **Flags:** `--engine cowork`, `--out-format pdf`.
+**Ships:** `check-tech-spec.sh` (the gate linter). **Flags:** `--engine cowork`, `--out-format pdf`, `--questions batch|one`.
 **Gate:** you can restate the client's problem in one breath and show the spec answers it.
 
 ### 2 · `tech-req-to-adrs` — greenfield or brownfield, and write the ADRs
@@ -163,6 +168,18 @@ blocked-task report, never silence.
 ---
 
 ## The engine and the tooling
+
+### `pass-to-lesson` — the teaching companion (optional, after any pass)
+
+Converge delegates the writing, never the understanding. After any pass's gate
+goes green, this companion reads everything the pass emitted and teaches it
+back — every component gets *what it is · why it's shaped this way · the
+decision it encodes · what breaks downstream without it* — plus the decisions
+and their rejected alternatives, a vocabulary of every term of art, and a
+closing Feynman quiz. The lesson persists at `docs/lessons/lesson-*.md`, so
+understanding survives the session. It explains decisions, never reopens them.
+**Ships:** `check-lesson.sh` (the gate linter), `references/lesson-template.md`. **Flags:** `--depth full|brief`, `--quiz on|off`.
+**Gate:** every emitted artifact taught, every decision names a rejected alternative, every term defined, 3–5 check-yourself questions, artifacts untouched.
 
 ### `agents-kbs-tech-stack` — the scaffolder Pass 6 drives (v0.3.0)
 
