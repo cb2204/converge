@@ -360,6 +360,42 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   version bump. Gate: first tagged chain release + policy paragraph in
   README + rule 9 consistent with it.
 
+- [ ] **P-2 · The cvg knowledge home** *(sketched 2026-07-17; decide the
+  convention at a beat boundary, never mid-pass — artifact paths are gate
+  contracts)*. One organized root per consuming project for everything the
+  chain generates and consumes, so learning scales instead of scattering:
+  **generated** (brds, no-gos, tech-specs, adrs, plans, task-specs, lessons,
+  gate receipts) + **inputs** (transcripts, meeting notes, definitions,
+  refs) + a single `INDEX.md` kept tidy on top of raw dumps. First
+  deliverable: root `MAP.md` (ten lines: where do I look for X) — zero
+  path churn. Skill enhancement riding along (rule-9 ceremony): Pass 0
+  Step 1 / Pass 1 Step 1.5 read the knowledge home's index when present
+  and emit a **grounding receipt** (facts found + where — provenance for
+  every question not asked). Embedded memory tooling (MemPalace,
+  Graphify, claude-mem — github.com/MemPalace/mempalace,
+  github.com/Graphify-Labs/graphify, github.com/thedotmack/claude-mem)
+  evaluated later, AFTER the folder convention exists; tools serve the
+  convention, not the reverse.
+
+- [ ] **P-3 · Second-brain integration** *(Luan has several ideas parked
+  here, 2026-07-17)*. External brains — an Obsidian vault, a Claude
+  Project, a Codex project — as pull sources for the knowledge home: key
+  information and decisions get distilled INTO the repo (the brain feeds
+  P-2's inputs folder; the repo stays the single source of truth), and the
+  most important always-loaded facts get indexed into `CLAUDE.md` /
+  `AGENTS.md` so every session starts already knowing them. Depends on
+  P-2's convention existing first.
+
+- [ ] **P-4 · `--questions auto` — the brain answers first** *(noted
+  2026-07-17 per Luan: "agentic auto mode with the human at the gate")*.
+  For the interviewing passes (0, 1): each frontier round is first
+  answered from the knowledge home + repo, every auto-answer cited to its
+  source document and tagged; only questions no document can answer
+  escalate to the owner (the gap register's questionnaire export is the
+  escalation surface — it already exists). Human stays the gate for
+  decisions; facts stop consuming human turns. Feeds Milestone 7.1
+  (`cvg deliver`'s two-human-stops design). Depends on P-2 + P-3.
+
 ---
 
 ## Progress log
