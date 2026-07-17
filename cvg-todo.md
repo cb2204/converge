@@ -79,9 +79,13 @@ complete vertical slice. The five beats, in order, never bundled:
 1. **UNDERSTAND** — read the pass's skill + references + check script end to
    end; compare against the field (DGE etc.); deliver a hardening list for
    the user's approval. Analysis only, no edits.
-2. **RUN** — execute the pass **for real** on the proving ground
-   (`uc-postgres-duckdb-dbt-analytics`, staged: BRD + signed-off base). The
-   user judges every output; hardening list gets applied along the way.
+2. **RUN** — execute the pass **for real** on the proving ground:
+   **`tests/uc-analytics/`** (greenfield-from-Pass-0: e-commerce Postgres
+   terrain, deterministic seed, no BRD — the brief gets born here). The user
+   judges every output; hardening list gets applied along the way. The
+   external `uc-postgres-duckdb-dbt-analytics` repo is the future
+   *brownfield* receipt (enters at Pass 1; its BRD exists). Cross-discipline
+   universality receipts (frontend/DevOps runs) deferred to runs #2/#3.
 3. **CANONIZE** — iterate skill + artifact until the user calls it canonical.
    Deliverable: the updated SKILL.md (the blueprint) + the pass's artifact
    approved at its gate. Blueprints are **canonical v0** — a later pass may
@@ -345,6 +349,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - 2026-07-16 · **0.1** · `/bin/bash seed.sh && /bin/bash evals/smoke.sh` → exit 0 in 0.064s (bash 3.2.57); `evals/red.sh` → exit 1 ("gold_daily_revenue does not exist yet"). Effort XS — Task-Spec ceremony skipped per rule 6. Note: red.sh doubles as backlog T1's Success Criteria (discriminating by construction).
 - 2026-07-16 · **housekeeping** · fixture renamed `examples/toy-revenue/` → `tests/e2e-test-engine/` (proof re-run green from new path); `cvg-kickoff-prompt.md` deleted — its bootstrap content folded into this file ("Fresh session? Start here"). One contract file from here on.
+- 2026-07-17 · **R0 terrain** · Proving ground pivoted to `tests/uc-analytics/` (Luan's call: first run in the home domain — method friction, not domain confusion; universality receipts deferred to runs #2/#3). Postgres terrain transplanted from the UC repo (compose + schema + gen/seed, container `uc-analytics-postgres`, port 5433, own volume). **Smoke test caught real contamination:** the compose project name `ecommerce` mounted the stale `ecommerce_pgdata` volume from earlier experiments (5000 leftover orders, schema has zero INSERTs — data had to be foreign). Fixed: project renamed `uc-analytics`, fresh volume, `.env` port agreement, deterministic seed 42 → customers=50 / products=20 / orders=200 / payments=200 verified. Clean terrain, known numbers.
 - 2026-07-17 · **absorb (external session)** · Reviewed + integrated Luan's out-of-session skill upgrades: NEW `idea-to-brd` (Pass 0 Capture — 12th skill) + refinements across all 9 spine skills (Pass 1 facts-vs-decisions rule + gap-questionnaire export + self-review; Pass 2 ADR-worthiness 3-condition test + `docs/CONTEXT.md` glossary; Pass 3 highest-seam/fewest-seams + deep-lane test; Pass 4 throwaway-prototype settlement; Pass 5A staple-check self-review; **task-spec v3.3.0**: vertical-slice rule, context-window sizing, breakdown quiz, expand–contract for wide refactors; Pass 6 glossary wiring + wizard-ize manual steps; Pass 8 stop-patching-start-diagnosing after 2× same RED). Review actions: 12/12 `quick_validate` green; `check-brd.sh` proven discriminating (rule 8/9); fixed version skew their lint caught (_lib.sh + plugin.json + marketplace.json → 3.3.0) + wrote the missing CHANGELOG 3.3.0 entry; restored `docs/demos/*` (staged for deletion but referenced by the committed ASD deck §04/§07/§12). Process note: external changes skipped rule 9's proof runs — remediated here, all green.
 - 2026-07-16 · **R1.U** · Pass 1 skill `brd-docs-to-tech-req` hardened v0.2.0→v0.3.0. SKILL.md gained: Step 1.5 prior-art (problem-level only), one-question-at-a-time interrogation protocol with typed gap register (blocker gaps fail the gate), Confirmed-decisions recap before Crystallize, prioritized requirements (must/should/could/wont), TL;DR discipline. check-tech-spec.sh gained: Check 7 (unresolved blocker gaps → FAIL, awk-paired severity/resolution), Check 8 (priority differentiation warn), and de-biased "data named" (dropped hardcoded order/payment/customer nouns → domain-universal). Proof: passing DevOps fixture exit 0 (10/10 checks), same fixture w/ one open blocker gap exit 1 (fails only Check 7). Rule 9 satisfied incl. non-data domain. Rule 0/8/9 all honored.
 - 2026-07-16 · **restructure** · Operating model agreed: five beats per pass (UNDERSTAND → RUN → CANONIZE → IMPLEMENT → PROVE), Track R (method, pass-by-pass vertical slices on the UC repo) now CURRENT; Track M (machine) parked at Milestone 0-done, resumes ~R8. CLI subcommands are built per pass, thin, against the manual golden run.
