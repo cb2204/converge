@@ -362,7 +362,12 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - [ ] **P-2 · The cvg knowledge home** *(sketched 2026-07-17; decide the
   convention at a beat boundary, never mid-pass — artifact paths are gate
-  contracts)*. One organized root per consuming project for everything the
+  contracts)*. **First deliverables shipped 2026-07-17:** root `MAP.md`,
+  `tests/uc-analytics/brain/` skeleton (transcripts / notes / definitions /
+  refs / decisions + `INDEX.md` front door), `tests/uc-analytics/CLAUDE.md`
+  stating the user-generated vs cvg-generated split. Remaining below:
+  grounding-receipt skill enhancement + memory-tooling evaluation.
+  One organized root per consuming project for everything the
   chain generates and consumes, so learning scales instead of scattering:
   **generated** (brds, no-gos, tech-specs, adrs, plans, task-specs, lessons,
   gate receipts) + **inputs** (transcripts, meeting notes, definitions,
@@ -395,6 +400,21 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   escalation surface — it already exists). Human stays the gate for
   decisions; facts stop consuming human turns. Feeds Milestone 7.1
   (`cvg deliver`'s two-human-stops design). Depends on P-2 + P-3.
+
+- [ ] **P-5 · Engrave the pass anatomy** *(Luan's framing, 2026-07-17: every
+  pass = PROCESS → JUDGE → TEACH → SHOW)*. Today the four verbs exist but
+  are distributed: PROCESS = each skill's Instructions + gate script;
+  JUDGE = the human (Track R's run-beat contract) + a different engine
+  only at Pass 4 (`--adversary`) and later Milestone 6.1 (`cvg verify
+  --judge`); TEACH = `pass-to-lesson` offered at every handoff; SHOW =
+  gate output + progress-log line. The engraving: (a) make the anatomy
+  explicit as the uniform close-of-pass contract in `skills/README.md`;
+  (b) generalize the second-engine JUDGE so ANY pass's artifact can be
+  reviewed by another engine via CLI (Kimi, Codex — Pass 4's adversary
+  pattern promoted to a per-pass option, becomes a `cvg` flag);
+  (c) standardize SHOW as a small "pass receipt" (what was produced,
+  where, gate verdict, lesson link). Implement alongside each pass's
+  I-beat, not as a big-bang skill edit.
 
 ---
 
