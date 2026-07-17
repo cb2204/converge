@@ -362,11 +362,21 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - [ ] **P-2 · The cvg knowledge home** *(sketched 2026-07-17; decide the
   convention at a beat boundary, never mid-pass — artifact paths are gate
-  contracts)*. **First deliverables shipped 2026-07-17:** root `MAP.md`,
-  `tests/uc-analytics/brain/` skeleton (transcripts / notes / definitions /
-  refs / decisions + `INDEX.md` front door), `tests/uc-analytics/CLAUDE.md`
-  stating the user-generated vs cvg-generated split. Remaining below:
-  grounding-receipt skill enhancement + memory-tooling evaluation.
+  contracts)*. **Convention DECIDED + first cut shipped 2026-07-17:** the
+  single home is **`<project>/converge/`** — the Converge workspace root
+  (name chosen over `cvg/` = names the tool not the method, and over
+  `.cvg/` = hidden folders defeat a knowledge home; dot-space stays
+  reserved for machine config `.converge/`, Milestone 4.3). Skill paths
+  (`docs/brd-*`, `sketch/*.plan`, `brain/`) are RELATIVE to the workspace
+  — no skill edits needed; engrave the workspace-root line in each skill
+  at its beat, and `cvg` resolves the workspace before globbing.
+  Shipped: root `MAP.md`; `tests/uc-analytics/converge/{docs,brain}/`
+  (brain = transcripts/notes/definitions/refs/decisions + INDEX.md front
+  door; BRD moved in, gate re-proven exit 0 post-move);
+  `tests/uc-analytics/CLAUDE.md` states the split. Exception: `tasks/`
+  stays git-root anchored (tooling finding from 0.2) until the project
+  is its own repo. Remaining below: grounding-receipt skill enhancement
+  + memory-tooling evaluation.
   One organized root per consuming project for everything the
   chain generates and consumes, so learning scales instead of scattering:
   **generated** (brds, no-gos, tech-specs, adrs, plans, task-specs, lessons,
