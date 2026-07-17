@@ -4,11 +4,11 @@ E-commerce operational Postgres (customers, products, orders, payments;
 deterministic seed 42, container `uc-analytics-postgres`, port 5433). The
 analytical lane does NOT exist yet — Converge builds it, pass by pass.
 
-## The single home: `converge/`
+## The single home: `cvg/`
 
-Everything Converge touches lives under **`converge/`** — the workspace
+Everything Converge touches lives under **`cvg/`** — the workspace
 root. Skill-conventional paths (`docs/brd-*`, `sketch/*.plan`, `brain/`)
-are relative to it. [`converge/INDEX.md`](converge/INDEX.md) is the front
+are relative to it. [`cvg/INDEX.md`](cvg/INDEX.md) is the front
 door — the full folder map, lifecycles, and current pass state. The one-
 breath version:
 
@@ -21,7 +21,7 @@ breath version:
   contract paths, never mix inputs in. (`tasks/` is git-root anchored
   today — see its README.)
 
-Everything OUTSIDE `converge/` is the product itself: `src/` (schema, seed,
+Everything OUTSIDE `cvg/` is the product itself: `src/` (schema, seed,
 chaos generator), `Makefile` (`make help`), `docker-compose.yml`.
 
 ## Standing rules for sessions in this project

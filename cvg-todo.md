@@ -278,7 +278,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 - [ ] **4.3 · Routing v1** — `cvg route [--explain]`
   - Build: pin (`execution_backend`) → rules (effort × severity → engine
-    table in `.converge/routing.yaml`) → fallback default. Every decision logs
+    table in `.cvg/routing.yaml`) → fallback default. Every decision logs
     a rationale record `{task, chose, source, why}` to the ledger. (Receipts
     layer comes in Milestone 7 — leave the seam.)
   - **Prove:** `--explain` dry-run prints one rationale per ready task; a pin
@@ -363,10 +363,12 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 - [ ] **P-2 · The cvg knowledge home** *(sketched 2026-07-17; decide the
   convention at a beat boundary, never mid-pass — artifact paths are gate
   contracts)*. **Convention DECIDED + first cut shipped 2026-07-17:** the
-  single home is **`<project>/converge/`** — the Converge workspace root
-  (name chosen over `cvg/` = names the tool not the method, and over
-  `.cvg/` = hidden folders defeat a knowledge home; dot-space stays
-  reserved for machine config `.converge/`, Milestone 4.3). Skill paths
+  single home is **`<project>/cvg/`** — the Converge workspace root
+  (Luan's call, same day, reversing the initial `converge/` pick: matches
+  the CLI brand AND kills the collision with the converge repo's own
+  name; visible over `.cvg/` = hidden folders defeat a knowledge home;
+  dot-space stays reserved for machine config `.cvg/`, Milestone 4.3).
+  Skill paths
   (`docs/brd-*`, `sketch/*.plan`, `brain/`) are RELATIVE to the workspace
   — no skill edits needed; engrave the workspace-root line in each skill
   at its beat, and `cvg` resolves the workspace before globbing.

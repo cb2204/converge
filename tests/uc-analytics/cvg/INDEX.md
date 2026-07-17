@@ -1,4 +1,4 @@
-# converge/ — the Converge workspace (single home)
+# cvg/ — the Converge workspace (single home)
 
 One kind of knowledge per folder, one lifecycle each:
 
