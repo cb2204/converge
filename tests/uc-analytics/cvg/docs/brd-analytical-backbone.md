@@ -4,6 +4,15 @@
 > Owner's voice throughout. No requirements, no solution shape, no technology
 > decisions — those belong to the passes below.
 
+## Executive summary
+
+Partners fire their analytical questions at our operational database — the
+only place data lives — and it's crashing under them while the business
+flies blind. Phase one: a standalone, near-real-time analytical backbone
+partners plug into; production then gets locked to analytical traffic.
+Ceiling $1,000/month. Unlocks data-driven prioritization and the AI-first
+phase two.
+
 ## Problem
 
 Our operational database is the only place our data lives, so everyone —
@@ -132,3 +141,8 @@ before questioning: `tests/uc-analytics/` operational PostgreSQL (customers,
 products, orders, payments; deterministic seed 42), `src/README.md` (the
 analytical lane explicitly does not exist yet). Parked stub from
 scope-check: silent-failure detection idea (own BRD later).
+
+## Sign-off
+
+- **Owner/decider:** VP of Engineering (Luan Moreno, persona) — verdict: _pending_
+- **Date:** —

@@ -2,7 +2,7 @@
 name: idea-to-brd
 description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -86,7 +86,7 @@ handoff from a no-go.
 
 ### Step 3 — Draft (write the BRD in the owner's voice)
 
-Write `docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source. Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
+Write `docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Executive summary (written LAST — one breath, ≤ 60 words) · Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source · Sign-off (present from the first draft, verdict `_pending_` — only the owner flips it to `canonical`, and Pass 1 must not consume an unsigned brief). Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
 
 Three drafting rules from the grill carry into the document:
 
@@ -117,6 +117,8 @@ bash .claude/skills/idea-to-brd/scripts/check-brd.sh docs/brd-<slug>.md
 - [ ] **Every open question has a named owner**, and if more than one stakeholder is named, **the decider is named**.
 - [ ] The BRD is in the **owner's voice** — no requirement, no solution shape, no technology decision.
 - [ ] **Definition of success** is written from the owner's seat.
+- [ ] The **Executive summary reads in one breath** (written last; if it can't, revisit the scope-check).
+- [ ] The **Sign-off block is present** — verdict stays `_pending_` until the owner writes `canonical`; an unsigned BRD is a draft, not a handoff.
 
 ## Examples
 
@@ -161,5 +163,5 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 
 ## References
 
-- `references/brd-template.md` — the BRD section skeleton (Problem · Goals & KPIs · Scope · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source) with per-section guidance, plus the no-go record shape.
+- `references/brd-template.md` — the BRD section skeleton (Executive summary · Problem · Goals & KPIs · Scope · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source · Sign-off) with per-section guidance, plus the no-go record shape.
 - `scripts/check-brd.sh` — the falsifiable gate (sections present, pain quantified, provenance tags present, KPIs named, open questions owned).

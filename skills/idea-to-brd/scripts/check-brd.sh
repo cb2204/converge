@@ -34,7 +34,7 @@ section() {
 }
 
 # 1 — required sections
-for SEC in "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Risks" "Constraints" "Open questions" "Source"; do
+for SEC in "Executive summary" "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Risks" "Constraints" "Open questions" "Source" "Sign-off"; do
   if grep -qiE "^## +.*${SEC}" "$FILE"; then
     pass "section present: $SEC"
   else
@@ -94,7 +94,14 @@ if grep -qE '\(guessed\)' "$FILE"; then
   warn "(guessed) number(s) present — each needs a matching open question to verify it"
 fi
 
-# 7 — altitude warnings (advisory only; the human judges)
+# 7 — sign-off state (advisory: structure is gated, the verdict is the owner's)
+if section "Sign-off" | grep -qiE '\bcanonical\b'; then
+  pass "Sign-off: owner has marked the brief canonical"
+else
+  warn "Sign-off pending — the brief is a draft until the owner writes 'canonical' (Pass 1 must not consume it)"
+fi
+
+# 8 — altitude warnings (advisory only; the human judges)
 if grep -qiE '\b(the system shall|must implement|architecture|schema|database|endpoint|framework)\b' "$FILE"; then
   warn "possible solution-shape leak (requirement/tech language found) — keep the BRD in the owner's voice"
 fi

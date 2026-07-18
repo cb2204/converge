@@ -7,6 +7,12 @@ altitude — no requirements, no solution shape, no technology decisions.
 ```markdown
 # BRD — <idea title>
 
+## Executive summary
+
+One breath, written LAST: the pain, the thing phase one builds, the
+headline number(s), and what it unlocks. A reader who stops here still
+knows what this brief asks for. ≤ 60 words.
+
 ## Problem
 
 Who feels the pain, when, and what it costs — with at least one number
@@ -67,10 +73,23 @@ questionnaire to send them.
 
 Where the idea came from (conversation date, voice note, whiteboard photo,
 meeting) — the provenance Pass 1 can trace lines back to.
+
+## Sign-off
+
+- **Owner/decider:** <name/role> — verdict: _pending_
+- **Date:** —
+
+The judge beat made physical: the owner writes `canonical` (and the date)
+here after reviewing the draft; until then the brief is a draft and Pass 1
+must not consume it. Corrections iterate the draft, then re-gate, then
+sign.
 ```
 
 ## Per-section reminders
 
+- **Executive summary** — written after everything else, like Pass 1's
+  TL;DR. If it doesn't fit in one breath, the idea probably failed the
+  scope-check (is this one idea?).
 - **Problem** — half the gate. If you can't quantify the pain, the number
   itself becomes an owned open question; never soften it into prose.
 - **Goals & KPIs** — the owner's numbers, not engineering metrics. Latency
@@ -83,6 +102,9 @@ meeting) — the provenance Pass 1 can trace lines back to.
 - **Risks** — accepted risks stay here in the owner's words; anything that
   needs an answer moves to Open questions with an owner. Don't let the
   pre-mortem's findings evaporate into conversation.
+- **Sign-off** — the section exists from the first draft (verdict
+  `_pending_`); only the owner flips it to `canonical`. Downstream passes
+  treat an unsigned BRD as not yet landed.
 
 ## The no-go record (the other exit)
 
