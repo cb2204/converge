@@ -22,4 +22,8 @@ refs, decisions). `docs/` + `sketch/` + root `tasks/` are cvg-generated
 *(empty — external links, papers, competitor notes)*
 
 ## Decisions (`decisions/`)
-*(empty — key business decisions made outside the passes, dated)*
+- [2026-07-19-pass1-round1-owner-answers.md](decisions/2026-07-19-pass1-round1-owner-answers.md) —
+  Pass 1 Rounds 1+2 locked: 5-min freshness floor (process default), SLA by
+  question class (small ≤5m / medium ≤30m / hard ≤1h), lockdown =
+  migrate-all → revoke → 7-day-zero window, never-silently-wrong staleness
+  policy, 100 queries/day. The grill never re-asks these.

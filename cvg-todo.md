@@ -115,8 +115,13 @@ complete vertical slice. The five beats, in order, never bundled:
   U-beat partially done at absorption: reviewed, validator green, gate proven
   discriminating (template-conformant BRD exit 0 / numbers stripped exit 1).
   **Beat state:** U ✅ · R ✅ · C ✅ 2026-07-19 (BRD signed canonical + Pass 0
-  lesson taught) · I/P wait on the `bin/cvg` entrypoint born at R1.I —
-  `cvg capture` circles back right after.
+  lesson taught) · I/P **now CURRENT** — owner's call 2026-07-19: close
+  Pass 0 100% end-to-end before anything else; the CLI takes place now.
+  The `bin/cvg` entrypoint birth (Milestone 1.1 + the UX contract's `_ui`
+  layer) moves HERE from R1.I. Sequence: (1) 1.1 router on the fixture →
+  (2) P-8 gate hardening (prerequisite: no noncanonical brief may emit a
+  handoff verdict) → (3) R0.I `cvg capture` → (4) R0.P prove against the
+  canonical manual run. R2 explicitly deferred ("not now").
 - [ ] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req`
   - [x] R1.U understand + harden ✅ 2026-07-16 — audited skill vs DGE's
     `dge-design`; applied H1–H7 to SKILL.md (v0.3.0) + H1/H4/H6 to
@@ -124,13 +129,16 @@ complete vertical slice. The five beats, in order, never bundled:
     specs (passing DevOps spec exit 0 / same spec with one open blocker gap
     exit 1) — H6 universality confirmed (a non-data domain passes the
     de-biased "data named" check). `quick_validate.py` green.
-  - [ ] R1.R run — the pass on the canonical
-    `tests/uc-analytics/cvg/docs/brd-analytical-backbone.md` (greenfield
-    proving ground; the UC repo's PDF BRD stays the future brownfield
-    receipt); user answers the interrogation, judges the tech-spec
-  - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**
-  - [ ] R1.I implement — `bin/cvg` entrypoint (absorbs Milestone 1.1's
-    skeleton) + `cvg intent` subcommand. **UX contract (owner's wish,
+  - [x] R1.R run ✅ 2026-07-19 — interrogation answered in two frontier
+    rounds (D1–D5 locked, recorded in the workspace
+    `brain/decisions/2026-07-19-pass1-round1-owner-answers.md`); tech-spec
+    crystallized at `tests/uc-analytics/cvg/docs/tech-spec-analytical-backbone.md`;
+    `check-tech-spec.sh` GATE PASS exit 0, zero warnings; owner judged the
+    spec: "looks great, nice structure".
+  - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**.
+    *Deferred by owner's 2026-07-19 call: Pass 0 closes end-to-end first.*
+  - [ ] R1.I implement — `cvg intent` subcommand (the `bin/cvg` entrypoint
+    birth moved to R0.I, owner's call 2026-07-19). **UX contract (owner's wish,
     2026-07-19 — resolution proposed, canonize at this beat):** the CLI must
     be beautiful and show the stages. Proposed: core stays bash/stdlib per
     rule 5 (gates run dep-free in CI); beauty ships as a shared pure-ANSI
@@ -139,6 +147,10 @@ complete vertical slice. The five beats, in order, never bundled:
     presentation shell with graceful plain fallback, never in the gate path;
     Typer evaluated and declined for core (thin routing surface, hard pip
     dep). Full stage visualization lands at Milestone 5's board.
+    Field research done 2026-07-19 (deep-research, 18 verified claims):
+    `temp/cli-ux-research-2026-07-19.md` — degradation contract
+    (TTY/NO_COLOR/machine-mode), color discipline, buildx/Dagger stage
+    precedents; confirms the argparse-over-Typer call. Consume at this beat.
   - [ ] R1.P prove — `cvg intent` re-run matches the manual golden run
 - [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
@@ -482,12 +494,35 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   matrix says what each gate guarantees, not merely whether a similarly named
   command exists.
 
+- [ ] **P-8 · Align and reproduce the Pass 0 exit contract before `cvg
+  capture`** *(found during the guided Pass 0 audit, 2026-07-19)*. Today
+  `check-brd.sh` is a useful structural linter, but a pending owner sign-off
+  only warns and the script still prints `GATE: PASS` plus “hand off to Pass
+  1,” contradicting the skill and template. Split draft validation from
+  handoff authorization (`--draft` versus canonical/default, or equivalent):
+  canonical sign-off + date must hard-block handoff; Scope In/Out must contain
+  real entries; question/owner records must pair with nonblank owners; enforce
+  the mechanically provable provenance and guessed-number linkage rules; and
+  keep semantic owner-voice/altitude judgment explicitly human. Add a no-go
+  record validator and define how advertised PDF output is converted or
+  checked. Commit a table-driven regression suite covering canonical green,
+  pending sign-off, empty scope, blank owner, missing/guessed provenance,
+  altitude warning, and valid/invalid no-go records—the earlier synthetic
+  proof currently survives only in commit/backlog prose. Packaging gate: both
+  `idea-to-brd` and its `pass-to-lesson` close must pass the current installed
+  official skill validator as well as the vendored one (both currently fail
+  the official validator on unsupported `compatibility` frontmatter). Final
+  gate: no noncanonical brief can emit a Pass 1 handoff verdict, every negative
+  fixture fails for its intended reason, Bash 3.2 + ShellCheck stay green, and
+  P-5 owns the resulting write-once receipt rather than duplicating it here.
+
 ---
 
 ## Progress log
 
 > Append one line per completed step: date · step · proof command · result.
 
+- 2026-07-19 · **R1.R** · Pass 1 executed for real on the canonical greenfield BRD. Note: the first R1.R session crashed mid-round — the owner's five answers were recovered from the session transcript, verified verbatim against the question round, and locked into the workspace `brain/decisions/` (new standing rule: interrogation answers land on disk the moment they arrive). Two frontier rounds: D1 5-min freshness floor (process default), D2 SLA classes small ≤5m / medium ≤30m / hard ≤1h (timed drills per class), D3 lockdown = migrate-all → revoke-provably-fails → 7-day-zero window, D4 never-silently-wrong + 15-min staleness alert, D5 100 queries/day (≤10 orgs + modest growth stay estimated). Deliverable: `tests/uc-analytics/cvg/docs/tech-spec-analytical-backbone.md` — `check-tech-spec.sh` GATE PASS exit 0, ZERO warnings (14 quantified lines, 17 comparators, no stack leak); 3 minor gaps open (capture-overhead bound, local-loop time, partner sequencing), no blockers. Owner verdict on the spec: "looks great, nice structure". CLI-UX deep-research recovered from the crashed session's workflow state → `temp/cli-ux-research-2026-07-19.md` (18 verified claims). **Owner re-ordered the plan:** Pass 0 closes 100% end-to-end NOW (router → P-8 → capture → prove); R1.C/I/P and R2 wait.
 - 2026-07-19 · **R0.C** · Pass 0 canonized. Owner verdict **approved — canonical** signed into the BRD's Sign-off block (the v0.4.0 field-audit sections Executive summary + Sign-off were already applied); `check-brd.sh` → GATE PASS exit 0, sign-off check green, same 2 advisory warns as the R0.R run. TEACH beat taken — first real outing of `pass-to-lesson`: `tests/uc-analytics/cvg/docs/lessons/lesson-pass-0-analytical-backbone.md`, `check-lesson.sh` exit 0 (11 components four-part treated, 7 decisions with rejected alternatives, 5 check-yourself questions). R1.R's input path corrected in this file (greenfield `.md`, not the UC repo PDF — stale pre-pivot line). R0.I/R0.P deferred by design: the `bin/cvg` entrypoint is born at R1.I; `cvg capture` circles back immediately after. Next: R1.R.
 - 2026-07-17 · **R0.R** · Pass 0 executed for real on `tests/uc-analytics/` — first live outing of the frontier-rounds grill (3 rounds, voice, Luan as owner/VP-of-Eng persona). Terrain read first (schema + counts verified in container; no BRD → precondition held). Captured: partners' analytical queries crashing operational Postgres (several outages (estimated), one major w/ 3-4h rescue), no analytical backbone = business flying blind; KPI under-1-hour answers; near-real-time freshness; partners in scope; pre-mortem yielded prod-lockdown hard requirement + accepted $1k/mo phase-one ceiling; full stack preference (DuckDB/MotherDuck/dbt/CDC-WAL) quarantined to open-questions ledger for Pass 3. Deliverable: `tests/uc-analytics/docs/brd-analytical-backbone.md` — `check-brd.sh` GATE PASS exit 0 (2 expected warns: guessed→owned-OQ, advisory "database" = terrain description). Owner judgment → R0.C next.
 - 2026-07-17 · **R0.U** · Pass 0 understand+harden closed. Two hardening rounds on `idea-to-brd` since absorption: v0.2.0 (no-go exit + `docs/no-go-*.md` record, provenance tags (measured)/(estimated)/(guessed) with guessed→owned-verification rule, do-nothing test, pre-mortem→Risks section, named decider) and v0.3.0 (frontier-rounds batch grill default — adapts Matt Pocock's batch-grill-me; `--questions batch|one`; voice-first). Companion skill `pass-to-lesson` v0.1.0 born (teach-after-any-pass; 13/13 validator green). Rule 9 proof: `check-brd.sh` discriminating on a NON-data (DevOps runbook) synthetic pair — full BRD exit 0, Risks-section-stripped exit 1; numbers-stripped exit 1 proven at absorption. Next: R0.R — run the grill for real on `tests/uc-analytics/` (raw idea → BRD born there).
