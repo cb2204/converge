@@ -90,6 +90,10 @@ complete vertical slice. The five beats, in order, never bundled:
    Deliverable: the updated SKILL.md (the blueprint) + the pass's artifact
    approved at its gate. Blueprints are **canonical v0** — a later pass may
    send a retro-edit back (compound loop; logged, expected).
+   **Closing the C-beat includes the TEACH beat (agreed 2026-07-19):** run
+   `pass-to-lesson` on the just-canonized artifacts, `check-lesson.sh` green,
+   lesson committed under the workspace `docs/lessons/` — a pass is not
+   closed until its lesson exists.
 4. **IMPLEMENT** — the `cvg` subcommand for this pass: frame → dispatch →
    collect → gate, thin by design. Shared plumbing (bin/cvg entrypoint,
    engine adapter) is born once in R1's beat 4 and only reused after.
