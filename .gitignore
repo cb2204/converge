@@ -21,3 +21,6 @@ dist/
 # Scratch page-render artifacts (spine PDF build leftovers — kept on disk, out of git)
 temp/spine-*
 temp/v3-*
+temp/cvg-spine-*
+temp/fig*.html
+temp/genfig*.py
