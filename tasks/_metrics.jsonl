@@ -6,3 +6,5 @@
 {"schema_version":1,"ts":"2026-07-16T23:11:07Z","task":"T-20260716-impossible-control-sum","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md","effort":"S","agent":"any"}
 {"schema_version":1,"ts":"2026-07-19T14:03:17Z","task":"T-20260719-cvg-router","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md Milestone 1.1 — owner pivot 2026-07-19: bin/cvg born at R0.I","effort":"S","agent":"claude"}
 {"ts":"2026-07-19T14:15:15Z","task":"T-20260719-cvg-router","event":"status_change","from":"ready","to":"done","reason":"built + gold-sanity accepted 2026-07-19"}
+{"schema_version":1,"ts":"2026-07-19T14:19:59Z","task":"T-20260719-pass0-exit-contract","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md P-8 — Pass 0 exit contract before cvg capture","effort":"S","agent":"claude"}
+{"ts":"2026-07-19T14:31:16Z","task":"T-20260719-pass0-exit-contract","event":"status_change","from":"ready","to":"done","reason":"gold-sanity accepted 2026-07-19"}

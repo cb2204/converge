@@ -47,6 +47,11 @@ directory to the first repo carrying `skills/task-spec/scripts/`.
    zero pip/npm dependencies in the core path (rule 5).
 5. **Dogfood ceremony** — S+ subcommands are cut as Task-Specs, gated
    before build, gold-sanity accepted after (rule 6).
+6. **Agents are first-class users** (owner directive, 2026-07-19) — every
+   gate/verdict surface ends in ONE stable greppable machine token (e.g.
+   `CHECK_BRD=PASS`, `TIER=1`, `CONFORMANCE=L2`), exit codes are contracts,
+   and piped output is plain and parse-stable. A harness should never have
+   to parse prose. `--json`/`--ci` modes deepen this at Milestone 2.1.
 
 ## Not yet built (see cvg-todo.md for order and detail)
 

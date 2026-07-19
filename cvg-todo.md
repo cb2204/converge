@@ -151,6 +151,12 @@ complete vertical slice. The five beats, in order, never bundled:
     `temp/cli-ux-research-2026-07-19.md` — degradation contract
     (TTY/NO_COLOR/machine-mode), color discipline, buildx/Dagger stage
     precedents; confirms the argparse-over-Typer call. Consume at this beat.
+    **Owner directive (2026-07-19): the CLI serves AGENTS as first-class
+    users too — feed them what they need.** Standing rule from P-8 onward:
+    every gate/verdict surface ends in a stable greppable machine token
+    (`CHECK_BRD=…` pattern), exit codes are contracts, piped output is
+    plain and parse-stable; `--json`/`--ci` modes deepen this at
+    Milestone 2.1.
   - [ ] R1.P prove — `cvg intent` re-run matches the manual golden run
 - [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
@@ -496,8 +502,11 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   matrix says what each gate guarantees, not merely whether a similarly named
   command exists.
 
-- [ ] **P-8 · Align and reproduce the Pass 0 exit contract before `cvg
-  capture`** *(found during the guided Pass 0 audit, 2026-07-19)*. Today
+- [x] **P-8 · Align and reproduce the Pass 0 exit contract before `cvg
+  capture`** ✅ 2026-07-19 — closed by `tasks/done/T-20260719-pass0-exit-contract.md`
+  (check-brd.sh v0.3.0: canonical/--draft/--no-go modes, machine tokens,
+  17-row regression suite, both skill validators green; see progress log).
+  *(found during the guided Pass 0 audit, 2026-07-19)*. Today
   `check-brd.sh` is a useful structural linter, but a pending owner sign-off
   only warns and the script still prints `GATE: PASS` plus “hand off to Pass
   1,” contradicting the skill and template. Split draft validation from
@@ -524,6 +533,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 > Append one line per completed step: date · step · proof command · result.
 
+- 2026-07-19 · **P-8** · Pass 0 exit contract hardened — `check-brd.sh` v0.2→v0.3.0 via full dogfood ceremony (`T-20260719-pass0-exit-contract`, stamped Tier-1, accepted `--gold-sanity`, transitioned done through `cvg`). The gate now has an exit contract: **canonical (default)** hard-FAILs pending sign-off, missing ISO sign-off date, empty Scope In/Out entries, blank owners, untagged numbers, and (guessed)-without-open-question — and is the ONLY mode that prints the Pass 1 handoff verdict; **--draft** validates structure and NEVER authorizes; **--no-go** validates the other honest exit (marker/date/why/reopen); PDF input refused with convert guidance; every verdict ends in a machine token `CHECK_BRD=…` (first brick of the owner's agents-are-users directive). Proof: 17-row table-driven regression suite green (`skills/idea-to-brd/tests/run-tests.sh` — canonical passes in data AND DevOps domains (rule-9 universality), every negative fails for its INTENDED reason via grep, altitude stays warn-only, the signed proving-ground BRD stays a true positive); shellcheck -x + bash 3.2 clean; packaging gate met — vendored AND installed-official `quick_validate.py` both "Skill is valid!" after moving `compatibility` under `metadata:` (idea-to-brd → 0.5.0, pass-to-lesson → 0.1.1). Finding for later: `claude plugin validate` expects `.claude-plugin/` manifests — the repo's plugin packaging (incl. task-spec's root plugin.json) predates that layout; belongs to P-1/P-6 packaging work, out of this task's blast radius. Next: R0.I `cvg capture`.
 - 2026-07-19 · **1.1 (at R0.I)** · `bin/cvg` router born — the CLI's first breath, full dogfood ceremony. Task-Spec `T-20260719-cvg-router` generated → filled → `validate-task-spec.sh` OK → `safe-to-delegate.sh --stamp` DELEGATE Tier-1 (one re-stamp: eval_3 initially passed on the unbuilt baseline — a rule-8 bug in the eval, fixed to require command success before the no-ANSI check; resealing after edit proved the envelope's tamper-detection works). Built: `bin/cvg` (router: tasks validate|gate|accept, eval, lint, transition, ready, help, version — exact pass-throughs via exec; CVG_HOME override + walk-up home resolution) + `bin/_ui.sh` (degradation-correct color: TTY + NO_COLOR + CVG_COLOR, 8-color palette, per the field research). Proof: `./bin/cvg eval tasks/T-20260719-cvg-router.md` → 3/3 evals pass + Exit Check pass (eval_1 byte-parity with direct script, eval_2 help completeness, eval_3 zero ANSI when piped); `shellcheck -x` clean; bash 3.2.57 verified; `cvg tasks accept --stamp --gold-sanity` → **ACCEPT** (blast radius clean after git-ignoring pre-existing temp/spine-* scratch; gold-sanity: evals FAIL on baseline HEAD, PASS on the work). The acceptance itself ran THROUGH cvg — the machine gated its own birth. Next: P-8 (Pass 0 exit contract) → `cvg capture` → R0.P.
 - 2026-07-19 · **R1.R** · Pass 1 executed for real on the canonical greenfield BRD. Note: the first R1.R session crashed mid-round — the owner's five answers were recovered from the session transcript, verified verbatim against the question round, and locked into the workspace `brain/decisions/` (new standing rule: interrogation answers land on disk the moment they arrive). Two frontier rounds: D1 5-min freshness floor (process default), D2 SLA classes small ≤5m / medium ≤30m / hard ≤1h (timed drills per class), D3 lockdown = migrate-all → revoke-provably-fails → 7-day-zero window, D4 never-silently-wrong + 15-min staleness alert, D5 100 queries/day (≤10 orgs + modest growth stay estimated). Deliverable: `tests/uc-analytics/cvg/docs/tech-spec-analytical-backbone.md` — `check-tech-spec.sh` GATE PASS exit 0, ZERO warnings (14 quantified lines, 17 comparators, no stack leak); 3 minor gaps open (capture-overhead bound, local-loop time, partner sequencing), no blockers. Owner verdict on the spec: "looks great, nice structure". CLI-UX deep-research recovered from the crashed session's workflow state → `temp/cli-ux-research-2026-07-19.md` (18 verified claims). **Owner re-ordered the plan:** Pass 0 closes 100% end-to-end NOW (router → P-8 → capture → prove); R1.C/I/P and R2 wait.
 - 2026-07-19 · **R0.C** · Pass 0 canonized. Owner verdict **approved — canonical** signed into the BRD's Sign-off block (the v0.4.0 field-audit sections Executive summary + Sign-off were already applied); `check-brd.sh` → GATE PASS exit 0, sign-off check green, same 2 advisory warns as the R0.R run. TEACH beat taken — first real outing of `pass-to-lesson`: `tests/uc-analytics/cvg/docs/lessons/lesson-pass-0-analytical-backbone.md`, `check-lesson.sh` exit 0 (11 components four-part treated, 7 decisions with rejected alternatives, 5 check-yourself questions). R1.R's input path corrected in this file (greenfield `.md`, not the UC repo PDF — stale pre-pivot line). R0.I/R0.P deferred by design: the `bin/cvg` entrypoint is born at R1.I; `cvg capture` circles back immediately after. Next: R1.R.

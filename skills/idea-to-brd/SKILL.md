@@ -2,8 +2,8 @@
 name: idea-to-brd
 description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.4.0"
-compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
+  version: "0.5.0"
+  compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
 # idea-to-brd — Converge Pass 0 (Capture)
@@ -103,11 +103,30 @@ Re-read the draft with fresh eyes and fix inline (no re-review loop):
 3. **Ambiguity** — could any line be read two ways? Pick one, make it explicit.
 4. **Altitude** — any requirement, solution shape, or technology that leaked in? Strip it or demote it to a recorded preference.
 
-Then run the gate checker and walk the checklist:
+Then run the gate checker and walk the checklist. The checker has an exit
+contract (v0.3.0): **draft validation and handoff authorization are
+different verdicts.**
 
 ```bash
+# while writing — structural validation only, NEVER authorizes handoff:
+bash .claude/skills/idea-to-brd/scripts/check-brd.sh --draft docs/brd-<slug>.md
+
+# the handoff gate (default) — passes ONLY a canonical brief: owner verdict
+# 'canonical' + ISO date, real Scope In/Out entries, nonblank owners,
+# provenance tags, every (guessed) number linked to an open question:
 bash .claude/skills/idea-to-brd/scripts/check-brd.sh docs/brd-<slug>.md
+
+# the no-go exit has a validator too (marker, date, why, what-would-reopen):
+bash .claude/skills/idea-to-brd/scripts/check-brd.sh --no-go docs/no-go-<slug>.md
 ```
+
+The checker reads `.md` only — a `.pdf` brief is a consensus object; convert
+it (or re-emit `--out-format md`) before gating. For harnesses and agents,
+the last output line is always a stable token:
+`CHECK_BRD=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|NOGO_OK|NOGO_INVALID`.
+Owner-voice and altitude judgments stay warnings in every mode — the human
+judges voice. The regression suite lives at `tests/run-tests.sh`
+(table-driven; every negative fixture must fail for its intended reason).
 
 - [ ] The **pain carries a number** — cost, count, or frequency, in the Problem section — and **every number carries a provenance tag**; every `(guessed)` one has a matching open question to verify it.
 - [ ] The **do-nothing test was asked** — and its answer justifies building (otherwise you should be on the no-go exit, not here).
@@ -164,4 +183,5 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 ## References
 
 - `references/brd-template.md` — the BRD section skeleton (Executive summary · Problem · Goals & KPIs · Scope · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source · Sign-off) with per-section guidance, plus the no-go record shape.
-- `scripts/check-brd.sh` — the falsifiable gate (sections present, pain quantified, provenance tags present, KPIs named, open questions owned).
+- `scripts/check-brd.sh` — the falsifiable gate with an exit contract: canonical mode (default, the ONLY path to the Pass 1 handoff verdict), `--draft` (validation while writing, never authorizes), `--no-go` (validates the other honest exit). Machine token on the last line for agents.
+- `tests/run-tests.sh` + `tests/fixtures/` — the gate's table-driven regression suite (canonical green in two domains, every negative failing for its intended reason).
