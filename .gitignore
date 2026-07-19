@@ -17,3 +17,6 @@ _fleet.jsonl
 
 # Build artifacts
 dist/
+
+# Scratch page-render artifacts (spine PDF build leftovers — kept on disk, out of git)
+temp/spine-*
