@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# cvg — the Converge CLI: one name over the proven task-spec toolchain.
+#
+# The referee, never a player: cvg frames, routes, and gates — it holds no
+# model credentials and never calls an LLM. Wrapped subcommands are exact
+# pass-throughs (same bytes, same exit code) to skills/task-spec/scripts/,
+# so every already-proven gate stays proven (rule 3: wrap, don't rewrite).
+#
+# Resolution: CVG_HOME wins when set; otherwise walk up from the working
+# directory to the first repo carrying skills/task-spec/scripts/.
+#
+# Task-Spec: tasks/T-20260719-cvg-router.md (Milestone 1.1, born at R0.I).
+# Portability: macOS system bash 3.2.
+
+set -euo pipefail
+
+CVG_VERSION="0.1.0"
+
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=bin/_ui.sh
+. "$BIN_DIR/_ui.sh"
+
+# ---------------------------------------------------------------------------
+# Locate the Converge home (the repo whose scripts we route to)
+# ---------------------------------------------------------------------------
+resolve_home() {
+  if [ -n "${CVG_HOME:-}" ]; then
+    if [ -d "$CVG_HOME/skills/task-spec/scripts" ]; then
+      printf '%s\n' "$CVG_HOME"
+      return 0
+    fi
+    ui_err "CVG_HOME is set but '$CVG_HOME/skills/task-spec/scripts' does not exist"
+    return 1
+  fi
+  local dir="$PWD"
+  while [ "$dir" != "/" ]; do
+    if [ -d "$dir/skills/task-spec/scripts" ]; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  ui_err "no Converge home found walking up from '$PWD' — run inside a repo with skills/task-spec/scripts/, or set CVG_HOME"
+  return 1
+}
+
+# route <script-name> [args...] — exact pass-through; exec keeps stdout and
+# the exit code byte-identical to a direct invocation.
+route() {
+  local script="$1"
+  shift
+  exec bash "$SCRIPTS/$script" "$@"
+}
+
+cmd_version() {
+  local ts_ver
+  ts_ver="$(grep -m1 '^TASKSPEC_VERSION=' "$SCRIPTS/_lib.sh" | cut -d'"' -f2)"
+  printf 'cvg %s%s%s (task-spec %s)\n' "$UI_BOLD" "$CVG_VERSION" "$UI_RESET" "${ts_ver:-unknown}"
+  printf '%shome: %s%s\n' "$UI_DIM" "$CVG_HOME_DIR" "$UI_RESET"
+}
+
+cmd_help() {
+  printf '%scvg%s %s— the Converge referee%s  v%s\n' \
+    "$UI_BOLD" "$UI_RESET" "$UI_DIM" "$UI_RESET" "$CVG_VERSION"
+  ui_rule
+  printf 'usage: cvg <command> [args]   %s(flags pass through verbatim)%s\n' "$UI_DIM" "$UI_RESET"
+  printf '\n'
+  printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
+  printf '  tasks gate <spec>        sign-off gate (safe-to-delegate)\n'
+  printf '  tasks accept <spec>      acceptance after execution\n'
+  printf '\n'
+  printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  ready                    list ready-to-run tasks\n'
+  printf '  lint                     lint the whole backlog (cycles, overlaps)\n'
+  printf '  transition <id> <state>  move a task between statuses\n'
+  printf '\n'
+  printf '%sevals%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  eval <spec>              run a Task-Spec'\''s own evals\n'
+  printf '\n'
+  printf '%smeta%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  help                     this screen\n'
+  printf '  version                  cvg + wrapped toolchain versions\n'
+  ui_rule
+  printf '%senv: CVG_HOME (repo override) · NO_COLOR / CVG_COLOR=0|1%s\n' "$UI_DIM" "$UI_RESET"
+}
+
+# ---------------------------------------------------------------------------
+# Router
+# ---------------------------------------------------------------------------
+CMD="${1:-help}"
+[ $# -gt 0 ] && shift
+
+case "$CMD" in
+  help|--help|-h)
+    CVG_HOME_DIR="(unresolved)"
+    cmd_help
+    exit 0
+    ;;
+esac
+
+CVG_HOME_DIR="$(resolve_home)" || exit 1
+SCRIPTS="$CVG_HOME_DIR/skills/task-spec/scripts"
+
+case "$CMD" in
+  tasks)
+    SUB="${1:-}"
+    [ $# -gt 0 ] && shift
+    case "$SUB" in
+      validate) route validate-task-spec.sh "$@" ;;
+      gate)     route safe-to-delegate.sh "$@" ;;
+      accept)   route accept-task.sh "$@" ;;
+      *)
+        ui_err "unknown tasks subcommand '${SUB:-}' — expected: validate | gate | accept"
+        exit 2
+        ;;
+    esac
+    ;;
+  eval)       route run-task-spec.sh "$@" ;;
+  lint)       route lint-backlog.sh "$@" ;;
+  transition) route transition-status.sh "$@" ;;
+  ready)      route list-ready.sh "$@" ;;
+  version|--version|-v)
+    cmd_version
+    exit 0
+    ;;
+  *)
+    ui_err "unknown command '$CMD' — run 'cvg help' for the command map"
+    exit 2
+    ;;
+esac
