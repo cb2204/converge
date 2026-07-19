@@ -1,7 +1,7 @@
 ---
 id: T-20260719-cvg-router
 title: Create the bin/cvg router — one name over the task-spec toolchain
-status: ready
+status: done
 format_version: 3
 profile: standard  # lite | standard | full — scales required zones to effort/blast-radius (see references/concepts/profiles.md)
 effort: S  # XS | S | M → Kimi ; L → GLM (requires execution_backend: glm) ; XL → route to SDD (see references/concepts/effort-gate.md)

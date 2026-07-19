@@ -13,5 +13,6 @@ comes later.)
 | **The machine fixture** (Track M test floor) | [`tests/e2e-test-engine/`](tests/e2e-test-engine/) |
 | **A project's Converge home** | `<project>/cvg/` — the workspace root; its `INDEX.md` maps the five folders (brain → docs → sketch → tasks → receipts) and the current pass state |
 | **Design decks & demos** | [`presentation/`](presentation/) · [`docs/`](docs/) (method PDFs) |
+| **The CLI** (`cvg` — router, UI layer, surface ledger) | [`bin/`](bin/) — its `README.md` records what exists and what proved it |
 | **The task-spec engine** (scripts the CLI wraps) | [`skills/task-spec/scripts/`](skills/task-spec/scripts/) |
 | **Scratch** (never load-bearing) | `temp/` |
