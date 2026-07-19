@@ -19,10 +19,15 @@ One kind of knowledge per folder, one lifecycle each:
   hardened (check-brd.sh v0.3.0 exit contract); `cvg capture` reproduces
   the manual golden run byte-identically (R0.P). Lesson:
   [`docs/lessons/lesson-pass-0-analytical-backbone.md`](docs/lessons/lesson-pass-0-analytical-backbone.md).
-- **Pass 1 (Intent): tech-spec gate-green, owner-approved** —
-  `docs/tech-spec-analytical-backbone.md` (R1.R closed 2026-07-19; locked
-  decisions in `brain/decisions/`). Canonization (R1.C, Gate H1) deferred
-  by the owner's Pass-0-first call.
-- **Next beat:** R1.C when the owner reopens Track R's descent.
+- **Pass 1 (Intent): CANONICAL — Gate H1 taken** (2026-07-19) —
+  `docs/tech-spec-analytical-backbone.md` signed by the owner after an
+  agentic-execution review (SUFFICIENT-WITH-FIXES; all blocker and
+  should-fix edits applied: analytical-query defined by principal,
+  Q-SET-1 answer-key oracle, p99 normative for R-1, D1–D8 traceability).
+  Gap register fully resolved (D6 ≤20% capture overhead / D7 15-min local
+  loop / D8 elected waves). Lesson:
+  [`docs/lessons/lesson-pass-1-analytical-backbone.md`](docs/lessons/lesson-pass-1-analytical-backbone.md).
+- **Next beat:** R1.I — `cvg intent` (exit contract + subcommand), then
+  R1.P golden-diff proof.
 - Everything else: not yet born. The current beat lives in the repo-root
   [`cvg-todo.md`](../../../cvg-todo.md).
