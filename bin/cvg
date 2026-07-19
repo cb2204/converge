@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.1.0"
+CVG_VERSION="0.2.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -64,6 +64,11 @@ cmd_help() {
     "$UI_BOLD" "$UI_RESET" "$UI_DIM" "$UI_RESET" "$CVG_VERSION"
   ui_rule
   printf 'usage: cvg <command> [args]   %s(flags pass through verbatim)%s\n' "$UI_DIM" "$UI_RESET"
+  printf '\n'
+  printf '%spasses%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  capture [--draft|--no-go] [brief]\n'
+  printf '                           Pass 0 gate — finds cvg/docs/brd-*.md (then\n'
+  printf '                           docs/) when no path is given\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
@@ -115,6 +120,44 @@ case "$CMD" in
         exit 2
         ;;
     esac
+    ;;
+  capture)
+    # Pass 0 gate: locate the brief, route to the idea-to-brd exit contract.
+    # Gate path is an exact pass-through (exec, zero decoration) — R0.P
+    # proves by byte-diff. Discovery messages exist ONLY on the exit-2 path.
+    GATE="$CVG_HOME_DIR/skills/idea-to-brd/scripts/check-brd.sh"
+    CAP_FLAGS=""
+    CAP_TARGET=""
+    CAP_KIND="brd"
+    for A in "$@"; do
+      case "$A" in
+        --draft) CAP_FLAGS="$CAP_FLAGS --draft" ;;
+        --no-go) CAP_FLAGS="$CAP_FLAGS --no-go"; CAP_KIND="no-go" ;;
+        *)       CAP_TARGET="$A" ;;
+      esac
+    done
+    if [ -z "$CAP_TARGET" ]; then
+      CAP_N=0
+      CAP_LIST=""
+      for F in "cvg/docs/${CAP_KIND}-"*.md "docs/${CAP_KIND}-"*.md; do
+        [ -f "$F" ] || continue
+        CAP_N=$((CAP_N + 1))
+        CAP_TARGET="$F"
+        CAP_LIST="${CAP_LIST}  ${F}
+"
+      done
+      if [ "$CAP_N" -eq 0 ]; then
+        ui_err "no ${CAP_KIND}-*.md found under cvg/docs/ or docs/ from '$PWD' — pass the file: cvg capture [--draft|--no-go] <file>"
+        exit 2
+      fi
+      if [ "$CAP_N" -gt 1 ]; then
+        ui_err "ambiguous: $CAP_N ${CAP_KIND} documents found — pass one explicitly:"
+        printf '%s' "$CAP_LIST" >&2
+        exit 2
+      fi
+    fi
+    # shellcheck disable=SC2086  # CAP_FLAGS is a controlled flag list (--draft/--no-go only)
+    exec bash "$GATE" $CAP_FLAGS "$CAP_TARGET"
     ;;
   eval)       route run-task-spec.sh "$@" ;;
   lint)       route lint-backlog.sh "$@" ;;

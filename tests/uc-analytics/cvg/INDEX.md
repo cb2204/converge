@@ -14,10 +14,15 @@ One kind of knowledge per folder, one lifecycle each:
 
 ## Current state
 
-- **Pass 0 (Capture): CANONICAL** — `docs/brd-analytical-backbone.md`
-  signed by the owner 2026-07-19 (gate green since 2026-07-17). Lesson:
+- **Pass 0 (Capture): CLOSED END-TO-END** (2026-07-19, all five beats) —
+  `docs/brd-analytical-backbone.md` signed canonical by the owner; gate
+  hardened (check-brd.sh v0.3.0 exit contract); `cvg capture` reproduces
+  the manual golden run byte-identically (R0.P). Lesson:
   [`docs/lessons/lesson-pass-0-analytical-backbone.md`](docs/lessons/lesson-pass-0-analytical-backbone.md).
-- **Next beat: R1.R** — Pass 1 (`brd-docs-to-tech-req`) runs on the
-  canonical BRD; the tech-spec gets born in `docs/`.
+- **Pass 1 (Intent): tech-spec gate-green, owner-approved** —
+  `docs/tech-spec-analytical-backbone.md` (R1.R closed 2026-07-19; locked
+  decisions in `brain/decisions/`). Canonization (R1.C, Gate H1) deferred
+  by the owner's Pass-0-first call.
+- **Next beat:** R1.C when the owner reopens Track R's descent.
 - Everything else: not yet born. The current beat lives in the repo-root
   [`cvg-todo.md`](../../../cvg-todo.md).
