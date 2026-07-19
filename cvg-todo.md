@@ -130,7 +130,15 @@ complete vertical slice. The five beats, in order, never bundled:
     receipt); user answers the interrogation, judges the tech-spec
   - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**
   - [ ] R1.I implement — `bin/cvg` entrypoint (absorbs Milestone 1.1's
-    skeleton) + `cvg intent` subcommand
+    skeleton) + `cvg intent` subcommand. **UX contract (owner's wish,
+    2026-07-19 — resolution proposed, canonize at this beat):** the CLI must
+    be beautiful and show the stages. Proposed: core stays bash/stdlib per
+    rule 5 (gates run dep-free in CI); beauty ships as a shared pure-ANSI
+    `_ui` layer (blueprint aesthetic — stage strip, truecolor, box-drawing)
+    used by every subcommand; Rich/Textual allowed only as an OPTIONAL
+    presentation shell with graceful plain fallback, never in the gate path;
+    Typer evaluated and declined for core (thin routing surface, hard pip
+    dep). Full stage visualization lands at Milestone 5's board.
   - [ ] R1.P prove — `cvg intent` re-run matches the manual golden run
 - [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
