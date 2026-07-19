@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.2.1"
+CVG_VERSION="0.3.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -69,6 +69,8 @@ cmd_help() {
   printf '  capture [--draft|--no-go] [brief]\n'
   printf '                           Pass 0 gate — finds cvg/docs/brd-*.md (then\n'
   printf '                           docs/) when no path is given\n'
+  printf '  intent [--draft] [spec]  Pass 1 gate — finds cvg/docs/tech-spec-*.md\n'
+  printf '                           (then docs/) when no path is given\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
@@ -174,6 +176,50 @@ case "$CMD" in
     fi
     # shellcheck disable=SC2086  # CAP_FLAGS is a controlled flag list (--draft/--no-go only)
     exec bash "$GATE" $CAP_FLAGS "$CAP_TARGET"
+    ;;
+  intent)
+    # Pass 1 gate: locate the tech-spec, route to the brd-docs-to-tech-req
+    # exit contract. Gate path is an exact pass-through (exec, zero
+    # decoration) — R1.P proves by byte-diff. Discovery/flag errors exist
+    # ONLY on the exit-2 path and still end in the machine token.
+    GATE="$CVG_HOME_DIR/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh"
+    INT_FLAGS=""
+    INT_TARGET=""
+    for A in "$@"; do
+      case "$A" in
+        --draft) INT_FLAGS="$INT_FLAGS --draft" ;;
+        -*)
+          ui_err "unknown intent flag '$A' — expected --draft"
+          printf 'CHECK_TECH_SPEC=USAGE_ERROR\n'
+          exit 2
+          ;;
+        *)       INT_TARGET="$A" ;;
+      esac
+    done
+    if [ -z "$INT_TARGET" ]; then
+      INT_N=0
+      INT_LIST=""
+      for F in cvg/docs/tech-spec-*.md docs/tech-spec-*.md; do
+        [ -f "$F" ] || continue
+        INT_N=$((INT_N + 1))
+        INT_TARGET="$F"
+        INT_LIST="${INT_LIST}  ${F}
+"
+      done
+      if [ "$INT_N" -eq 0 ]; then
+        ui_err "no tech-spec-*.md found under cvg/docs/ or docs/ from '$PWD' — pass the file: cvg intent [--draft] <file>"
+        printf 'CHECK_TECH_SPEC=USAGE_ERROR\n'
+        exit 2
+      fi
+      if [ "$INT_N" -gt 1 ]; then
+        ui_err "ambiguous: $INT_N tech-spec documents found — pass one explicitly:"
+        printf '%s' "$INT_LIST" >&2
+        printf 'CHECK_TECH_SPEC=USAGE_ERROR\n'
+        exit 2
+      fi
+    fi
+    # shellcheck disable=SC2086  # INT_FLAGS is a controlled flag list (--draft only)
+    exec bash "$GATE" $INT_FLAGS "$INT_TARGET"
     ;;
   eval)       route run-task-spec.sh "$@" ;;
   lint)       route lint-backlog.sh "$@" ;;

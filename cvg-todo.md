@@ -121,7 +121,12 @@ complete vertical slice. The five beats, in order, never bundled:
   template-copy bypass + 3 seams (T-20260719-pass0-gate-v031, gold-sanity
   ACCEPT, suite 17→27 rows, golden diff re-proven EMPTY) — Pass 0 sign-off
   is now 100%.**
-- [ ] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req`
+- [x] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req` ✅ **CLOSED END-TO-END
+  2026-07-19, all five beats.** Beat state: U ✅ · R ✅ · C ✅ (tech-spec
+  signed canonical at Gate H1 + lesson taught) · I ✅ (`cvg intent` +
+  check-tech-spec v0.4.0 exit contract, T-20260719-cvg-intent, gold-sanity
+  accepted) · P ✅ (golden diff EMPTY: `cvg intent` byte-identical to the
+  direct gate run, exit 0, `CHECK_TECH_SPEC=PASS`).
   - [x] R1.U understand + harden ✅ 2026-07-16 — audited skill vs DGE's
     `dge-design`; applied H1–H7 to SKILL.md (v0.3.0) + H1/H4/H6 to
     check-tech-spec.sh (v0.3.0). Gate proven discriminating on two synthetic
@@ -145,7 +150,10 @@ complete vertical slice. The five beats, in order, never bundled:
     size + probe interval; S-1..S-7 decidability edits). Gate re-proven
     PASS exit 0. TEACH beat: `lesson-pass-1-analytical-backbone.md`,
     check-lesson exit 0 (12 components, 12 decisions w/ alternatives).
-  - [ ] R1.I implement — `cvg intent` subcommand (the `bin/cvg` entrypoint
+  - [x] R1.I implement ✅ 2026-07-19 — `cvg intent` born (cvg 0.3.0) +
+    check-tech-spec v0.4.0 exit contract, one atomic ceremony
+    (T-20260719-cvg-intent, Tier-1, gold-sanity ACCEPT); see progress log.
+    *(original beat notes preserved below)* — `cvg intent` subcommand (the `bin/cvg` entrypoint
     birth moved to R0.I, owner's call 2026-07-19). **UX contract (owner's wish,
     2026-07-19 — resolution proposed, canonize at this beat):** the CLI must
     be beautiful and show the stages. Proposed: core stays bash/stdlib per
@@ -165,7 +173,10 @@ complete vertical slice. The five beats, in order, never bundled:
     (`CHECK_BRD=…` pattern), exit codes are contracts, piped output is
     plain and parse-stable; `--json`/`--ci` modes deepen this at
     Milestone 2.1.
-  - [ ] R1.P prove — `cvg intent` re-run matches the manual golden run
+  - [x] R1.P prove ✅ 2026-07-19 — `cvg intent` on the proving ground
+    byte-identical to the direct check-tech-spec run (golden diff EMPTY,
+    exit 0, `CHECK_TECH_SPEC=PASS`), proven in eval_3 AND re-proven by
+    hand post-acceptance.
 - [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
@@ -541,6 +552,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 > Append one line per completed step: date · step · proof command · result.
 
+- 2026-07-19 · **R1.I + R1.P — PASS 1 CLOSED END-TO-END** · One atomic ceremony (T-20260719-cvg-intent, stamped Tier-1 → built → 3/3 evals → gold-sanity ACCEPT → done through cvg): **check-tech-spec v0.3.0→v0.4.0** — the Pass 1 exit contract (review blocker B-1 closed): canonical (default) adds Check 9 (fence-stripped Sign-off extraction, verdict-line-anchored canonical, valid-ISO date) and is the ONLY mode whose verdict hands to Pass 2; --draft validates and NEVER authorizes; every exit path incl. exit-2 ends in CHECK_TECH_SPEC=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|USAGE_ERROR; dead HAS_IN assignment removed (shellcheck SC2034, never consulted). **New 15-row regression suite** (skills/brd-docs-to-tech-req/tests/, canonical fixture in DevOps domain per rule 9) — rule-8 with teeth: all 4 sign-off negatives wrongly PASS on v0.3.0 with the full handoff verdict (git show run recorded), exit-2 paths tokenless there. **cvg intent** (cvg 0.2.1→0.3.0): capture-mirror discovery (cvg/docs/tech-spec-*.md then docs/, 0→exit 2+token, >1→exit 2 naming+token), --draft pass-through, unknown flags refused; gate path exact exec. **R1.P: golden diff EMPTY** — cvg intent byte-identical to the direct gate run on the canonical spec, CHECK_TECH_SPEC=PASS. Version note: task Context assumed SKILL.md 0.3.0 (stale R1.U reading — external absorb had moved it to 0.5.0); bumped 0.5.0→0.6.0, quick_validate green, eval contract unaffected. **R1 = second pass fully closed; next: R2.U (Pass 2 Structure — tech-req-to-adrs).**
 - 2026-07-19 · **R1.C — Gate H1 taken, Pass 1 canonical** · Owner verdict (conditional on agentic-execution review) → two independent reviews ran: (a) three-engine STRUCTURE review (Exa/Firecrawl/Tavily vs field guides + ISO 29148): layout matches or beats practice (problem-first, MoSCoW, per-requirement evals, hand-built traceability), one true gap — no approved-by block → Sign-off section added; (b) adversarial AGENTIC-EXECUTION review: SUFFICIENT-WITH-FIXES, 4 blockers + 7 should-fixes, ALL applied (analytical query = identity-by-principal never judgment; Q-SET-1 named deliverable w/ answer-key oracle, verifiers may read _control, product surface stays fenced; R-1 p99 normative w/ ≥1000 samples @ ≤30s probes; D1–D8 trace rule; partner registry = decidable "all"; cost boundary = billing exports; staleness event = 5-min floor; load shape = ≥20% peak hour). Gaps→D6/D7/D8 locked on arrival (brain/decisions round3). check-tech-spec PASS exit 0 post-edits. TEACH engraved: lesson-pass-1 (12 components, 12 decisions, check-lesson exit 0). Review also proved gate B-1: unsigned spec passes check-tech-spec v0.3.0 + no machine token → R1.I hardens the exit contract before cvg intent wraps it.
 - 2026-07-19 · **R0 second-eyes hardening — Pass 0 sign-off completed at 100%** · An adversarial second-eyes review (two independent agents: gate-evasion + closure-consistency) refuted the "airtight" claim with one BLOCKER: a BRD copied faithfully from the skill's OWN template (verdict `_pending_`, guidance sentence containing `canonical`, any ISO date in the section) passed the canonical gate — plus 3 seams: fenced examples satisfied checks, open-questions fail-OPEN on unrecognized shapes, no machine token on exit-2 paths (contradicting the script's own header AND codified by the old pdf-refused test row). Closed via full dogfood ceremony (`T-20260719-pass0-gate-v031` stamped Tier-1 → built → 3/3 evals + Exit Check → gold-sanity ACCEPT → done through `cvg`). check-brd.sh v0.3.0→**v0.3.1**: verdict-line anchoring (canonical must be ON the verdict line, pending/draft there never authorizes), ALL checks run fence-stripped, OQ shape fails closed, valid-ISO date on a Date/Signed line, `--draft --no-go` conflict + unknown flags + extra positionals refused, EVERY exit-2 ends in `CHECK_BRD=USAGE_ERROR` (pdf-refused row fixed to expect it); `cvg` 0.2.1: capture refuses unknown flags/conflicts, discovery exit-2 paths emit the token (gate path stays exact exec — untouched). Proof: suite 17→**27 rows** green; **rule-8 with teeth: all 4 new fixtures wrongly PASS on v0.3.0** (`git show HEAD:` run recorded), conflict on v0.3.0 silently returned NOGO_OK and two-positionals gated only the last file — both now exit 2; shellcheck -x clean, bash 3.2.57, `quick_validate.py` "Skill is valid!" (idea-to-brd → 0.6.0); **R0.P golden diff re-proven EMPTY** post-hardening. Consistency audit fixes riding along: bin/README stale "(v0.1.0)" heading → v0.2.1, P-2's two stale `converge/` paths → `cvg/`. Known-limit recorded in the spec: S3 per-number provenance coverage stays document-level (a mechanical per-line rule would false-fail dates/numbering) — candidate for a later beat. Deferred to P-6: count drift now includes shell scripts (56 actual vs 54/53 advertised). **Pass 0 = 100% signed off; next: R1.C.**
 - 2026-07-19 · **R0.I + R0.P — PASS 0 CLOSED END-TO-END** · `cvg capture` born (v0.2.0) via full ceremony (`T-20260719-cvg-capture` stamped Tier-1 → built → 3/3 evals → gold-sanity ACCEPT → done). Thin by design: explicit file = exact `exec` pass-through to check-brd.sh (zero decoration — agents parse the gate's own token); no file = workspace discovery (`cvg/docs/brd-*.md` then `docs/`, `no-go-*.md` under `--no-go`; 0 found → exit 2 with guidance, >1 → exit 2 NAMING each candidate, never guesses). **R0.P proof: golden diff EMPTY** — `cd tests/uc-analytics && cvg capture` byte-identical to the direct manual gate run, exit 0, `GATE: PASS … hand off to Pass 1`, `CHECK_BRD=PASS` (one advisory warn — altitude "database"; the R0.R-era second warn became a passing hard check under v0.3.0's guessed→OQ linkage, expected delta). **Task-spec learnings paid for (2 new eval-authoring footguns, both caught by the gate/harness before acceptance):** (1) `cmd | grep -q` on a LIVE pipe under the harness's pipefail dies SIGPIPE 141 when grep exits early — capture output to a var first (herestring); (2) the eval harness runs bodies under `set -e`, so an expected-to-fail command aborts the eval before its check — use `RC=0; cmd || RC=$?`. Candidates for the generator's guidance block (rule-9 ceremony, own XS step). **R0 = the first pass fully closed: skill hardened, artifact canonical, lesson taught, CLI subcommand accepted, CLI run provably equal to the human run.**

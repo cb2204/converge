@@ -10,13 +10,25 @@
 # because Pass 1 must stay above the stack — the engine is decided in Pass 3.
 #
 # Usage:
-#   bash check-tech-spec.sh docs/tech-spec-analytical-engine.md
+#   bash check-tech-spec.sh docs/tech-spec-analytical-engine.md    # canonical
+#   bash check-tech-spec.sh --draft docs/tech-spec-*.md            # validation only
 #   bash check-tech-spec.sh --version
 #
+# Exit contract (v0.4.0): draft validation and Pass 2 handoff authorization
+# are DIFFERENT verdicts. Canonical (default) adds the sign-off check —
+# fence-stripped Sign-off section, 'canonical' on the verdict line itself
+# (pending/draft there never authorizes), valid ISO date — and is the ONLY
+# mode whose verdict hands to Pass 2. --draft runs the structural checks and
+# NEVER authorizes.
+#
+# Agent contract: the LAST line is always a stable machine token —
+#   CHECK_TECH_SPEC=PASS | FAIL | DRAFT_OK | DRAFT_INCOMPLETE | USAGE_ERROR
+# including every exit-2 usage path.
+#
 # Exit codes:
-#   0   PASS — every required box is checked (warnings do not fail the gate)
-#   1   FAIL — one or more required checks failed, or the file is missing
-#   2   usage error
+#   0   PASS / DRAFT_OK (warnings do not fail the gate)
+#   1   FAIL / DRAFT_INCOMPLETE
+#   2   usage error (still ends in CHECK_TECH_SPEC=USAGE_ERROR)
 #
 # Portability: macOS system bash 3.2 safe. No mapfile, no `declare -A`, no
 # process substitution into arrays. grep/sed/awk only, like the task-spec
@@ -24,7 +36,10 @@
 
 set -euo pipefail
 
-CHECK_TECH_SPEC_VERSION="0.3.0"
+CHECK_TECH_SPEC_VERSION="0.4.0"
+
+# A valid ISO date: month 01-12, day 01-31 (2026-13-45 is not a date).
+ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
 
 # ---------------------------------------------------------------------------
 # Error / warning helpers (arrays + explicit counters so `set -u` stays happy
@@ -43,25 +58,50 @@ ok()   { PASSES+=("$1");   NPASS=$((NPASS + 1)); }
 
 die() {
   echo "ERROR: $*" >&2
+  echo "CHECK_TECH_SPEC=USAGE_ERROR"
+  exit 2
+}
+
+usage_error() {
+  echo "ERROR: $*" >&2
+  echo "usage: bash check-tech-spec.sh [--draft] <tech-spec.md>" >&2
+  echo "       bash check-tech-spec.sh --version" >&2
+  echo "CHECK_TECH_SPEC=USAGE_ERROR"
   exit 2
 }
 
 # ---------------------------------------------------------------------------
 # Args
 # ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--version" ]]; then
-  echo "check-tech-spec v$CHECK_TECH_SPEC_VERSION"
-  exit 0
-fi
+MODE="canonical"
+SPEC=""
 
-if [[ $# -lt 1 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  echo "usage: bash check-tech-spec.sh <tech-spec.md>" >&2
-  echo "       bash check-tech-spec.sh --version" >&2
-  exit 2
-fi
+for ARG in "$@"; do
+  case "$ARG" in
+    --version)
+      echo "check-tech-spec v$CHECK_TECH_SPEC_VERSION"
+      exit 0
+      ;;
+    --draft) MODE="draft" ;;
+    -h|--help)
+      echo "usage: bash check-tech-spec.sh [--draft] <tech-spec.md>" >&2
+      echo "       bash check-tech-spec.sh --version" >&2
+      echo "CHECK_TECH_SPEC=USAGE_ERROR"
+      exit 2
+      ;;
+    -*)
+      usage_error "unknown flag '$ARG' — expected --draft, --version, or a file path"
+      ;;
+    *)
+      if [[ -n "$SPEC" ]]; then
+        usage_error "more than one file argument ('$SPEC', '$ARG') — gate one spec per run"
+      fi
+      SPEC="$ARG"
+      ;;
+  esac
+done
 
-SPEC="$1"
-
+[[ -n "$SPEC" ]] || usage_error "no tech-spec path given"
 [[ -f "$SPEC" ]] || die "tech-spec not found: $SPEC"
 
 case "$SPEC" in
@@ -112,8 +152,8 @@ fi
 # ---------------------------------------------------------------------------
 HAS_SCOPE=0
 has_any '^#+.*scope' '\bscope\b' && HAS_SCOPE=1
-HAS_IN=0
-has_any 'in[[:space:]-]*scope' '\bin\b[[:space:]]*:' '^[[:space:]]*[-*].*\bin\b' && HAS_IN=1
+# (v0.4.0: dead HAS_IN assignment removed — it was never consulted by the
+# verdict below; the in-side judgment is the human gate's job.)
 HAS_OUT=0
 has_any 'out[[:space:]-]*of[[:space:]-]*scope' 'out[[:space:]-]*scope' 'explicitly out' 'not[[:space:]]+in[[:space:]]+scope' && HAS_OUT=1
 
@@ -231,6 +271,57 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# Check 9 — Sign-off: the authorization boundary (Gate H1 made mechanical).
+# Extraction is fence-stripped (an example inside ``` proves nothing) and
+# anchored to the VERDICT LINE itself — 'canonical' in guidance prose never
+# authorizes, and a verdict carrying pending/draft never authorizes. Hard in
+# canonical mode; advisory in --draft. Mirrors check-brd.sh v0.3.1.
+# ---------------------------------------------------------------------------
+SO_STRIPPED="$(awk '/^[[:space:]]*```/ { fence = !fence; next } !fence { print }' "$SPEC")"
+SO_BODY="$(printf '%s\n' "$SO_STRIPPED" | awk '
+  /^##[^#]/ {
+    inside = (tolower($0) ~ /sign-off/) ? 1 : 0
+    next
+  }
+  inside { print }
+')"
+HAS_SO_SECTION=0
+printf '%s\n' "$SO_STRIPPED" | grep -qiE '^## +.*sign-off' && HAS_SO_SECTION=1
+VERDICT_LINE="$(printf '%s\n' "$SO_BODY" | grep -iE 'verdict' | head -1 || true)"
+VERDICT_CANONICAL=0
+if printf '%s\n' "$VERDICT_LINE" | grep -qiE '\bcanonical\b'; then
+  if ! printf '%s\n' "$VERDICT_LINE" | grep -qiE '\b(pending|draft)\b'; then
+    VERDICT_CANONICAL=1
+  fi
+fi
+DATE_LINES="$(printf '%s\n' "$SO_BODY" | grep -iE '(date|signed)' || true)"
+HAS_SO_DATE=0
+printf '%s\n' "$DATE_LINES" | grep -qE "$ISO_RE" && HAS_SO_DATE=1
+
+if [[ "$MODE" == "canonical" ]]; then
+  if [[ $HAS_SO_SECTION -eq 0 ]]; then
+    err "Sign-off: section missing — a spec without the owner's verdict block is a draft (validate work-in-progress with --draft)"
+  else
+    if [[ $VERDICT_CANONICAL -eq 1 ]]; then
+      ok "Sign-off: owner has marked the spec canonical (Gate H1)"
+    else
+      err "Sign-off: owner verdict 'canonical' missing — a draft cannot pass the canonical gate (validate work-in-progress with --draft)"
+    fi
+    if [[ $HAS_SO_DATE -eq 1 ]]; then
+      ok "Sign-off: dated (valid ISO YYYY-MM-DD)"
+    else
+      err "Sign-off: no valid ISO date (YYYY-MM-DD) on a Date/Signed line — an undated sign-off cannot anchor the descent"
+    fi
+  fi
+else
+  if [[ $VERDICT_CANONICAL -eq 1 ]]; then
+    warn "Sign-off already reads canonical — run the default (canonical) mode for the Pass 2 handoff verdict"
+  else
+    warn "Sign-off pending — the spec is a draft until the owner signs it canonical (Pass 2 must not consume it)"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Leak scan — WARN on premature technology / stack (Pass 1 stays above it).
 # We scan word-boundaried, case-insensitively, and report the first hit line
 # per term against the ORIGINAL body so the author can find it.
@@ -273,13 +364,25 @@ if [[ $NERR -gt 0 ]]; then
   i=0
   while [[ $i -lt $NERR ]]; do echo "  [ ] ${ERRORS[$i]}"; i=$((i + 1)); done
   echo "────────────────────────────────────────────────────────────"
-  echo "FAIL: $NERR required check(s) failed — do not descend to Pass 2"
+  if [[ "$MODE" == "canonical" ]]; then
+    echo "FAIL: $NERR required check(s) failed — do not descend to Pass 2"
+    echo "CHECK_TECH_SPEC=FAIL"
+  else
+    echo "DRAFT: incomplete — fix the structural items above, then keep drafting."
+    echo "CHECK_TECH_SPEC=DRAFT_INCOMPLETE"
+  fi
   exit 1
 fi
 echo "────────────────────────────────────────────────────────────"
-if [[ $NWARN -gt 0 ]]; then
-  echo "PASS: gate met with $NWARN warning(s) — review the stack leaks above before sign-off"
+if [[ "$MODE" == "canonical" ]]; then
+  if [[ $NWARN -gt 0 ]]; then
+    echo "PASS: gate met with $NWARN warning(s) — canonical spec; review the warnings, then hand to Pass 2 (tech-req-to-adrs)"
+  else
+    echo "PASS: gate met — canonical tech-spec; hand to Pass 2 (tech-req-to-adrs)"
+  fi
+  echo "CHECK_TECH_SPEC=PASS"
 else
-  echo "PASS: gate met — the tech-spec is ready to hand to Pass 2 (tech-req-to-adrs)"
+  echo "DRAFT: structure OK — validation only; a draft NEVER descends to Pass 2 (owner sign-off + the canonical gate do that)."
+  echo "CHECK_TECH_SPEC=DRAFT_OK"
 fi
 exit 0

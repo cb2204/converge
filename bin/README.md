@@ -7,12 +7,13 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.2.1** · born 2026-07-19 at R0.I (Milestone 1.1 executed early per
+**cvg v0.3.0** · born 2026-07-19 at R0.I (Milestone 1.1 executed early per
 the owner's pivot; `capture` added same day; 0.2.1 same day — second-eyes
-hardening: `capture` refuses unknown flags and flag conflicts, and every
-exit-2 surface ends in `CHECK_BRD=USAGE_ERROR`) · Task-Specs
+hardening: `capture` refuses unknown flags and flag conflicts, every exit-2
+surface ends in `CHECK_BRD=USAGE_ERROR`; 0.3.0 same day at R1.I — `intent`
+wraps the Pass 1 exit contract, `CHECK_TECH_SPEC=…` tokens) · Task-Specs
 `tasks/done/T-20260719-cvg-router.md` + `tasks/done/T-20260719-cvg-capture.md`
-+ `tasks/done/T-20260719-pass0-gate-v031.md`
++ `tasks/done/T-20260719-pass0-gate-v031.md` + `tasks/done/T-20260719-cvg-intent.md`
 — each stamped Tier-1, 3/3 evals, accepted with `--gold-sanity`.
 
 ## The two files
@@ -22,11 +23,12 @@ exit-2 surface ends in `CHECK_BRD=USAGE_ERROR`) · Task-Specs
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.2.1)
+## Command surface (v0.3.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
 | `cvg capture [--draft\|--no-go] [brief]` | `idea-to-brd/scripts/check-brd.sh` (Pass 0 exit contract) | golden byte-parity with the direct gate on the signed proving-ground BRD (R0.P); discovery contract (0→exit 2, 2→exit 2 naming both, 1→gates) |
+| `cvg intent [--draft] [spec]` | `brd-docs-to-tech-req/scripts/check-tech-spec.sh` (Pass 1 exit contract, v0.4.0) | golden byte-parity with the direct gate on the signed proving-ground tech-spec (R1.P); same discovery contract; exit-2 paths end in `CHECK_TECH_SPEC=USAGE_ERROR` |
 | `cvg tasks validate <spec>` | `validate-task-spec.sh` | routed pass-through (same mechanism as `gate`, byte-parity eval'd there) |
 | `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |

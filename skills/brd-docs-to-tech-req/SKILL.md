@@ -2,7 +2,7 @@
 name: brd-docs-to-tech-req
 description: Transforms a client BRD (docs/brd-*.pdf) into a verifiable tech-spec (docs/tech-spec-*.md or .pdf) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (frontier rounds with recommended defaults, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # brd-docs-to-tech-req — Converge Pass 1 (Intent)
@@ -139,11 +139,25 @@ fix inline — no re-review loop, just fix and move on:
 
 ### Step 4 — Gate (confirm before leaving this pass)
 
-Do not descend to Pass 2 until every box is checked. Run the bundled checklist verifier against the spec:
+Do not descend to Pass 2 until every box is checked. The verifier has an
+exit contract (v0.4.0): **draft validation and Pass 2 handoff authorization
+are different verdicts.**
 
 ```bash
-bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-spec-analytical-engine.md
+# while writing — structural validation only, NEVER authorizes descent:
+bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh --draft docs/tech-spec-<slug>.md
+
+# the handoff gate (default) — passes ONLY a canonical spec: owner verdict
+# 'canonical' on the Sign-off verdict line (fence-stripped; pending/draft
+# there never authorizes) + a valid ISO date:
+bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-spec-<slug>.md
 ```
+
+For harnesses and agents, the last output line is always a stable token —
+including usage errors (exit 2):
+`CHECK_TECH_SPEC=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|USAGE_ERROR`.
+The regression suite lives at `tests/run-tests.sh` (table-driven; every
+negative fixture must fail for its intended reason).
 
 - [ ] You can **restate the client's problem in one paragraph** from the client's seat.
 - [ ] The tech-spec **answers the brief** — every client pain maps to at least one requirement.

@@ -27,7 +27,11 @@ One kind of knowledge per folder, one lifecycle each:
   Gap register fully resolved (D6 ≤20% capture overhead / D7 15-min local
   loop / D8 elected waves). Lesson:
   [`docs/lessons/lesson-pass-1-analytical-backbone.md`](docs/lessons/lesson-pass-1-analytical-backbone.md).
-- **Next beat:** R1.I — `cvg intent` (exit contract + subcommand), then
-  R1.P golden-diff proof.
+- **Pass 1 machine beats: CLOSED** (2026-07-19) — `cvg intent` born
+  (cvg 0.3.0) over the check-tech-spec v0.4.0 exit contract
+  (`CHECK_TECH_SPEC=…` tokens, sign-off enforced); R1.P golden diff EMPTY.
+  **Pass 1 = CLOSED END-TO-END, all five beats.**
+- **Next beat:** R2.U — Pass 2 Structure (`tech-req-to-adrs`), the
+  understand+harden beat.
 - Everything else: not yet born. The current beat lives in the repo-root
   [`cvg-todo.md`](../../../cvg-todo.md).
