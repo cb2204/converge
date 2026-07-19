@@ -144,5 +144,5 @@ scope-check: silent-failure detection idea (own BRD later).
 
 ## Sign-off
 
-- **Owner/decider:** VP of Engineering (Luan Moreno, persona) — verdict: _pending_
-- **Date:** —
+- **Owner/decider:** VP of Engineering (Luan Moreno, persona) — verdict: **approved — canonical**
+- **Date:** 2026-07-19

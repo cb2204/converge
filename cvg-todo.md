@@ -110,6 +110,9 @@ complete vertical slice. The five beats, in order, never bundled:
   descent); the UC repo enters at R1 directly since its BRD already exists.
   U-beat partially done at absorption: reviewed, validator green, gate proven
   discriminating (template-conformant BRD exit 0 / numbers stripped exit 1).
+  **Beat state:** U ✅ · R ✅ · C ✅ 2026-07-19 (BRD signed canonical + Pass 0
+  lesson taught) · I/P wait on the `bin/cvg` entrypoint born at R1.I —
+  `cvg capture` circles back right after.
 - [ ] **R1 · Pass 1 Intent** — `brd-docs-to-tech-req`
   - [x] R1.U understand + harden ✅ 2026-07-16 — audited skill vs DGE's
     `dge-design`; applied H1–H7 to SKILL.md (v0.3.0) + H1/H4/H6 to
@@ -117,8 +120,10 @@ complete vertical slice. The five beats, in order, never bundled:
     specs (passing DevOps spec exit 0 / same spec with one open blocker gap
     exit 1) — H6 universality confirmed (a non-data domain passes the
     de-biased "data named" check). `quick_validate.py` green.
-  - [ ] R1.R run — the pass on `docs/brd-analytical-backbone.pdf` in the UC
-    repo; user answers the interrogation, judges the tech-spec
+  - [ ] R1.R run — the pass on the canonical
+    `tests/uc-analytics/cvg/docs/brd-analytical-backbone.md` (greenfield
+    proving ground; the UC repo's PDF BRD stays the future brownfield
+    receipt); user answers the interrogation, judges the tech-spec
   - [ ] R1.C canonize — skill + tech-spec iterated to canonical; **Gate H1**
   - [ ] R1.I implement — `bin/cvg` entrypoint (absorbs Milestone 1.1's
     skeleton) + `cvg intent` subcommand
@@ -471,6 +476,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
 
 > Append one line per completed step: date · step · proof command · result.
 
+- 2026-07-19 · **R0.C** · Pass 0 canonized. Owner verdict **approved — canonical** signed into the BRD's Sign-off block (the v0.4.0 field-audit sections Executive summary + Sign-off were already applied); `check-brd.sh` → GATE PASS exit 0, sign-off check green, same 2 advisory warns as the R0.R run. TEACH beat taken — first real outing of `pass-to-lesson`: `tests/uc-analytics/cvg/docs/lessons/lesson-pass-0-analytical-backbone.md`, `check-lesson.sh` exit 0 (11 components four-part treated, 7 decisions with rejected alternatives, 5 check-yourself questions). R1.R's input path corrected in this file (greenfield `.md`, not the UC repo PDF — stale pre-pivot line). R0.I/R0.P deferred by design: the `bin/cvg` entrypoint is born at R1.I; `cvg capture` circles back immediately after. Next: R1.R.
 - 2026-07-17 · **R0.R** · Pass 0 executed for real on `tests/uc-analytics/` — first live outing of the frontier-rounds grill (3 rounds, voice, Luan as owner/VP-of-Eng persona). Terrain read first (schema + counts verified in container; no BRD → precondition held). Captured: partners' analytical queries crashing operational Postgres (several outages (estimated), one major w/ 3-4h rescue), no analytical backbone = business flying blind; KPI under-1-hour answers; near-real-time freshness; partners in scope; pre-mortem yielded prod-lockdown hard requirement + accepted $1k/mo phase-one ceiling; full stack preference (DuckDB/MotherDuck/dbt/CDC-WAL) quarantined to open-questions ledger for Pass 3. Deliverable: `tests/uc-analytics/docs/brd-analytical-backbone.md` — `check-brd.sh` GATE PASS exit 0 (2 expected warns: guessed→owned-OQ, advisory "database" = terrain description). Owner judgment → R0.C next.
 - 2026-07-17 · **R0.U** · Pass 0 understand+harden closed. Two hardening rounds on `idea-to-brd` since absorption: v0.2.0 (no-go exit + `docs/no-go-*.md` record, provenance tags (measured)/(estimated)/(guessed) with guessed→owned-verification rule, do-nothing test, pre-mortem→Risks section, named decider) and v0.3.0 (frontier-rounds batch grill default — adapts Matt Pocock's batch-grill-me; `--questions batch|one`; voice-first). Companion skill `pass-to-lesson` v0.1.0 born (teach-after-any-pass; 13/13 validator green). Rule 9 proof: `check-brd.sh` discriminating on a NON-data (DevOps runbook) synthetic pair — full BRD exit 0, Risks-section-stripped exit 1; numbers-stripped exit 1 proven at absorption. Next: R0.R — run the grill for real on `tests/uc-analytics/` (raw idea → BRD born there).
 

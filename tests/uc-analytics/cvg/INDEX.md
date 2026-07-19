@@ -14,7 +14,10 @@ One kind of knowledge per folder, one lifecycle each:
 
 ## Current state
 
-- **Pass 0 (Capture): gate green** — `docs/brd-analytical-backbone.md`
-  (2026-07-17). Awaiting owner canonization (R0.C).
+- **Pass 0 (Capture): CANONICAL** — `docs/brd-analytical-backbone.md`
+  signed by the owner 2026-07-19 (gate green since 2026-07-17). Lesson:
+  [`docs/lessons/lesson-pass-0-analytical-backbone.md`](docs/lessons/lesson-pass-0-analytical-backbone.md).
+- **Next beat: R1.R** — Pass 1 (`brd-docs-to-tech-req`) runs on the
+  canonical BRD; the tech-spec gets born in `docs/`.
 - Everything else: not yet born. The current beat lives in the repo-root
   [`cvg-todo.md`](../../../cvg-todo.md).
