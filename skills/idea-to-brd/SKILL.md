@@ -2,7 +2,7 @@
 name: idea-to-brd
 description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
   compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -31,7 +31,7 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 |------|----------|
 | **IN** | A raw idea with no BRD — a conversation, a voice-note transcript, a whiteboard photo, a half-page of notes. The owner is in the room (or reachable). |
 | **OUT** | A BRD at `docs/brd-<slug>.md` (or `.pdf`) in the owner's voice — the same artifact shape a client engagement would hand Pass 1. **Or**, when the pain doesn't clear the bar: a no-go record at `docs/no-go-<slug>.md` (the idea, the date, why it didn't clear, what would reopen it). |
-| **GATE** | *(BRD exit)* The pain is stated with a provenance-tagged number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears. *(No-go exit)* The record states why and what would reopen it — a parked idea, not a deleted one. |
+| **GATE** | *(BRD exit)* The pain is stated with a provenance-tagged number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears (altitude is advisory — the checker WARNs, the human judges voice). *(No-go exit)* The record states why and what would reopen it — a parked idea, not a deleted one. |
 
 ## Flags
 
@@ -104,8 +104,11 @@ Re-read the draft with fresh eyes and fix inline (no re-review loop):
 4. **Altitude** — any requirement, solution shape, or technology that leaked in? Strip it or demote it to a recorded preference.
 
 Then run the gate checker and walk the checklist. The checker has an exit
-contract (v0.3.0): **draft validation and handoff authorization are
-different verdicts.**
+contract (v0.3.1): **draft validation and handoff authorization are
+different verdicts.** Authorization is anchored to the verdict line itself —
+the word `canonical` in guidance prose or a fenced example proves nothing
+(all checks run with fenced code blocks stripped), the sign-off date must be
+a real ISO date, and open questions not in the record shape fail closed.
 
 ```bash
 # while writing — structural validation only, NEVER authorizes handoff:
@@ -122,8 +125,9 @@ bash .claude/skills/idea-to-brd/scripts/check-brd.sh --no-go docs/no-go-<slug>.m
 
 The checker reads `.md` only — a `.pdf` brief is a consensus object; convert
 it (or re-emit `--out-format md`) before gating. For harnesses and agents,
-the last output line is always a stable token:
-`CHECK_BRD=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|NOGO_OK|NOGO_INVALID`.
+the last output line is always a stable token — including usage errors
+(exit 2):
+`CHECK_BRD=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|NOGO_OK|NOGO_INVALID|USAGE_ERROR`.
 Owner-voice and altitude judgments stay warnings in every mode — the human
 judges voice. The regression suite lives at `tests/run-tests.sh`
 (table-driven; every negative fixture must fail for its intended reason).

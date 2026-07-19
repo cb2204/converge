@@ -67,6 +67,19 @@ run_case no-provenance           "$FIX/brd-no-provenance.md"    -- 1 'FAIL  numb
 run_case no-provenance-draft     --draft "$FIX/brd-no-provenance.md" -- 0 'WARN  numbers in Problem/Goals carry no provenance tag' 'hand off to Pass 1'
 run_case guessed-without-oq      "$FIX/brd-guessed-no-oq.md"    -- 1 'FAIL  \(guessed\) number\(s\) with no open question' ''
 
+# --- second-eyes hardening (v0.3.1): the gate survives its own template ----
+run_case template-copy-blocked   "$FIX/brd-template-copy.md"    -- 1 "FAIL  Sign-off: owner verdict 'canonical' missing" 'hand off to Pass 1'
+run_case codefence-evasion       "$FIX/brd-codefence-evasion.md" -- 1 "FAIL  Sign-off: owner verdict 'canonical' missing" 'hand off to Pass 1'
+run_case oq-shape-fails-closed   "$FIX/brd-oq-evasion.md"       -- 1 'record shape' 'hand off to Pass 1'
+run_case oq-shape-draft-warns    --draft "$FIX/brd-oq-evasion.md" -- 0 'record shape.*draft: advisory' 'hand off to Pass 1'
+run_case invalid-date-blocked    "$FIX/brd-bad-date.md"         -- 1 'FAIL  Sign-off: no valid ISO date' 'hand off to Pass 1'
+
+# --- usage errors exit 2 AND still end in the machine token (v0.3.1) -------
+run_case flags-conflict          --draft --no-go "$FIX/nogo-valid.md" -- 2 '^CHECK_BRD=USAGE_ERROR$' 'CHECK_BRD=NOGO'
+run_case unknown-flag            -draft "$FIX/brd-canonical.md" -- 2 '^CHECK_BRD=USAGE_ERROR$' 'CHECK_BRD=PASS'
+run_case two-files-refused       "$FIX/brd-pending-signoff.md" "$FIX/brd-canonical.md" -- 2 '^CHECK_BRD=USAGE_ERROR$' 'CHECK_BRD=PASS'
+run_case missing-file-token      "$FIX/does-not-exist.md"       -- 2 '^CHECK_BRD=USAGE_ERROR$' ''
+
 # --- semantic judgment stays human: altitude only WARNS --------------------
 run_case altitude-warns-only     "$FIX/brd-altitude-warn.md"    -- 0 'WARN  possible solution-shape leak' ''
 run_case altitude-still-passes   "$FIX/brd-altitude-warn.md"    -- 0 '^CHECK_BRD=PASS$' ''
@@ -76,10 +89,11 @@ run_case nogo-valid              --no-go "$FIX/nogo-valid.md"   -- 0 '^CHECK_BRD
 run_case nogo-invalid            --no-go "$FIX/nogo-invalid.md" -- 1 'reopen' ''
 run_case nogo-invalid-token      --no-go "$FIX/nogo-invalid.md" -- 1 '^CHECK_BRD=NOGO_INVALID$' ''
 
-# --- PDF policy: text in, or no verdict at all ------------------------------
+# --- PDF policy: text in, or no gate verdict at all -------------------------
 PDF_TMP="${TMPDIR:-/tmp}/check-brd-test-$$.pdf"
 : > "$PDF_TMP"
-run_case pdf-refused             "$PDF_TMP"                     -- 2 '[Cc]onvert' 'CHECK_BRD='
+run_case pdf-refused             "$PDF_TMP"                     -- 2 '[Cc]onvert' 'CHECK_BRD=(PASS|FAIL|DRAFT|NOGO)'
+run_case pdf-refused-token       "$PDF_TMP"                     -- 2 '^CHECK_BRD=USAGE_ERROR$' ''
 rm -f "$PDF_TMP"
 
 # --- the true positive: the signed proving-ground BRD stays green ----------

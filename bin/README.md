@@ -7,9 +7,12 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.2.0** · born 2026-07-19 at R0.I (Milestone 1.1 executed early per
-the owner's pivot; `capture` added same day) · Task-Specs
+**cvg v0.2.1** · born 2026-07-19 at R0.I (Milestone 1.1 executed early per
+the owner's pivot; `capture` added same day; 0.2.1 same day — second-eyes
+hardening: `capture` refuses unknown flags and flag conflicts, and every
+exit-2 surface ends in `CHECK_BRD=USAGE_ERROR`) · Task-Specs
 `tasks/done/T-20260719-cvg-router.md` + `tasks/done/T-20260719-cvg-capture.md`
++ `tasks/done/T-20260719-pass0-gate-v031.md`
 — each stamped Tier-1, 3/3 evals, accepted with `--gold-sanity`.
 
 ## The two files
@@ -19,7 +22,7 @@ the owner's pivot; `capture` added same day) · Task-Specs
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.1.0)
+## Command surface (v0.2.1)
 
 | Command | Wraps | Proven by |
 |---|---|---|

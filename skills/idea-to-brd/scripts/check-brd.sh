@@ -3,10 +3,13 @@
 #
 # Three modes:
 #   canonical (default)  The handoff gate. Structure AND authorization: the
-#                        owner's sign-off must say 'canonical' with an ISO
-#                        date, scope In/Out must carry real entries, every
-#                        open question a nonblank owner, numbers provenance-
-#                        tagged, (guessed) numbers linked to an open question.
+#                        owner's sign-off must say 'canonical' on the verdict
+#                        line itself (a verdict carrying 'pending'/'draft'
+#                        never authorizes) with a VALID ISO date on a
+#                        Date/Signed line, scope In/Out must carry real
+#                        entries, every open question a nonblank owner in the
+#                        record shape, numbers provenance-tagged, (guessed)
+#                        numbers linked to an open question.
 #                        ONLY this mode may print the Pass 1 handoff verdict.
 #   --draft              Validation while writing. Same structural checks;
 #                        ownership/provenance/sign-off items downgrade to
@@ -16,12 +19,17 @@
 #                        exit): a no-go marker, an ISO date, why it didn't
 #                        clear, and what would reopen it.
 #
+# All checks run on the file with fenced code blocks stripped — an example
+# inside ``` fences can neither satisfy nor trip a check (v0.3.1).
+#
 # Semantic judgment (owner voice, altitude leaks) stays WARN in every mode —
 # the human judges voice; this script mechanizes only the provable.
 #
 # Agent contract: the LAST line is always a stable machine token —
-#   CHECK_BRD=PASS | FAIL | DRAFT_OK | DRAFT_INCOMPLETE | NOGO_OK | NOGO_INVALID
-# so a harness greps one line and never parses prose. Usage errors exit 2.
+#   CHECK_BRD=PASS | FAIL | DRAFT_OK | DRAFT_INCOMPLETE | NOGO_OK
+#             | NOGO_INVALID | USAGE_ERROR
+# so a harness greps one line and never parses prose. Usage errors exit 2
+# AND still end in CHECK_BRD=USAGE_ERROR (v0.3.1 — agents are users too).
 #
 # PDF policy: this verifier reads text (.md). A .pdf brief is a consensus
 # object — convert it (or emit --out-format md) and gate the .md.
@@ -30,38 +38,69 @@
 
 set -euo pipefail
 
-CHECK_BRD_VERSION="0.3.0"
+CHECK_BRD_VERSION="0.3.1"
+
+# A valid ISO date: month 01-12, day 01-31 (2026-13-45 is not a date).
+ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
+
+usage_error() {
+  printf 'ERROR: %s\n' "$1" >&2
+  printf 'usage: check-brd.sh [--draft] docs/brd-<slug>.md\n' >&2
+  printf '       check-brd.sh --no-go docs/no-go-<slug>.md\n' >&2
+  printf '       check-brd.sh --version\n' >&2
+  echo "CHECK_BRD=USAGE_ERROR"
+  exit 2
+}
 
 MODE="canonical"
 FILE=""
+DRAFT_SET=0
+NOGO_SET=0
 
 for ARG in "$@"; do
   case "$ARG" in
     --version) echo "check-brd v$CHECK_BRD_VERSION"; exit 0 ;;
-    --draft)   MODE="draft" ;;
-    --no-go)   MODE="nogo" ;;
+    --draft)   MODE="draft"; DRAFT_SET=1 ;;
+    --no-go)   MODE="nogo";  NOGO_SET=1 ;;
     -h|--help)
       echo "usage: check-brd.sh [--draft] docs/brd-<slug>.md" >&2
       echo "       check-brd.sh --no-go docs/no-go-<slug>.md" >&2
       echo "       check-brd.sh --version" >&2
+      echo "CHECK_BRD=USAGE_ERROR"
       exit 2
       ;;
-    *) FILE="$ARG" ;;
+    -*)
+      usage_error "unknown flag '$ARG' — expected --draft, --no-go, --version, or a file path"
+      ;;
+    *)
+      if [ -n "$FILE" ]; then
+        usage_error "more than one file argument ('$FILE', '$ARG') — gate one brief per run"
+      fi
+      FILE="$ARG"
+      ;;
   esac
 done
 
+if [ "$DRAFT_SET" -eq 1 ] && [ "$NOGO_SET" -eq 1 ]; then
+  usage_error "--draft and --no-go conflict — a record is a BRD draft or a no-go, never both"
+fi
+
 if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
-  echo "usage: check-brd.sh [--draft|--no-go] <file.md>  (file missing: '$FILE')" >&2
-  exit 2
+  usage_error "file missing: '$FILE'"
 fi
 
 case "$FILE" in
   *.pdf)
     echo "ERROR: this verifier reads text (.md) — a .pdf is a consensus object." >&2
     echo "Convert it (or re-emit with --out-format md), then gate the .md." >&2
+    echo "CHECK_BRD=USAGE_ERROR"
     exit 2
     ;;
 esac
+
+# BODY: the file with fenced code blocks stripped. Every check below reads
+# BODY, never the raw file — an example inside ``` fences proves nothing.
+BODY="$(awk '/^[[:space:]]*```/ { fence = !fence; next } !fence { print }' "$FILE")"
 
 FAIL=0
 pass() { printf 'PASS  %s\n' "$1"; }
@@ -79,35 +118,35 @@ own() {
 
 # --- extract a section body: lines after "## <name>" until the next "## " ---
 section() {
-  awk -v want="$1" '
+  printf '%s\n' "$BODY" | awk -v want="$1" '
     /^##[^#]/ {
       inside = (tolower($0) ~ tolower(want)) ? 1 : 0
       next
     }
     inside { print }
-  ' "$FILE"
+  '
 }
 
 # ===========================================================================
 # --no-go mode — validate the pass's other honest exit, then leave.
 # ===========================================================================
 if [ "$MODE" = "nogo" ]; then
-  if grep -qiE 'no-go' "$FILE"; then
+  if printf '%s\n' "$BODY" | grep -qiE 'no-go'; then
     pass "no-go: record identifies itself as a no-go"
   else
     fail "no-go: no 'no-go' marker found — say what this record is"
   fi
-  if grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}' "$FILE"; then
-    pass "no-go: dated (ISO YYYY-MM-DD)"
+  if printf '%s\n' "$BODY" | grep -qE "$ISO_RE"; then
+    pass "no-go: dated (valid ISO YYYY-MM-DD)"
   else
-    fail "no-go: no ISO date — a parked idea needs its parking date"
+    fail "no-go: no valid ISO date — a parked idea needs its parking date"
   fi
-  if grep -qiE '(^|[[:space:]#*-])why([^a-z]|$)' "$FILE"; then
+  if printf '%s\n' "$BODY" | grep -qiE '(^|[[:space:]#*-])why([^a-z]|$)'; then
     pass "no-go: states why it didn't clear"
   else
     fail "no-go: no 'why' — record why the pain didn't justify a build"
   fi
-  if grep -qiE 'reopen' "$FILE"; then
+  if printf '%s\n' "$BODY" | grep -qiE 'reopen'; then
     pass "no-go: states what would reopen it"
   else
     fail "no-go: nothing would reopen it? — a no-go is parked, not deleted; name the reopen condition"
@@ -130,7 +169,7 @@ fi
 
 # 1 — required sections (structural: hard in every mode)
 for SEC in "Executive summary" "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Risks" "Constraints" "Open questions" "Source" "Sign-off"; do
-  if grep -qiE "^## +.*${SEC}" "$FILE"; then
+  if printf '%s\n' "$BODY" | grep -qiE "^## +.*${SEC}"; then
     pass "section present: $SEC"
   else
     fail "section missing: $SEC"
@@ -197,13 +236,19 @@ else
   fail "Scope: no explicit Out entry — ask 'what are we explicitly NOT doing?'"
 fi
 
-# 5 — every open question owned, and every owner nonblank
+# 5 — every open question owned, in the record shape; unrecognized
+#     question-shaped content FAILS CLOSED (the gate cannot verify what it
+#     cannot parse — v0.3.1)
 OQ_BODY="$(section "Open questions")"
 Q_COUNT=$(printf '%s\n' "$OQ_BODY" | grep -cE '^- *question:' || true)
 O_TOTAL=$(printf '%s\n' "$OQ_BODY" | grep -cE '^[[:space:]]*owner:' || true)
 O_FILLED=$(printf '%s\n' "$OQ_BODY" | grep -cE '^[[:space:]]*owner:[[:space:]]*[^[:space:]]' || true)
 if [ "$Q_COUNT" -eq 0 ]; then
-  pass "Open questions: none recorded (explicitly empty is allowed)"
+  if printf '%s\n' "$OQ_BODY" | grep -qiE '(\?|question)'; then
+    own "Open questions: content present but not in the record shape ('- question:' / 'owner:') — the gate cannot verify ownership of what it cannot parse"
+  else
+    pass "Open questions: none recorded (explicitly empty is allowed)"
+  fi
 else
   if [ "$O_TOTAL" -gt "$O_FILLED" ]; then
     own "Open questions: blank owner value(s) — every owner must be a name, not an empty field"
@@ -224,7 +269,7 @@ if printf '%s\n' "$PG_BODY" | grep -qE '[0-9]'; then
     own "numbers in Problem/Goals carry no provenance tag — tag each (measured), (estimated), or (guessed)"
   fi
 fi
-if grep -qE '\(guessed\)' "$FILE"; then
+if printf '%s\n' "$BODY" | grep -qE '\(guessed\)'; then
   if [ "$Q_COUNT" -ge 1 ]; then
     pass "(guessed) number(s) are linked: open question(s) exist to verify them"
   else
@@ -232,21 +277,31 @@ if grep -qE '\(guessed\)' "$FILE"; then
   fi
 fi
 
-# 7 — sign-off: the authorization boundary between draft and canonical
+# 7 — sign-off: the authorization boundary between draft and canonical.
+#     Anchored to the VERDICT LINE (v0.3.1): 'canonical' anywhere else in the
+#     section — a guidance sentence, an example — authorizes nothing.
 SO_BODY="$(section "Sign-off")"
+VERDICT_LINE="$(printf '%s\n' "$SO_BODY" | grep -iE 'verdict' | head -1 || true)"
+VERDICT_CANONICAL=0
+if printf '%s\n' "$VERDICT_LINE" | grep -qiE '\bcanonical\b'; then
+  if ! printf '%s\n' "$VERDICT_LINE" | grep -qiE '\b(pending|draft)\b'; then
+    VERDICT_CANONICAL=1
+  fi
+fi
+DATE_LINES="$(printf '%s\n' "$SO_BODY" | grep -iE '(date|signed)' || true)"
 if [ "$MODE" = "canonical" ]; then
-  if printf '%s\n' "$SO_BODY" | grep -qiE '\bcanonical\b'; then
+  if [ "$VERDICT_CANONICAL" -eq 1 ]; then
     pass "Sign-off: owner has marked the brief canonical"
   else
     fail "Sign-off: owner verdict 'canonical' missing — a draft cannot pass the canonical gate (validate work-in-progress with --draft)"
   fi
-  if printf '%s\n' "$SO_BODY" | grep -qE '[0-9]{4}-[0-9]{2}-[0-9]{2}'; then
+  if printf '%s\n' "$DATE_LINES" | grep -qE "$ISO_RE"; then
     pass "Sign-off: dated (ISO YYYY-MM-DD)"
   else
-    fail "Sign-off: no ISO date (YYYY-MM-DD) — an undated sign-off cannot anchor the descent"
+    fail "Sign-off: no valid ISO date (YYYY-MM-DD) on a Date/Signed line — an undated sign-off cannot anchor the descent"
   fi
 else
-  if printf '%s\n' "$SO_BODY" | grep -qiE '\bcanonical\b'; then
+  if [ "$VERDICT_CANONICAL" -eq 1 ]; then
     warn "Sign-off already reads canonical — run the default (canonical) mode for the handoff verdict"
   else
     warn "Sign-off pending — the brief is a draft until the owner writes 'canonical' (Pass 1 must not consume it)"
@@ -254,7 +309,7 @@ else
 fi
 
 # 8 — altitude warnings (advisory in EVERY mode; the human judges voice)
-if grep -qiE '\b(the system shall|must implement|architecture|schema|database|endpoint|framework)\b' "$FILE"; then
+if printf '%s\n' "$BODY" | grep -qiE '\b(the system shall|must implement|architecture|schema|database|endpoint|framework)\b'; then
   warn "possible solution-shape leak (requirement/tech language found) — keep the BRD in the owner's voice"
 fi
 

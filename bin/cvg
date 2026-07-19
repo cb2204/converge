@@ -9,12 +9,12 @@
 # Resolution: CVG_HOME wins when set; otherwise walk up from the working
 # directory to the first repo carrying skills/task-spec/scripts/.
 #
-# Task-Spec: tasks/T-20260719-cvg-router.md (Milestone 1.1, born at R0.I).
+# Task-Spec: tasks/done/T-20260719-cvg-router.md (Milestone 1.1, born at R0.I).
 # Portability: macOS system bash 3.2.
 
 set -euo pipefail
 
-CVG_VERSION="0.2.0"
+CVG_VERSION="0.2.1"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -124,18 +124,32 @@ case "$CMD" in
   capture)
     # Pass 0 gate: locate the brief, route to the idea-to-brd exit contract.
     # Gate path is an exact pass-through (exec, zero decoration) — R0.P
-    # proves by byte-diff. Discovery messages exist ONLY on the exit-2 path.
+    # proves by byte-diff. Discovery messages exist ONLY on the exit-2 path,
+    # and every exit-2 path still ends in the CHECK_BRD=USAGE_ERROR token
+    # (agents are users — never make a harness parse prose).
     GATE="$CVG_HOME_DIR/skills/idea-to-brd/scripts/check-brd.sh"
     CAP_FLAGS=""
     CAP_TARGET=""
     CAP_KIND="brd"
+    CAP_DRAFT=0
+    CAP_NOGO=0
     for A in "$@"; do
       case "$A" in
-        --draft) CAP_FLAGS="$CAP_FLAGS --draft" ;;
-        --no-go) CAP_FLAGS="$CAP_FLAGS --no-go"; CAP_KIND="no-go" ;;
+        --draft) CAP_FLAGS="$CAP_FLAGS --draft"; CAP_DRAFT=1 ;;
+        --no-go) CAP_FLAGS="$CAP_FLAGS --no-go"; CAP_NOGO=1; CAP_KIND="no-go" ;;
+        -*)
+          ui_err "unknown capture flag '$A' — expected --draft or --no-go"
+          printf 'CHECK_BRD=USAGE_ERROR\n'
+          exit 2
+          ;;
         *)       CAP_TARGET="$A" ;;
       esac
     done
+    if [ "$CAP_DRAFT" -eq 1 ] && [ "$CAP_NOGO" -eq 1 ]; then
+      ui_err "--draft and --no-go conflict — a record is a BRD draft or a no-go, never both"
+      printf 'CHECK_BRD=USAGE_ERROR\n'
+      exit 2
+    fi
     if [ -z "$CAP_TARGET" ]; then
       CAP_N=0
       CAP_LIST=""
@@ -148,11 +162,13 @@ case "$CMD" in
       done
       if [ "$CAP_N" -eq 0 ]; then
         ui_err "no ${CAP_KIND}-*.md found under cvg/docs/ or docs/ from '$PWD' — pass the file: cvg capture [--draft|--no-go] <file>"
+        printf 'CHECK_BRD=USAGE_ERROR\n'
         exit 2
       fi
       if [ "$CAP_N" -gt 1 ]; then
         ui_err "ambiguous: $CAP_N ${CAP_KIND} documents found — pass one explicitly:"
         printf '%s' "$CAP_LIST" >&2
+        printf 'CHECK_BRD=USAGE_ERROR\n'
         exit 2
       fi
     fi

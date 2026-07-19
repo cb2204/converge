@@ -10,3 +10,4 @@
 {"ts":"2026-07-19T14:31:16Z","task":"T-20260719-pass0-exit-contract","event":"status_change","from":"ready","to":"done","reason":"gold-sanity accepted 2026-07-19"}
 {"schema_version":1,"ts":"2026-07-19T14:35:31Z","task":"T-20260719-cvg-capture","event":"created","author":"luanmorenomaciel","source":"cvg-todo.md R0.I — cvg capture wraps the hardened Pass 0 gate","effort":"S","agent":"claude"}
 {"ts":"2026-07-19T14:41:12Z","task":"T-20260719-cvg-capture","event":"status_change","from":"ready","to":"done","reason":"gold-sanity accepted; R0.P golden diff empty 2026-07-19"}
+{"ts":"2026-07-19T15:39:03Z","task":"T-20260719-pass0-gate-v031","event":"status_change","from":"ready","to":"done"}
