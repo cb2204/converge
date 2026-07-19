@@ -436,6 +436,35 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   where, gate verdict, lesson link). Implement alongside each pass's
   I-beat, not as a big-bang skill edit.
 
+- [ ] **P-6 · Reconcile the public method/skill taxonomy** *(found during the
+  guided anatomy audit, 2026-07-18)*. The live tree contains **13** skill
+  packages: ten spine skills (including optional Capture ⓪ and Register ①),
+  one teaching companion, one harness engine, and one authoring tool.
+  `skills/README.md` states that taxonomy at the top but still says 12 in its
+  Compliance and By-the-numbers sections; the root `readme.md` still presents
+  and catalogs 11, omitting Capture and the teaching companion. Decide the
+  canonical public wording for **passes vs bridges vs supporting skills**, then
+  make both READMEs use it consistently. Gate: the advertised installed count
+  equals `find skills -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l`, every
+  installed skill appears exactly once in the catalog, and the optional path is
+  visibly distinct from the invariant spine.
+
+- [ ] **P-7 · Re-ground the competitive positioning against the live field**
+  *(found during the guided methodology audit, 2026-07-19)*. The root README
+  says Spec Kit and the other named SDD frameworks stop at `Implement` and lack
+  a closed loop. Current official Spec Kit documentation now ships workflow
+  gates, conditional loops, fan-out/fan-in, pause/resume, and
+  `/speckit.converge`, which checks implementation against spec/plan/tasks and
+  appends missing work until convergence. Re-run the comparison using current
+  primary sources and distinguish **contract semantics** instead of claiming
+  feature absence: adversarial cross-engine consensus, the explicit
+  trust-boundary fork, sealed per-unit PRE/POST eval contracts, clean-checkout
+  acceptance, and derived tracker state are the candidate Converge differences
+  to prove. Gate: every competitor claim is source-linked and date-stamped;
+  no categorical `lacks` claim survives without a reproducible receipt; the
+  matrix says what each gate guarantees, not merely whether a similarly named
+  command exists.
+
 ---
 
 ## Progress log
