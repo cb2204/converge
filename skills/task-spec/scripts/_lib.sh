@@ -23,7 +23,7 @@
 #   3) add a CHANGELOG.md entry
 #   4) bump version field in plugin.json + marketplace.json (if present)
 # The doc-consistency lint asserts (1) == (2) == (4).
-TASKSPEC_VERSION="3.3.0"
+TASKSPEC_VERSION="3.4.0"
 
 # ----- Resolve skill root from this file's location -----
 # Works whether sourced from scripts/ or via an indirect symlink.
@@ -77,6 +77,33 @@ ts_die() {
 #              L-adjacent M task).
 TS_PROFILES="lite standard full"
 export TS_PROFILES
+
+# ----- Effort sizing (v3.4 — six-tier, tasks-all-the-way-down) -----
+# The "dark factory" unit model: every piece of work is a Task-Spec, at every scale.
+# Two KINDS of size:
+#   LEAVES  (XS S M L) — directly-runnable atoms. Each fits one fresh context window
+#                        and verifies as ONE PR / one test-suite. L is the ceiling
+#                        (long-horizon, one coherent goal, glm backend).
+#   NODES   (XL XXL)   — decomposition directives, NOT runnable. They MUST expand
+#                        into child Task-Specs (>=2 for XL, >=3 for XXL). There is NO
+#                        route out to a spec-driven paradigm — tasks decompose into
+#                        tasks, and the node composes its children's results back up.
+# Budgets are the WRITE-surface ceiling per leaf tier (research-grounded: 1-3 tightly
+# coupled files keep together, 5+ loosely related split; files-to-read is the real
+# limiter — Young/Anthropic/Vaughan/Vest, 2026). A breach means the decomposition
+# was too coarse: split or reclassify UP. This replaces the old "XL -> route to SDD"
+# fork with recursion — the single tasking path.
+TS_SIZES="XS S M L XL XXL"
+export TS_SIZES
+# 0 if $1 is a recognized size, else non-zero.
+ts_size_is_valid() { case " $TS_SIZES " in *" ${1:-} "*) return 0 ;; *) return 1 ;; esac; }
+# 0 if $1 is a runnable LEAF tier (XS S M L).
+ts_size_is_leaf()  { case "${1:-}" in XS|S|M|L) return 0 ;; *) return 1 ;; esac; }
+# Echo the max write-surface (|touches_paths ∪ creates_paths|) a leaf tier may declare;
+# NODES echo 0 (they own no write surface — their children do).
+ts_size_writes_max() { case "${1:-}" in XS) echo 1 ;; S) echo 2 ;; M) echo 3 ;; L) echo 5 ;; *) echo 0 ;; esac; }
+# Echo the minimum child count a NODE tier must decompose into (0 for leaves).
+ts_size_min_children() { case "${1:-}" in XL) echo 2 ;; XXL) echo 3 ;; *) echo 0 ;; esac; }
 
 # Resolve the declared profile for a spec file. Echoes lite|standard|full.
 # Absent field → standard (backward-compatible default). $1 = spec path.

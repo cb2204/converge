@@ -81,9 +81,14 @@ EFFORT="${ARGS[1]}"
 AGENT="${ARGS[2]:-any}"
 SOURCE_NOTE="${ARGS[3]:-(none)}"
 
-if [[ "$EFFORT" != "S" && "$EFFORT" != "M" ]]; then
-  echo "ERROR: effort must be S or M. L/XL belong in AgentSpec SDD. See .claude/skills/agent-spec/SKILL.md" >&2
+if ! ts_size_is_valid "$EFFORT"; then
+  echo "ERROR: effort must be one of $TS_SIZES (got: '$EFFORT'). See references/concepts/effort-gate.md" >&2
   exit 1
+fi
+if ! ts_size_is_leaf "$EFFORT"; then
+  echo "NOTE: '$EFFORT' is a decomposition NODE, not a runnable leaf. This stub will need a" >&2
+  echo "      children: block ($(ts_size_min_children "$EFFORT")+ child task-spec ids) before it can be delegated —" >&2
+  echo "      the worker dispatches the children (leaves), never the node. See references/concepts/effort-gate.md" >&2
 fi
 
 case "$PROFILE" in

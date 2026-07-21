@@ -8,10 +8,12 @@ description: |
   development. Produces task PRDs with runnable bash evals + a behavior-to-eval
   traceability chain + a post-execution acceptance gate that work in any
   conformant engine (e.g. Claude, Codex, Cursor — adapters in
-  runbooks/dispatch-recipes/) or manual execution. Best for S/M-effort work with
-  a machine-checkable done-condition; L runs on GLM (one coherent goal), routes XL or subjective work to SDD.
+  runbooks/dispatch-recipes/) or manual execution. The UNIVERSAL sizing engine
+  (v3.4): XS/S/M/L are runnable leaf atoms; XL/XXL are decomposition nodes that
+  expand into child specs. Tasks all the way down — no route out to a separate
+  spec-driven paradigm.
 metadata:
-  version: "3.3.0"
+  version: "3.4.0"
 ---
 
 # task-spec — Cornerstone CAW for Task-Spec v3
@@ -38,10 +40,11 @@ Trigger conditions (Claude auto-invokes when context matches):
 - User asks for a task that any conformant engine (e.g. Claude/Codex/Cursor) can pick up
 
 Skip if:
-- Task is XL effort (route to SDD — AgentSpec / OpenSpec / SpecKit)
-- Task is L effort AND not a single coherent goal on GLM (decompose, or route to SDD)
-- Output is subjective (UX, copy, design — use SDD)
 - User just wants a one-off prompt, not a reusable spec
+
+(XL/XXL are NOT skipped anymore — they decompose into child specs, in-skill. There
+is no route out; see references/concepts/effort-gate.md. L still needs
+execution_backend: glm and one coherent goal, else decompose.)
 
 ---
 
@@ -80,7 +83,7 @@ Skip if:
 Parse the user's intent. Critical questions answered before scaffolding:
 
 1. **What's the verbal description?** (1 paragraph from user)
-2. **Effort class?** XS/S/M → Kimi. L → GLM (requires `execution_backend: glm`, one coherent goal). XL → refuse, route to SDD (AgentSpec/OpenSpec/SpecKit). See `references/concepts/effort-gate.md`.
+2. **Effort class?** LEAVES: XS/S/M → Kimi; L → GLM (requires `execution_backend: glm`, one coherent goal; gate-checked write-surface budget). NODES: XL/XXL → NOT runnable — require a `children:` block (>=2 for XL, >=3 for XXL); decompose into leaf slices, no route out. See `references/concepts/effort-gate.md`.
 3. **Agent hint?** `any` (vendor-portable) OR specific (`python-developer`, etc.)
 4. **Source provenance?** Meeting note, audit, ticket — must have one
 5. **Touches what paths?** Best guess; refined in Phase 3
@@ -150,11 +153,13 @@ then fill in:
   end-to-end; a tracer bullet's eval exercises the seam the system actually
   ships through. The eval defines *done*; the vertical cut defines *worth
   doing alone*.
-- **Size to one fresh context window.** An atom must fit — spec, cited ADRs,
-  touched files, and the working diff — inside a single fresh executor
-  session. If holding the task means the executor must page out what it read,
-  the atom is too big: split it and wire `depends_on`. This is the practical
-  ceiling under the XS/S/M effort classes, not a new class.
+- **Size to one fresh context window.** A LEAF atom (XS/S/M/L) must fit — spec,
+  cited ADRs, touched files, and the working diff — inside a single fresh executor
+  session, and verify as one PR / one test-suite. If holding it means the executor
+  must page out what it read, it is too big: split it (wire `depends_on`) or, if it
+  spans layers/lanes, promote it to an XL/XXL **node** and give it a `children:`
+  block. The gate enforces this via the per-tier write-surface budget — a breach is
+  the signal your decomposition was too coarse.
 
 **Layered policy (legacy tolerance):** `format_version` is `3` for new specs (the template's default; see `templates/task-spec.md.tpl`). Tasks created before 2026-05-27 (or explicitly marked `format_version: 0`, `1`, or `2`) are treated as legacy. The validator accepts legacy v0/v1/v2 tasks with warnings rather than hard failures, and the `migrate-legacy-task.sh` script converts legacy markdown checklists into runnable eval stubs.
 
@@ -428,8 +433,8 @@ PROCEEDS with a disclaimer.
 | Reading the user's intent | ADVISORY |
 | MCP research | STANDARD |
 | Drafting evals | IMPORTANT (severity-scaled) |
-| Refusing XL effort (and L without glm) | CRITICAL (always refuses, never overrides) |
-| Detecting subjective output | CRITICAL (refuses EDD, routes to SDD) |
+| Requiring XL/XXL to decompose (children:) and L to use glm | CRITICAL (always enforces, never overrides) |
+| Enforcing the leaf write-surface budget | IMPORTANT (warns; a breach signals coarse decomposition) |
 
 ---
 
@@ -492,7 +497,7 @@ The empty string `""` matches the frontmatter key name exactly, so the body H1 i
 - `references/concepts/six-zones.md` — zone-by-zone deep dive
 - `references/concepts/profiles.md` — **v3** effort-scaled profiles (lite/standard/full) + the behavior↔eval traceability rule
 - `references/concepts/conformance-levels.md` — **v3** executor conformance L0/L1/L2 + the A2A lifecycle mapping
-- `references/concepts/effort-gate.md` — XS/S/M/L/XL routing + size→engine recommendation (Kimi/GLM/SDD)
+- `references/concepts/effort-gate.md` — six-tier sizing (XS/S/M/L leaves + XL/XXL decomposition nodes), write-surface budgets, single tasking path
 - `references/concepts/agent-contract.md` — cross-vendor contract (includes the generic `backend_metadata` field; the backend names itself)
 - `references/concepts/decomposition.md` — **v3** intent/PRD → N atomic specs (flat index + detail atoms, holes-as-blockers)
 - `references/concepts/backlog-architecture.md` — 5-layer state management

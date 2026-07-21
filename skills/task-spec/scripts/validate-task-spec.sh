@@ -219,38 +219,50 @@ if grep -q "^signed_off:" "$FILE"; then
   fi
 fi
 
-# Check 3: effort gate (v3.2 — size-tiered, engine-aware)
-#   XS/S/M → always accepted (Kimi-class atomic cranks)
-#   L      → accepted ONLY when execution_backend is glm (long-horizon builder),
-#            and warned that it must still carry ONE coherent done-condition
-#   XL     → rejected → route to SDD (AgentSpec / OpenSpec / SpecKit)
+# Check 3: effort gate (v3.4 — six-tier, tasks-all-the-way-down)
+#   XS/S/M/L → runnable LEAF atoms; the write-surface must fit the tier budget.
+#              L is the ceiling: accepted only with execution_backend: glm + ONE goal.
+#   XL/XXL   → decomposition NODES: NOT runnable leaves. MUST declare children:
+#              (>=2 for XL, >=3 for XXL). No SDD escape — tasks decompose into tasks.
 # Legacy v0 keeps the old lenient behavior (warns, never hard-fails).
 EFFORT=$(grep '^effort:' "$FILE" | head -1 | awk '{print $2}' || true)
 EXEC_BACKEND=$(grep '^execution_backend:' "$FILE" | head -1 | awk '{print $2}' || true)
-case "$EFFORT" in
-  XS|S|M)
-    : # accepted
-    ;;
-  L)
+CHILDREN=$(parse_yaml_list "children" "$FRONTMATTER")
+N_CHILDREN=$(echo "$CHILDREN" | grep -c . || true); N_CHILDREN="${N_CHILDREN//[^0-9]/}"; N_CHILDREN="${N_CHILDREN:-0}"
+# write-surface = |touches_paths ∪ creates_paths| (unique, ignoring the (none) sentinel)
+WS_ALL=$(printf '%s\n%s\n' "$(parse_yaml_list "touches_paths" "$FRONTMATTER")" "$(parse_yaml_list "creates_paths" "$FRONTMATTER")" \
+         | grep -v '^$' | grep -vxF '(none)' | sort -u || true)  # || true: a node with no write surface must not abort set -e
+N_WRITES=$(echo "$WS_ALL" | grep -c . || true); N_WRITES="${N_WRITES//[^0-9]/}"; N_WRITES="${N_WRITES:-0}"
+
+if ! ts_size_is_valid "$EFFORT"; then
+  ERRORS+=("effort must be one of $TS_SIZES (got: '$EFFORT'). See references/concepts/effort-gate.md")
+elif ts_size_is_leaf "$EFFORT"; then
+  # LEAF — blast-radius budget on the write surface (a breach = coarse decomposition)
+  MAXW=$(ts_size_writes_max "$EFFORT")
+  if [[ "$N_WRITES" -gt "$MAXW" ]]; then
+    WARNINGS+=("effort '$EFFORT' is a LEAF declaring $N_WRITES write path(s) (tier budget: <= $MAXW). Mis-sized — split into smaller atoms or reclassify UP; budgets expose coarse decomposition. See references/concepts/effort-gate.md")
+  fi
+  if [[ "$N_CHILDREN" -gt 0 ]]; then
+    WARNINGS+=("effort '$EFFORT' is a runnable LEAF but declares children: — only XL/XXL nodes decompose. Drop children, or reclassify to XL/XXL.")
+  fi
+  if [[ "$EFFORT" == "L" ]]; then
     if [[ "$FORMAT_VERSION" == "0" ]]; then
-      WARNINGS+=("effort is 'L' (legacy v0 tolerated); for v3.2, an L spec is accepted only with execution_backend: glm and must still carry ONE machine-checkable done-condition.")
+      WARNINGS+=("effort is 'L' (legacy v0 tolerated); an L leaf is accepted only with execution_backend: glm and ONE coherent done-condition.")
     elif [[ "$EXEC_BACKEND" == "glm" ]]; then
-      WARNINGS+=("effort is 'L' — accepted for the glm backend (long-horizon builder). An L spec MUST still have a single coherent done-condition; if it needs multiple independent evals, decompose into S/M atoms instead. See references/concepts/effort-gate.md")
+      WARNINGS+=("effort 'L' — accepted for the glm backend (long-horizon builder). An L leaf MUST carry ONE coherent done-condition; multiple independent evals => decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
     else
-      ERRORS+=("effort 'L' is accepted only with execution_backend: glm (got backend: '${EXEC_BACKEND:-<none>}'). Either set execution_backend: glm, decompose into S/M atoms, or route to SDD. See references/concepts/effort-gate.md")
+      ERRORS+=("effort 'L' is accepted only with execution_backend: glm (got backend: '${EXEC_BACKEND:-<none>}'). Set execution_backend: glm, or decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
     fi
-    ;;
-  XL)
-    if [[ "$FORMAT_VERSION" == "0" ]]; then
-      WARNINGS+=("effort is 'XL' (legacy v0 tolerated); for v3.2, XL is too big for a single Task-Spec — route to SDD (AgentSpec / OpenSpec / SpecKit).")
-    else
-      ERRORS+=("effort 'XL' is too big for a single Task-Spec. Route to SDD: AgentSpec (/agentspec:brainstorm), OpenSpec, or SpecKit. See references/concepts/effort-gate.md")
-    fi
-    ;;
-  *)
-    ERRORS+=("effort must be one of XS|S|M|L|XL (got: '$EFFORT'). See references/concepts/effort-gate.md")
-    ;;
-esac
+  fi
+else
+  # NODE (XL/XXL) — a decomposition directive, never a runnable leaf. No route out.
+  MINC=$(ts_size_min_children "$EFFORT")
+  if [[ "$N_CHILDREN" -lt "$MINC" ]]; then
+    ERRORS+=("effort '$EFFORT' is a decomposition NODE, not a runnable Task-Spec: it MUST declare children: with >= $MINC child task-spec id(s) (the vertical slices it expands into). Tasks decompose into tasks — there is no route out to SDD. See references/concepts/effort-gate.md")
+  else
+    WARNINGS+=("effort '$EFFORT' is a NODE with $N_CHILDREN child task-spec(s) — a composition unit, not directly delegated. A worker dispatches its children (leaves) and composes their results back up.")
+  fi
+fi
 
 # Check 4: status is valid enum
 STATUS=$(grep '^status:' "$FILE" | head -1 | awk '{print $2}' || true)

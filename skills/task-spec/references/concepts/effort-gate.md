@@ -1,160 +1,130 @@
 # Effort Gate
 
-> **Purpose**: XS/S/M/L/XL classification + engine-aware routing. The size-based safety primitive.
+> **Purpose**: XS/S/M/L/XL/XXL classification — the size-based safety primitive that
+> keeps every unit right-sized and keeps the pipeline on ONE path: tasking.
 > **Confidence**: HIGH
-> **MCP Validated**: 2026-05-19 (size↔engine mapping added 2026-07-06, v3.2)
+> **MCP Validated**: 2026-05-19 · six-tier + fork-collapse (v3.4) 2026-07-21
+> (research: Young, Anthropic context-engineering, Vaughan/Codex-KB, Vest — 2026)
 
-## The rule (v3.2 — size-tiered, engine-aware)
+## The one path (v3.4 — tasks all the way down)
 
-The gate maps t-shirt size to a **recommended engine** AND enforces atomicity. Small work
-is atomic and portable; L is the boundary case a long-horizon engine can hold as ONE
-coherent spec; XL and beyond are too big for a single machine-checkable done-condition and
-route to SDD.
+Converge no longer forks between a plan-driven spec (Fork A / SDD) and a task-driven
+decomposition (Fork B). **There is one path: everything becomes a Task-Spec, at every
+scale.** Big work is not routed *out* to a different paradigm — it is *decomposed* into
+smaller Task-Specs, recursively, until every leaf is a runnable atom. The reason is
+empirical: frontier models (GPT‑5, Opus/Fable, Kimi K2) execute well-scoped atoms
+reliably, and a tree of verified atoms composes back up more safely than one giant
+spec. The gate is what keeps the atoms atomic.
+
+## Two KINDS of size
 
 ```text
-XS → Task-Spec ✅  → recommend Kimi   (sprinter: fast atomic crank)
-S  → Task-Spec ✅  → recommend Kimi
-M  → Task-Spec ✅  → recommend Kimi
-L  → Task-Spec ✅* → recommend GLM    (marathoner: long-horizon builder)
-     *ACCEPTED ONLY with execution_backend: glm, AND it must still carry ONE
-      coherent done-condition. If it needs multiple independent evals → decompose.
-XL → Task-Spec ❌  → route to SDD: AgentSpec / OpenSpec / SpecKit
-     ("XXL" and anything larger live here too — XL is the top t-shirt tier.)
+LEAVES  (runnable atoms — fit ONE fresh context window, verify as ONE PR/test-suite)
+  XS → Task-Spec ✅  → recommend Kimi   (sprinter: fast atomic crank)
+  S  → Task-Spec ✅  → recommend Kimi
+  M  → Task-Spec ✅  → recommend Kimi
+  L  → Task-Spec ✅* → recommend GLM    (marathoner: long-horizon builder)
+       *ACCEPTED ONLY with execution_backend: glm AND ONE coherent done-condition.
+        If it needs multiple independent evals → decompose.
+
+NODES   (decomposition directives — NOT runnable; they expand into leaves)
+  XL  → Task-Spec ⇗  → MUST declare children: (>= 2 child task-spec ids)
+  XXL → Task-Spec ⇗  → MUST declare children: (>= 3 child task-spec ids)
+       A node owns NO write surface — its children do. A worker dispatches the
+       children (leaves) and composes their results back up. There is no route out.
 ```
 
-**Why the recommendation is advisory, not a spec requirement.** The size→engine map is a
-*dispatcher heuristic*, not a hard field. A spec names a `execution_backend` (a backend), and
-the agent contract treats the model inside that backend as a black box (clause C9). "Kimi =
-sprinter, GLM = marathoner" is fleet-level dispatch advice — it never overrides an author's
-explicit backend choice, and it keeps the spec portable (see agent-contract.md, the
-portability proof).
+## Size by context + verification + blast-radius (NOT by human time)
 
-**Why L is gated to glm specifically.** L is the one tier where relaxing atomicity is
-defensible: a 3–7 day task can occasionally have a single coherent done-condition that a
-1M-context, long-horizon engine (GLM) can hold across hundreds of tool-call rounds. That
-capability does not exist for every backend, so an L spec is accepted **only** when it
-declares `execution_backend: glm`. Any other backend at L is refused — decompose into S/M
-atoms (which then recommend GLM anyway) or route to SDD. The relaxation is narrow and loud,
-never silent.
+The real limiter for an agent is not lines of code or wall-clock — it is **how much
+context it must consume to act safely** and **whether the result verifies
+independently**. The gate enforces the one objective, machine-checkable proxy it can
+see in the spec: the **write surface** (`|touches_paths ∪ creates_paths|`). A leaf that
+declares more write paths than its tier allows is mis-sized — split it or reclassify UP.
+Budgets are not arbitrary; a breach is decomposition feedback (Vest, 2026).
 
-## The definitions
+| Class | Kind | Write-surface budget | Reads (guide) | Evals | Backend | Example |
+|-------|------|----------------------|---------------|-------|---------|---------|
+| **XS** | leaf | ≤ 1 path | ≤ 2 files | 1 | Kimi | bump a dep; fix a constant; add one config key |
+| **S**  | leaf | ≤ 2 paths | ≤ 4 files | 1–2 | Kimi | add a `/health` endpoint; one small model |
+| **M**  | leaf | ≤ 3 paths | ≤ 6 files | 2–3 | Kimi | a new endpoint family; a dbt model + its test |
+| **L**  | leaf (ceiling) | ≤ 5 paths | ≤ 10 files | ≤ 4, ONE goal | **glm** (required) | migrate one service end-to-end as one coherent goal |
+| **XL** | **node** | 0 (decomposes) | — | children's | *expands* | a whole swimlane; a feature spanning ≥2 layers |
+| **XXL**| **node** | 0 (decomposes) | — | children's | *expands* | a backbone; a platform slice → epic → slices → atoms |
 
-| Class | Time scope | Effort signal | Recommended engine | Example |
-|-------|-----------|---------------|--------------------|---------|
-| **XS** | ≤ 2 hours | Trivial one-liner / config tweak | Kimi | Bump a dependency; fix a typo in a constant |
-| **S** | ≤ 1 day | One file or 2-3 closely-related files | Kimi | Add a /health endpoint |
-| **M** | 1-3 days | Module-level change, multiple coordinated files | Kimi | Refactor a parser; add a new endpoint family |
-| **L** | 3-7 days | Major migration held as ONE coherent goal | **GLM** (required backend) | Migrate one service to a new client, end-to-end |
-| **XL** | > 1 week | Multi-team / multi-quarter → **not a Task-Spec** | SDD (route out) | Platform rewrite; org-wide rollout |
+Reads/evals columns are authoring guidance (files-to-read ~5–6 is the split trigger,
+~10 the ceiling — Crosley/Young; a single test-suite keeps, multiple independent split
+— Vaughan). Only the **write-surface budget** is gate-enforced today; the rest is the
+classifier's job.
 
 ## Why the gate matters
 
-| Property | XS/S/M (Kimi) | L (GLM, one coherent goal) | XL+ (SDD) |
-|----------|---------------|----------------------------|-----------|
-| Eval loop overhead | Amortized over small surface | Bounded — single done-condition | Crushing — too many things to verify |
-| Human alignment cost | Small | Moderate — one goal, no design phases | Large — needs design phases |
-| Single PR fits | Yes | Usually | No |
-| Autonomous overnight execution | Sane | Sane on GLM (long-horizon) | Risky |
-| Recovery if it fails | Park, retry tomorrow | Park, resume the GLM session | Major incident |
-
-EDD's velocity advantage holds for XS/S/M on a sprinter (Kimi). L is the boundary a
-long-horizon builder (GLM) can hold as one coherent spec. For XL and beyond, the spec phase
-IS the work — and SDD's 5-phase rigor handles that better.
+| Property | XS/S/M (Kimi) | L (GLM, one goal) | XL/XXL (node) |
+|----------|---------------|-------------------|---------------|
+| Fits one fresh context window | Yes | Usually | No — that's why it decomposes |
+| Single PR fits | Yes | Usually | No (its children each do) |
+| Verified independently | One suite | One coherent done-condition | Each child, then composed |
+| Autonomous overnight run | Sane | Sane on GLM | Only the leaves run |
+| Recovery if it fails | Park, retry | Park, resume GLM | Re-slice the node |
 
 ## The classifier (task-architect agent)
-
-The `task-architect` agent applies these heuristics:
 
 ```text
 SIGNAL                                      → IMPLIES
 ─────────────────────────────────────────────────────
 Trivial one-liner / config tweak            → XS
 1 file changes                              → S
-2-5 closely-related files                   → S or small M
-Multiple modules touched                    → M
-New top-level directory                     → likely L (→ GLM, one coherent goal)
-Cross-language change                       → likely L
-New service / new deployment unit           → L or XL
-"big" / "huge" / "platform" in intent       → likely XL
-Multi-team coordination required            → XL
+2-3 closely-related files                   → S or M
+Multiple modules, one coherent goal         → M (or L on glm)
+New top-level dir / cross-language, one goal → L (→ GLM)
+Crosses >= 2 architectural layers            → XL (decompose along layer seams)
+A whole swimlane / feature / backbone        → XL or XXL (decompose)
+"big" / "platform" / multi-team in intent    → XXL (decompose into an epic tree)
 ```
 
-**XS/S/M** → accept, recommend Kimi.
-
-**L** → accept ONLY with `execution_backend: glm`, and only if the task still has ONE
-coherent done-condition. If it needs several independent evals, it is really multiple M
-tasks — DECOMPOSE (the atoms then recommend GLM too). If the classifier returns L and the
-backend is not glm, the agent outputs:
+**XS/S/M** → accept, recommend Kimi. **L** → accept ONLY with `execution_backend: glm`
+and ONE coherent done-condition (else decompose). **XL/XXL** → accept ONLY with a
+`children:` block; otherwise the gate refuses — not to route out, but to force the
+decomposition. When the classifier returns XL/XXL, the agent outputs:
 
 ```text
-This task is L effort.
+This is XL/XXL effort — a decomposition NODE, not a runnable Task-Spec.
 
-An L Task-Spec is accepted only with execution_backend: glm (the long-horizon builder),
-and it must still have a single coherent done-condition. Your options:
-  1. Set execution_backend: glm  (if this is one coherent goal), or
-  2. Decompose into S/M atoms     (dispatch the atoms to GLM), or
-  3. Route to SDD                 (if the design itself is the work).
-```
+Expand it into child Task-Specs (the vertical slices), each a runnable leaf (XS–L):
+  parent:   T-<date>-<this-node>
+  children: [T-…-slice-1, T-…-slice-2, …]   (>= 2 for XL, >= 3 for XXL)
 
-If the classifier returns **XL**, the agent REFUSES and outputs:
-
-```text
-This task is XL effort — too big for a single Task-Spec.
-
-Route to a spec-driven (SDD) flow designed for large work:
-  · AgentSpec  →  /agentspec:brainstorm "<your intent>"   (5-phase: brainstorm → define → design → build → ship)
-  · OpenSpec   →  an OpenSpec proposal
-  · SpecKit    →  a SpecKit specification
-
-Decompose the SDD's build phase into S/M Task-Spec atoms when you reach implementation.
+Split along the natural seams (architectural layers, swimlane legs, independent
+test-suites). Then dispatch the leaves; the node composes their results back up.
 ```
 
 ## Edge cases
 
 ### "It's actually two tasks"
-
-If a task feels L because it's two M tasks bundled — DECOMPOSE.
+If a task feels L because it's two M tasks bundled — DECOMPOSE. If it feels XL, it *is*
+a node: give it `children:` and slice along the seams.
 
 ```text
-Original (L): "Migrate auth from JWT to OAuth2 across all services"
-
-Decomposed:
-  T-1 (M): Add OAuth2 provider in auth-service
-  T-2 (M): Switch user-service to OAuth2 client
-  T-3 (M): Switch admin-service to OAuth2 client
-  T-4 (S): Remove JWT code paths after migration verified
+Original (XL, node): "Migrate auth from JWT to OAuth2 across all services"
+  parent:   T-…-auth-oauth2-migration        (XL, children below)
+  children:
+    T-1 (M): add OAuth2 provider in auth-service
+    T-2 (M): switch user-service to OAuth2 client
+    T-3 (M): switch admin-service to OAuth2 client
+    T-4 (S): remove JWT code paths after migration verified
 ```
-
-Decomposition restores Task-Spec eligibility.
 
 ### "It LOOKS small but actually isn't"
+Some 1-file changes are L in disguise — a critical, fragile module. RED FLAGS: file
+> 500 lines with high coverage; many CODEOWNERS; lives in `src/core|auth|billing/`; the
+last 5 commits all needed follow-up fixes. When in doubt, classify UP.
 
-Some 1-file changes are L in disguise — touching a critical, fragile module.
-Use repo-scan heuristics:
-
-```text
-RED FLAGS for "looks S but actually L":
-  · File has > 500 lines and high test coverage (sensitive code)
-  · File appears in CODEOWNERS with many reviewers
-  · File is in src/core/, src/auth/, src/billing/ (high-stakes paths)
-  · Last 5 commits touching the file all required follow-up fixes
-```
-
-When in doubt, classify UP (S→M or M→L). False S→M produces overengineered specs; false M→L routes to AgentSpec, which is fine.
-
-### "I want to override and use Task-Spec anyway"
-
-For **XL**: don't. The gate refuses XL (doesn't ask) — bypassing it is how you get
-half-baked specs for half-baked work. Route to SDD.
-
-For **L**: the gate does not refuse outright — it requires `execution_backend: glm` AND a
-single coherent done-condition. That is the override, and it is deliberate and narrow. Do
-not reach for it to smuggle two M tasks into one L spec; if the done-condition needs several
-independent evals, DECOMPOSE. The `--gold-sanity` acceptance gate will expose a non-atomic L
-spec whose evals don't jointly discriminate.
+### "I want to force a node to run as a leaf"
+Don't. The gate refuses an XL/XXL without `children:` — bypassing it is how you get a
+half-baked spec for work that needed slicing. Decompose; the leaves are where the work
+actually runs.
 
 ## Related
-
-- [task-spec-v1.md](task-spec-v1.md) — frontmatter spec for `effort` field
-- [edd-vs-sdd-honest-comparison.md](edd-vs-sdd-honest-comparison.md) — when each wins
-- [agent-contract.md](agent-contract.md) — how the agent refuses
+- [task-spec-v1.md](task-spec-v1.md) — frontmatter spec for `effort` + `children`
+- [profiles.md](profiles.md) — effort-scaled profiles (lite/standard/full)
+- [agent-contract.md](agent-contract.md) — how the agent refuses / decomposes

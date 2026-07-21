@@ -16,6 +16,34 @@ falls back to a legacy top-level `version:` for older specs.
 
 ---
 
+## [3.4.0] — 2026-07-21
+
+### Changed — the fork collapses; task-spec becomes the universal sizing engine
+- **Six-tier effort model (XS/S/M/L/XL/XXL), two KINDS.** LEAVES (XS/S/M/L) are
+  directly-runnable atoms; NODES (XL/XXL) are decomposition directives that MUST
+  declare a `children:` block (>=2 for XL, >=3 for XXL) and expand into leaf slices.
+- **The SDD escape is removed.** The old gate routed `XL → SDD (AgentSpec/OpenSpec/
+  SpecKit)` — a plan-driven fork. It now routes `XL/XXL → decompose into child
+  Task-Specs`. There is one path: tasks all the way down (the "dark factory" model).
+- **Write-surface budgets (research-grounded).** A leaf's `|touches_paths ∪
+  creates_paths|` is gate-checked against its tier (XS≤1, S≤2, M≤3, L≤5); a breach
+  WARNS "mis-sized — split or reclassify UP" (budgets expose coarse decomposition —
+  Young/Anthropic/Vaughan/Vest, 2026). L still requires `execution_backend: glm`.
+- **New frontmatter:** `children:` (a node's leaf slices); `parent:` recognized.
+
+### Added
+- `_lib.sh`: `TS_SIZES`, `ts_size_is_valid`, `ts_size_is_leaf`, `ts_size_writes_max`,
+  `ts_size_min_children`.
+- `tests/test-effort-sizing.sh` — 11 discriminating rows across all six tiers +
+  decompose-or-fail + mis-size warning + unknown-size refusal.
+- `references/examples/T-20260721-ex-{xs,s,m,l,xl,xxl}-*.md` — one worked, validating
+  example per tier (the XXL backbone → XL swimlanes → M/S/L legs recursion).
+- `references/concepts/effort-gate.md` rewritten for the six-tier, single-path model.
+
+### Fixed
+- `validate-task-spec.sh`: a node with no write surface (`touches_paths: []`, no
+  creates) no longer aborts the validator under `set -e`.
+
 ## [3.3.0] — 2026-07-17
 
 The **decomposition shape** release (MINOR — additive guidance; `format_version: 3`
