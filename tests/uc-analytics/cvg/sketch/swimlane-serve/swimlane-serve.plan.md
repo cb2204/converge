@@ -2,6 +2,8 @@
 
 lane-meta: thread=no · risk=med · owner=analytics-eng
 
+FORK: B (task-driven) — Pass 4 consensus reached (cross-family adversary, kimi/moonshot); the seam contracts are settled, so this backbone decomposes to per-unit task-specs at Pass 5B.
+
 Component **C · Serve** — expose gold as honest, fast answers.
 Input contract: `gold.*` (the published contract from transform). Output contract:
 `answers` (the serving surface partners and internal consumers query).
@@ -57,6 +59,23 @@ This lane reads **only the `gold.*` published contract**, never below it.
 **Seam evolution:** additive columns on `gold.*` are non-breaking; a rename/removal is
 BREAKING and needs a coexistence window. Transform keeps a consumer-driven contract
 test green for the columns serve reads.
+
+## Seam contract · reads `gold.*` + freshness/snapshot (sharpened — Pass 4)
+
+- **Consumes.** The published `gold.*` columns per question **plus** the per-table
+  freshness watermark `gold_as_of` (transform's contract publishes it).
+- **Staleness alert (R-4).** Serve computes `staleness = now − gold_as_of` and
+  raises the honest-answer alert when it exceeds the R-4 SLA; the answer carries its
+  own `as_of`. This is the consumer end of the freshness lineage seeded at capture
+  (`_source_committed_at` → `gold_as_of`) — no as-of is invented at serve.
+- **Snapshot isolation (no torn reads).** Serve pins **one DuckLake snapshot per
+  logical answer** — the snapshot is resolved once at the start of a single API
+  request (leg-02) or a single MCP call (leg-03) and every read for that answer uses
+  it, so a multi-table answer never spans snapshots. A concurrent transform publish
+  (atomic snapshot swap) is picked up only on the *next* answer.
+- **Replay / backfill.** Serve is **stateless over `gold.*`** — a transform
+  republish (new snapshot) needs no serve-side reconciliation; the next session
+  reads the newer snapshot and its higher `gold_as_of`.
 
 ## Dependencies
 

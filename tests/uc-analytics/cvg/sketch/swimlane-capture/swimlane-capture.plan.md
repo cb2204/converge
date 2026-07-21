@@ -2,6 +2,8 @@
 
 lane-meta: thread=yes · risk=high · owner=data-platform
 
+FORK: B (task-driven) — Pass 4 consensus reached (cross-family adversary, kimi/moonshot); the seam contracts are settled, so this backbone decomposes to per-unit task-specs at Pass 5B.
+
 Component **A · Capture** — feed the operational source into the backbone without
 adding analytical load. Input contract: `public.*` (operational, GIVEN, frozen).
 Output contract: `raw.*` (the landing contract the transform lane consumes).
@@ -15,6 +17,32 @@ Where this lane cuts: **above the operational source, below the landing contract
 `public.*` is given/frozen — capture never reaches below the committed row and never
 into `_control` (ADR 0001, the fence). Downstream reads `raw.*` only. The dependency
 is one-way; the interface on the seam is the `raw.*` change-record contract.
+
+## Seam contract · `raw.*` change-record (sharpened — Pass 4)
+
+The one interface on this seam, pinned so transform's dedup is deterministic and
+replay is safe. Contract shapes, not SQL — black-box altitude holds.
+
+- **Grain.** One row per *source change event* (append-only) — NOT per current row.
+- **Business key.** The source primary key per domain (`<domain>_id`), carried
+  verbatim — the identity transform dedups and joins on.
+- **Total order / dedup key.** `_lsn` (Postgres WAL LSN, monotonic per source) is
+  the order of record; `_source_committed_at` (commit time) is the human-readable
+  tiebreak. Dedup = keep the **max-`_lsn`** event per business key. WAL LSN is
+  unique, so ties cannot occur and the surviving row is deterministic. *(Decision —
+  dedup ordered by WAL LSN per ADR 0002 log-based capture; VP may override the
+  order field.)*
+- **Op type.** `_op ∈ {insert, update, delete}`. A `delete` is a **tombstone**
+  (business columns null, key present); max-`_lsn`-wins means a trailing delete
+  removes the entity downstream. No op is dropped at capture.
+- **Freshness lineage seed.** Every row carries `_captured_at` (capture as-of) and
+  `_source_committed_at` (source commit). These are the seed the gold freshness
+  watermark is computed from (transform's contract) — they never disappear.
+- **Idempotency / replay.** Capture is replayable from a WAL **checkpoint (LSN)**.
+  Re-reading re-emits events with identical `(business key, _lsn)` — exact
+  duplicates that collapse under max-`_lsn` dedup, so at-least-once delivery + dedup
+  = **effectively-once**. Backfill = replay from an earlier checkpoint; never a
+  truncate.
 
 ## Architecture
 

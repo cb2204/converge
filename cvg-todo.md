@@ -345,7 +345,7 @@ complete vertical slice. The five beats, in order, never bundled:
       shellcheck + bash 3.2 clean (commit 5f3a12b). R3.R **capture** lane migrated
       to the final form (PRD 73 lines + 3 leg files), CHECK_PLAN=OK; transform/serve
       migration is the mechanical next step.
-- [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
+- [x] **R4 · Pass 4 Consensus** ✅ 2026-07-21 — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
   - [x] R4.U understand + harden ✅ 2026-07-21 — MCP-grounded (Exa/Tavily/
     Firecrawl/Context7/GitHub; it read the local Codex/Kimi plugin prompts +
@@ -431,6 +431,15 @@ complete vertical slice. The five beats, in order, never bundled:
     proven (codex,kimi fakes → merge → `CHECK_CONSENSUS=OK`). This is the ATTACK half
     of the auto-loop (referee never a player); SHARPEN/SIGN/COMMIT tail lands with
     Track M's worker (M3/M4) — full green needs the deferred fork.
+  - [x] R4.C/R4.P close ✅ 2026-07-21 — owner named the fork: **FORK B (task-driven)**
+    → Pass 5B. `FORK: B (task-driven)` line stamped atop all 3 backbone PRDs; the
+    resolved objection-log promoted to `sketch/.consensus/objection-log.json` (kimi/
+    moonshot cross-family, verdict PASS, 8 objections all FIX, referee-hashed
+    provenance over all 12 live plan files). **`cvg review --check` → GATE GREEN,
+    `CHECK_CONSENSUS=OK`** — all 6 checks (cross-family, verdict, resolutions, fork
+    declared, fork atop every PRD, provenance intact). Pass 3 structure still
+    `CHECK_PLAN=OK` after the fork lines. **Pass 4 CLOSED on a real adversarial
+    consensus.** Backbone hands off to R5 (Pass 5B) per the fork.
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)

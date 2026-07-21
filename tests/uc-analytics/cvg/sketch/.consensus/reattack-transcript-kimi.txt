@@ -1,0 +1,61 @@
+• This is a read-only review task. The user gave me the revised PRDs inline and asked for a terse assessment of C1-C5. I should evaluate honestly. The PRDs are included in the prompt; I could also check the leg files for consistency, but the review is at PRD/seam altitude. Let me assess.
+
+  C1: capture->transform raw.* change-record — now named: grain one row per change event, business key = domain_id, dedup key = max-_lsn, tiebreak _source_committed_at, op-type with tombstone deletes. RESOLVED.
+
+  C2: freshness lineage through dedup to gold — transform now defines gold_as_of = min over contributing domains of max(_source_committed_at) ingested. Serve consumes gold_as_of, computes staleness. So lineage survives aggregation via min-over-domains rule. RESOLVED. One caveat: min-over-domains is conservative — fine.
+
+  C3: idempotency/backfill end-to-end — capture replayable from LSN checkpoint, at-least-once + dedup = effectively-once; dbt incremental on _lsn high-watermark, full-refresh deterministic; atomic DuckLake snapshot swap; serve stateless, next session picks up snapshot. RESOLVED.
+
+  C4: revenue-join grain — pinned at order grain, payments pre-aggregated to order_id before join, orders→customers N:1, order lines→products on (order_id, product_id). Fan-out addressed. Freeze authority: one authority (analytics-eng owns Q-SET-1, gold derived). RESOLVED.
+
+  Minor nit: order lines joined on (order_id, product_id) — but the revenue base is order grain; if products join happens at order-line grain then fan-out could occur if a metric multiplies order-level revenue by lines. But the contract says metrics above order grain aggregate from non-fanned base. Acceptable.
+
+  C5: publish/read concurrency — atomic snapshot swap + serve pins one snapshot per session. RESOLVED.
+
+  New objections introduced by the sharpening? Honest check:
+  - C1: "VP may override the order field" — introduces a dangling decision authority; minor, not blocking.
+  - C2: min-over-domains watermark is a conservative pessimization — one lagging domain drags freshness for all; that's acknowledged ("honestly lower"). Fine.
+  - Dedup at silver: max-_lsn per business key across domains — LSN is global per source, fine.
+  - dbt incremental on _lsn high-watermark with late-arriving events with lower LSN after checkpoint? WAL is monotonic, so no late arrivals. Fine.
+  - Serve pins snapshot per session: session definition undefined (what is a session for FastAPI? per request?) — minor.
+  - Tombstone at silver removes key, but gold aggregates — delete propagation from silver to gold on incremental dbt runs: if a key is deleted, gold incremental needs to re-aggregate; incremental models don't typically handle deletes in aggregates without full-refresh of affected partitions. The contract claims "full-refresh is deterministic... safe and idempotent" as the escape hatch, but doesn't state that incremental gold handles deletes — a real residual gap. I'd flag as a new minor objection: deletes-in-gold under incremental not specified (only "full-refresh is safe" as fallback). Actually C3 was about idempotency and this is arguably covered by "full-refresh deterministic", so it's PARTIAL-ish but the seam answer is "fall back to full refresh" which is acceptable contract-level. I could note it as a new objection (medium/low).
+
+  New objection candidate: C4's payments pre-aggregated to order_id — refunds? ADR 0004 pins base revenue = captured, Q1 open about net-of-refunds. Not new.
+
+  Another: min-over-domains gold_as_of — serve's staleness uses table-level watermark; fine.
+
+  Let me decide: new objection — one new (low): incremental gold + tombstone deletes — contract says deletes remove keys from silver but gold incremental-on-watermark doesn't specify how aggregate gold retracts deleted keys without full refresh; fallback is full-refresh determinism. And the serve "session" boundary undefined (per-request vs per-connection) — minor.
+
+  Should that change verdict? Verdict: PASS. Fork B safe.
+
+  Maybe also read the actual files to verify the sharpened text exists in the files? The user pasted the PRDs. Read-only review. The prompt says "Read-only" and provides the revised PRDs inline — I can verify against the files quickly to ensure the pasted text matches. A quick grep for "sharpened" in the swimlane files would confirm. Let me do a quick check to be diligent.The sharpened text exists in the plan files. Quick spot-check that the leg files don't contradict — but the review is at PRD altitude; the pasted PRDs match the plan files. I could quickly verify leg files don't contradict (e.g., dedup by timestamp instead of LSN). A quick grep for "dedup" in leg files.Note: leg-01-silver says "dedup by business signature" — that's a potential contradiction with the plan-level "dedup = max-_lsn per business key". Let me read that leg file section to check."dedup by business signature" — ambiguous. Does "business signature" mean business key + max LSN? The plan-level contract says dedup = max-_lsn per business key. The leg says "dedup by business signature" and "each signature appears once". If signature = business key, then dedup rule (which event survives) is unspecified at leg level but specified at plan level — the plan says max-_lsn. "Signature" could also mean hash of all business columns, which would NOT dedup change events (each event has different column values) — contradiction. This is a NEW minor objection: leg-level language "business signature" is inconsistent/ambiguous vs the plan's max-_lsn-per-key rule. At PRD altitude the seam is settled, but the leg needs alignment before task-specs.
+
+  Also leg-01 gold: "revenue ... transitive joins" — leg-02 file line 49 mentions ADR 0006 (join grain) — fine.
+
+  Also check capture leg-01/02 for _lsn mention — the grep found no _lsn in leg files. The leg files predate sharpening; they say "per-row as-of / lag" — fine.
+
+  Quick check serve leg-02 for staleness/gold_as_of — grep found nothing in serve legs about watermark. Serve leg files may say "as-of freshness" generically. That's OK at plan altitude.
+
+  So: C1-C5 all resolved at the seam/plan level. New objection: leg-01-silver "dedup by business signature" contradicts/underspecifies the sharpened max-_lsn rule (and no _lsn named in any leg file); plus incremental gold + delete retraction unspecified (relies on full-refresh determinism); serve "session" boundary undefined. Minor.
+
+  Verdict: PASS (with one leg-alignment nit). Fork B safe, with the leg-language fix first.
+
+• Verified against the actual files (`swimlane-*.plan.md` carry the sharpened contracts; I spot-checked the legs for contradictions — one found, below).
+
+  **C1–C5 status:**
+
+  - **C1 RESOLVED** — capture contract now pins grain (one row per change event), business key (`<domain>_id`), dedup = **max-`_lsn`** per key (LSN unique → no ties, deterministic winner), `_op ∈ {insert, update, delete}` with delete-as-tombstone semantics.
+  - **C2 RESOLVED** — transform defines `gold_as_of` = min over contributing domains of max(`_source_committed_at`); serve consumes it verbatim and computes `staleness = now − gold_as_of` — the per-row as-of survives aggregation via an explicit min-over-domains rule.
+  - **C3 RESOLVED** — end-to-end story is now closed: WAL-checkpoint replay re-emits identical `(key, _lsn)` → collapses under dedup (effectively-once); dbt incremental on `_lsn` high-watermark with deterministic full-refresh fallback; atomic DuckLake snapshot swap; serve stateless, next session picks up the new snapshot.
+  - **C4 RESOLVED** — revenue pinned at order grain with payments pre-aggregated to `order_id` before join (no fan-out), N:1 keys named (`customer_id`, `(order_id, product_id)`); freeze authority collapsed to one (analytics-eng owns Q-SET-1, `gold.*` derived and frozen with it).
+  - **C5 RESOLVED** — atomic snapshot swap on publish + serve pins one snapshot per query/session; torn reads ruled out by contract.
+
+  **New objections introduced by the sharpening:**
+
+  1. **(low, leg-level inconsistency)** `swimlane-transform-leg-01-dbt-silver.md:19,44` still says "dedup by **business signature**" and no leg file names `_lsn` at all — if "signature" means a hash of business columns it contradicts the plan's max-`_lsn`-per-key rule (each event has distinct columns, so nothing dedups); leg files need a one-line alignment before task-specs.
+  2. **(low)** Deletes in **gold under incremental** are unaddressed — tombstones remove keys from silver, but aggregate gold models on a watermark don't retract deleted keys without a full refresh; the contract implicitly relies on "full-refresh is deterministic" as the escape hatch, which is acceptable but should be stated as the delete-handling rule.
+  3. **(low)** Serve's "one snapshot per query/session" leaves *session* undefined (per HTTP request? per MCP connection?) — a torn read across requests within one logical answer is possible if session ≠ request.
+
+  **VERDICT: PASS** — the seams are settled at PRD altitude; the three nits are leg-file alignment, not seam gaps. **Fork B (per-unit task-specs) is now safe**, conditional on fixing nit #1 (rename "business signature" → "business key, max-`_lsn` wins" in leg-01-silver) as part of that pass — it's the only one that could produce a wrong implementation.
+
+To resume this session: kimi -r session_4cfe65b7-d131-43f2-92f3-c5f6b00400fb
