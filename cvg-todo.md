@@ -521,6 +521,38 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   matrix says what each gate guarantees, not merely whether a similarly named
   command exists.
 
+- [ ] **P-9 · Pass 1 universality retro-hardening (v0.4.1) before the next
+  domain run** *(second-eyes universality review, 2026-07-19 — owner's
+  standing goal: Converge as the universal harness for ALL work areas
+  (SWE/FE/BE/DE/DA/AI/DevOps/SA); Pass 1 closed with one real receipt (data
+  greenfield), verdict READY-WITH-GAPS on both lenses)*. **Five should-fixes
+  before run #2 in a non-data domain — two behavioral holes CONFIRMED by
+  mutated-fixture runs, three contract engravings:** (1) `LEAK_TERMS` is
+  data-stack-only — a spec naming React/Next.js/Kubernetes/Terraform/
+  LangChain/GPT-4/Pinecone gets ZERO leak warnings and a clean PASS; extend
+  with per-domain buckets or move to `references/leak-terms.txt`, add word
+  boundaries (kills the confirmed 'sparked'→spark false positive). (2)
+  Check 7 fails OPEN on unrecognized blocker resolutions — `resolution:
+  awaiting owner` on a `severity: blocker` record → clean PASS (same seam
+  class check-brd v0.3.1 closed); invert: a blocker passes only with a
+  resolved-shaped resolution, add the evasion fixture. (3) Pass 0→1
+  handoff glob says `docs/brd-*.pdf` in all three SKILL.md contract spots
+  but Pass 0's default output is `.md` — a cold agent globs .pdf, finds
+  nothing, mis-routes; fix to `.md|.pdf`. (4) Engrave the
+  decisions-on-disk rule in SKILL.md Step 2 (`brain/decisions/…roundN…`
+  with stable Dn IDs; requirements cite them) — currently only progress-log
+  lore born from the R1.R crash; a fresh agent repeats that loss. (5)
+  Mandate stable requirement IDs (`R-n`/`W-n`) in Step 3 + warn-only check —
+  Pass 2 ADRs and 5B task minting anchor on them, today they are craft.
+  **Park-riders for P-4's autonomous mode:** questionnaire export needs a
+  schema+path; question rounds need a machine format (id/default/rationale);
+  recap folds into sign-off for async owners; enrich falsifiability units
+  (user/request/session/deploy/incident/$/week) + wish-words
+  (secure/stable/boring/resilient); de-data-fy interrogation prose examples;
+  soften "typically 2–3 questions" (real run: 3 rounds, D1–D8); mandate the
+  spec→BRD provenance header. Gate: rule-9 ceremony (both a passing and a
+  failing fixture per behavioral fix, non-data domain included), suite rows
+  grow accordingly, golden diff on the canonical spec stays EMPTY.
 - [x] **P-8 · Align and reproduce the Pass 0 exit contract before `cvg
   capture`** ✅ 2026-07-19 — closed by `tasks/done/T-20260719-pass0-exit-contract.md`
   (check-brd.sh v0.3.0: canonical/--draft/--no-go modes, machine tokens,
