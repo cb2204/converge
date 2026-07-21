@@ -83,8 +83,10 @@ cmd_help() {
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
-  printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
-  printf '  tasks gate <spec>        sign-off gate (safe-to-delegate)\n'
+  printf '  tasks validate <spec>    structural lint + six-tier sizing (XS/S/M/L leaf\n'
+  printf '                           budgets; XL/XXL nodes need children:)\n'
+  printf '  tasks gate <spec>        sign-off gate (safe-to-delegate) — refuses an\n'
+  printf '                           XL/XXL node (dispatch its children, not the node)\n'
   printf '  tasks accept <spec>      acceptance after execution\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"

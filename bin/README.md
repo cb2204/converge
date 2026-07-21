@@ -41,8 +41,8 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg review --adversary codex,kimi` | `sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh` (Pass 4 multi-adversary) | a **comma-list** dispatches each engine through the proven single-engine path (reused via `--out`) and **merges** the judgments into ONE referee-stamped log: objections unioned + renumbered + tagged `raised_by`, `adversaries[]` recorded, provenance recomputed by the referee. Fail-closed if **no cross-family** engine ran (`REVIEW=ERROR`) or all absent (`REVIEW=SKIP`). Two independent cross-family views beat one — the ATTACK half of the auto-loop. |
 | `cvg review [--check]` | `sketch-plans-adversarial-review/scripts/check-consensus-gate.sh` (Pass 4 gate, v0.4.0) | validates the stamped objection log (structure + semantics + **provenance re-hash** of the live plans); `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR` |
 | `cvg doctor` | `sketch-plans-adversarial-review/scripts/doctor.sh` | engine readiness for Pass 4 dispatch — per-engine PASS/SKIP; requires ≥2 engines + ≥1 cross-family; `DOCTOR=OK\|FAIL` |
-| `cvg tasks validate <spec>` | `validate-task-spec.sh` | routed pass-through (same mechanism as `gate`, byte-parity eval'd there) |
-| `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call |
+| `cvg tasks validate <spec>` | `validate-task-spec.sh` (task-spec v3.4 six-tier engine) | routed pass-through; enforces the six-tier sizing gate — leaf write-surface budgets (XS≤1/S≤2/M≤3/L≤5) and XL/XXL nodes that must declare `children:` (decompose, no route out) |
+| `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call. Gate 0 **refuses an XL/XXL node** — a worker dispatches its children (leaves), never the node itself |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |
 | `cvg eval <spec>` | `run-task-spec.sh` | ran its own birth task's evals, 3/3 + Exit Check |
 | `cvg lint` | `lint-backlog.sh` | routed pass-through |
