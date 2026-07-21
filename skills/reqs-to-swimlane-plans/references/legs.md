@@ -70,6 +70,29 @@ greppable regardless of tool churn:
 
 `ADR → seam → swimlane → leg → task-spec → eval`
 
+## Each leg is its own file (v0.7.0)
+
+A swimlane is a **directory** — a lean PRD index plus one file per leg, so the
+PRD never bloats and each leg evolves on its own git history / review:
+
+```
+sketch/swimlane-<seam>/
+  swimlane-<seam>.plan.md            the PRD (index → links to the legs)
+  swimlane-<seam>-leg-01-<tech>.md   one leg, full detail
+  swimlane-<seam>-leg-02-<tech>.md
+```
+
+The leg file's structure is field-grounded (Spec Kit user-story · INVEST ·
+Gherkin · Shape Up · ADR): small **frontmatter** (`leg:` the stable key,
+`parent`, `swimlane`, `status`, `spec_ref`, `depends_on`, `type`) then
+**Responsibility** (one job) · **Proves** (declarative **Given/When/Then**
+acceptance criteria, **1–3**, never a runnable eval — the eval is generated
+*from* these at Pass 5B) · **Independence** · **Consumes/Produces** ·
+**Appetite** (a size token — small/medium) · **Yields** (the 1:N task-specs) ·
+**Re-verify when**. If a leg needs 4+ acceptance criteria, it is too big — split
+it. Status enum: `proposed → accepted → in_progress → done` (+ `superseded`); an
+accepted leg is replaced by superseding, not edited in place.
+
 ## The "too big" test — when a lane earns legs
 
 Legs exist because a lane is too big to hold in one head — never for ceremony.

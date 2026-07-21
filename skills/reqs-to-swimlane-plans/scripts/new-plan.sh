@@ -1,45 +1,44 @@
 #!/usr/bin/env bash
-# new-plan.sh — Converge Pass 3 (DECOMPOSE): scaffold one swimlane plan per seam,
-# or check the existing sketch/*.plan set for altitude-drift (SQL / tasks / code).
+# new-plan.sh — Converge Pass 3 (DECOMPOSE): scaffold a swimlane as a directory —
+# one lean PRD index (swimlane-<seam>.plan.md) plus one file per leg
+# (swimlane-<seam>-leg-NN-<tech>.md) — or --check the sketch/ tree for altitude
+# drift and structural completeness.
 #
-# A swimlane plan describes WHAT a lane contains and IN WHAT ORDER it is built —
-# nothing lower. The moment a plan holds a SELECT, a handler body, or an atomic
-# task with an eval, it has left Pass 3 and skipped the adversarial review that is
-# meant to harden the plan first. That altitude boundary is the one invariant this
-# pass enforces; --check is its deterministic guard.
+# The swimlane PRD is a lean INDEX: it names the seam, shows the architecture, and
+# LINKS to its legs — it never embeds leg detail (so it never bloats). Each leg is
+# its own atomic, independently-evolvable file. That split + the plan-altitude
+# boundary (no SQL, no handler body, no atomic task with an eval — those are Pass 5)
+# are the invariants --check guards.
 #
 # Usage:
-#   new-plan.sh "transform lane"                   Create sketch/<slug>.plan.md (a lane)
-#   new-plan.sh --component "A · Transform" "..."  Set the identity line's component
-#   new-plan.sh --consumes <seam> "serve lane"     Mark a DOWNSTREAM lane + its seam
-#   new-plan.sh --dir path/to/sketch "..."         Override the sketch directory
-#   new-plan.sh --check                            Lint sketch/*.plan.md for altitude-drift
+#   new-plan.sh "capture"                          Scaffold sketch/swimlane-capture/swimlane-capture.plan.md
+#   new-plan.sh --component "A · Capture" "capture" Set the identity line's component
+#   new-plan.sh --consumes <seam> "serve"          Mark a DOWNSTREAM swimlane + its consumed seam
+#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
+#   new-plan.sh --dir path/to/sketch ...            Override the sketch directory
+#   new-plan.sh --check                            Lint the sketch/ tree
 #   new-plan.sh --help
 #
-# Produces: sketch/<slug>.plan.md  (renders as Markdown on GitHub/GitLab, still
-#           greppable — RFC 7764 type tag). Skeleton: lane-meta / Identity /
-#           Architecture (mermaid + steps) / Legs / Consumed-interface +
-#           Seam-evolution / Dependencies / Build-order / Proving-tests /
-#           Open-questions / Spec-traceability.
+# Layout (dir-per-swimlane; fully-qualified filenames = the ids):
+#   sketch/
+#     swimlane-<seam>/
+#       swimlane-<seam>.plan.md            the PRD (lean index)
+#       swimlane-<seam>-leg-NN-<tech>.md   one file per leg (full detail)
 #
-# Decomposition chain: seam → swimlane → leg → task-spec. Legs carry an in-plan
-#   id leg-NN-<tech> (fully-qualified swimlane-<seam>-leg-NN-<tech>). The STABLE
-#   reference key is swimlane-<seam>-leg-NN — <tech> is a swappable display label,
-#   NEVER part of the key. One responsibility + one proving-test cluster each;
-#   1:N task-specs at Pass 5B. Every plan carries a mermaid architecture diagram
-#   (dual-coding). See references/legs.md.
+# Nomenclature: the STABLE reference key is swimlane-<seam>-leg-NN (2-digit
+#   zero-pad); <tech> is a swappable display label appended in the filename, NEVER
+#   part of the key. Legs are contiguous leg-01..leg-0N. Each leg yields 1:N
+#   task-specs at Pass 5B. See references/legs.md.
 #
-# --check also enforces the Pass 3 "seam economics" hardening (v0.4.0): every
-#   lane carries lane-meta (thread=<yes|no> · risk=<low|med|high> · owner=<stream>);
-#   the SET has exactly one steel-thread lane (thread=yes) that exercises every seam
-#   end-to-end first (walking skeleton); a downstream lane names its seam-evolution
-#   rule (additive-safe vs breaking). Cycles that fail the one-way seam test are
-#   recorded as blocks-build open questions with the breaking technique named.
-#   Legs are checked in-section and must be CONTIGUOUS (leg-01..leg-0N, no gap).
+# Internal structure (field-grounded — Spec Kit / arc42 / Amazon PR-FAQ / INVEST /
+#   Gherkin / Shape Up / ADR): PRD = lane-meta / identity+why / Seam / Architecture
+#   (mermaid LR + steps) / Non-Goals / Legs index / Dependencies / Build order /
+#   Open questions / Spec traceability. Leg = frontmatter (stable id, parent,
+#   status, spec_ref) / Responsibility / Proves (Given/When/Then, 1-3, no evals) /
+#   Independence / Consumes-Produces / Appetite / Yields / Re-verify when.
 #
 # Agent contract: every --check / usage surface ends in a stable machine token —
-#   CHECK_PLAN=OK | FAIL | EMPTY | USAGE_ERROR  (agents are first-class users; a
-#   harness greps the token, never the prose). Pass 3's cvg subcommand gates on it.
+#   CHECK_PLAN=OK | FAIL | EMPTY | USAGE_ERROR. Pass 3's cvg subcommand gates on it.
 # Exit:     0 = ok; 1 = drift/usage error; 2 = nothing to check
 #
 # bash 3.2-safe (runs on macOS system /bin/bash). No associative arrays, no mapfile.
@@ -49,144 +48,140 @@ set -euo pipefail
 SKETCH_DIR="sketch"
 COMPONENT=""
 CONSUMES=""
+LANE=""
+LEG=""
 
-usage() { sed -n '11,17p' "$0"; }
+usage() { sed -n '11,20p' "$0"; }
 
 # ── Altitude-drift guards ─────────────────────────────────────────────────────
-# A plan that carries SQL, an atomic task, or a handler body has dropped below
-# plan altitude into Pass 5 territory. Match at the head of a line / bullet so
-# ordinary prose (a "select few marts", "the create step") never trips the check.
-#
 # SQL_RE — a SQL statement opening a line (the SELECT/handler-body leak).
 SQL_RE='^[[:space:]]*(SELECT|INSERT[[:space:]]+INTO|UPDATE|DELETE[[:space:]]+FROM|CREATE[[:space:]]+(TABLE|VIEW|OR[[:space:]]+REPLACE)|WITH[[:space:]]+[A-Za-z_].*[[:space:]]+AS[[:space:]]*\(|MERGE[[:space:]]+INTO)[[:space:]]'
 # TASK_RE — an atomic task id or an eval block; tasks live at tasks/T-*.md (Pass 5).
 TASK_RE='(^[[:space:]]*[-*>]?[[:space:]]*(Task|T-[0-9]{6,})[-: ]|^[[:space:]]*(eval|acceptance[_-]?eval|bash[_-]?eval)[[:space:]]*:)'
 
-# Structural sections a lane plan must carry (Step 2 of the SKILL). Kept to the
-# headings the canonical plans share; identity + features are expressed in prose or
-# under varying heading names (Layers / Components), so they are not grep-required —
-# the altitude guards above are the hard gate, this is a nudge.
-#
-# One grep -E pattern per line (newline-delimited, NOT space-delimited: the patterns
-# contain spaces, so a space-split for-loop would shred them). '|' inside a pattern
-# covers wording variants a real plan uses (e.g. "Build order" vs. "Build-order").
-REQUIRED_SECTIONS='Dependenc(y|ies)
+# PRD sections that must be present (newline-delimited; spaces inside a pattern).
+REQUIRED_PRD='Seam
+Architecture
+Non-?Goals|Out of scope
+Legs
+Dependenc(y|ies)
 Build[ -]order
-Tests +that +prove
 Open +question'
 
 slugify() {
-  printf '%s' "$1" \
-    | tr '[:upper:]' '[:lower:]' \
-    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
 }
 
-check_drift() {
-  local rc=0 hits f thread_seen=0
-  if [ ! -d "$SKETCH_DIR" ] || ! ls "$SKETCH_DIR"/*.plan.md >/dev/null 2>&1; then
-    echo "CHECK: no plans found in $SKETCH_DIR/ (expected *.plan.md) — scaffold a lane first." >&2
-    echo "CHECK_PLAN=EMPTY"
-    return 2
+# altitude_drift <file> — echo DRIFT lines for SQL/task leaks; return 1 if any.
+altitude_drift() {
+  local f="$1" hits arc=0
+  hits=$(grep -nEi "$SQL_RE" "$f" || true)
+  if [ -n "$hits" ]; then
+    echo "DRIFT  $f — SQL at a line head (that is Pass 5 / task-spec, not a plan):"
+    printf '%s\n' "$hits" | sed 's/^/         /'; arc=1
   fi
-  for f in "$SKETCH_DIR"/*.plan.md; do
-    [ -e "$f" ] || continue
+  hits=$(grep -nEi "$TASK_RE" "$f" || true)
+  if [ -n "$hits" ]; then
+    echo "DRIFT  $f — atomic task / eval block (that is Pass 5 / task-spec, not a plan):"
+    printf '%s\n' "$hits" | sed 's/^/         /'; arc=1
+  fi
+  return "$arc"
+}
 
-    # 1) SQL leak — a SELECT / DDL statement at a line head.
-    hits=$(grep -nEi "$SQL_RE" "$f" || true)
-    if [ -n "$hits" ]; then
-      echo "DRIFT  $f — SQL at a line head (that is Pass 5 / task-spec, not a plan):"
-      printf '%s\n' "$hits" | sed 's/^/         /'
-      rc=1
+check_tree() {
+  local rc=0 thread_seen=0 found=0 d prd lf n
+  if [ ! -d "$SKETCH_DIR" ]; then
+    echo "CHECK: no sketch dir $SKETCH_DIR/ — scaffold a swimlane first." >&2
+    echo "CHECK_PLAN=EMPTY"; return 2
+  fi
+
+  for d in "$SKETCH_DIR"/*/; do
+    [ -d "$d" ] || continue
+    prd=""
+    for p in "$d"*.plan.md; do [ -e "$p" ] && prd="$p"; done
+    [ -n "$prd" ] || continue
+    found=1
+
+    # PRD altitude + mermaid + lane-meta + required sections + seam-evolution
+    altitude_drift "$prd" || rc=1
+    grep -qi '```mermaid' "$prd" || { echo "VISUAL $prd — no mermaid diagram; add the ## Architecture block (flowchart LR + numbered steps)."; rc=1; }
+
+    if ! grep -qiE 'lane-meta:' "$prd"; then
+      echo "WEAK   $prd — no 'lane-meta:' line (thread=<yes|no> · risk=<low|med|high> · owner=<stream>)."; rc=1
+    else
+      grep -qiE 'thread=(yes|no)' "$prd" || { echo "META   $prd — lane-meta missing a real thread=yes|no (H1)."; rc=1; }
+      grep -qiE 'risk=(low|med|high)' "$prd" || { echo "META   $prd — lane-meta missing a real risk=low|med|high (H2)."; rc=1; }
+      grep -qiE 'owner=[^[:space:]<]' "$prd" || { echo "META   $prd — lane-meta missing a real owner=<stream> (H3)."; rc=1; }
     fi
+    if grep -qiE 'thread=yes' "$prd"; then thread_seen=1; fi
 
-    # 2) Atomic-task / eval leak — a task id or an eval block.
-    hits=$(grep -nEi "$TASK_RE" "$f" || true)
-    if [ -n "$hits" ]; then
-      echo "DRIFT  $f — atomic task / eval block (that is Pass 5 / task-spec, not a plan):"
-      printf '%s\n' "$hits" | sed 's/^/         /'
-      rc=1
-    fi
-
-    # 3) A plan missing a required structural section is not skimmable / not
-    #    attackable. Iterate the newline-delimited patterns without word-splitting
-    #    on spaces (bash 3.2-safe: set IFS to newline for just this loop).
     local sec oldifs="$IFS"
     IFS='
 '
-    for sec in $REQUIRED_SECTIONS; do
+    for sec in $REQUIRED_PRD; do
       IFS="$oldifs"
-      if ! grep -qiE "$sec" "$f"; then
-        echo "WEAK   $f — no section matching /$sec/; a lane plan needs Legs, Dependencies, Build order, Tests-that-prove, and Open-questions."
-        rc=1
-      fi
+      grep -qiE "^#+ +.*($sec)" "$prd" || { echo "WEAK   $prd — no section matching /$sec/ (PRD needs Seam, Architecture, Non-Goals, Legs, Dependencies, Build order, Open questions)."; rc=1; }
       IFS='
 '
     done
     IFS="$oldifs"
 
-    # 4) Legs (v0.5.0) — scoped to the ## Legs section: present, named, and
-    #    CONTIGUOUS (leg-01..leg-0N, no gap — a gap is a dropped/misnamed stretch).
-    #    Section-scoped so a stray 'leg-01' in prose can't satisfy the check.
-    legs_body="$(awk '/^##[[:space:]]+[Ll]egs?([[:space:]]|$)/{f=1;next} /^##[^#]/{f=0} f' "$f")"
-    if [ -z "$(printf '%s' "$legs_body" | tr -d '[:space:]')" ]; then
-      echo "WEAK   $f — no populated '## Legs' section; name the lane's stretches (seam → swimlane → leg → task-spec)."
-      rc=1
+    if grep -qiE 'interface this lane consumes|consumes the seam|consumed seam' "$prd"; then
+      grep -qiE 'seam evolution|additive|breaking' "$prd" || { echo "SEAM   $prd — downstream lane names a consumed seam but no evolution rule (H4)."; rc=1; }
+    fi
+
+    # Leg files in this swimlane dir
+    local has_leg=0 leg_nums=""
+    for lf in "$d"*-leg-*.md; do
+      [ -e "$lf" ] || continue
+      has_leg=1
+      altitude_drift "$lf" || rc=1
+      grep -qiE '^#+ +Responsibilit' "$lf" || { echo "LEG    $lf — no Responsibility section."; rc=1; }
+      grep -qiE '^#+ +Proves' "$lf" || { echo "LEG    $lf — no Proves section (Given/When/Then acceptance criteria, 1-3, no evals)."; rc=1; }
+      grep -qiE '^leg:[[:space:]]+swimlane-.*-leg-[0-9]{2}' "$lf" || { echo "LEG    $lf — frontmatter missing the stable key 'leg: swimlane-<seam>-leg-NN'."; rc=1; }
+      grep -qiE '^status:' "$lf" || { echo "LEG    $lf — frontmatter missing 'status:'."; rc=1; }
+      grep -qiE '^(parent|swimlane):' "$lf" || { echo "LEG    $lf — frontmatter missing a parent/swimlane pointer."; rc=1; }
+      grep -qF "$(basename "$lf")" "$prd" || { echo "LINK   $prd — Legs index does not reference $(basename "$lf") (orphan leg)."; rc=1; }
+      n="$(basename "$lf" | grep -oE 'leg-[0-9]{2}' | head -1)"
+      leg_nums="$leg_nums$n
+"
+    done
+
+    if [ "$has_leg" -eq 0 ]; then
+      echo "WEAK   $d — no leg files (swimlane-<seam>-leg-NN-<tech>.md); a swimlane is its PRD + its legs."; rc=1
     else
-      leg_ids="$(printf '%s\n' "$legs_body" | grep -oE 'leg-[0-9]{2}' | sort -u || true)"
-      if [ -z "$leg_ids" ]; then
-        echo "WEAK   $f — '## Legs' has no leg-NN identifiers; name each stretch leg-01, leg-02… in build order (one responsibility + one proving-test cluster each)."
-        rc=1
-      else
-        leg_n="$(printf '%s\n' "$leg_ids" | grep -c .)"
-        leg_first="$(printf '%s\n' "$leg_ids" | head -1)"
-        leg_last="$(printf '%s\n' "$leg_ids" | tail -1)"
-        leg_expect="$(printf 'leg-%02d' "$leg_n")"
-        if [ "$leg_first" != "leg-01" ] || [ "$leg_last" != "$leg_expect" ]; then
-          # shellcheck disable=SC2086  # deliberate word-split of the newline id list for display
-          echo "LEGS   $f — legs must run leg-01..$leg_expect with no gap (found: $(printf '%s ' $leg_ids)); a gap is a dropped or misnamed stretch."
-          rc=1
-        fi
+      local leg_sorted leg_cnt leg_first leg_last leg_expect
+      leg_sorted="$(printf '%s\n' "$leg_nums" | grep -v '^$' | sort -u)"
+      leg_cnt="$(printf '%s\n' "$leg_sorted" | grep -c .)"
+      leg_first="$(printf '%s\n' "$leg_sorted" | head -1)"
+      leg_last="$(printf '%s\n' "$leg_sorted" | tail -1)"
+      leg_expect="$(printf 'leg-%02d' "$leg_cnt")"
+      if [ "$leg_first" != "leg-01" ] || [ "$leg_last" != "$leg_expect" ]; then
+        # shellcheck disable=SC2086  # deliberate word-split of the id list for display
+        echo "LEGS   $d — leg files must run leg-01..$leg_expect with no gap (found: $(printf '%s ' $leg_sorted)); a gap is a dropped or misnamed leg."; rc=1
       fi
     fi
-
-    # H1/H2/H3 — every lane declares its seam economics on a lane-meta line,
-    # with real values (an unfilled <yes|no> placeholder does not count).
-    if ! grep -qiE 'lane-meta:' "$f"; then
-      echo "WEAK   $f — no 'lane-meta:' line (need thread=<yes|no> · risk=<low|med|high> · owner=<stream>)."
-      rc=1
-    else
-      grep -qiE 'thread=(yes|no)' "$f" || { echo "META   $f — lane-meta missing a real thread=yes|no (H1 steel-thread marker)."; rc=1; }
-      grep -qiE 'risk=(low|med|high)' "$f" || { echo "META   $f — lane-meta missing a real risk=low|med|high (H2 risk-first order)."; rc=1; }
-      grep -qiE 'owner=[^[:space:]<]' "$f" || { echo "META   $f — lane-meta missing a real owner=<stream> (H3 Conway ownership)."; rc=1; }
-    fi
-    if grep -qiE 'thread=yes' "$f"; then thread_seen=1; fi
-
-    # H4 — a downstream lane (one that consumes a seam) states how the contract evolves.
-    if grep -qiE 'interface this lane consumes|## +.*consumes' "$f"; then
-      grep -qiE 'seam evolution|additive|breaking' "$f" || { echo "SEAM   $f — downstream lane names a consumed seam but no evolution rule (H4: additive-safe vs breaking + coexistence window)."; rc=1; }
-    fi
-
-    # 5) Architecture visual (v0.6.0, dual-coding grounded): a plan carries a
-    #    mermaid diagram so a human sees the pipeline; the numbered steps sit
-    #    beside it (spatial contiguity). GitHub/GitLab render the fence natively.
-    grep -qi '```mermaid' "$f" || { echo "VISUAL $f — no mermaid diagram; add the ## Architecture block (flowchart LR pipeline + numbered steps) for human visualization."; rc=1; }
   done
 
-  # H1 (set level) — the plan set must contain exactly one steel-thread lane.
+  if [ "$found" -eq 0 ]; then
+    echo "CHECK: no swimlanes found in $SKETCH_DIR/ (expected $SKETCH_DIR/swimlane-<seam>/swimlane-<seam>.plan.md)." >&2
+    echo "CHECK_PLAN=EMPTY"; return 2
+  fi
   if [ "$thread_seen" -eq 0 ]; then
-    echo "THREAD $SKETCH_DIR/ — no steel-thread lane (no plan carries thread=yes); one lane must exercise every seam end-to-end first (H1 walking skeleton)."
-    rc=1
+    echo "THREAD $SKETCH_DIR/ — no steel-thread swimlane (none carries thread=yes); one lane must exercise every seam end-to-end first (H1)."; rc=1
   fi
 
   if [ "$rc" -eq 0 ]; then
-    echo "CHECK: OK — plan altitude held (legs/deps/order/tests, no SQL/tasks); seam economics present (steel-thread, risk, owner, evolution); legs named + contiguous; architecture diagram present."
+    echo "CHECK: OK — every swimlane is a lean PRD + linked leg files; plan altitude held (no SQL/tasks); seam economics + architecture + contiguous legs present."
     echo "CHECK_PLAN=OK"
   else
-    echo "CHECK: FAIL — fix the flagged plans; push SQL/tasks to Pass 5, complete the seam economics (lane-meta / steel-thread / evolution), and name the lane's legs." >&2
+    echo "CHECK: FAIL — fix the flagged swimlanes; keep the PRD an index, push detail to legs, hold plan altitude, and complete the structure." >&2
     echo "CHECK_PLAN=FAIL"
   fi
   return "$rc"
 }
+
+usage_error() { echo "Error: $*" >&2; usage >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
 
 # ── Parse args ────────────────────────────────────────────────────────────────
 TITLE=""
@@ -196,108 +191,143 @@ while [ $# -gt 0 ]; do
     --help|-h)   usage; exit 0 ;;
     --check)     DO_CHECK=true; shift ;;
     --dir)       SKETCH_DIR="${2:?--dir needs a path}"; shift 2 ;;
-    --component) COMPONENT="${2:?--component needs a label, e.g. \"A · Transform\"}"; shift 2 ;;
-    --consumes)  CONSUMES="${2:?--consumes needs an upstream seam, e.g. the output/contract layer}"; shift 2 ;;
+    --component) COMPONENT="${2:?--component needs a label}"; shift 2 ;;
+    --consumes)  CONSUMES="${2:?--consumes needs an upstream seam}"; shift 2 ;;
+    --lane)      LANE="${2:?--lane needs a seam name}"; shift 2 ;;
+    --leg)       LEG="${2:?--leg needs NN-<tech>, e.g. 01-dlt}"; shift 2 ;;
     --)          shift; TITLE="${1:-}"; break ;;
-    -*)          echo "Unknown option: $1" >&2; usage >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1 ;;
+    -*)          usage_error "unknown option: $1" ;;
     *)           TITLE="$1"; shift ;;
   esac
 done
 
 if [ "$DO_CHECK" = true ]; then
-  check_drift
+  check_tree
   exit $?
 fi
 
-if [ -z "$TITLE" ]; then
-  echo "Error: lane title required (e.g. \"transform lane\")." >&2
-  usage >&2
-  echo "CHECK_PLAN=USAGE_ERROR"
-  exit 1
+# ── Leg scaffold ──────────────────────────────────────────────────────────────
+if [ -n "$LEG" ]; then
+  [ -n "$LANE" ] || usage_error "--leg needs --lane <seam>"
+  SEAM="$(slugify "$LANE")"
+  printf '%s' "$LEG" | grep -qE '^[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$' \
+    || usage_error "--leg must be NN-<tech>, 2-digit zero-pad + lowercase-kebab tech (e.g. 01-dlt, 04-dbt-bronze)"
+  LEG_NN="${LEG%%-*}"
+  DIR="$SKETCH_DIR/swimlane-$SEAM"
+  mkdir -p "$DIR"
+  OUT="$DIR/swimlane-$SEAM-leg-$LEG.md"
+  [ -e "$OUT" ] && usage_error "$OUT already exists — edit it, don't re-scaffold"
+  cat > "$OUT" <<EOF
+---
+leg: swimlane-$SEAM-leg-$LEG_NN
+tech: ${LEG#*-}
+swimlane: swimlane-$SEAM
+parent: swimlane-$SEAM.plan.md
+status: proposed
+spec_ref: []
+depends_on: []
+type: leg
+---
+
+# swimlane-$SEAM-leg-$LEG — <one-line responsibility>
+
+> Part of swimlane **$SEAM** ([swimlane-$SEAM.plan.md](swimlane-$SEAM.plan.md)).
+> Plan altitude only — responsibility + acceptance criteria; the runnable eval binds at Pass 5B.
+
+## Responsibility
+
+<!-- ONE job, in prose (INVEST-Valuable). Optionally: "so that <benefit>". Never
+     the SQL / handler body — that is the task-spec this leg yields at 5B. -->
+
+## Proves (acceptance criteria — Given/When/Then; 1-3; NO evals)
+
+<!-- Declarative behaviour/outcome, technology-agnostic. 4+ criteria = the leg is
+     too big; split it. The runnable eval is generated FROM these at Pass 5B. -->
+
+- Given <state>, when <event>, then <observable outcome>.
+
+## Independence
+
+<!-- Why this leg is buildable + provable with no later leg existing (INVEST-Independent). -->
+
+## Consumes / produces
+
+- Consumes: <this leg's inputs>.
+- Produces: <this leg's outputs — toward the lane's output contract>.
+
+## Appetite
+
+<!-- One token bounding size (Shape Up): small | medium — one build-order step,
+     one context window. Bigger is two legs. -->
+
+## Yields at Pass 5B (named units, not specified here)
+
+- <the 1:N task-specs this leg becomes — named in prose, no evals>.
+
+## Re-verify when
+
+<!-- The event that invalidates this leg (an ADR supersede, a contract change). -->
+EOF
+  echo "Created $OUT"
+  exit 0
 fi
 
-SLUG="$(slugify "$TITLE")"
-[ -n "$SLUG" ] || { echo "Error: title slugified to empty." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
+# ── Swimlane PRD scaffold ─────────────────────────────────────────────────────
+[ -n "$TITLE" ] || usage_error "swimlane title required (e.g. \"capture\")"
+SEAM="$(slugify "$TITLE")"
+[ -n "$SEAM" ] || usage_error "title slugified to empty"
+DIR="$SKETCH_DIR/swimlane-$SEAM"
+mkdir -p "$DIR"
+OUT="$DIR/swimlane-$SEAM.plan.md"
+[ -e "$OUT" ] && usage_error "$OUT already exists — edit it, don't re-scaffold"
 
-mkdir -p "$SKETCH_DIR"
-OUT="$SKETCH_DIR/$SLUG.plan.md"
-[ -e "$OUT" ] && { echo "Error: $OUT already exists — edit it, don't re-scaffold." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
-
-# Identity line — component label if given, else a placeholder to fill in.
 if [ -n "$COMPONENT" ]; then
-  IDENTITY="Component **$COMPONENT** from the decomposition."
+  IDENTITY="Component **$COMPONENT**"
 else
-  IDENTITY="Component **<A · Transform | B · Serve>** from the decomposition."
+  IDENTITY="Component **<A · Capture | B · Serve>**"
 fi
 
-# The consumed-interface block only exists for a DOWNSTREAM lane (one with --consumes).
 CONSUMED_BLOCK=""
 if [ -n "$CONSUMES" ]; then
   CONSUMED_BLOCK="## The interface this lane consumes (the seam — hard boundary)
 
-This lane reads **only the \`$CONSUMES\` contract**, and never reaches below it. Name
-the exact upstream fields each leg consumes, so the seam is explicit. If an answer
-needs something not in \`$CONSUMES\`, the fix is a **new addition to the upstream
-contract**, never a deeper read here.
+This lane reads **only the \`$CONSUMES\` contract**, never below it. Name the exact
+upstream fields each leg consumes. A missing field is a new upstream-contract
+request, never a deeper read.
 
-| upstream unit | fields consumed | read by (this lane's leg) |
+| upstream unit | fields consumed | read by (leg) |
 |---|---|---|
-| \`$CONSUMES\` <unit> | <field, field, …> | <endpoint / tool / model> |
+| \`$CONSUMES\` <unit> | <field, …> | swimlane-$SEAM-leg-01 |
 
-<!-- One row per upstream unit this lane reads (e.g. a published table, an API
-     resource, an event topic). Never list a field the upstream lane has not
-     committed to producing (its schema/contract). A missing field is a new
-     upstream-contract request, not a deeper read. -->
-
-**Seam evolution:** the frozen contract will change — say how safely. Additive
-changes (a new column/field/endpoint) are non-breaking; renames, removals, and
-newly-required fields are BREAKING and need a coexistence window before this lane
-cuts over. <State the evolution rule for \`$CONSUMES\`, and how this lane learns of
-a change — e.g. a consumer-driven contract test the upstream must keep green.>
+**Seam evolution:** additive changes (a new column/field/endpoint) are non-breaking;
+renames, removals, and newly-required fields are BREAKING and need a coexistence
+window. <State how this lane learns of a change — e.g. a consumer-driven contract test.>
 
 ---
 
 "
 fi
 
-TODAY="$(date +%Y-%m-%d)"
-
 cat > "$OUT" <<EOF
-# Plan · $TITLE
-
-<!-- Pass 3 (DECOMPOSE) · scaffolded $TODAY · PLAN ALTITUDE ONLY.
-     Describe WHAT this lane contains and IN WHAT ORDER it is built. No model SQL,
-     no handler bodies, no atomic tasks with evals — those are Pass 5 (task-spec).
-     This plan is meant to be ATTACKED in Pass 4, so leave the soft spots visible;
-     do not pre-empt objections. -->
+# Swimlane · $SEAM
 
 lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<owning stream/team>
 
-<!-- lane-meta is the greppable seam economics of this lane (Pass 3 hardening):
-     · thread=yes marks THE steel-thread lane — the thin vertical path that
-       exercises EVERY seam end-to-end (build+prove) before the component lanes
-       fatten (walking skeleton). Exactly one lane in the set carries thread=yes.
-     · risk = confidence the frozen contract / hard constraint is RIGHT
-       (low|med|high risk of being wrong). A high-risk seam is spiked FIRST,
-       ahead of pure dependency order.
-     · owner = the single stream/team that owns this lane (one owner, or mark
-       it shared/platform). A seam that splits one owner or fuses two is a
-       Conway smell — flag it. -->
+$IDENTITY — its purpose in one line (the problem this slice solves).
+Input contract: \`<upstream>.*\`. Output contract: \`<downstream>.*\` (the seam the next lane consumes).
 
-$IDENTITY Input contract: \`<upstream>.*\`. Output contract:
-\`<downstream>.*\` (the seam the next lane consumes — name it).
+> **This is the swimlane PRD — a lean INDEX over the legs.** Each leg's full detail
+> lives in its own file (\`swimlane-$SEAM-leg-NN-<tech>.md\`). Keep this at black-box
+> altitude: interfaces, the seam, the DAG, links — never leg detail, never SQL, never evals.
 
-Plan altitude: legs, responsibilities, dependencies, build order, tests. No
-model SQL, no handler code, no atomic tasks.
+## Seam
 
----
+<!-- Where this lane cuts: the nameable one-way interface. What is given/frozen
+     upstream, what is published downstream, and why the dependency is one-way. -->
 
 ## Architecture
 
-<!-- Dual-coding (field-grounded): a diagram + an adjacent numbered narrative
-     builds the mental model neither gives alone — keep them together. One L-R
-     pipeline overview here; add a small per-leg diagram only where a leg needs
-     its own. Mermaid renders natively on GitHub/GitLab. -->
+<!-- Dual-coding: a diagram + adjacent numbered steps. Black-box altitude only. -->
 
 \`\`\`mermaid
 flowchart LR
@@ -308,94 +338,55 @@ flowchart LR
 Step-by-step:
 
 1. <source> changes land where this lane's leg-01 reads them.
-2. <leg-01-tech> shapes them toward the lane's output contract.
+2. <leg-01> shapes them toward the lane's output contract.
 3. <downstream> consumes only the published contract — never below the seam.
 
----
+## Non-Goals
 
-## Legs
+<!-- Explicit out-of-scope — the #1 anti-bloat device. What this swimlane will NOT do. -->
 
-<!-- The lane's named stretches — seam → swimlane → LEG → task-spec. Each leg:
-     ONE responsibility + ONE proving-test cluster, INDEPENDENTLY FINISHABLE,
-     one context window (bigger is two legs; two sharing one proving test are one
-     leg — no quotas). Never the SQL or the handler body.
-     NOMENCLATURE (v0.6.0, field-grounded): the in-plan id is leg-NN-<tech>
-     (2-digit zero-pad; <tech> a lowercase-kebab tool slug, e.g. dlt, dbt-bronze,
-     fastapi). Fully-qualified across artifacts: swimlane-<seam>-leg-NN-<tech>.
-     The STABLE reference key is swimlane-<seam>-leg-NN — <tech> is a SWAPPABLE
-     display label, NEVER part of the key (swapping the tool must not break a
-     reference; defer or replace it freely). Each leg yields 1:N task-specs at 5B.
-     See references/legs.md. -->
+- <not this>.
 
-- **leg-01-<tech>** — <the first stretch's responsibility, in prose>. Proves: <what its tests assert>.
-- **leg-02-<tech>** — <the next stretch, handed the baton by leg-01>. Proves: <what its tests assert>.
-- **leg-03-<tech>** — <…only if the lane is genuinely that big — legs are not a quota>.
+## Legs — index (full detail in each file)
 
----
+| Leg | Responsibility (one line) | File |
+|---|---|---|
+| **leg-01-<tech>** | <one line> | [swimlane-$SEAM-leg-01-<tech>.md](swimlane-$SEAM-leg-01-<tech>.md) |
+| **leg-02-<tech>** | <one line> | [swimlane-$SEAM-leg-02-<tech>.md](swimlane-$SEAM-leg-02-<tech>.md) |
+
+Stable keys: \`swimlane-$SEAM-leg-01/02\` — the \`<tech>\` suffix is a swappable label.
 
 ${CONSUMED_BLOCK}## Dependencies
 
-<!-- A small DAG: the build order between this lane's LEGS AND its inbound
-     seam. One direction; no leg reads above itself. -->
+<!-- A small DAG across the legs + the inbound seam. One direction. -->
 
 \`\`\`
 <upstream seam>  ->  leg-01  ->  leg-02
 \`\`\`
 
-- <the dependency edges in words; call out the single inbound seam>.
-
----
-
 ## Build order
 
-<!-- A sane sequence OF LEGS. Call out the GATING input explicitly — the frozen
-     decision or upstream contract that nothing downstream can finish until it
-     is settled (for example, a frozen requirement set gating the output layer
-     and serving surface). -->
+<!-- A sane sequence of legs; call out the GATING input. -->
 
 1. **leg-01** — <why it unblocks the rest>.
 2. **leg-02** — <next>.
-3. <…>.
-
-<!-- Name the gating edge: what cannot finish until <gating input> is frozen. -->
-
----
-
-## Tests that prove each leg
-
-<!-- Plan altitude: WHAT each test asserts, keyed by leg — not the test code.
-     The eval binds at Pass 5B, when the leg yields its 1:N task-specs. -->
-
-| Leg | Tests (what they prove) |
-|---|---|
-| **leg-01** | <invariant this leg must satisfy>. Proves: <property>. |
-| **leg-02** | <invariant>. Proves: <property>. |
-
----
 
 ## Open questions
 
-<!-- Anything the ADRs do NOT cover. Surface it — do NOT invent the answer inside
-     the plan. Owner + blocks-build flag per row.
-     CYCLE NOTE (H5): if this lane and another genuinely co-depend (the one-way
-     seam test fails), do NOT smear the boundary — record HERE how the cycle was
-     broken: dependency inversion (both depend on an extracted shared contract),
-     an async/event boundary (one sync cycle → two one-way flows), or a promoted
-     shared kernel. Flag it blocks-build until the technique is chosen. -->
+<!-- Anything the ADRs do NOT cover: owner + blocks-build flag. Do not invent answers.
+     CYCLE NOTE (H5): a genuine two-way dependency is broken here (dependency
+     inversion / async boundary / shared kernel) and flagged blocks-build. -->
 
 | # | Item | Owner | Blocks build? |
 |---|---|---|---|
-| Q1 | <question the ADRs don't settle> | <owner> | <Yes/No — and which piece> |
-
----
+| Q1 | <question the ADRs don't settle> | <owner> | <Yes/No> |
 
 ## Spec traceability
 
-<!-- Trace each piece back to the ADR (docs/adrs/NNNN-*.md) or tech requirement it
-     satisfies. A plan that CONTRADICTS an ADR fails the gate — cite it, never
-     re-decide it here. -->
+<!-- Every leg traces to an ADR / requirement; the leg files carry the leg-level trace. -->
 
-- **<ADR / requirement id>** — <how this lane honors it>.
+- **<ADR / R-n>** — <how this lane honors it>.
 EOF
 
 echo "Created $OUT"
+echo "Next: add legs with  new-plan.sh --lane $SEAM --leg 01-<tech>"

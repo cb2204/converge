@@ -3,7 +3,7 @@
 name: reqs-to-swimlane-plans
 description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5B. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
 ---
 
@@ -27,7 +27,7 @@ compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs
 | Slot | Contract |
 |------|----------|
 | **IN** | The Pass 2 understanding (held in-session) **+** the ADRs at `docs/adrs/*.md` (each a numbered decision file — e.g. a join-key decision, a date-grain decision, a metric-definition decision). |
-| **OUT** | One sketch plan per swimlane under `sketch/`, named for the lane's technology or feature — e.g. `sketch/<lane-a>.plan` (Component A) + `sketch/<lane-b>.plan` (Component B). |
+| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/swimlane-<seam>/` holding a **lean PRD index** `swimlane-<seam>.plan.md` **plus one file per leg** `swimlane-<seam>-leg-NN-<tech>.md`. The PRD links to its legs; it never embeds their detail. Filenames are the fully-qualified ids (stable key `swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
 | **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). Plus the seam-economics hardening: **one steel-thread lane** (H1), per-lane **risk + owner** (H2/H3), stated **seam evolution** (H4), and any cycle **broken and recorded** (H5). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
 
 ## Flags
@@ -63,12 +63,32 @@ Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.
 6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5B, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
 7. **Open questions** — anything the ADRs do not cover, with an owner and whether it blocks the build. Surface it here; do not invent the answer inside the plan.
 
-Every plan also carries an **`## Architecture` block** near the top: a **mermaid
-`flowchart LR` pipeline** (source → this lane → downstream) *plus an adjacent
-numbered step-by-step* — the diagram and the narrative build the mental model
-neither gives alone (dual coding), so keep them together. Plans are files named
-**`sketch/<lane>.plan.md`** — the trailing `.md` renders on GitHub/GitLab and
-stays greppable; the `.plan` tag marks the type.
+### The swimlane is a directory: a lean PRD + one file per leg (v0.7.0)
+
+A swimlane is **`sketch/swimlane-<seam>/`**, containing:
+
+- **The PRD — `swimlane-<seam>.plan.md`** — a *lean index*. Field-grounded
+  structure (Spec Kit / arc42 / Amazon PR-FAQ): **lane-meta · identity + why ·
+  Seam · Architecture** (mermaid `flowchart LR` + adjacent numbered steps —
+  dual coding) **· Non-Goals** (the #1 anti-bloat device — explicit
+  out-of-scope) **· Legs index** (a table that *links* to each leg file, one
+  line of responsibility each) **· Dependencies · Build order · Open questions ·
+  Spec traceability.** The PRD holds **no leg detail** — it stays black-box
+  altitude so it never bloats as legs grow.
+- **One file per leg — `swimlane-<seam>-leg-NN-<tech>.md`** — atomic and
+  independently evolvable. Structure (Spec Kit user-story / INVEST / Gherkin /
+  Shape Up): **frontmatter** (`leg:` the stable key, `parent`, `swimlane`,
+  `status`, `spec_ref`, `depends_on`) **· Responsibility** (one job) **· Proves**
+  (**declarative Given/When/Then acceptance criteria, 1–3, never an eval**) **·
+  Independence · Consumes/Produces · Appetite** (size token) **· Yields** (the
+  1:N task-specs it seeds at 5B) **· Re-verify when.** Status enum:
+  `proposed → accepted → in_progress → done` (+ `superseded`); an accepted leg is
+  edited by superseding, not in place.
+
+Bidirectional links (like ADR supersede): the PRD's Legs index links **down** to
+each leg; each leg's `parent:` frontmatter + a top back-link points **up**. Every
+file is scaffolded with `new-plan.sh` (`"<seam>"` for the PRD, `--lane <seam>
+--leg NN-<tech>` for a leg) and gated together by `--check`.
 
 **Naming the stack is allowed here — as a reversible pick, not a silent lock.**
 Pass 3 may bind the concrete tool per leg (the `<tech>` label) — the tech-spec's
@@ -89,14 +109,15 @@ Tie every lane back to the bound decisions in `docs/adrs/`.
 
 ### Step 4 — Gate and hand off
 
-Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every box holds, the `sketch/*.plan` files are the input to Pass 4 (`sketch-plans-adversarial-review`), where a **different** model attacks them one at a time and names the fork.
+Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every box holds, the `sketch/swimlane-*/` directories are the input to Pass 4 (`sketch-plans-adversarial-review`), where a **different** model attacks them one at a time (PRD then legs) and names the fork.
 
 ## Gate — confirm before leaving this pass
 
-- [ ] One sketch plan exists per genuine seam, each a **`sketch/<lane>.plan.md`** file (renders as Markdown, greppable).
+- [ ] One **`sketch/swimlane-<seam>/`** directory per genuine seam, each holding a lean PRD `swimlane-<seam>.plan.md` + one file per leg `swimlane-<seam>-leg-NN-<tech>.md`.
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
-- [ ] Each plan carries an **`## Architecture` mermaid diagram + adjacent numbered steps** (a human can see the pipeline).
-- [ ] Each plan lists its legs (`leg-NN-<tech>`), the dependencies between them, a sane build order, and the tests that prove each leg (at plan altitude).
+- [ ] **The PRD is a lean index** — lane-meta, Seam, Architecture (mermaid + steps), **Non-Goals**, a Legs-index table linking to each leg file, Dependencies, Build order, Open questions — and holds **no leg detail**.
+- [ ] **Each leg file is complete and atomic** — frontmatter (stable `leg:` key, `parent`, `status`), a single **Responsibility**, **Proves** as **Given/When/Then** (1–3, no evals), Independence, Consumes/Produces, Appetite, Yields.
+- [ ] **Links are bidirectional and consistent** — every leg file is referenced in the PRD index (no orphan) and every index row has a file (no dangling); legs are **contiguous** `leg-01..leg-0N` across the files.
 - [ ] **Leg nomenclature holds** — in-plan `leg-NN-<tech>`, fully-qualified `swimlane-<seam>-leg-NN-<tech>`; the stable key is `swimlane-<seam>-leg-NN` and `<tech>` is a swappable label, **never** part of the key.
 - [ ] Each leg carries one responsibility in prose + one proving-test cluster, is **independently finishable**, and fits one context window — bigger is two legs; two stretches sharing one proving test are one leg.
 - [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5B and is cited by them (`swimlane-<seam>-leg-NN`).
