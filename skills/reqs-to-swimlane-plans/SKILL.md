@@ -3,7 +3,7 @@
 name: reqs-to-swimlane-plans
 description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs under docs/adrs/ plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "break it into plans", "find the seams", or "one plan per lane". Each plan lists features, dependencies, build order, and inherits the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Do not use for atomic tasks or implementation code — that is Pass 5 (task-spec), not this pass.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
 ---
 
@@ -27,7 +27,7 @@ compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs
 |------|----------|
 | **IN** | The Pass 2 understanding (held in-session) **+** the ADRs at `docs/adrs/*.md` (each a numbered decision file — e.g. a join-key decision, a date-grain decision, a metric-definition decision). |
 | **OUT** | One sketch plan per swimlane under `sketch/`, named for the lane's technology or feature — e.g. `sketch/<lane-a>.plan` (Component A) + `sketch/<lane-b>.plan` (Component B). |
-| **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
+| **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). Plus the seam-economics hardening: **one steel-thread lane** (H1), per-lane **risk + owner** (H2/H3), stated **seam evolution** (H4), and any cycle **broken and recorded** (H5). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
 
 ## Flags
 
@@ -44,16 +44,19 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 - The seam itself is an **interface**, and it must be nameable. *Example — a data pipeline whose upstream inputs are already fixed:* the seam falls cleanly above those inputs — a **transform** lane that shapes the data (Component A) and a **serve** lane that exposes it (Component B), with the **published-output contract** (the tables/columns A produces and B consumes) as the interface between them. Your seams will follow your own system's real boundaries.
 - If a boundary is fuzzy, that is signal: either it is a real seam (name the interface) or a false one (fold the lanes back together).
 - **Prefer the highest seam, and the fewest.** Cut at the highest point the architecture allows — above implementation detail, at the published contract — and resist adding seams: every seam is an interface someone must freeze, attack (Pass 4), and honor (Pass 5). The fewer seams across the system, the better; the ideal number is the smallest that still separates genuinely independent work.
-- **The deep-lane test.** For each proposed lane you should be able to answer, without reading its internals: *what does it do, how do you use it (its interface), and what does it depend on?* If a lane can't be understood from its interface alone — if a consumer would need to see inside it — the boundary is wrong: move it or fold the lane.
+- **The deep-lane test.** For each proposed lane you should be able to answer, without reading its internals: *what does it do, how do you use it (its interface), what does it depend on* — and **what is this lane's secret** (the decision most likely to change, per Parnas)? If a lane can't be understood from its interface alone — if a consumer would need to see inside it — the boundary is wrong: move it or fold the lane. A clean interface around a volatile decision is only the right cut if that decision sits *inside* the lane. *(This is Ousterhout's "deep module": a narrow interface hiding large, changeable functionality.)*
+- **Name the steel-thread lane (H1 — walking skeleton).** Exactly one lane in the set is the **thin vertical path that exercises every seam end-to-end** (build → prove) before the component lanes fatten. Mark it `thread=yes` on its lane-meta line. Cutting only "by component" (e.g. transform vs serve) is a *horizontal* slice — it can leave a plan set where no lane is independently demonstrable and integration mismatches hide until late; the steel thread is the antidote. Prove the skeleton connects, then flesh out.
+- **Annotate seam risk and sequence risk-first (H2).** On each lane's lane-meta, record `risk=low|med|high` — the confidence that the frozen contract / hard constraint is *right*. Risk rarely tracks effort: spike the highest-risk seam **ahead of** pure dependency order, so a fatal contract mismatch surfaces before the easy 80% is built.
+- **A seam is one-way — break cycles explicitly (H5).** The seam test *requires* a one-way dependency. When two lanes genuinely co-depend, do not smear the boundary: break the cycle with dependency inversion (both depend on an extracted shared contract), an async/event boundary (one sync cycle → two one-way flows), or a promoted shared kernel — and record which technique you used as a blocks-build open question.
 - **Use the canonical vocabulary.** Name lanes, interfaces, and components with the terms pinned in `docs/CONTEXT.md` (Pass 2's glossary). A plan that invents a synonym for a defined term creates drift the adversary then has to catch.
 
 ### Step 2 — SWIMLANE: one plan per seam
 
 Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.** Each plan should carry:
 
-1. **Identity line** — which component this is (e.g. A · Transform / B · Serve) and its input/output contract.
+1. **Identity + lane-meta line** — which component this is (e.g. A · Transform / B · Serve), its input/output contract, and the greppable **`lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<stream>`** line. **`owner` (H3 — Conway)** names the single stream/team that owns the lane (or `shared`/`platform`); a seam that splits one owner or fuses two is a coordination smell — flag it, because architecture mirrors the org's communication structure.
 2. **Features / components** — the pieces inside the lane and what each does (for example, in a transform lane, the staged transformation layers; in a serve lane, a shared query core plus each transport/interface it exposes). Component-level, never implementation bodies (no query bodies, no handler bodies).
-3. **The consumed interface (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals.
+3. **The consumed interface + seam evolution (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals. **Seam evolution (H4):** the frozen contract *will* change — state how safely. Additive changes (a new column/field/endpoint) are non-breaking; renames, removals, and newly-required fields are **breaking** and need a coexistence window before this lane cuts over. Recommend a consumer-driven contract test the upstream must keep green, so a later change can't silently break this lane.
 4. **Dependencies** — a small DAG showing the build order between the lane's own pieces and its inbound seam.
 5. **Build order** — a sane sequence, with the gating input called out (for example, a frozen acceptance-question set may gate the output layer and the final serving surface).
 6. **Tests that prove each piece** — at plan altitude: *what* each test asserts, not the test code.
@@ -82,8 +85,12 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 - [ ] The downstream lane names the **exact upstream interface** it consumes (the published tables/columns/fields) and never reaches below it.
 - [ ] Open questions the ADRs do not cover are surfaced with an owner and a blocks-build flag — not answered inside the plan.
 - [ ] **Plan altitude held** — no atomic tasks, no implementation code anywhere.
+- [ ] **Steel thread named (H1)** — exactly one lane carries `thread=yes` and exercises every seam end-to-end (build → prove) before the component lanes fatten.
+- [ ] **Seam economics on every lane (H2/H3)** — each `lane-meta` carries a real `risk=` and `owner=`; the highest-risk seam is spiked first, not deferred behind pure dependency order.
+- [ ] **Seam evolution stated (H4)** — every downstream lane says how its consumed contract may change (additive-safe vs breaking + coexistence window).
+- [ ] **No unbroken cycles (H5)** — any genuine two-way dependency is broken by a named technique (dependency inversion / async boundary / shared kernel) and recorded as a blocks-build open question, never smeared into a fuzzy boundary.
 
-When these hold, hand off to Pass 4.
+`new-plan.sh --check` enforces the machine-checkable subset (lane-meta values, the single steel-thread lane, downstream seam-evolution, and the altitude guards); the rest is the human read above. When these hold, hand off to Pass 4.
 
 ## Examples
 
@@ -106,11 +113,15 @@ User proposes three lanes where two of them are just two transports (say, an HTT
 | Three-plus lanes and the extra one feels thin | Forced quota, not a real seam | Test each seam by naming its interface. If you can't name a hard interface, fold the lane back in. |
 | Downstream plan reaches below the seam (into an upstream lane's internals) | The interface wasn't pinned | Make the plan name the exact published tables/columns/fields it consumes; any missing field becomes a "new output request" upstream, never a deeper read. |
 | ADRs missing under `docs/adrs/` | Pass 2 didn't record, or ran in another session | Do not proceed on memory. Ensure Pass 2 wrote the ADRs; plans inherit files, not recollection. |
+| Two lanes genuinely co-depend (the one-way seam test fails) | A real cycle, not just a bad cut | Break it (H5): dependency inversion (both depend on an extracted shared contract) / async boundary (sync cycle → two one-way flows) / promoted shared kernel. Record the technique as a blocks-build open question; never smear the boundary. |
+| `--check` says "no steel-thread lane" | The set is all horizontal component lanes; nothing is demonstrable end-to-end | Mark the thin vertical path `thread=yes` (H1 walking skeleton). If no lane exercises every seam end-to-end, the decomposition is layered — add or designate the steel thread before fattening components. |
+| `--check` flags "lane-meta missing thread/risk/owner" | A lane left the seam-economics placeholders unfilled | Fill real values: `thread=yes|no`, `risk=low|med|high`, `owner=<stream>` (H1/H2/H3). The unfilled `<yes|no>` placeholder does not count. |
 
 ## Notes
 
 - **Why this order.** Seams first (Step 1), then plan the contents (Step 2), then ground against the ADRs (Step 3). Planning contents before naming the seam enshrines a boundary you haven't justified; grounding before planning has nothing to check.
 - **The seam is a contract, not a suggestion.** The published-output interface is owned by the upstream lane and consumed by the downstream lane. Naming it here is what lets Pass 4 attack it and Pass 5 build both lanes against a frozen shape.
+- **"Seam" here ≠ Feathers' seam (H6).** Michael Feathers' *seam* (Working Effectively with Legacy Code) is a place you can alter behavior *for testing* without editing there. Converge repurposes the word for a **decomposition boundary** — a nameable interface with a one-way dependency — closer to a module interface or bounded context. Same word, deliberately different construct; don't expect the testability meaning.
 - **Plans are attacked, not shipped.** Pass 3 output is deliberately un-hardened. It is *supposed* to have soft spots that Pass 4's adversary finds. Do not over-polish or pre-empt objections into the plan; that hides the seams the review needs to test.
 
 ## Handoff

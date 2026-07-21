@@ -271,6 +271,26 @@ complete vertical slice. The five beats, in order, never bundled:
     exit 0, `CHECK_ADR=OK`), proven in eval_1 AND by hand. **R2 = third pass
     fully closed end-to-end; next: R3.U (Pass 3 Decompose — reqs-to-swimlane-plans).**
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
+  - [x] R3.U understand + harden ✅ 2026-07-21 — read the skill + both
+    references (plan-altitude, seams-and-swimlanes) + `new-plan.sh` end to end;
+    **MCP field verification** (Exa/Firecrawl/Tavily, source-linked) graded the
+    pass **4/5 mature**: strongly anchored in Parnas (information hiding),
+    Ousterhout (deep modules = the deep-lane test), contract-first/consumer-
+    driven design, anti-premature-decomposition, and 2025–26 spec-driven /
+    orchestrator-worker agentic practice; "seam" is a deliberate redefinition
+    of Feathers'. Owner approved ALL hardening; applied **H1–H7** →
+    SKILL.md **0.3.0→0.4.0** + `new-plan.sh` v0.4.0: **H1** steel-thread lane
+    (walking skeleton, `thread=yes`, set-level gate), **H2** per-lane `risk=`
+    + risk-first spike order, **H3** `owner=` stream (Conway), **H4** downstream
+    seam-evolution rule (additive-safe vs breaking + coexistence window),
+    **H5** cycle-breaking sub-procedure (dependency inversion / async / shared
+    kernel, recorded blocks-build), **H6** seam≠Feathers doc note, **H7**
+    deep-lane "what's the lane's secret" (Parnas change-locality). `lane-meta:`
+    greppable line born; `--check` gates the machine-checkable subset. Rule 9:
+    good/bad fixtures in a NON-data domain (web checkout) + run-tests.sh —
+    discriminating (good exit 0 / bad exit 1 on THREAD/META/SEAM; fresh scaffold
+    now fails until filled). quick_validate green; shellcheck -x + bash 3.2 -n
+    clean. Next: R3.R (run Pass 3 on the backbone ADRs).
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
