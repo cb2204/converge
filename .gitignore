@@ -24,3 +24,8 @@ temp/v3-*
 temp/cvg-spine-*
 temp/fig*.html
 temp/genfig*.py
+temp/*.png
+temp/legs-e2e/
+
+# Engine session scratch (kimi/codex run dirs)
+.kimi/
