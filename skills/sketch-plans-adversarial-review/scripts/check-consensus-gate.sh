@@ -1,223 +1,183 @@
 #!/usr/bin/env bash
 # check-consensus-gate.sh — Converge Pass 4 (Consensus): the falsifiable exit gate.
 #
-# The pass is done only when the swimlane plans have been ATTACKED by a different
-# model, GROUNDED against the spec + ADRs, every objection is FIXED-or-ACCEPTED,
-# the cross-lane published-contract interface survived, and THE FORK is named at
-# the top of every plan. This script makes that machine-checkable — it does not
-# sharpen plans, it only refuses to let a soft pass slip through.
+# v0.4.0 — gates a STAMPED OBJECTION-LOG ARTIFACT (JSON), not plan prose. The
+# dispatch (cvg review --adversary) writes sketch/.consensus/objection-log.json;
+# this gate validates its structure + semantics + PROVENANCE (it re-hashes the live
+# swimlane plans and requires they match the ones the adversary attacked). It never
+# reads the model's judgment — only refuses to let a soft pass slip through.
+#
+# The pass is done only when: a DIFFERENT-FAMILY model attacked (not self-review),
+# every objection is FIX-or-ACCEPT (ACCEPT names an owner), the fork is declared
+# (in the artifact AND at the top of every swimlane PRD), and the plans have not
+# drifted since the review. Fail-closed: a missing/malformed artifact is FAIL/EMPTY,
+# never a pass.
 #
 # Usage:
-#   check-consensus-gate.sh sketch/                 Gate every sketch/*.plan
-#   check-consensus-gate.sh sketch/foo.plan ...     Gate the named plans only
-#   check-consensus-gate.sh --spec docs/x.pdf DIR   Point at a specific tech-spec
-#   check-consensus-gate.sh --adrs docs/adrs   DIR  Point at a specific ADR dir
+#   check-consensus-gate.sh --dir sketch/                Gate the swimlane tree + its log
+#   check-consensus-gate.sh --log path/to/log.json ...   Point at a specific artifact
+#   check-consensus-gate.sh --author-family anthropic    Who wrote the plans (default anthropic)
 #   check-consensus-gate.sh --help
 #
-# Exit: 0 = green (all checks hold); 1 = a check failed; 2 = nothing to gate.
-#
-# bash 3.2-safe (runs on macOS system /bin/bash). No mapfile, no associative
-# arrays — plain grep/sed/awk over the plan text, mirroring the task-spec scripts.
+# Agent contract: the LAST line is a stable machine token —
+#   CHECK_CONSENSUS=OK | FAIL | EMPTY | USAGE_ERROR
+# Exit: 0 = ok; 1 = check failed; 2 = nothing to gate / usage error.
+# bash 3.2-safe; Python is stdlib-only (json, hashlib) — no pip, no jq.
 
 set -euo pipefail
 
-SPEC_GLOB="docs/tech-spec-*.pdf docs/tech-spec-*.md"
-ADR_DIR="docs/adrs"
+SKETCH_DIR="sketch"
+LOG=""
+AUTHOR_FAMILY="anthropic"
 
-usage() { sed -n '2,20p' "$0"; }
+usage() { sed -n '2,26p' "$0"; }
+usage_error() { echo "ERROR: $*" >&2; usage >&2; echo "CHECK_CONSENSUS=USAGE_ERROR"; exit 2; }
 
-err() { echo "ERROR: $*" >&2; }
-
-# ── Parse args ────────────────────────────────────────────────────────────────
-TARGETS=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --help|-h) usage; exit 0 ;;
-    --spec)    SPEC_GLOB="${2:?--spec needs a path}"; shift 2 ;;
-    --adrs)    ADR_DIR="${2:?--adrs needs a path}"; shift 2 ;;
-    --) shift; TARGETS="$TARGETS $*"; break ;;
-    -*) err "unknown option: $1"; usage >&2; exit 1 ;;
-    *)  TARGETS="$TARGETS $1"; shift ;;
+    --help|-h)       usage; exit 0 ;;
+    --dir)           SKETCH_DIR="${2:?--dir needs a path}"; shift 2 ;;
+    --log)           LOG="${2:?--log needs a path}"; shift 2 ;;
+    --author-family) AUTHOR_FAMILY="${2:?--author-family needs a value}"; shift 2 ;;
+    -*)              usage_error "unknown option: $1" ;;
+    *)               SKETCH_DIR="$1"; shift ;;
   esac
 done
 
-# Default target: the conventional sketch/ directory.
-[ -n "${TARGETS// /}" ] || TARGETS="sketch/"
+[ -n "$LOG" ] || LOG="$SKETCH_DIR/.consensus/objection-log.json"
 
-# ── Resolve the target dir/files into a flat list of *.plan paths ─────────────
-PLANS=""
-for t in $TARGETS; do
-  if [ -d "$t" ]; then
-    for f in "$t"/*.plan; do
-      [ -e "$f" ] || continue
-      PLANS="$PLANS $f"
-    done
-  elif [ -f "$t" ]; then
-    PLANS="$PLANS $t"
-  else
-    err "no such plan or directory: $t"
-    exit 1
-  fi
-done
-
-if [ -z "${PLANS// /}" ]; then
-  echo "GATE: no *.plan files found — run Pass 3 (reqs-to-swimlane-plans) first." >&2
-  exit 2
+if [ ! -d "$SKETCH_DIR" ]; then
+  echo "GATE: no swimlane tree at $SKETCH_DIR/ — run Pass 3 (reqs-to-swimlane-plans) first." >&2
+  echo "CHECK_CONSENSUS=EMPTY"; exit 2
 fi
-
-# ── Check helpers ─────────────────────────────────────────────────────────────
-RC=0
-pass() { echo "  ok   $*"; }
-fail() { echo "  FAIL $*"; RC=1; }
-
-# A plan's fork line: FORK A|B declared near the top. Tolerant of both the prose
-# form ("**Execution model: FORK B — task-driven.**") and the terse form the
-# SKILL.md prescribes ("FORK: A (plan-driven)"). Must appear in the first 15 lines.
-fork_declared() {
-  head -15 "$1" | grep -qiE 'FORK[:[:space:]]*[AB]\b'
-}
-
-# The fork must also carry its descriptor (plan-driven / task-driven) so the line
-# is a decision, not a bare letter.
-fork_has_reason() {
-  head -15 "$1" | grep -qiE '(plan-driven|task-driven)'
-}
+if [ ! -f "$LOG" ]; then
+  echo "GATE: no objection log at $LOG — run the adversary first (cvg review --adversary codex|kimi)." >&2
+  echo "CHECK_CONSENSUS=EMPTY"; exit 2
+fi
 
 echo "== Converge Pass 4 · Consensus gate =="
-echo "plans:$PLANS"
+echo "sketch: $SKETCH_DIR   log: $LOG   author-family: $AUTHOR_FAMILY"
 echo
 
-# ── Check 1 — a DIFFERENT engine attacked the plans (not self-review) ─────────
-# The adversary leaves fingerprints: objection markers naming the engine
-# (Codex C1, gemini, gpt) somewhere in the plan set. Self-review leaves none.
-echo "[1] a different-model adversary attacked the plans"
-ADVERSARY_HITS=$(grep -hoiE '\b(Codex|Gemini|GPT)\b' $PLANS 2>/dev/null | sort -u | tr '\n' ' ' || true)
-if [ -n "${ADVERSARY_HITS// /}" ]; then
-  pass "adversary fingerprints present:${ADVERSARY_HITS}"
-else
-  fail "no adversary named in any plan — did the author self-review? (Step 1)"
-fi
-echo
+set +e
+python3 - "$LOG" "$SKETCH_DIR" "$AUTHOR_FAMILY" <<'PY'
+import json, sys, hashlib, glob, os, re
 
-# ── Check 2 — plans grilled against the tech-spec AND the ADRs ────────────────
-echo "[2] plans grounded vs. tech-spec + ADRs"
-SPEC_FOUND=""
-for g in $SPEC_GLOB; do
-  [ -e "$g" ] && SPEC_FOUND="$g" && break
-done
-if [ -n "$SPEC_FOUND" ]; then
-  pass "tech-spec present: $SPEC_FOUND"
-else
-  fail "no tech-spec found ($SPEC_GLOB) — Step 2 has no ground truth"
-fi
-# Spec traceability must be visible in the plans (E-requirement citations, §refs).
-if grep -qiE '(spec|§|\bE[0-9]\b|traceab)' $PLANS 2>/dev/null; then
-  pass "plans cite the spec (requirement/section references present)"
-else
-  fail "no spec citations in the plans — Step 2 drift check not recorded"
-fi
-if [ -d "$ADR_DIR" ] && ls "$ADR_DIR"/*.md >/dev/null 2>&1; then
-  pass "ADRs present in $ADR_DIR/"
-else
-  # SKILL.md contract: absent ADRs are allowed but must be logged as an open Q.
-  if grep -qiE 'ADRs? absent' $PLANS 2>/dev/null; then
-    pass "ADRs absent — logged as an open question (allowed by the pass)"
-  else
-    fail "no ADRs in $ADR_DIR/ AND not logged as 'ADRs absent' open question"
-  fi
-fi
-echo
+log_path, sketch, author_family = sys.argv[1], sys.argv[2], sys.argv[3]
+rc = 0
+def ok(m):   print("  ok   " + m)
+def fail(m):
+    global rc; print("  FAIL " + m); rc = 1
 
-# ── Check 3 — every logged objection is FIXED or ACCEPTED (no silent drop) ────
-# Objections are labelled C1, C2, ... (e.g. "Codex C3"). Each id must recur in
-# the plan body — the recurrence is the resolution (a FIX cites the C-id where it
-# revised the plan; an ACCEPT records it with an owner). An id that appears once
-# and is never referenced again is a logged-but-unresolved objection.
-echo "[3] every objection FIXED or ACCEPTED (one resolution per objection)"
-OBJ_IDS=$(grep -hoE '\bC[0-9]+\b' $PLANS 2>/dev/null | sort -u || true)
-if [ -z "$OBJ_IDS" ]; then
-  fail "no objection ids (C1, C2, ...) found — Step 1 attack not logged"
+try:
+    art = json.load(open(log_path))
+except Exception as e:
+    print("  FAIL objection-log is not valid JSON: %s" % e)
+    sys.exit(1)
+
+# [1] a DIFFERENT-FAMILY adversary attacked (H3/H4 — provenance, not a grep of a word)
+adv = art.get("adversary", {}) or {}
+fam = (adv.get("family") or "").strip().lower()
+if not fam:
+    fail("adversary.family missing — cannot prove a different model attacked")
+elif fam == author_family.strip().lower():
+    fail("adversary.family == author (%s) — self-review; a DIFFERENT family must attack" % author_family)
+else:
+    ok("cross-family adversary: %s / %s (%s)" % (adv.get("engine_id","?"), adv.get("model","?"), fam))
+
+# [2] verdict is a completed review (fail-closed on ABSTAIN/ERROR)
+verdict = art.get("verdict", "")
+if verdict not in ("PASS", "REVISE", "ABSTAIN", "ERROR"):
+    fail("verdict not in {PASS,REVISE,ABSTAIN,ERROR}: %r" % verdict)
+elif verdict in ("ABSTAIN", "ERROR"):
+    fail("verdict is %s — not a completed review (fail-closed)" % verdict)
+else:
+    ok("verdict: %s" % verdict)
+
+# [3] every objection FIX or ACCEPT; ACCEPT names an owner (H9); default-to-refuted (H6)
+objs = art.get("objections", []) or []
+if not objs:
+    fail("no objections logged — the adversary blessed everything (default-to-refuted violated)")
+else:
+    bad = 0
+    for o in objs:
+        oid = o.get("id", "?")
+        if not o.get("severity"):
+            fail("objection %s: missing severity"); bad += 1
+        res = o.get("resolution", {}) or {}
+        disp = res.get("disposition")
+        if disp not in ("FIX", "ACCEPT"):
+            fail("objection %s: resolution.disposition must be FIX or ACCEPT (got %r)" % (oid, disp)); bad += 1
+        elif disp == "ACCEPT" and not (res.get("owner") or "").strip():
+            fail("objection %s: ACCEPT requires a non-empty owner" % oid); bad += 1
+    if bad == 0:
+        ok("%d objection(s), each FIX or ACCEPT (ACCEPT names an owner)" % len(objs))
+    sev = [(o.get("severity") or "").lower() for o in objs]
+    if not any(s in ("high", "critical") for s in sev) and verdict != "PASS":
+        fail("no high/critical objection and verdict != PASS — weak/blessing review (H6)")
+
+# [4] fork declared in the artifact, with a reason
+fork = art.get("fork", {}) or {}
+if fork.get("choice") not in ("A", "B"):
+    fail("fork.choice must be A or B (got %r)" % fork.get("choice"))
+elif not (fork.get("reason") or "").strip():
+    fail("fork declared but carries no reason")
+else:
+    ok("fork: %s — %s" % (fork["choice"], (fork["reason"] or "")[:60]))
+
+# [5] fork line at the top of EVERY swimlane PRD (dir-per-swimlane)
+prds = sorted(glob.glob(os.path.join(sketch, "swimlane-*", "swimlane-*.plan.md")))
+if not prds:
+    fail("no swimlane PRDs (%s/swimlane-*/swimlane-*.plan.md) — nothing to gate" % sketch)
+else:
+    missing = []
+    for p in prds:
+        head = "".join(open(p, encoding="utf-8", errors="replace").readlines()[:15])
+        if not (re.search(r"FORK[:\s]*[AB]\b", head, re.I) and re.search(r"plan-driven|task-driven", head, re.I)):
+            missing.append(os.path.basename(os.path.dirname(p)))
+    if missing:
+        fail("fork not declared at the top of PRD(s): %s" % ", ".join(missing))
+    else:
+        ok("fork line present at the top of all %d swimlane PRD(s)" % len(prds))
+
+# [6] PROVENANCE — the adversary attacked the LIVE plans (H3 anti-spoof)
+inputs = {}
+for i in (art.get("inputs", []) or []):
+    if i.get("path"):
+        inputs[i["path"]] = i.get("sha256")
+if not inputs:
+    fail("no inputs[] provenance — cannot prove the adversary saw the real plans")
+else:
+    live = sorted(glob.glob(os.path.join(sketch, "swimlane-*", "*.md")))
+    live = [f for f in live if not os.path.basename(os.path.dirname(f)).startswith(".")]
+    stale, unseen = [], []
+    for f in live:
+        rel = os.path.relpath(f, sketch)
+        want = inputs.get(rel) if rel in inputs else inputs.get(f)
+        if want is None:
+            unseen.append(rel); continue
+        got = hashlib.sha256(open(f, "rb").read()).hexdigest()
+        if got != want:
+            stale.append(rel)
+    if unseen:
+        fail("plan(s) not in the reviewed inputs[] — the review is incomplete: %s" % ", ".join(unseen[:4]))
+    if stale:
+        fail("plan(s) changed since the review (hash mismatch) — re-review: %s" % ", ".join(stale[:4]))
+    if not unseen and not stale:
+        ok("provenance verified: every current plan is the one attacked (%d files)" % len(live))
+
+sys.exit(rc)
+PY
+PYRC=$?
+set -e
+
+echo
+if [ "$PYRC" -eq 0 ]; then
+  echo "GATE: GREEN — consensus reached (different-family attack, all objections resolved, fork named, provenance intact). Hand off per the fork."
+  echo "CHECK_CONSENSUS=OK"
+  exit 0
 else
-  UNRESOLVED=""
-  for id in $OBJ_IDS; do
-    # Count every occurrence of this id across all plans. A resolved objection is
-    # referenced at least twice: the log entry + the place it was fixed/accepted.
-    N=$(grep -hoE "\b${id}\b" $PLANS 2>/dev/null | wc -l | tr -d ' ')
-    if [ "${N:-0}" -lt 2 ]; then
-      UNRESOLVED="$UNRESOLVED $id"
-    fi
-  done
-  if [ -n "${UNRESOLVED// /}" ]; then
-    fail "objection(s) logged but not resolved (no FIX/ACCEPT reference):${UNRESOLVED}"
-  else
-    pass "all objections resolved:$(echo $OBJ_IDS | sed 's/^/ /')"
-  fi
+  echo "GATE: RED — fix the FAILs above. Sharpen in place, name the fork, or re-run the adversary; do NOT add scope." >&2
+  echo "CHECK_CONSENSUS=FAIL"
+  exit 1
 fi
-# Every ACCEPTed risk must name an owner — an ACCEPT without an owner is a drop.
-if grep -qiE 'Accepted risk' $PLANS 2>/dev/null; then
-  if grep -qiE 'Owner:' $PLANS 2>/dev/null; then
-    pass "accepted risks carry a named owner"
-  else
-    fail "an 'Accepted risk' block has no 'Owner:' — ACCEPT must name an owner"
-  fi
-fi
-echo
-
-# ── Check 4 — the cross-lane published-contract interface survived scrutiny ───
-# The seam is the producer->consumer contract between lanes: a downstream lane
-# reads an upstream lane's output ONLY through a published contract layer, never
-# its internals. Three shape properties must hold, whatever the stack:
-#   (a) a published/output/contract layer is named as the interface,
-#   (b) that contract is pinned by a schema/contract file (so it can't drift), and
-#   (c) reads are against a single atomic-publish generation stamp / version, so
-#       a consumer never observes a half-written interface.
-# (Example — in a dbt/warehouse project the layer is `gold.*`, pinned by a per-mart
-#  `schema.yml`, read against a published `_gold_run_id`; those literals still match.)
-echo "[4] cross-lane published-contract interface survived"
-SEAM_RC=0
-grep -qiE '(published|output|contract|interface|gold)[[:space:]_-]*(layer|table|tables|mart|marts)?' $PLANS 2>/dev/null \
-  || { fail "no published/output/contract layer named as the cross-lane interface"; SEAM_RC=1; }
-grep -qiE '(schema|contract)[._-][a-z]+|schema\.yml|data[[:space:]-]*contract' $PLANS 2>/dev/null \
-  || { fail "cross-lane contract not pinned by a schema/contract file"; SEAM_RC=1; }
-grep -qiE '(run|batch|publish|snapshot|version|generation)[[:space:]_-]*(id|stamp|version)|_[a-z]*run_id' $PLANS 2>/dev/null \
-  || { fail "no atomic-publish generation stamp/version pinning the read"; SEAM_RC=1; }
-[ "$SEAM_RC" -eq 0 ] && pass "published-contract layer + pinned schema/contract + atomic-publish stamp all present"
-echo
-
-# ── Check 5 — THE FORK declared at the top of EVERY plan, with a reason ───────
-echo "[5] the fork declared at the top of every plan (Fork A or Fork B) + reason"
-for p in $PLANS; do
-  if fork_declared "$p"; then
-    if fork_has_reason "$p"; then
-      pass "$(basename "$p"): fork declared with plan-driven/task-driven descriptor"
-    else
-      fail "$(basename "$p"): fork letter present but no plan-driven/task-driven reason"
-    fi
-  else
-    fail "$(basename "$p"): no 'FORK A|B' in the first 15 lines (Step 4 skipped)"
-  fi
-done
-echo
-
-# ── Check 6 — an open-questions list exists; blockers are flagged ─────────────
-echo "[6] open-questions list exists; blockers flagged"
-if grep -qiE '^#+[[:space:]]*Open[[:space:]-]*questions|^\**[[:space:]]*Open[[:space:]-]*questions' $PLANS 2>/dev/null; then
-  pass "open-questions section present"
-  if grep -qiE 'Blocks? build|Yes[[:space:]—-]' $PLANS 2>/dev/null; then
-    pass "blocker status recorded (Blocks build? column)"
-  else
-    fail "open questions present but no blocker flag (Blocks build? / Yes|No)"
-  fi
-else
-  fail "no 'Open questions' section — the residual-risk list is missing"
-fi
-echo
-
-# ── Verdict ───────────────────────────────────────────────────────────────────
-if [ "$RC" -eq 0 ]; then
-  echo "GATE: GREEN — consensus reached. Hand off per the fork (Pass 5A or 5B)."
-else
-  echo "GATE: RED — see FAILs above. Sharpen in place (Step 3) or declare the fork" >&2
-  echo "      (Step 4); do NOT add scope. Re-run this gate until green." >&2
-fi
-exit "$RC"

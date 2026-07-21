@@ -2,7 +2,7 @@
 name: sketch-plans-adversarial-review
 description: Runs the Pass 3 swimlane plans through a different model as adversary, sharpens them in place, and decides THE FORK (whole-system plan-driven vs. per-unit task-driven). Implements Converge Pass 4 (Consensus). Use when the user says "adversarial review", "consensus pass", "attack the plans", "have Codex refute this", "find what bites us at build time", or "decide the fork". Engine-agnostic via flags — the adversary is --adversary codex|gemini|gpt (default codex), never baked into the name; no tracker. Do NOT use to write new plans (that is Pass 3 reqs-to-swimlane-plans) or to cut a spec or tasks (that is Pass 5A plans-to-coherent-spec or Pass 5B task-spec) — this pass only hardens existing plans and names the fork.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 compatibility: "Converge chain Pass 4 · Consensus. Runs after Pass 3 (reqs-to-swimlane-plans), before the Pass 5 fork (5A plans-to-coherent-spec / 5B task-spec). Engine/tracker-agnostic."
 ---
 
@@ -22,15 +22,15 @@ Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan defa
 
 | | Artifact |
 |------|----------|
-| **IN** | The swimlane plans (`sketch/*.plan`, one per lane of your system) + the tech-spec (`docs/tech-spec-*.pdf`) + the ADRs (`docs/adrs/*.md`) as ground truth. |
-| **OUT** | The **same plans, sharpened in place** (`sketch/*.plan` — the diff is the record) + a short open-questions list + **THE FORK named at the top of every plan**. No new files. |
-| **GATE** | A *different* model attacked the plans default-to-refuted; every logged objection is FIXED in a plan or ACCEPTED with a named owner; every cross-lane interface (the contract one lane hands to the next) survived scrutiny or was corrected; **AND** the fork is declared at the top of every plan (Fork A whole-system, plan-driven / Fork B per-unit, task-driven) with a reason. Falsifiable — see Step 5. |
+| **IN** | The swimlane tree (`sketch/swimlane-<seam>/` — a lean PRD + one file per leg, from Pass 3 v0.7.0) + the tech-spec + the ADRs (`docs/adrs/*.md`) as ground truth, handed to a **different-family** adversary via the framed [`attack-playbook.md`](references/attack-playbook.md). |
+| **OUT** | The **same plans, sharpened in place** (the diff is the record) + **THE FORK named at the top of every swimlane PRD** + a **stamped objection log** at `sketch/.consensus/objection-log.json` ([schema](references/objection-log.schema.json)) — the deterministic gate target. No new plan files. |
+| **GATE** | A **different-family** model attacked (proven by the artifact's provenance stamp + input hashes, *not* a grep of a word); every objection is FIX or ACCEPT-with-owner; the fork is declared (in the artifact **and** atop every PRD); and the plans have **not drifted** since the review (the gate re-hashes them). Falsifiable — see Step 5. `check-consensus-gate.sh` ends in `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR`. |
 
 ## Flags
 
 | Flag | Values | Default | Effect |
 |------|--------|---------|--------|
-| `--adversary` | `codex` \| `gemini` \| `gpt` | `codex` | Which *different* model runs the refutation. Must differ from the author model (Claude). If the adversary is unavailable, fall back to a fresh same-model session with **no memory** of writing the plans — weaker, but better than self-review in the same context. |
+| `--adversary` | `codex` \| `kimi` \| `gemini` | `codex` | Which *different-**family*** model runs the refutation. The invariant is a **different family** than the author (Claude = anthropic): `codex`=openai, `kimi`=moonshot, `gemini`=google. Self-preference bias is measured and family-correlated, so same-family review under-reports its own flaws. `claude -p` (fresh, no memory) is the explicitly-**weaker fallback** only. Dispatched headless by `cvg review --adversary <e>` (see `references/engine-adapter.md`). |
 
 No `--tracker` flag: this pass registers nothing and produces no issues. It sharpens plans in place and decides one fork.
 
@@ -40,9 +40,9 @@ Run the four core steps in order, then the gate. This is Pattern 5 (domain-intel
 
 ### Step 1 — ATTACK (refute as a skeptic who didn't write it)
 
-Hand the plans to the `--adversary` engine, framed as a skeptical principal engineer who did NOT write them and whose job is to REFUTE, not bless.
+Dispatch the swimlane tree to the `--adversary` engine (headless, read-only, via `cvg review --adversary <e>`), framed by [`attack-playbook.md`](references/attack-playbook.md) as a skeptical principal engineer who did NOT write them and whose job is to REFUTE, not bless. The adversary **emits the stamped objection log** (`sketch/.consensus/objection-log.json`), never edits the plans.
 
-- **One plan at a time.** Refutation is per-plan and ranked by build-time damage so the cheapest-to-kill wrong idea dies first, at the plan, before any model/mart/endpoint exists.
+- **One swimlane at a time, then leg by leg.** Refutation is per-lane and per-leg (Pass 3 is now `sketch/swimlane-<seam>/` with one file per leg), ranked by build-time damage so the cheapest-to-kill wrong idea dies first — before any model/mart/endpoint exists.
 - **Default to refuted.** Merely plausible is not enough; the adversary must say why a step might be wrong.
 - Hunt the build-time bites, using your stack's real seams:
   - **Unverified assumptions about existing state** — where a plan assumes something unproven about the shape of a source/input contract, required audit/lineage columns, or a data-store constraint (e.g. single-writer, transaction limits).
@@ -96,12 +96,16 @@ Record the choice AND the why. Pass 5 only makes sense once the fork is committe
 Run the bundled gate to make the exit condition machine-checkable:
 
 ```bash
-bash .claude/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh sketch/
+bash .claude/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh --dir sketch/
+# validates sketch/.consensus/objection-log.json (structure + provenance hashes);
+# ends in CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR. cvg review --check wraps this.
 ```
 
-It fails (exit 1) unless all hold:
+It fails (`CHECK_CONSENSUS=FAIL`, exit 1) unless all hold — checked against the
+**stamped objection log**, not plan prose (so "a different model attacked" is
+un-spoofable):
 
-- [ ] A *different* engine (`--adversary`, default codex) attacked the plans — not the author self-reviewing.
+- [ ] A **different-family** engine (`--adversary`, default codex=openai) attacked — proven by the objection log's provenance stamp (engine/model/family + input `sha256`s that match the live plans), not a grep of a word.
 - [ ] Plans were grilled against the tech-spec AND the ADRs for drift, each conflict citing both sides.
 - [ ] Every logged objection is FIXED in a plan or ACCEPTED with a named owner — grep finds one resolution per objection.
 - [ ] Every cross-lane interface (the contract each lane hands to the next) survived scrutiny or was corrected.
@@ -132,6 +136,8 @@ Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 rec
 
 ## References
 
-- `references/attack-playbook.md` — the refutation prompt for the adversary, the "default to refuted" framing, and how to derive your stack's build-time bite list (source/input contracts, data-store constraints, build order, cross-lane interfaces).
+- `references/attack-playbook.md` — the adversary's system prompt (default-to-refuted), the cross-family + per-leg dispatch contract, and the stack's build-time bite list.
+- `references/engine-adapter.md` — how `cvg review` dispatches a headless engine (the read-only + schema-JSON + timeout + provenance contract, the invocation cheatsheet, `cvg doctor`).
+- `references/objection-log.schema.json` — the stamped review-record schema the gate validates.
 - `references/the-fork.md` — Fork A vs. Fork B decision rubric, the trust-boundary framing, and how each fork feeds Pass 5A / 5B.
-- `scripts/check-consensus-gate.sh` — the falsifiable gate (see Step 5).
+- `scripts/check-consensus-gate.sh` — the falsifiable gate on the objection log (see Step 5); `tests/run-tests.sh` proves it discriminates.

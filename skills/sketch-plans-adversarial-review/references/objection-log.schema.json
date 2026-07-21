@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "converge/pass4/objection-log",
+  "title": "Converge Pass 4 objection log (stamped adversarial-review record)",
+  "description": "The deterministic gate target. The dispatch (cvg review --adversary) writes this once per run; check-consensus-gate.sh validates its STRUCTURE + PROVENANCE, never the model's judgment. SARIF-inspired. Append, never overwrite — re-runs are an audit trail.",
+  "type": "object",
+  "required": ["schema_version", "pass", "adversary", "author", "verdict", "inputs", "objections", "fork"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "pass": { "const": "4-consensus" },
+    "adversary": {
+      "type": "object",
+      "required": ["engine_id", "model", "family", "engine_version", "sandbox_mode"],
+      "properties": {
+        "engine_id": { "enum": ["codex", "kimi", "claude", "gemini"] },
+        "model": { "type": "string" },
+        "family": { "enum": ["openai", "moonshot", "anthropic", "google"], "description": "H4: the review-independence invariant is by FAMILY, not brand." },
+        "engine_version": { "type": "string" },
+        "sandbox_mode": { "enum": ["read-only", "isolated-worktree"] }
+      }
+    },
+    "author": {
+      "type": "object",
+      "required": ["model", "family"],
+      "description": "Who wrote the plans. The gate asserts adversary.family != author.family.",
+      "properties": { "model": { "type": "string" }, "family": { "type": "string" } }
+    },
+    "verdict": { "enum": ["PASS", "REVISE", "ABSTAIN", "ERROR"], "description": "The adversary's overall call. ABSTAIN/ERROR fail the gate (not a completed review). Fail-closed: malformed => ERROR." },
+    "prompt_sha256": { "type": "string", "description": "Hash of the framed critic prompt actually sent (provenance)." },
+    "inputs": {
+      "type": "array", "minItems": 1,
+      "description": "Every plan file the adversary read + its sha256. The gate re-hashes the live plans and requires a match (H3 anti-spoof).",
+      "items": {
+        "type": "object", "required": ["path", "sha256"],
+        "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+      }
+    },
+    "objections": {
+      "type": "array", "minItems": 1,
+      "description": "One per finding. Empty/absent = the adversary blessed everything (default-to-refuted violated) => gate FAIL.",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "attack_class", "swimlane", "location", "resolution"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^C[0-9]+$" },
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "rank": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "attack_class": { "enum": ["unverified-assumption", "build-order", "cross-lane-interface", "drift", "auth", "data-loss", "race", "migration", "observability", "other"] },
+          "swimlane": { "type": "string", "description": "swimlane-<seam> the objection attacks." },
+          "leg": { "type": "string", "description": "swimlane-<seam>-leg-NN (optional; per-leg attacks)." },
+          "location": { "type": "object", "required": ["plan_file"], "properties": { "plan_file": { "type": "string" }, "section": { "type": "string" } } },
+          "evidence": { "type": "string", "description": "Quoted plan text or prototype output — the grounding." },
+          "cites": { "type": "array", "items": { "type": "string" }, "description": "spec §/ADR id for drift objections." },
+          "resolution": {
+            "type": "object", "required": ["disposition"],
+            "description": "H9: exactly FIX or ACCEPT, never null. The human accepter signs; the engine verdict is advice.",
+            "properties": {
+              "disposition": { "enum": ["FIX", "ACCEPT"] },
+              "fixed_in": { "type": "string", "description": "FIX => plan file + section changed." },
+              "owner": { "type": "string", "description": "ACCEPT => REQUIRED, non-empty." },
+              "reason": { "type": "string" },
+              "risk_residual": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "cross_lane_interfaces": {
+      "type": "array",
+      "items": { "type": "object", "required": ["producer", "consumer", "survived"], "properties": { "producer": { "type": "string" }, "consumer": { "type": "string" }, "survived": { "type": "boolean" }, "corrected_in": { "type": "string" } } }
+    },
+    "fork": {
+      "type": "object", "required": ["choice", "reason"],
+      "properties": { "choice": { "enum": ["A", "B"] }, "reason": { "type": "string" }, "per_plan_declared": { "type": "boolean" } }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "object", "required": ["q", "blocks_build"], "properties": { "q": { "type": "string" }, "owner": { "type": "string" }, "blocks_build": { "type": "boolean" } } }
+    },
+    "rounds_run": { "type": "integer", "minimum": 1, "description": "H11: bounded; stop when 0 open critical/high." },
+    "started_at": { "type": "string" },
+    "ended_at": { "type": "string" },
+    "timed_out": { "type": "boolean" },
+    "raw_exit_code": { "type": "integer" },
+    "adapter_exit_code": { "type": "integer" }
+  }
+}

@@ -347,6 +347,28 @@ complete vertical slice. The five beats, in order, never bundled:
       migration is the mechanical next step.
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
+  - [x] R4.U understand + harden ✅ 2026-07-21 — MCP-grounded (Exa/Tavily/
+    Firecrawl/Context7/GitHub; it read the local Codex/Kimi plugin prompts +
+    schemas). Field verdict fed H1–H12. **Two real defects found + fixed:**
+    (1) the gate proved "a different model attacked" by `grep '(Codex|Gemini|GPT)'`
+    in the plans — **spoofable by typing the word**; (2) `codex|gemini|gpt` mixes
+    OpenAI brands. Applied: skill **0.3.0→0.4.0**; `check-consensus-gate.sh`
+    **rewritten** to validate a **stamped objection-log artifact**
+    (`sketch/.consensus/objection-log.json`, SARIF-inspired schema) via python3
+    stdlib — structure + semantics + **provenance hashes** (re-hashes the live
+    plans → a plan edited after review, or an adversary that never saw the real
+    plans, FAILs). Cross-**family** invariant (openai/moonshot/google ≠ anthropic;
+    claude=weak fallback); dir-per-swimlane; per-leg attack; FIX/ACCEPT+owner as a
+    schema constraint; fork in artifact AND atop every PRD; severity floor; bounded
+    rounds; token `CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR`. New references:
+    `attack-playbook.md` (v0.4.0 output contract), `engine-adapter.md` (headless
+    dispatch: read-only + schema-JSON + timeout + provenance + `cvg doctor`;
+    Codex-exits-0-on-failure fail-closed), `objection-log.schema.json`. Rule 9:
+    `tests/run-tests.sh` 10/10 (good passes; same-family/unresolved/accept-no-owner/
+    no-fork/no-objections/tampered-hash/no-PRD-fork/no-log/usage all FAIL for their
+    reason); quick_validate green; shellcheck + bash 3.2 clean; gen-log.py stdlib.
+    Next: R4.R (dispatch codex/kimi on the 3 swimlanes) → R4.I (`cvg review` +
+    `cvg doctor` + engine adapters).
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)

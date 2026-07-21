@@ -10,6 +10,32 @@ self-review in the same context.
 The output of this playbook is a ranked objection list feeding Step 3 (SHARPEN),
 where each objection is FIXED in a plan or ACCEPTED with a named owner.
 
+## Output contract & dispatch (v0.4.0 — CLI-dispatchable, cross-family, structured)
+
+When run through `cvg review --adversary <engine>`, this playbook is the framed
+`--system-prompt-file`, and the invariants tighten:
+
+- **Cross-family, not just a brand.** The adversary must be a **different model
+  family** than the author (Claude = anthropic): `codex` (openai), `kimi`
+  (moonshot), or `gemini` (google) — never another anthropic model, because
+  self-preference bias is measured and family-correlated. Same-model-fresh-context
+  is the explicitly-weaker last resort.
+- **Attack per swimlane, then per leg.** Pass 3 is now `sketch/swimlane-<seam>/`
+  (a lean PRD + one file per leg). Attack each leg file independently; tag every
+  objection with its `swimlane` (and `leg` where applicable).
+- **Emit the stamped objection-log JSON**, conforming to
+  [`objection-log.schema.json`](objection-log.schema.json) — your engine/model/
+  **family**, the input **sha256 hashes** you were handed (provenance), and
+  `objections[]` (id, severity, rank, attack_class, swimlane/leg, location,
+  evidence, cites). You **attack and log**; you do **not** write the FIX or choose
+  the fork — those are the author's and the human's. `verdict ∈ PASS|REVISE`.
+- **Bound the loop (≤ 3 rounds)**; stop when 0 open critical/high remain — a
+  further round only dresses nitpicks as findings.
+
+The gate (`scripts/check-consensus-gate.sh`) validates that JSON's structure +
+provenance (it re-hashes the live plans), never the prose — so "a different model
+attacked the real plans" is auditable, not grep-spoofable.
+
 ## The stance: default to refuted
 
 A merely-plausible plan step is **not** "fine". The adversary's job is to state
