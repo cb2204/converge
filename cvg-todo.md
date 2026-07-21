@@ -227,7 +227,25 @@ complete vertical slice. The five beats, in order, never bundled:
     to prove the living-terrain-contract idea). `--check` green,
     `CHECK_ADR=OK`, no advisory NOTEs. Records stay `proposed` → flipped
     `accepted` at R2.C. Next: R2.C (second-eyes review → accept → TEACH).
-  - [ ] R2.C canonize + TEACH (Gate: owner calls the ADR set canonical)
+  - [x] R2.C canonize + TEACH ✅ 2026-07-21 — owner verdict **approved →
+    canonical**; all seven ADRs flipped `proposed → accepted` (immutable),
+    `--check --final` green (`CHECK_ADR=OK`, nothing proposed). **Second-eyes
+    review** (adversarial, re-ran every Evidence command live → zero drift):
+    `SUFFICIENT-WITH-FIXES` — caught a frozen false fact and applied all fixes
+    before accept: **B-1** 0002 wrongly claimed `payments.status` mutates
+    (verified: no `UPDATE payments` in `src/`; real in-place mutation is
+    `orders.status`/`total_amount` at `failures.py:431/463/491`) → re-grounded
+    on `orders`, `payments` noted insert-terminal; **B-2** removed 0002's
+    WAL/logical-replication prescription (Pass 3 stack choice + touches ops
+    like the rejected `updated_at`) → constraint kept, mechanism deferred;
+    **S-1** 0004 names `paid_at`; **S-2** money `NUMERIC(12,2)` glossary line;
+    **M-1** new **ADR 0006** (revenue join is transitive `payments→orders→
+    products|customers`, owner-approved); **M-2/3/4** glossary lines (total
+    referential integrity, UTC grain, partner≠customer). Set is now 7 records
+    (0000–0006) + 10-term glossary. **TEACH**: `lesson-pass-2-analytical-
+    backbone.md`, check-lesson `GATE: PASS` (8 components each w/ downstream
+    failure, decisions table w/ alternatives, 5 check-yourself Qs). Next: R2.I
+    (`cvg structure` subcommand) → R2.P (golden diff vs this manual run).
   - [ ] R2.I implement — `cvg structure` subcommand
   - [ ] R2.P prove — golden diff vs the manual run
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)

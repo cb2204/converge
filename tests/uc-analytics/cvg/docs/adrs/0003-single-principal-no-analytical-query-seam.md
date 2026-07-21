@@ -1,6 +1,6 @@
 ---
 adr: "0003"
-status: proposed
+status: accepted
 date: 2026-07-21
 ground: greenfield
 converge_pass: 2

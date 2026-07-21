@@ -1,6 +1,6 @@
 ---
 adr: "0004"
-status: proposed
+status: accepted
 date: 2026-07-21
 ground: greenfield
 converge_pass: 2
@@ -27,8 +27,10 @@ real column value, once, before any plan computes it.
 `refunded`, `failed` — and **there is no `paid`**. Realized revenue corresponds
 to the `captured` state; `authorized` is money promised but not taken,
 `refunded` and `failed` are not revenue. The canonical definition is therefore:
-**revenue = sum of `payments.amount` where `status = 'captured'`**, in the
-payment's `TIMESTAMPTZ` grain. Refunds are their own status on the payment row
+**revenue = sum of `payments.amount` where `status = 'captured'`**, on the
+`payments.paid_at` (`TIMESTAMPTZ`) time axis — the settlement event time, and a
+stable one, since payment rows are insert-terminal in this terrain (0002/0005:
+no `UPDATE payments`). Refunds are their own status on the payment row
 (not a separate negative row); whether a net-of-refunds figure is also needed
 is a metric question for Pass 3, but the base "revenue" term is captured-only.
 
