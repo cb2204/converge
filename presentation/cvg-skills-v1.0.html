@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A visual map of the Converge skill chain, its passes, gates, engine boundaries, and self-verifying task loop.">
 <title>The Converge Skill Chain — cvg-skills v1.0</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1520'/%3E%3Cpath d='M18 18h28v8H26v12h20v8H18Z' fill='%235b9bd5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
 <style>
   /* ============ THEME — Blueprint, dark-first ============ */
   :root {
@@ -59,6 +61,7 @@
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; color-scheme: dark light; }
 
   body {
     background-color: var(--bg);
@@ -76,6 +79,13 @@
   }
 
   a { color: var(--blue); text-decoration: underline; text-decoration-color: var(--border-bright); }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  .skip-link { position: fixed; top: 10px; left: 10px; z-index: 1000; transform: translateY(-160%); background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: 7px; font-family: var(--font-mono); font-size: 11px; }
+  .skip-link:focus { transform: translateY(0); }
+  .reading-progress { position: fixed; inset: 0 auto auto 0; z-index: 900; width: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--green)); box-shadow: 0 0 12px var(--gold-dim); }
+  .page-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: -12px 0 28px; }
+  .page-tool { border: 1px solid var(--border-bright); background: var(--surface); color: var(--text); border-radius: 7px; padding: 7px 10px; font-family: var(--font-mono); font-size: 10px; cursor: pointer; text-decoration: none; transition: border-color 0.15s ease, background 0.15s ease; }
+  .page-tool:hover { border-color: var(--gold); background: var(--gold-dim); }
 
   code {
     font-family: var(--font-mono);
@@ -569,6 +579,8 @@
     color: var(--text-dim);
   }
 
+  .table-scroll:focus-visible { outline-offset: -3px; }
+
   /* ============ RESPONSIVE ============ */
   @media (max-width: 1000px) {
     .wrap { grid-template-columns: 1fr; }
@@ -604,12 +616,22 @@
     .zone__desc { grid-column: 1; }
     h1 { font-size: 26px; }
   }
+  @media print {
+    .toc, .reading-progress, .page-tools, .skip-link { display: none !important; }
+    body { padding: 0; background: #fff; color: #111; }
+    .wrap { display: block; max-width: none; }
+    .main { max-width: none; }
+    .ve-card, .callout, .table-wrap, .pipeline, .dir-tree { break-inside: avoid; }
+    a { color: inherit; }
+  }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
 <div class="wrap">
 
-<nav class="toc" id="toc">
+<nav class="toc" id="toc" aria-label="Page sections">
   <div class="toc-title">cvg · skills</div>
   <a href="#s1">1. The chain at a glance</a>
   <a href="#s2">2. The spine map</a>
@@ -625,10 +647,15 @@
   <a href="#s12">12. Tooling &amp; compliance</a>
 </nav>
 
-<div class="main">
+<main class="main" id="main-content">
 
   <h1 class="animate" style="--i:0">The Converge Skill Chain</h1>
   <p class="subtitle animate" style="--i:1">skills/ &middot; v1.0 &middot; 11 Claude Code skills &middot; nine spine + one engine + one tooling &middot; every engine bound by a flag, never a name</p>
+  <div class="page-tools animate" style="--i:2" aria-label="Document actions">
+    <button class="page-tool" id="print-report" type="button">Print or save as PDF</button>
+    <a class="page-tool" href="#s2">Jump to the spine map</a>
+    <a class="page-tool" href="visual-explainer-v0.8.1-update.html">About the v0.8.1 refresh</a>
+  </div>
 
   <p class="lead animate" style="--i:2">
     Converge ships as <strong>eleven self-contained skills</strong> — nine that implement the spine
@@ -698,7 +725,7 @@
                                     <span class="hl">6 · HARNESS</span> ──▶ <span class="hl">8 · THE LOOP</span> ──▶ <span class="dim">fleet green ↺</span></pre>
 
   <div class="table-wrap animate" style="--i:1">
-    <div class="table-scroll">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Pass to skill mapping">
       <table class="data-table">
         <thead><tr><th>Pass</th><th>Skill</th><th class="wide">Out → Gate</th></tr></thead>
         <tbody>
@@ -1038,7 +1065,7 @@
   </p>
 
   <div class="table-wrap animate" style="--i:0">
-    <div class="table-scroll">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Skill validation summary">
       <table class="data-table">
         <thead><tr><th>Skill</th><th>Validator</th><th class="wide">Notes</th></tr></thead>
         <tbody>
@@ -1073,10 +1100,10 @@
   </div>
 
   <footer>
-    Source: /Users/luanmorenomaciel/GitHub/converge/skills &middot; cvg-skills v1.0 &middot; validator 11/11 &middot; rendered 2026-07-07
+    Source: /Users/luanmorenomaciel/GitHub/converge/skills &middot; cvg-skills v1.0 &middot; validator 11/11 &middot; rendered 2026-07-07 &middot; refreshed with visual-explainer v0.8.1 on 2026-07-21
   </footer>
 
-</div><!-- /main -->
+</main><!-- /main -->
 </div><!-- /wrap -->
 
 <script>
@@ -1087,11 +1114,28 @@
     entries.forEach(e => {
       if (e.isIntersecting) {
         const id = '#' + e.target.id;
-        tocLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === id));
+        tocLinks.forEach(a => {
+          const isActive = a.getAttribute('href') === id;
+          a.classList.toggle('active', isActive);
+          if (isActive) a.setAttribute('aria-current', 'location');
+          else a.removeAttribute('aria-current');
+        });
+        const active = tocLinks.find(a => a.getAttribute('href') === id);
+        if (active && window.innerWidth <= 1000) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       }
     });
   }, { rootMargin: '-10% 0px -80% 0px' });
   secs.forEach(s => spy.observe(s));
+  const progress = document.getElementById('reading-progress');
+  function updateProgress() {
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = scrollable > 0 ? Math.min(1, Math.max(0, window.scrollY / scrollable)) : 0;
+    progress.style.width = `${ratio * 100}%`;
+  }
+  document.addEventListener('scroll', updateProgress, { passive: true });
+  window.addEventListener('resize', updateProgress);
+  document.getElementById('print-report').addEventListener('click', () => window.print());
+  updateProgress();
 </script>
 
 </body>
