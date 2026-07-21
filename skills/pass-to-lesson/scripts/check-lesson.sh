@@ -76,6 +76,62 @@ if grep -qiE 'alternative unrecorded' "$FILE"; then
   warn "'alternative unrecorded' marker(s) present — confirm each is flagged under What to watch"
 fi
 
+# 6 — teaching modes (v0.2.0). A lesson declares its modes on a `modes:` line;
+# emitter modes (adept/review/map) are gate-checkable, reshape modes are
+# behavioral (advisory). No modes: line → nothing here runs (full back-compat).
+MODES_LINE="$(grep -iE '^>?[[:space:]]*modes:' "$FILE" | head -1 | sed -E 's/^[^:]*://; s/^[[:space:]]*//; s/[[:space:]]*$//' || true)"
+if [ -n "$MODES_LINE" ]; then
+  pass "modes declared: $MODES_LINE"
+  has_mode() { printf '%s' "$MODES_LINE" | grep -qiw "$1"; }
+
+  if has_mode adept; then
+    AB="$(section "ADEPT explanations")"
+    if [ -z "$AB" ]; then
+      fail "mode 'adept' declared but no '## ADEPT explanations' section"
+    else
+      miss=""
+      for L in "Analogy" "Diagram" "Example" "Plain-English" "Technical"; do
+        printf '%s\n' "$AB" | grep -qE "[*]{2}$L:" || miss="$miss $L"
+      done
+      if [ -n "$miss" ]; then fail "adept: ADEPT block missing label(s):$miss"; else pass "adept: all five ADEPT labels present"; fi
+    fi
+  fi
+
+  if has_mode review; then
+    RB="$(section "Review schedule")"
+    if [ -z "$RB" ]; then
+      fail "mode 'review' declared but no '## Review schedule' section"
+    else
+      QN=$(printf '%s\n' "$RB" | grep -cE '^Q:' || true)
+      DN=$(printf '%s\n' "$RB" | grep -ciE 'day [0-9]+' || true)
+      if [ "$QN" -ge 3 ] && [ "$DN" -ge 2 ]; then
+        pass "review: $QN flashcard(s) + $DN dated checkpoint(s)"
+      else
+        fail "review: need >=3 'Q:' cards (have $QN) and >=2 'day N' checkpoints (have $DN) — spacing is the point"
+      fi
+    fi
+  fi
+
+  if has_mode map; then
+    MB="$(section "Concept map")"
+    if [ -z "$MB" ]; then
+      fail "mode 'map' declared but no '## Concept map' section"
+    else
+      if printf '%s\n' "$MB" | grep -v '<!--' | grep -qE -- '-->'; then
+        pass "map: concept map carries edges"
+      else
+        fail "map: '## Concept map' has no edges (expected 'A --> B' lines below the answer marker)"
+      fi
+    fi
+  fi
+
+  for M in teachback socratic why mix; do
+    if has_mode "$M"; then
+      warn "mode '$M' is behavioral (reshapes quiz/walkthrough) — not script-verifiable; confirm it was honored"
+    fi
+  done
+fi
+
 echo
 if [ "$FAIL" -eq 0 ]; then
   echo "GATE: PASS — the lesson is teach-ready; walk it, then quiz (unless --quiz off)."

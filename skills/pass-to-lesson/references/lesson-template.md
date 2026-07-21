@@ -65,3 +65,54 @@ live quiz when the lesson is read async.
 ```markdown
 1. <question>? (→ see "<component>")
 ```
+
+---
+
+## Teaching-mode sections (optional — present only when the matching mode is on)
+
+Declare active modes on a `modes:` line under the title blockquote, e.g.
+`> modes: adept, review, teachback`. Reshape modes (`--teachback`, `--socratic`,
+`--why`, `--mix`) change how the sections above are produced and add nothing
+here. The three emitter modes append their section after "Check yourself":
+
+### `## ADEPT explanations`  (`--adept`)
+
+One block per load-bearing component, all five labels in order:
+
+```markdown
+### <component>
+- **Analogy:** <the intuition, in everyday terms>
+- **Diagram:** <a small ASCII or mermaid sketch>
+- **Example:** <a concrete instance from the real artifact>
+- **Plain-English:** <the idea in one plain sentence>
+- **Technical:** <the precise, vocabulary-carrying statement>
+```
+
+### `## Review schedule`  (`--review [spaced]`)
+
+A flashcard deck then a dated retrieval schedule (spacing is the point):
+
+```markdown
+Q: <question from a load-bearing fact>
+A: <the answer>
+(≥ 3 pairs)
+
+Schedule:
+- day 1 — re-test cards 1–N
+- day 3 — re-test the ones missed on day 1
+- day 7 — full deck
+- day 21 — full deck
+```
+
+### `## Concept map`  (`--map`)
+
+Owner assembles first; the answer edges sit below the marker:
+
+```markdown
+Nodes (shuffled): <A> · <B> · <C> · …
+Assemble the flow, then check:
+
+<!-- answer -->
+- <A> --> <B>
+- <B> --> <C>
+```

@@ -2,7 +2,7 @@
 name: pass-to-lesson
 description: Converge teaching companion — optional after ANY pass. Turns a just-closed pass's artifacts (BRD, tech-spec, ADRs, plans, specs, task-specs, harness, PRs) into a durable lesson at docs/lessons/lesson-*.md plus a spoken-style walkthrough, so the owner understands what the autonomous chain built — every component, the decision it encodes, what breaks downstream without it, and the roads not taken. Use when someone says "teach me what was built", "explain this pass", "walk me through the tech-spec/ADRs/plans", "debrief the pass", "what did you just do and why", or "start the lesson". Runs Locate / Read / Teach / Quiz and gates on every emitted artifact appearing in the walkthrough, every decision naming a rejected alternative, every term of art defined at first use, and the lesson ending in check-yourself questions. Explains decisions, never reopens them. Do NOT use to run a pass (each pass has its own skill) or to review/attack artifacts (that is Pass 4, sketch-plans-adversarial-review).
 metadata:
-  version: "0.1.1"
+  version: "0.2.0"
   compatibility: "Converge chain · teaching companion (optional, after any pass gate). Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -34,10 +34,36 @@ Converge delegates the *writing* of every artifact to the chain — but it never
 
 ## Flags
 
+Two kinds: **base flags** (shape the whole lesson) and **teaching modes**
+(composable, each operationalizing one evidence-based learning technique — see
+"Teaching modes" below). Modes compose: `--adept --review --teachback` is a
+first-exposure lesson that leads with intuition, ships a review deck, and
+closes with a mastery loop. Every mode applied is declared on the lesson's
+`modes:` line (agents-first: greppable, so a later pass knows how it was taught).
+
 | Flag | Default | Effect |
 |------|---------|--------|
 | `--depth full\|brief` | `full` | `full` = every component gets the four-part treatment. `brief` = TL;DR, top three components, top decision — a five-minute debrief for a pass the owner has seen before. |
-| `--quiz on\|off` | `on` | `on` = end with the Feynman loop (owner explains back, you correct). `off` = deliver the lesson and stop — for async/absent owners reading the file later. |
+| `--quiz on\|off` | `on` | `on` = end with the Feynman loop (owner explains back, you correct). `off` = deliver the lesson and stop — for async/absent owners reading the file later. Superseded by `--teachback` when that mode is on. |
+| `--level eli5\|novice\|expert` | `novice` | The explanation altitude. `eli5` = plain analogy-first, no jargon; `novice` = the default four-part treatment; `expert` = terse, assumes vocabulary, leads with the decision. Manages the expertise-reversal effect — match the altitude to the learner. |
+
+### Teaching modes (composable; each emits or reshapes, and is gated when present)
+
+| Mode | Kind | What it makes the lesson DO | Technique · why |
+|------|------|------------------------------|-----------------|
+| `--adept` | emitter → `## ADEPT explanations` | Re-teaches each load-bearing component as **A**nalogy → **D**iagram → **E**xample → **P**lain-English → **T**echnical — intuition before formalism | Worked-example effect + Mayer dual coding; fixes "handed technical output with no mental model" |
+| `--review [spaced]` | emitter → `## Review schedule` | Ships a flashcard deck (Q/A) + a dated retrieval schedule (day 1 · 3 · 7 · 21) | Spaced retrieval (the single strongest combo); fights *long-term* delegation-ignorance, not just the handoff moment |
+| `--map` | emitter → `## Concept map` | Gives the owner a shuffled node list to assemble into the component/data-flow map, then shows the answer edges | Concept-map *construction* (generation beats studying a pre-made map); builds the architectural mental model |
+| `--teachback` | reshape (quiz) | Upgrades `--quiz`: owner restates each load-bearing point; you grade the gaps and **re-teach only the misses**, then re-test | Self-explanation/Feynman + the mastery feedback loop (the real ~half of the "2-sigma" effect) |
+| `--socratic` | reshape (walkthrough) | Delivers the walkthrough as a graduated question ladder (pump → hint → prompt → reveal) instead of a lecture; detects the misconception and targets it | Intelligent-tutoring dialogue moves (AutoTutor); forces active generation |
+| `--why` | reshape (decisions) | For each locked decision, asks the owner "why X over Y?" and waits before revealing the recorded rationale | Elaborative interrogation + generation effect; stops passive acceptance of the machine's choices |
+| `--mix` | reshape (check-yourself) | Interleaves the check-yourself questions across all components in shuffled order rather than block-by-block | Interleaving + desirable difficulty; blocked review feels fluent but doesn't transfer |
+
+**Feedback-first invariant.** The highest-confidence lever in the evidence is
+the *test → correct-only-the-misses → re-test* loop. Every reshape mode that
+quizzes (`--teachback`, `--socratic`, `--why`, `--mix`) MUST re-teach only what
+the owner missed and then re-test that — never re-lecture the whole thing, never
+move on with a miss unaddressed.
 
 ## Instructions
 
@@ -78,6 +104,44 @@ Write `docs/lessons/lesson-<pass-slug>-<topic>.md` from [references/lesson-templ
 
 Then **walk it conversationally**: short plain-prose paragraphs in the pass's teaching order, voice-friendly — no tables read aloud, no bullet dumps. The file is the record; the walkthrough is the lesson.
 
+### Step 3.5 — Apply the teaching modes (when flagged)
+
+Declare every mode in effect on a **`modes:`** line directly under the lesson's
+title blockquote (e.g. `> modes: adept, review, teachback`) — greppable, so a
+later pass and `check-lesson.sh` both know how it was taught. Then:
+
+**Emitter modes add an optional section** (order: after "Check yourself"):
+
+- `--adept` → **`## ADEPT explanations`**. For each load-bearing component, one
+  `### <component>` block carrying all five labels, in order: **Analogy:** /
+  **Diagram:** (a small ASCII or mermaid sketch) / **Example:** (a concrete
+  instance from the real artifact) / **Plain-English:** / **Technical:**. Lead
+  with the analogy; never open with the technical line.
+- `--review [spaced]` → **`## Review schedule`**. A flashcard deck — at least
+  three `Q:` / `A:` pairs pulled from the load-bearing facts — followed by a
+  dated retrieval schedule with at least the `day 1`, `day 3`, `day 7`, `day 21`
+  checkpoints, each naming which cards to re-test. Spacing is the point: the
+  schedule is not decoration.
+- `--map` → **`## Concept map`**. A shuffled node list for the owner to
+  assemble, then the answer as edge lines (`A --> B`, or a fenced `mermaid`
+  graph). The owner builds it first; the answer is revealed below a
+  `<!-- answer -->` marker.
+
+**Reshape modes change how an existing section is produced** (no new section;
+they are behavioral, declared on `modes:` and honored in the walkthrough/quiz):
+
+- `--teachback` — the quiz becomes a mastery loop: grade each restatement, list
+  the specific misses, re-teach ONLY those, re-test them. Supersedes `--quiz`.
+- `--socratic` — deliver the walkthrough as a question ladder: pump ("what do
+  you think happens if…?") → hint → prompt → reveal, one rung at a time.
+- `--why` — at each decision, pose "why X over Y?" and wait for the owner's
+  answer before revealing the recorded rationale from the Decisions table.
+- `--mix` — shuffle the check-yourself questions across all components rather
+  than grouping them by component.
+
+**The feedback-first invariant** (above) binds every quizzing reshape: correct
+only the misses, then re-test — never re-lecture, never leave a miss open.
+
 ### Step 4 — Quiz (the Feynman loop, `--quiz on`)
 
 Ask the owner to explain back, in their own words: (a) the TL;DR, and (b) the single most load-bearing decision and why its alternative lost. Correct gently and concretely — point at the artifact line, not at the lesson. One round is usually enough; stop when the restatement would survive a client asking "why is it built this way?". What the owner *couldn't* restate marks the lesson section to sharpen — fix the file before closing.
@@ -94,6 +158,7 @@ bash .claude/skills/pass-to-lesson/scripts/check-lesson.sh docs/lessons/lesson-<
 - [ ] The lesson **ends with 3–5 check-yourself questions**.
 - [ ] **Nothing in the taught artifacts changed** — `git status` is clean apart from the lesson file.
 - [ ] (`--quiz on`) The owner **restated the TL;DR and the top decision** in their own words.
+- [ ] **Every mode on the `modes:` line is honored** — each emitter mode's section is present and well-formed (`--adept` → all five ADEPT labels per block; `--review` → ≥3 flashcards + the dated schedule; `--map` → nodes + revealed edges); `check-lesson.sh` verifies the emitter modes it can see and warns on a `modes:` mode it can't confirm.
 
 ## Examples
 
