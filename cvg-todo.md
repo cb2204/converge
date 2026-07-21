@@ -291,6 +291,22 @@ complete vertical slice. The five beats, in order, never bundled:
     discriminating (good exit 0 / bad exit 1 on THREAD/META/SEAM; fresh scaffold
     now fails until filled). quick_validate green; shellcheck -x + bash 3.2 -n
     clean. Next: R3.R (run Pass 3 on the backbone ADRs).
+    - **R3.U+ finalization ✅ 2026-07-21 (v0.4.0→0.5.0)** — the **leg** level
+      added (owner's out-of-session breakthrough): decomposition chain is now
+      **seam → swimlane → leg → task-spec** (a leg = one responsibility + one
+      proving-test cluster, independently finishable, one context window,
+      yielding 1:N task-specs at 5B; `references/legs.md`; "leg" not "stage" to
+      dodge staging/deploy/dbt collisions). Second-eyes polish applied to close
+      it as the definitive skill: **(1) agents-first machine token**
+      `CHECK_PLAN=OK|FAIL|EMPTY|USAGE_ERROR` on every `--check`/usage surface
+      (was prose-only — the one toolchain inconsistency; R3.I's `cvg decompose`
+      now gates on it like `cvg structure` on `CHECK_ADR`); **(2) legs
+      section-scoped + contiguity** check (leg-01..leg-0N, no gap = dropped
+      stretch); **(3)** orphaned `good-set`/`bad-set` fixtures removed;
+      **(4)** SKILL states green `--check` proves legs exist/named/ordered, not
+      well-*cut* (that's Pass 4). Suite 26/26 green (new leg-gap, legs-noids,
+      4 token rows, non-data web-checkout domain); quick_validate green;
+      shellcheck -x + bash 3.2 -n clean. Skill CLOSED — ready for R3.R.
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
@@ -554,7 +570,7 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   Exception: `tasks/` stays git-root anchored (tooling finding from 0.2)
   until the project is its own repo — workspace `tasks/README.md` marks
   it reserved. Remaining below: grounding-receipt skill enhancement
-  + memory-tooling evaluation.
+  + P-10 memory stewardship + P-11 tooling-radar evaluation.
   One organized root per consuming project for everything the
   chain generates and consumes, so learning scales instead of scattering:
   **generated** (brds, no-gos, tech-specs, adrs, plans, task-specs, lessons,
@@ -571,23 +587,48 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   convention, not the reverse.
 
 - [ ] **P-3 · Second-brain integration** *(Luan has several ideas parked
-  here, 2026-07-17)*. External brains — an Obsidian vault, a Claude
-  Project, a Codex project — as pull sources for the knowledge home: key
-  information and decisions get distilled INTO the repo (the brain feeds
-  P-2's inputs folder; the repo stays the single source of truth), and the
-  most important always-loaded facts get indexed into `CLAUDE.md` /
-  `AGENTS.md` so every session starts already knowing them. Depends on
-  P-2's convention existing first.
+  here, 2026-07-17; research-grounded contract added 2026-07-21)*. External
+  brains — first an Obsidian vault, then MCP-exposed or storage-specific
+  sources — are **read-only pull sources** for the knowledge home. Key
+  information and decisions are distilled INTO `cvg/brain/inputs/`; the repo
+  stays canonical, and the external brain is never silently rewritten.
+  Implement a source-adapter contract with: source ID/type, explicit path or
+  resource allowlist, retrieval timestamp, content digest, source URI, and
+  the permissions/data-residency boundary. Start with the smallest safe
+  adapter: an Obsidian vault is already a local folder of Markdown files, so
+  direct allowlisted file reads work without an Obsidian plugin; Obsidian CLI
+  or URI support is optional (the CLI requires the app to be running). Add an
+  MCP Resources adapter as the generic second path for other storage systems.
+  Produce a grounding receipt for every imported source and index only
+  owner-approved, high-value distilled facts into `CLAUDE.md` / `AGENTS.md`.
+  Depends on P-2's convention existing first. **Gate:** on a fixture vault
+  plus one non-Obsidian MCP source, Pass 0 retrieves only allowlisted records,
+  cites every used claim to URI + digest + observed time, detects a changed
+  or conflicting source, proves no source writes occurred, and leaves BRD
+  canonicalization exclusively to the owner. Sources:
+  [Obsidian data storage](https://obsidian.md/help/data-storage),
+  [Obsidian CLI](https://obsidian.md/help/cli),
+  [MCP specification](https://modelcontextprotocol.io/specification/2025-11-25/index).
 
 - [ ] **P-4 · `--questions auto` — the brain answers first** *(noted
-  2026-07-17 per Luan: "agentic auto mode with the human at the gate")*.
-  For the interviewing passes (0, 1): each frontier round is first
-  answered from the knowledge home + repo, every auto-answer cited to its
-  source document and tagged; only questions no document can answer
-  escalate to the owner (the gap register's questionnaire export is the
-  escalation surface — it already exists). Human stays the gate for
-  decisions; facts stop consuming human turns. Feeds Milestone 7.1
-  (`cvg deliver`'s two-human-stops design). Depends on P-2 + P-3.
+  2026-07-17 per Luan: "agentic auto mode with the human at the gate";
+  acceptance contract tightened 2026-07-21)*. For interviewing passes 0 and
+  1, each frontier round first queries the repo + staged knowledge-home
+  sources. Every proposed answer carries `source_ref`, `observed_at`, content
+  digest, provenance (`measured|estimated|guessed|derived`), and state
+  (`supported|conflict|stale|unknown`). Only supported facts may pre-fill the
+  understanding pack; conflicts, staleness, unknowns, and all owner decisions
+  escalate through the gap-register questionnaire. Present one concise
+  proposed understanding to the owner for **approve / decline / correct**;
+  approval signs the understanding, never the source itself, and the normal
+  BRD sign-off still gates Pass 1. Facts stop consuming human turns without
+  turning retrieval into authority. Feeds Milestone 7.1 (`cvg deliver`'s
+  two-human-stops design). Depends on P-2 + P-3. **Gate:** on a seeded Pass 0
+  fixture, every answerable factual question is removed from the human round
+  with a valid citation, contradictory and absent answers abstain/escalate,
+  no business decision is auto-locked, a declined understanding regenerates
+  without preserving the rejected claim, and only explicit owner approval
+  allows canonical BRD sign-off.
 
 - [ ] **P-5 · Engrave the pass anatomy** *(Luan's framing, 2026-07-17: every
   pass = PROCESS → JUDGE → TEACH → SHOW)*. Today the four verbs exist but
@@ -599,10 +640,30 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   explicit as the uniform close-of-pass contract in `skills/README.md`;
   (b) generalize the second-engine JUDGE so ANY pass's artifact can be
   reviewed by another engine via CLI (Kimi, Codex — Pass 4's adversary
-  pattern promoted to a per-pass option, becomes a `cvg` flag);
+  pattern promoted to a per-pass option). Recommended surface:
+  `cvg judge <artifact> --engine codex|kimi [--rubric <path>]`, with Pass 0
+  explicitly accepting BRD/PRD artifacts. Dispatch fresh-context and
+  read-only: artifact + versioned rubric + cited grounding pack only, never
+  the producer transcript. Codex uses non-interactive read-only execution and
+  a JSON output schema; Kimi print mode must run behind stricter isolation
+  because print mode auto-approves tool calls. The result is a fail-closed,
+  versioned receipt with `PASS|REVISE|ABSTAIN|ERROR`, criterion findings,
+  artifact locations, severity/confidence, engine/model/version, and prompt +
+  artifact hashes. Missing/malformed output is `ERROR`, never pass. Judge
+  bias is part of the threat model: the engine verdict is adversarial advice,
+  not the owner gate, and comparative judging swaps/randomizes candidate
+  order;
   (c) standardize SHOW as a small "pass receipt" (what was produced,
   where, gate verdict, lesson link). Implement alongside each pass's
-  I-beat, not as a big-bang skill edit.
+  I-beat, not as a big-bang skill edit. **Gate:** Codex and Kimi adapters are
+  proven on good/bad/injected fixture briefs; neither can mutate the checkout;
+  unsupported, malformed, timed-out, or unavailable engines produce stable
+  non-zero machine verdicts; every finding cites the rubric criterion and
+  artifact evidence; and the human can accept or reject the advice without
+  the CLI changing sign-off. Sources:
+  [Codex non-interactive mode](https://developers.openai.com/codex/noninteractive),
+  [Kimi print mode](https://www.kimi-cli.com/en/customization/print-mode.html),
+  [LLM judge position-bias study](https://aclanthology.org/2025.ijcnlp-long.18.pdf).
 
 - [ ] **P-6 · Reconcile the public method/skill taxonomy** *(found during the
   guided anatomy audit, 2026-07-18)*. The live tree contains **13** skill
@@ -689,6 +750,65 @@ manual file edit, with no stored state anywhere. `git grep -l 'state cache'` →
   gate: no noncanonical brief can emit a Pass 1 handoff verdict, every negative
   fixture fails for its intended reason, Bash 3.2 + ShellCheck stay green, and
   P-5 owns the resulting write-once receipt rather than duplicating it here.
+
+- [ ] **P-10 · Memory & lesson stewardship — maintain what Converge learns**
+  *(requested 2026-07-21; grounded against current agent-memory research)*.
+  Treat durable context as a **write → manage → read** lifecycle, not a folder
+  that grows forever. Keep raw pass artifacts, lessons, decisions, and receipts
+  append-only; derive compact memory records that always retain source URI/path,
+  content digest, observed/effective time, author/approver, confidence, and the
+  record they supersede. The maintenance engine proposes rather than silently
+  rewrites: exact duplicate/index/cache cleanup may be deterministic, while
+  semantic merges, contradiction resolution, promotion to always-loaded
+  context, demotion, and archival require a reviewable proposal and receipt.
+  Default cadence (configurable, not a platform dependency): **after every pass
+  close** validate the lesson + enqueue memory candidates; **nightly** refresh
+  indexes, detect source drift/staleness, and flag exact duplicates; **weekly**
+  generate consolidation/contradiction/promotion proposals; **monthly** run a
+  held-out retrieval evaluation and publish a stewardship report (precision,
+  coverage, staleness, contradiction rate, latency/token budget, and misses).
+  Establish the baseline before setting numeric thresholds; a scheduler is an
+  adapter (local cron/launchd, CI, or future Manager), not canonical state.
+  Candidate tools such as Graphify/Graphiti/claude-mem/MemPalace are evaluated
+  under P-11 and may accelerate a lane, but the lifecycle contract must work
+  with plain files first. **Gate:** a seeded history containing duplicates,
+  contradictions, superseded decisions, stale sources, and one rare critical
+  lesson produces the same auditable proposal set on repeat; no raw evidence is
+  lost; no semantic change auto-commits; approved changes preserve provenance
+  and rollback/supersession history; a held-out query set proves that maintained
+  context is no worse than the unmaintained baseline and exposes every miss.
+  Sources: [agent-native memory study](https://arxiv.org/html/2606.24775),
+  [memory mechanisms survey](https://arxiv.org/pdf/2603.07670),
+  [bi-temporal memory engine](https://arxiv.org/html/2606.09900v1).
+
+- [ ] **P-11 · Tooling radar — discover, test, and retire plugins safely**
+  *(requested 2026-07-21; initial MCP/Graphify scan complete)*. Build a recurring
+  evidence pipeline, not an unbounded “install interesting tools” list:
+  **discover → de-duplicate → score → sandbox pilot → adopt / reject / watch →
+  re-review**. Discovery lanes include the official MCP Registry, original
+  repositories/releases, package registries, research papers, and curated lists;
+  every candidate maps to a concrete Converge pain before evaluation. The
+  scorecard records source/owner, capability and overlapping native feature,
+  release/maintenance evidence, license, install/runtime dependencies,
+  permissions/secrets/network, data residency and telemetry, canonical-data
+  impact, Codex/Kimi/Claude portability, performance/cost, failure behavior,
+  uninstall/rollback, and security advisories. Registry presence proves
+  namespace/metadata, **not code safety**; reference MCP servers are educational,
+  not production approval. Every pilot runs on a disposable fixture with a
+  no-tool/plain-file baseline and produces a dated decision receipt with an
+  owner and re-review trigger. Seed the first portfolio with Graphify, Graphiti,
+  claude-mem, and MemPalace; evaluate Graphify's local/remote backend choice,
+  MCP surface, query logging, data-residency behavior, and graph value against
+  `rg` + indexed Markdown before baking in any feature. **Gate:** the radar can
+  ingest candidates from at least two source classes, reject a malicious or
+  over-privileged fixture, run and fully remove a sandboxed candidate without
+  residue, reproduce the baseline/candidate comparison, emit one of
+  `ADOPT|REJECT|WATCH|ERROR` with cited evidence, and schedule re-review when a
+  source, version, permission, license, or security fact changes. Sources:
+  [official MCP Registry](https://modelcontextprotocol.io/registry/about),
+  [MCP reference-server warning](https://github.com/modelcontextprotocol/servers),
+  [Graphify](https://github.com/Graphify-Labs/graphify),
+  [Graphiti](https://github.com/getzep/graphiti).
 
 ---
 

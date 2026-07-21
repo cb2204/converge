@@ -1,9 +1,9 @@
 ---
 
 name: reqs-to-swimlane-plans
-description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs under docs/adrs/ plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "break it into plans", "find the seams", or "one plan per lane". Each plan lists features, dependencies, build order, and inherits the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Do not use for atomic tasks or implementation code — that is Pass 5 (task-spec), not this pass.
+description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5B. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
 ---
 
@@ -11,6 +11,7 @@ compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs
 
 > **Identity:** The decomposition pass that cuts a confirmed system into one sketch plan per swimlane, along its real seams.
 > **Domain:** Plan-altitude decomposition, swimlane partitioning, ADR inheritance, seam/interface naming.
+> **Decomposition chain:** **seam → swimlane → leg → task-spec.** The seam is the joint; the lane is what gets planned; the leg is the lane's named stretch (one responsibility, one proving test); the task-spec is the atomic unit with an eval — born at Pass 5B, never here. See `references/legs.md`.
 > **Converge Pass:** 3 of 8 — DECOMPOSE. Lowers altitude from Pass 2's "what is true about the terrain" (ADRs) to "what to build in each lane, and in what order" (plans) — but never as far as Pass 5's tasks or code.
 > **Engine/flags:** Claude Code, SAME session as Pass 2. No flags — single transformation.
 
@@ -55,11 +56,11 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.** Each plan should carry:
 
 1. **Identity + lane-meta line** — which component this is (e.g. A · Transform / B · Serve), its input/output contract, and the greppable **`lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<stream>`** line. **`owner` (H3 — Conway)** names the single stream/team that owns the lane (or `shared`/`platform`); a seam that splits one owner or fuses two is a coordination smell — flag it, because architecture mirrors the org's communication structure.
-2. **Features / components** — the pieces inside the lane and what each does (for example, in a transform lane, the staged transformation layers; in a serve lane, a shared query core plus each transport/interface it exposes). Component-level, never implementation bodies (no query bodies, no handler bodies).
+2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN`** in build order (`leg-01`, `leg-02`, …; fully-qualified `swimlane-<lane>-leg-<NN>` when cited outside the plan — e.g. in a task-spec's frontmatter). Each leg carries exactly **one responsibility in prose** and **one proving-test cluster** (what its tests assert, never test code). For example, in a transform lane: ingest → conform → publish; in a serve lane: query core → transports. A leg must be **independently finishable** (buildable and provable without any later leg existing) and **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No leg quotas: the leg count is the smallest that holds these tests. See `references/legs.md`.
 3. **The consumed interface + seam evolution (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals. **Seam evolution (H4):** the frozen contract *will* change — state how safely. Additive changes (a new column/field/endpoint) are non-breaking; renames, removals, and newly-required fields are **breaking** and need a coexistence window before this lane cuts over. Recommend a consumer-driven contract test the upstream must keep green, so a later change can't silently break this lane.
 4. **Dependencies** — a small DAG showing the build order between the lane's own pieces and its inbound seam.
 5. **Build order** — a sane sequence, with the gating input called out (for example, a frozen acceptance-question set may gate the output layer and the final serving surface).
-6. **Tests that prove each piece** — at plan altitude: *what* each test asserts, not the test code.
+6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5B, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
 7. **Open questions** — anything the ADRs do not cover, with an owner and whether it blocks the build. Surface it here; do not invent the answer inside the plan.
 
 Keep each plan tight and skimmable. Plan altitude only.
@@ -80,7 +81,9 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 
 - [ ] One sketch plan exists per genuine seam (e.g. `sketch/<lane-a>.plan` + `sketch/<lane-b>.plan`).
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
-- [ ] Each plan lists features/components, the dependencies between them, a sane build order, and the tests that prove each piece (at plan altitude).
+- [ ] Each plan lists its legs (`leg-NN`), the dependencies between them, a sane build order, and the tests that prove each leg (at plan altitude).
+- [ ] Each leg carries one responsibility in prose + one proving-test cluster, is **independently finishable**, and fits one context window — bigger is two legs; two stretches sharing one proving test are one leg.
+- [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5B and is cited by them (`swimlane-<lane>-leg-<NN>`).
 - [ ] Each plan inherits the relevant `docs/adrs/*` decisions and **contradicts none** of them.
 - [ ] The downstream lane names the **exact upstream interface** it consumes (the published tables/columns/fields) and never reaches below it.
 - [ ] Open questions the ADRs do not cover are surfaced with an owner and a blocks-build flag — not answered inside the plan.
@@ -90,7 +93,7 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 - [ ] **Seam evolution stated (H4)** — every downstream lane says how its consumed contract may change (additive-safe vs breaking + coexistence window).
 - [ ] **No unbroken cycles (H5)** — any genuine two-way dependency is broken by a named technique (dependency inversion / async boundary / shared kernel) and recorded as a blocks-build open question, never smeared into a fuzzy boundary.
 
-`new-plan.sh --check` enforces the machine-checkable subset (lane-meta values, the single steel-thread lane, downstream seam-evolution, and the altitude guards); the rest is the human read above. When these hold, hand off to Pass 4.
+`new-plan.sh --check` enforces the machine-checkable subset (lane-meta values, the single steel-thread lane, downstream seam-evolution, legs present + named + **contiguous** `leg-01..leg-0N`, and the altitude guards) and ends every surface in a stable token — **`CHECK_PLAN=OK|FAIL|EMPTY|USAGE_ERROR`** (agents are first-class users; the Pass 3 `cvg` subcommand gates on this, never on prose). The rest is the human read above: a green `--check` proves the legs **exist, are named, and are ordered** — it does *not* prove they are well-*cut*. Whether a leg is genuinely independently-finishable and passes the fold test is Pass 4's judgment, not a grep's. When these hold, hand off to Pass 4.
 
 ## Examples
 
@@ -102,6 +105,9 @@ User says *"split it into plans and write the dedup query while you're at it."* 
 
 **Example 3 — a false seam.**
 User proposes three lanes where two of them are just two transports (say, an HTTP API and a tool interface) over the same logic. → You note they share one query core and differ only in protocol framing — that is one lane (serve) with two transports, not two lanes. → You fold them into a single serve plan as components B2/B3 over a shared B1, and record the split-later condition (only if one transport needs logic the other doesn't). Two lanes, not three.
+
+**Example 4 — legs inside a lane.**
+The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `leg-02` conform to silver — dedup, types, UTC grain; `leg-03` publish gold — serving-ready tables shaped to the frozen questions. Each leg: one responsibility, one proving-test cluster, independently finishable in order. → At Pass 4 the adversary attacks leg by leg and objects by leg ID (*"leg-02 assumes a dedup key the ADRs don't name — FIXED in swimlane-transform-leg-02"*). → At Pass 5B, `swimlane-transform-leg-03` yields three task-specs (one per published table) — 1:N, with every task citing the leg. A drafter who writes `leg-04: the conform query` has left plan altitude — the query is a task, not a leg.
 
 ## Troubleshooting
 
@@ -116,16 +122,20 @@ User proposes three lanes where two of them are just two transports (say, an HTT
 | Two lanes genuinely co-depend (the one-way seam test fails) | A real cycle, not just a bad cut | Break it (H5): dependency inversion (both depend on an extracted shared contract) / async boundary (sync cycle → two one-way flows) / promoted shared kernel. Record the technique as a blocks-build open question; never smear the boundary. |
 | `--check` says "no steel-thread lane" | The set is all horizontal component lanes; nothing is demonstrable end-to-end | Mark the thin vertical path `thread=yes` (H1 walking skeleton). If no lane exercises every seam end-to-end, the decomposition is layered — add or designate the steel thread before fattening components. |
 | `--check` flags "lane-meta missing thread/risk/owner" | A lane left the seam-economics placeholders unfilled | Fill real values: `thread=yes|no`, `risk=low|med|high`, `owner=<stream>` (H1/H2/H3). The unfilled `<yes|no>` placeholder does not count. |
+| A leg needs more than one context window to build | The leg is too big | Split it: one leg = one build-order step + one proving-test cluster. Bigger is two legs. |
+| Every leg in a lane maps to exactly one task-spec | The leg level is redundant there | Fold: legs are not a quota. If leg == task everywhere, keep the pieces and drop the extra naming layer for that lane. |
+| A leg carries an `eval:` or a query body | Altitude leak at leg level | The leg keeps the *responsibility* and *what the eval must assert* in prose; the runnable eval is born at Pass 5B inside the task-spec. |
 
 ## Notes
 
 - **Why this order.** Seams first (Step 1), then plan the contents (Step 2), then ground against the ADRs (Step 3). Planning contents before naming the seam enshrines a boundary you haven't justified; grounding before planning has nothing to check.
 - **The seam is a contract, not a suggestion.** The published-output interface is owned by the upstream lane and consumed by the downstream lane. Naming it here is what lets Pass 4 attack it and Pass 5 build both lanes against a frozen shape.
 - **"Seam" here ≠ Feathers' seam (H6).** Michael Feathers' *seam* (Working Effectively with Legacy Code) is a place you can alter behavior *for testing* without editing there. Converge repurposes the word for a **decomposition boundary** — a nameable interface with a one-way dependency — closer to a module interface or bounded context. Same word, deliberately different construct; don't expect the testability meaning.
+- **Why "leg" and not "stage".** In a relay race each swimmer runs one leg of the lane — the metaphor keeps the swimlane vocabulary coherent: a big lane subdivides into sequential stretches that hand the baton forward. "Stage" was rejected: it collides with staging area, deploy stage, and dbt staging.
 - **Plans are attacked, not shipped.** Pass 3 output is deliberately un-hardened. It is *supposed* to have soft spots that Pass 4's adversary finds. Do not over-polish or pre-empt objections into the plan; that hides the seams the review needs to test.
 
 ## Handoff
 
-→ **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `sketch/*.plan` files produced here and attacks them **one at a time** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, and any altitude leak into task or code detail — sharpens them in place (the diff is the record), and names **THE FORK**: whole-system plan-driven (Pass 5A, `plans-to-coherent-spec`) or per-unit task-driven (Pass 5B, `task-spec`).
+→ **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `sketch/*.plan` files produced here and attacks them **one at a time, leg by leg** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, legs that fail the independence or fold tests, and any altitude leak into task or code detail — sharpens them in place (the diff is the record, objections cite leg IDs), and names **THE FORK**: whole-system plan-driven (Pass 5A, `plans-to-coherent-spec`) or per-unit task-driven (Pass 5B, `task-spec`, which cuts tasks per leg, 1:N).
 
 *Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.

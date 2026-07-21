@@ -17,8 +17,13 @@
 #   new-plan.sh --help
 #
 # Produces: sketch/<slug>.plan  (templated skeleton: lane-meta / Identity /
-#           Features / Consumed-interface + Seam-evolution / Dependencies /
+#           Legs / Consumed-interface + Seam-evolution / Dependencies /
 #           Build-order / Proving-tests / Open-questions / Spec-traceability)
+#
+# Decomposition chain (v0.5.0): seam → swimlane → leg → task-spec. The plan's
+#   pieces are named as legs (leg-01, leg-02…): one responsibility + one
+#   proving-test cluster each, independently finishable, sized to one context
+#   window — each leg yields 1:N task-specs at Pass 5B. See references/legs.md.
 #
 # --check also enforces the Pass 3 "seam economics" hardening (v0.4.0): every
 #   lane carries lane-meta (thread=<yes|no> · risk=<low|med|high> · owner=<stream>);
@@ -26,6 +31,11 @@
 #   end-to-end first (walking skeleton); a downstream lane names its seam-evolution
 #   rule (additive-safe vs breaking). Cycles that fail the one-way seam test are
 #   recorded as blocks-build open questions with the breaking technique named.
+#   Legs are checked in-section and must be CONTIGUOUS (leg-01..leg-0N, no gap).
+#
+# Agent contract: every --check / usage surface ends in a stable machine token —
+#   CHECK_PLAN=OK | FAIL | EMPTY | USAGE_ERROR  (agents are first-class users; a
+#   harness greps the token, never the prose). Pass 3's cvg subcommand gates on it.
 # Exit:     0 = ok; 1 = drift/usage error; 2 = nothing to check
 #
 # bash 3.2-safe (runs on macOS system /bin/bash). No associative arrays, no mapfile.
@@ -71,6 +81,7 @@ check_drift() {
   local rc=0 hits f thread_seen=0
   if [ ! -d "$SKETCH_DIR" ] || ! ls "$SKETCH_DIR"/*.plan >/dev/null 2>&1; then
     echo "CHECK: no plans found in $SKETCH_DIR/ — scaffold a lane first." >&2
+    echo "CHECK_PLAN=EMPTY"
     return 2
   fi
   for f in "$SKETCH_DIR"/*.plan; do
@@ -101,13 +112,38 @@ check_drift() {
     for sec in $REQUIRED_SECTIONS; do
       IFS="$oldifs"
       if ! grep -qiE "$sec" "$f"; then
-        echo "WEAK   $f — no section matching /$sec/; a lane plan needs Dependencies, Build order, Tests-that-prove, and Open-questions."
+        echo "WEAK   $f — no section matching /$sec/; a lane plan needs Legs, Dependencies, Build order, Tests-that-prove, and Open-questions."
         rc=1
       fi
       IFS='
 '
     done
     IFS="$oldifs"
+
+    # 4) Legs (v0.5.0) — scoped to the ## Legs section: present, named, and
+    #    CONTIGUOUS (leg-01..leg-0N, no gap — a gap is a dropped/misnamed stretch).
+    #    Section-scoped so a stray 'leg-01' in prose can't satisfy the check.
+    legs_body="$(awk '/^##[[:space:]]+[Ll]egs?([[:space:]]|$)/{f=1;next} /^##[^#]/{f=0} f' "$f")"
+    if [ -z "$(printf '%s' "$legs_body" | tr -d '[:space:]')" ]; then
+      echo "WEAK   $f — no populated '## Legs' section; name the lane's stretches (seam → swimlane → leg → task-spec)."
+      rc=1
+    else
+      leg_ids="$(printf '%s\n' "$legs_body" | grep -oE 'leg-[0-9]{2}' | sort -u || true)"
+      if [ -z "$leg_ids" ]; then
+        echo "WEAK   $f — '## Legs' has no leg-NN identifiers; name each stretch leg-01, leg-02… in build order (one responsibility + one proving-test cluster each)."
+        rc=1
+      else
+        leg_n="$(printf '%s\n' "$leg_ids" | grep -c .)"
+        leg_first="$(printf '%s\n' "$leg_ids" | head -1)"
+        leg_last="$(printf '%s\n' "$leg_ids" | tail -1)"
+        leg_expect="$(printf 'leg-%02d' "$leg_n")"
+        if [ "$leg_first" != "leg-01" ] || [ "$leg_last" != "$leg_expect" ]; then
+          # shellcheck disable=SC2086  # deliberate word-split of the newline id list for display
+          echo "LEGS   $f — legs must run leg-01..$leg_expect with no gap (found: $(printf '%s ' $leg_ids)); a gap is a dropped or misnamed stretch."
+          rc=1
+        fi
+      fi
+    fi
 
     # H1/H2/H3 — every lane declares its seam economics on a lane-meta line,
     # with real values (an unfilled <yes|no> placeholder does not count).
@@ -134,9 +170,11 @@ check_drift() {
   fi
 
   if [ "$rc" -eq 0 ]; then
-    echo "CHECK: OK — plan altitude held (features/deps/order/tests, no SQL/tasks); seam economics present (steel-thread, risk, owner, evolution)."
+    echo "CHECK: OK — plan altitude held (legs/deps/order/tests, no SQL/tasks); seam economics present (steel-thread, risk, owner, evolution); legs named + contiguous."
+    echo "CHECK_PLAN=OK"
   else
-    echo "CHECK: FAIL — fix the flagged plans; push SQL/tasks to Pass 5, and complete the seam economics (lane-meta / steel-thread / evolution)." >&2
+    echo "CHECK: FAIL — fix the flagged plans; push SQL/tasks to Pass 5, complete the seam economics (lane-meta / steel-thread / evolution), and name the lane's legs." >&2
+    echo "CHECK_PLAN=FAIL"
   fi
   return "$rc"
 }
@@ -152,7 +190,7 @@ while [ $# -gt 0 ]; do
     --component) COMPONENT="${2:?--component needs a label, e.g. \"A · Transform\"}"; shift 2 ;;
     --consumes)  CONSUMES="${2:?--consumes needs an upstream seam, e.g. the output/contract layer}"; shift 2 ;;
     --)          shift; TITLE="${1:-}"; break ;;
-    -*)          echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
+    -*)          echo "Unknown option: $1" >&2; usage >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1 ;;
     *)           TITLE="$1"; shift ;;
   esac
 done
@@ -165,15 +203,16 @@ fi
 if [ -z "$TITLE" ]; then
   echo "Error: lane title required (e.g. \"transform lane\")." >&2
   usage >&2
+  echo "CHECK_PLAN=USAGE_ERROR"
   exit 1
 fi
 
 SLUG="$(slugify "$TITLE")"
-[ -n "$SLUG" ] || { echo "Error: title slugified to empty." >&2; exit 1; }
+[ -n "$SLUG" ] || { echo "Error: title slugified to empty." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
 
 mkdir -p "$SKETCH_DIR"
 OUT="$SKETCH_DIR/$SLUG.plan"
-[ -e "$OUT" ] && { echo "Error: $OUT already exists — edit it, don't re-scaffold." >&2; exit 1; }
+[ -e "$OUT" ] && { echo "Error: $OUT already exists — edit it, don't re-scaffold." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
 
 # Identity line — component label if given, else a placeholder to fill in.
 if [ -n "$COMPONENT" ]; then
@@ -188,11 +227,11 @@ if [ -n "$CONSUMES" ]; then
   CONSUMED_BLOCK="## The interface this lane consumes (the seam — hard boundary)
 
 This lane reads **only the \`$CONSUMES\` contract**, and never reaches below it. Name
-the exact upstream fields each piece consumes, so the seam is explicit. If an answer
+the exact upstream fields each leg consumes, so the seam is explicit. If an answer
 needs something not in \`$CONSUMES\`, the fix is a **new addition to the upstream
 contract**, never a deeper read here.
 
-| upstream unit | fields consumed | read by (this lane's piece) |
+| upstream unit | fields consumed | read by (this lane's leg) |
 |---|---|---|
 | \`$CONSUMES\` <unit> | <field, field, …> | <endpoint / tool / model> |
 
@@ -239,32 +278,35 @@ lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<owning stream/team>
 $IDENTITY Input contract: \`<upstream>.*\`. Output contract:
 \`<downstream>.*\` (the seam the next lane consumes — name it).
 
-Plan altitude: features, responsibilities, dependencies, build order, tests. No
+Plan altitude: legs, responsibilities, dependencies, build order, tests. No
 model SQL, no handler code, no atomic tasks.
 
 ---
 
-## Features / components
+## Legs
 
-<!-- The pieces INSIDE this lane and what each is responsible for — component
-     level, never the SQL or the handler body. For example: staged transform
-     layers in a warehouse project, or query-core / API transport / MCP transport
-     in a serving lane. State each piece's RESPONSIBILITY in prose (e.g. "dedup
-     duplicate records by business signature, quarantine the rest"), not its
-     implementation. -->
+<!-- The lane's named stretches — seam → swimlane → LEG → task-spec. Each leg:
+     ONE responsibility in prose + ONE proving-test cluster, INDEPENDENTLY
+     FINISHABLE (buildable + provable with no later leg existing), sized to one
+     build-order step + one context window (bigger is two legs; two stretches
+     sharing one proving test are one leg — no quotas). Never the SQL or the
+     handler body — e.g. "dedup duplicate records by business signature,
+     quarantine the rest", not the query. Cited outside the plan as
+     swimlane-<lane>-leg-<NN>; each leg yields 1:N task-specs at Pass 5B. -->
 
-- **<piece>** — <what it does / what it is responsible for>.
-- **<piece>** — <what it does / what it is responsible for>.
+- **leg-01** — <the first stretch's responsibility, in prose>. Proves: <what its tests assert>.
+- **leg-02** — <the next stretch, handed the baton by leg-01>. Proves: <what its tests assert>.
+- **leg-03** — <…only if the lane is genuinely that big — legs are not a quota>.
 
 ---
 
 ${CONSUMED_BLOCK}## Dependencies
 
-<!-- A small DAG: the build order between this lane's own pieces AND its inbound
-     seam. One direction; no piece reads above itself. -->
+<!-- A small DAG: the build order between this lane's LEGS AND its inbound
+     seam. One direction; no leg reads above itself. -->
 
 \`\`\`
-<upstream seam>  ->  <piece>  ->  <piece>
+<upstream seam>  ->  leg-01  ->  leg-02
 \`\`\`
 
 - <the dependency edges in words; call out the single inbound seam>.
@@ -273,26 +315,28 @@ ${CONSUMED_BLOCK}## Dependencies
 
 ## Build order
 
-<!-- A sane sequence. Call out the GATING input explicitly — the frozen decision or
-     upstream contract that nothing downstream can finish until it is settled (for
-     example, a frozen requirement set gating the output layer and serving surface). -->
+<!-- A sane sequence OF LEGS. Call out the GATING input explicitly — the frozen
+     decision or upstream contract that nothing downstream can finish until it
+     is settled (for example, a frozen requirement set gating the output layer
+     and serving surface). -->
 
-1. <first buildable piece — why it unblocks the rest>.
-2. <next>.
+1. **leg-01** — <why it unblocks the rest>.
+2. **leg-02** — <next>.
 3. <…>.
 
 <!-- Name the gating edge: what cannot finish until <gating input> is frozen. -->
 
 ---
 
-## Tests that prove each piece
+## Tests that prove each leg
 
-<!-- Plan altitude: WHAT each test asserts, not the test code. -->
+<!-- Plan altitude: WHAT each test asserts, keyed by leg — not the test code.
+     The eval binds at Pass 5B, when the leg yields its 1:N task-specs. -->
 
-| Piece | Tests (what they prove) |
+| Leg | Tests (what they prove) |
 |---|---|
-| **<piece>** | <invariant this piece must satisfy>. Proves: <property>. |
-| **<piece>** | <invariant>. Proves: <property>. |
+| **leg-01** | <invariant this leg must satisfy>. Proves: <property>. |
+| **leg-02** | <invariant>. Proves: <property>. |
 
 ---
 

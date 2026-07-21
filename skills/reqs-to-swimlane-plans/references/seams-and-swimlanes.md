@@ -83,6 +83,27 @@ The seam is a contract, so the consuming lane must pin it precisely:
 | A lane you added to "balance" the diagram | No interface crosses into it | Delete it; its work belongs inside an existing lane. |
 | A boundary you can describe but not name | The interface isn't pinned | Either name the exact tables/columns/signature (real seam) or fold the lanes (false seam). Fuzziness is the signal. |
 
+## The seam's contract structure
+
+A seam is only as good as the contract pinned on it. The field's hard-won rules
+(consumer-driven contracts — Fowler/Robinson, Pact) apply verbatim:
+
+1. **The producer owns the contract.** The upstream lane publishes the shape
+   (the tables/columns, the endpoint, the signature); it is the sole writer.
+2. **The consumer pins only what it actually reads** — the tolerant-reader
+   rule. A contract that names elements nobody consumes is over-specified: it
+   blocks evolution for data nobody uses. A field no consumer pins is
+   demonstrably dead — the producer can change or drop it without ceremony.
+3. **Both sides build against the frozen shape.** The contract is frozen at
+   naming time so the consumer can be planned in full while the producer's
+   internals are still in flux.
+4. **Evolution is typed, not negotiated.** Additive changes (a new optional
+   column/field/endpoint) are non-breaking. Renames, removals, and
+   newly-required fields are BREAKING and need a coexistence window — the old
+   shape stays live until every consumer has cut over. How the consumer learns
+   of a change is stated in the plan (e.g. a consumer-driven contract test the
+   producer must keep green).
+
 ## Output of Step 1
 
 You leave Step 1 with: the list of lanes, the **dependency direction** between
