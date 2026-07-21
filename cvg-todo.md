@@ -323,6 +323,20 @@ complete vertical slice. The five beats, in order, never bundled:
       suite 28/28 (new no-mermaid fixture + mermaid scaffold assert); quick_validate
       green; shellcheck + bash 3.2 clean. R3.R plans regenerated to the new format
       (mermaid + dlt/dbt/ducklake/duckdb/fastapi/mcp legs), CHECK_PLAN=OK.
+    - **R3.U+++ v0.6.0→0.7.0 ✅ 2026-07-21 (swimlane = directory)** — owner
+      refinement, MCP-grounded (Tavily/Firecrawl + Spec Kit/arc42/Amazon PR-FAQ/
+      INVEST/Gherkin/Shape Up): a swimlane is now a **dir** `sketch/swimlane-<seam>/`
+      = a lean PRD index (`swimlane-<seam>.plan.md`) + **one file per leg**
+      (`swimlane-<seam>-leg-NN-<tech>.md`); PRD links to legs, never embeds them
+      (no bloat); each leg evolves independently. Filenames = fully-qualified ids.
+      Internal structure grounded: PRD gains **Non-Goals** (#1 anti-bloat); legs
+      express **Proves as Given/When/Then** (1-3, no evals) + frontmatter
+      (stable `leg:` key, parent, status, spec_ref, depends_on) + Appetite. `--check`
+      now cross-file (PRD + legs, contiguity across files, no orphan/dangling links).
+      Suite 28/28 across 11 dir-per-swimlane fixtures; quick_validate green;
+      shellcheck + bash 3.2 clean (commit 5f3a12b). R3.R **capture** lane migrated
+      to the final form (PRD 73 lines + 3 leg files), CHECK_PLAN=OK; transform/serve
+      migration is the mechanical next step.
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
