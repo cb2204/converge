@@ -9,21 +9,25 @@
 # pass enforces; --check is its deterministic guard.
 #
 # Usage:
-#   new-plan.sh "transform lane"                   Create sketch/<slug>.plan (a lane)
+#   new-plan.sh "transform lane"                   Create sketch/<slug>.plan.md (a lane)
 #   new-plan.sh --component "A · Transform" "..."  Set the identity line's component
 #   new-plan.sh --consumes <seam> "serve lane"     Mark a DOWNSTREAM lane + its seam
 #   new-plan.sh --dir path/to/sketch "..."         Override the sketch directory
-#   new-plan.sh --check                            Lint sketch/*.plan for altitude-drift
+#   new-plan.sh --check                            Lint sketch/*.plan.md for altitude-drift
 #   new-plan.sh --help
 #
-# Produces: sketch/<slug>.plan  (templated skeleton: lane-meta / Identity /
-#           Legs / Consumed-interface + Seam-evolution / Dependencies /
-#           Build-order / Proving-tests / Open-questions / Spec-traceability)
+# Produces: sketch/<slug>.plan.md  (renders as Markdown on GitHub/GitLab, still
+#           greppable — RFC 7764 type tag). Skeleton: lane-meta / Identity /
+#           Architecture (mermaid + steps) / Legs / Consumed-interface +
+#           Seam-evolution / Dependencies / Build-order / Proving-tests /
+#           Open-questions / Spec-traceability.
 #
-# Decomposition chain (v0.5.0): seam → swimlane → leg → task-spec. The plan's
-#   pieces are named as legs (leg-01, leg-02…): one responsibility + one
-#   proving-test cluster each, independently finishable, sized to one context
-#   window — each leg yields 1:N task-specs at Pass 5B. See references/legs.md.
+# Decomposition chain: seam → swimlane → leg → task-spec. Legs carry an in-plan
+#   id leg-NN-<tech> (fully-qualified swimlane-<seam>-leg-NN-<tech>). The STABLE
+#   reference key is swimlane-<seam>-leg-NN — <tech> is a swappable display label,
+#   NEVER part of the key. One responsibility + one proving-test cluster each;
+#   1:N task-specs at Pass 5B. Every plan carries a mermaid architecture diagram
+#   (dual-coding). See references/legs.md.
 #
 # --check also enforces the Pass 3 "seam economics" hardening (v0.4.0): every
 #   lane carries lane-meta (thread=<yes|no> · risk=<low|med|high> · owner=<stream>);
@@ -79,12 +83,12 @@ slugify() {
 
 check_drift() {
   local rc=0 hits f thread_seen=0
-  if [ ! -d "$SKETCH_DIR" ] || ! ls "$SKETCH_DIR"/*.plan >/dev/null 2>&1; then
-    echo "CHECK: no plans found in $SKETCH_DIR/ — scaffold a lane first." >&2
+  if [ ! -d "$SKETCH_DIR" ] || ! ls "$SKETCH_DIR"/*.plan.md >/dev/null 2>&1; then
+    echo "CHECK: no plans found in $SKETCH_DIR/ (expected *.plan.md) — scaffold a lane first." >&2
     echo "CHECK_PLAN=EMPTY"
     return 2
   fi
-  for f in "$SKETCH_DIR"/*.plan; do
+  for f in "$SKETCH_DIR"/*.plan.md; do
     [ -e "$f" ] || continue
 
     # 1) SQL leak — a SELECT / DDL statement at a line head.
@@ -161,6 +165,11 @@ check_drift() {
     if grep -qiE 'interface this lane consumes|## +.*consumes' "$f"; then
       grep -qiE 'seam evolution|additive|breaking' "$f" || { echo "SEAM   $f — downstream lane names a consumed seam but no evolution rule (H4: additive-safe vs breaking + coexistence window)."; rc=1; }
     fi
+
+    # 5) Architecture visual (v0.6.0, dual-coding grounded): a plan carries a
+    #    mermaid diagram so a human sees the pipeline; the numbered steps sit
+    #    beside it (spatial contiguity). GitHub/GitLab render the fence natively.
+    grep -qi '```mermaid' "$f" || { echo "VISUAL $f — no mermaid diagram; add the ## Architecture block (flowchart LR pipeline + numbered steps) for human visualization."; rc=1; }
   done
 
   # H1 (set level) — the plan set must contain exactly one steel-thread lane.
@@ -170,7 +179,7 @@ check_drift() {
   fi
 
   if [ "$rc" -eq 0 ]; then
-    echo "CHECK: OK — plan altitude held (legs/deps/order/tests, no SQL/tasks); seam economics present (steel-thread, risk, owner, evolution); legs named + contiguous."
+    echo "CHECK: OK — plan altitude held (legs/deps/order/tests, no SQL/tasks); seam economics present (steel-thread, risk, owner, evolution); legs named + contiguous; architecture diagram present."
     echo "CHECK_PLAN=OK"
   else
     echo "CHECK: FAIL — fix the flagged plans; push SQL/tasks to Pass 5, complete the seam economics (lane-meta / steel-thread / evolution), and name the lane's legs." >&2
@@ -211,7 +220,7 @@ SLUG="$(slugify "$TITLE")"
 [ -n "$SLUG" ] || { echo "Error: title slugified to empty." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
 
 mkdir -p "$SKETCH_DIR"
-OUT="$SKETCH_DIR/$SLUG.plan"
+OUT="$SKETCH_DIR/$SLUG.plan.md"
 [ -e "$OUT" ] && { echo "Error: $OUT already exists — edit it, don't re-scaffold." >&2; echo "CHECK_PLAN=USAGE_ERROR"; exit 1; }
 
 # Identity line — component label if given, else a placeholder to fill in.
@@ -283,20 +292,44 @@ model SQL, no handler code, no atomic tasks.
 
 ---
 
+## Architecture
+
+<!-- Dual-coding (field-grounded): a diagram + an adjacent numbered narrative
+     builds the mental model neither gives alone — keep them together. One L-R
+     pipeline overview here; add a small per-leg diagram only where a leg needs
+     its own. Mermaid renders natively on GitHub/GitLab. -->
+
+\`\`\`mermaid
+flowchart LR
+  SRC[(<source / upstream seam>)] --> A["<this lane> · leg-01-<tech>"]
+  A --> OUT["<downstream seam> · <next lane>"]
+\`\`\`
+
+Step-by-step:
+
+1. <source> changes land where this lane's leg-01 reads them.
+2. <leg-01-tech> shapes them toward the lane's output contract.
+3. <downstream> consumes only the published contract — never below the seam.
+
+---
+
 ## Legs
 
 <!-- The lane's named stretches — seam → swimlane → LEG → task-spec. Each leg:
-     ONE responsibility in prose + ONE proving-test cluster, INDEPENDENTLY
-     FINISHABLE (buildable + provable with no later leg existing), sized to one
-     build-order step + one context window (bigger is two legs; two stretches
-     sharing one proving test are one leg — no quotas). Never the SQL or the
-     handler body — e.g. "dedup duplicate records by business signature,
-     quarantine the rest", not the query. Cited outside the plan as
-     swimlane-<lane>-leg-<NN>; each leg yields 1:N task-specs at Pass 5B. -->
+     ONE responsibility + ONE proving-test cluster, INDEPENDENTLY FINISHABLE,
+     one context window (bigger is two legs; two sharing one proving test are one
+     leg — no quotas). Never the SQL or the handler body.
+     NOMENCLATURE (v0.6.0, field-grounded): the in-plan id is leg-NN-<tech>
+     (2-digit zero-pad; <tech> a lowercase-kebab tool slug, e.g. dlt, dbt-bronze,
+     fastapi). Fully-qualified across artifacts: swimlane-<seam>-leg-NN-<tech>.
+     The STABLE reference key is swimlane-<seam>-leg-NN — <tech> is a SWAPPABLE
+     display label, NEVER part of the key (swapping the tool must not break a
+     reference; defer or replace it freely). Each leg yields 1:N task-specs at 5B.
+     See references/legs.md. -->
 
-- **leg-01** — <the first stretch's responsibility, in prose>. Proves: <what its tests assert>.
-- **leg-02** — <the next stretch, handed the baton by leg-01>. Proves: <what its tests assert>.
-- **leg-03** — <…only if the lane is genuinely that big — legs are not a quota>.
+- **leg-01-<tech>** — <the first stretch's responsibility, in prose>. Proves: <what its tests assert>.
+- **leg-02-<tech>** — <the next stretch, handed the baton by leg-01>. Proves: <what its tests assert>.
+- **leg-03-<tech>** — <…only if the lane is genuinely that big — legs are not a quota>.
 
 ---
 

@@ -3,7 +3,7 @@
 name: reqs-to-swimlane-plans
 description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5B. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
 ---
 
@@ -56,12 +56,26 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.** Each plan should carry:
 
 1. **Identity + lane-meta line** — which component this is (e.g. A · Transform / B · Serve), its input/output contract, and the greppable **`lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<stream>`** line. **`owner` (H3 — Conway)** names the single stream/team that owns the lane (or `shared`/`platform`); a seam that splits one owner or fuses two is a coordination smell — flag it, because architecture mirrors the org's communication structure.
-2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN`** in build order (`leg-01`, `leg-02`, …; fully-qualified `swimlane-<lane>-leg-<NN>` when cited outside the plan — e.g. in a task-spec's frontmatter). Each leg carries exactly **one responsibility in prose** and **one proving-test cluster** (what its tests assert, never test code). For example, in a transform lane: ingest → conform → publish; in a serve lane: query core → transports. A leg must be **independently finishable** (buildable and provable without any later leg existing) and **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No leg quotas: the leg count is the smallest that holds these tests. See `references/legs.md`.
+2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN-<tech>`** in build order (`leg-01-dlt`, `leg-04-dbt-bronze`, `leg-01-fastapi`; fully-qualified `swimlane-<seam>-leg-NN-<tech>` when cited outside the plan). **Nomenclature (field-grounded):** the **stable reference key is `swimlane-<seam>-leg-NN`** (2-digit zero-pad so ids sort); the **`<tech>` is a lowercase-kebab tool slug appended as a *swappable display label*, never part of the key** — swapping DuckLake→Iceberg or dlt→Airbyte must not break a single cross-reference (embedding volatile tech in an identifier is the classic id anti-pattern). Each leg carries **one responsibility in prose** + **one proving-test cluster** (what its tests assert, never test code), is **independently finishable** (buildable/provable without any later leg), and is **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No quotas. See `references/legs.md`.
 3. **The consumed interface + seam evolution (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals. **Seam evolution (H4):** the frozen contract *will* change — state how safely. Additive changes (a new column/field/endpoint) are non-breaking; renames, removals, and newly-required fields are **breaking** and need a coexistence window before this lane cuts over. Recommend a consumer-driven contract test the upstream must keep green, so a later change can't silently break this lane.
 4. **Dependencies** — a small DAG showing the build order between the lane's own pieces and its inbound seam.
 5. **Build order** — a sane sequence, with the gating input called out (for example, a frozen acceptance-question set may gate the output layer and the final serving surface).
 6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5B, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
 7. **Open questions** — anything the ADRs do not cover, with an owner and whether it blocks the build. Surface it here; do not invent the answer inside the plan.
+
+Every plan also carries an **`## Architecture` block** near the top: a **mermaid
+`flowchart LR` pipeline** (source → this lane → downstream) *plus an adjacent
+numbered step-by-step* — the diagram and the narrative build the mental model
+neither gives alone (dual coding), so keep them together. Plans are files named
+**`sketch/<lane>.plan.md`** — the trailing `.md` renders on GitHub/GitLab and
+stays greppable; the `.plan` tag marks the type.
+
+**Naming the stack is allowed here — as a reversible pick, not a silent lock.**
+Pass 3 may bind the concrete tool per leg (the `<tech>` label) — the tech-spec's
+A-1 expects the stack decided against the ADRs at this pass. But bind it at the
+*last responsible moment* and treat it as replaceable: the choice rides in the
+swappable `<tech>` label and (where a genuine alternative was rejected) an open
+question or a note — never in the stable id, and never as code.
 
 Keep each plan tight and skimmable. Plan altitude only.
 
@@ -79,11 +93,13 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 
 ## Gate — confirm before leaving this pass
 
-- [ ] One sketch plan exists per genuine seam (e.g. `sketch/<lane-a>.plan` + `sketch/<lane-b>.plan`).
+- [ ] One sketch plan exists per genuine seam, each a **`sketch/<lane>.plan.md`** file (renders as Markdown, greppable).
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
-- [ ] Each plan lists its legs (`leg-NN`), the dependencies between them, a sane build order, and the tests that prove each leg (at plan altitude).
+- [ ] Each plan carries an **`## Architecture` mermaid diagram + adjacent numbered steps** (a human can see the pipeline).
+- [ ] Each plan lists its legs (`leg-NN-<tech>`), the dependencies between them, a sane build order, and the tests that prove each leg (at plan altitude).
+- [ ] **Leg nomenclature holds** — in-plan `leg-NN-<tech>`, fully-qualified `swimlane-<seam>-leg-NN-<tech>`; the stable key is `swimlane-<seam>-leg-NN` and `<tech>` is a swappable label, **never** part of the key.
 - [ ] Each leg carries one responsibility in prose + one proving-test cluster, is **independently finishable**, and fits one context window — bigger is two legs; two stretches sharing one proving test are one leg.
-- [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5B and is cited by them (`swimlane-<lane>-leg-<NN>`).
+- [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5B and is cited by them (`swimlane-<seam>-leg-NN`).
 - [ ] Each plan inherits the relevant `docs/adrs/*` decisions and **contradicts none** of them.
 - [ ] The downstream lane names the **exact upstream interface** it consumes (the published tables/columns/fields) and never reaches below it.
 - [ ] Open questions the ADRs do not cover are surfaced with an owner and a blocks-build flag — not answered inside the plan.

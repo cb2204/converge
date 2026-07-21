@@ -6,6 +6,20 @@ Component **A · Transform** from the decomposition. Input contract: `raw.*`. Ou
 
 Plan altitude: legs, responsibilities, dependencies, build order, tests.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  RAW[(raw.*)] --> T["transform · leg-01"]
+  T --> GOLD["gold.* · serve lane"]
+```
+
+Step-by-step:
+
+1. raw.* landed records feed leg-01.
+2. conform → model → publish shapes gold.*.
+3. serve consumes gold.* only, never below the seam.
+
 ## Legs
 
 - **leg-01** — ingest and pin the raw sources read-only. Proves: raw tables reachable, row counts stable.

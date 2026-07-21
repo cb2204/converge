@@ -75,6 +75,7 @@ run_case no-thread-set          --check --dir "$FIX/no-thread"     -- 1 'THREAD.
 run_case no-evolution           --check --dir "$FIX/no-evolution"  -- 1 'SEAM.*evolution'  '^CHECK: OK'
 run_case empty-dir              --check --dir "$FIX/empty"         -- 2 'no plans found'   ''
 run_case leg-gap                --check --dir "$FIX/leg-gap"       -- 1 'LEGS.*no gap'     '^CHECK: OK'
+run_case no-mermaid             --check --dir "$FIX/no-mermaid"    -- 1 'VISUAL.*mermaid'  '^CHECK: OK'
 
 echo "== machine token (agents-first) =="
 run_case token-ok               --check --dir "$FIX/good"          -- 0 'CHECK_PLAN=OK'    ''
@@ -87,16 +88,17 @@ TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 run_case scaffold-basic         --dir "$TMP_ROOT/s1" "transform lane"                          -- 0 '^Created ' ''
-assert_file scaffold-leg-section   "$TMP_ROOT/s1/transform-lane.plan" '^## Legs$' ''
-assert_file scaffold-lanemeta      "$TMP_ROOT/s1/transform-lane.plan" '^lane-meta: thread=' ''
-assert_file scaffold-leg-ids       "$TMP_ROOT/s1/transform-lane.plan" 'leg-01' ''
+assert_file scaffold-leg-section   "$TMP_ROOT/s1/transform-lane.plan.md" '^## Legs$' ''
+assert_file scaffold-lanemeta      "$TMP_ROOT/s1/transform-lane.plan.md" '^lane-meta: thread=' ''
+assert_file scaffold-leg-ids       "$TMP_ROOT/s1/transform-lane.plan.md" 'leg-01' ''
+assert_file scaffold-mermaid       "$TMP_ROOT/s1/transform-lane.plan.md" '```mermaid' ''
 
 run_case scaffold-component     --dir "$TMP_ROOT/s2" --component "A · Transform" "transform lane" -- 0 '^Created ' ''
-assert_file scaffold-identity      "$TMP_ROOT/s2/transform-lane.plan" 'Component \*\*A · Transform\*\*' ''
+assert_file scaffold-identity      "$TMP_ROOT/s2/transform-lane.plan.md" 'Component \*\*A · Transform\*\*' ''
 
 run_case scaffold-consumes      --dir "$TMP_ROOT/s3" --consumes "gold.*" "serve lane"          -- 0 '^Created ' ''
-assert_file scaffold-consumed      "$TMP_ROOT/s3/serve-lane.plan" 'interface this lane consumes' ''
-assert_file scaffold-evolution     "$TMP_ROOT/s3/serve-lane.plan" 'Seam evolution' ''
+assert_file scaffold-consumed      "$TMP_ROOT/s3/serve-lane.plan.md" 'interface this lane consumes' ''
+assert_file scaffold-evolution     "$TMP_ROOT/s3/serve-lane.plan.md" 'Seam evolution' ''
 
 run_case scaffold-no-clobber    --dir "$TMP_ROOT/s1" "transform lane"                          -- 1 'already exists' ''
 run_case scaffold-no-title      --dir "$TMP_ROOT/s5"                                           -- 1 'title required' ''

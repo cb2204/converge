@@ -43,17 +43,30 @@ A leg is the smallest named unit of a plan:
 
 ## The leg's identity
 
-Inside a plan, legs are numbered: `leg-01`, `leg-02`, … in build order.
+Inside a plan, legs are named **`leg-NN-<tech>`** in build order —
+`leg-01-dlt`, `leg-04-dbt-bronze`, `leg-01-fastapi`. Across artifacts the
+fully-qualified form is **`swimlane-<seam>-leg-NN-<tech>`**.
 
-Across artifacts, use the fully-qualified form:
+**The stable reference key excludes the tech** (field-grounded — Wilkinson
+et al., "Identifiers for the 21st century"; Sparx EA on hierarchical numbers as
+unsuitable immutable ids). Links resolve on the tech-less key:
 
 ```
-swimlane-<lane-slug>-leg-<NN>          e.g. swimlane-transform-leg-02
-swimlane-<lane-slug>-leg-<NN>-<tech>   when the tech disambiguates (…-dbt, …-mcp)
+swimlane-<seam>-leg-NN          ← the STABLE key (2-digit zero-pad; ids sort lexically)
+swimlane-<seam>-leg-NN-<tech>   ← the DISPLAY form (tech = swappable mnemonic label)
 ```
 
-A Pass 5B task-spec cites its leg (`leg: swimlane-transform-leg-02`), so the
-traceability chain is complete and greppable:
+The `<tech>` is a lowercase-kebab tool slug (`dlt`, `dbt-bronze`, `fastapi`,
+`mcp-server`) appended as a mnemonic. It **may be omitted, and may change when the
+stack changes, without breaking any reference** — because nothing links on it.
+Never put the tool in the key: swapping DuckLake→Iceberg or dlt→Airbyte would
+otherwise silently break every cross-artifact reference, branch name, and PR
+title. Parse anchor: the literal `-leg-` + two digits, so a multi-word seam or
+tech slug stays unambiguous (`<tech>` is always the trailing segment).
+
+A Pass 5B task-spec cites its leg on the **stable key**
+(`leg: swimlane-transform-leg-02`), so the traceability chain is complete and
+greppable regardless of tool churn:
 
 `ADR → seam → swimlane → leg → task-spec → eval`
 

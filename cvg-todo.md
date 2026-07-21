@@ -307,6 +307,22 @@ complete vertical slice. The five beats, in order, never bundled:
       well-*cut* (that's Pass 4). Suite 26/26 green (new leg-gap, legs-noids,
       4 token rows, non-data web-checkout domain); quick_validate green;
       shellcheck -x + bash 3.2 -n clean. Skill CLOSED — ready for R3.R.
+    - **R3.U++ v0.5.0→0.6.0 ✅ 2026-07-21 (mid-R3.R retro, MCP-grounded)** —
+      owner asked to finalize nomenclature + human-visualization; grounded via
+      Firecrawl/Exa/Tavily (RFC 7764, PLOS "Identifiers for the 21st century",
+      Last-Responsible-Moment, mermaid+dual-coding). Applied: **(1)** plans are
+      **`<lane>.plan.md`** (renders as Markdown, greppable — RFC 7764 §2.1);
+      **(2)** leg nomenclature **`leg-NN-<tech>`** (display) / fully-qualified
+      **`swimlane-<seam>-leg-NN-<tech>`** — with the grounded correction that
+      the **stable reference key is tech-LESS** (`swimlane-<seam>-leg-NN`);
+      `<tech>` is a swappable label, never in the key (volatile-id anti-pattern);
+      **(3)** every plan carries an **`## Architecture` mermaid `flowchart LR` +
+      adjacent numbered steps** (dual coding), enforced by `--check` (new VISUAL
+      guard); **(4)** stack named at Pass 3 as a *reversible* pick (LRM),
+      resolving the earlier open judgment call. `--check` glob → `*.plan.md`;
+      suite 28/28 (new no-mermaid fixture + mermaid scaffold assert); quick_validate
+      green; shellcheck + bash 3.2 clean. R3.R plans regenerated to the new format
+      (mermaid + dlt/dbt/ducklake/duckdb/fastapi/mcp legs), CHECK_PLAN=OK.
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)

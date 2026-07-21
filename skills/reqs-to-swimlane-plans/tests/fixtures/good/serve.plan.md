@@ -6,6 +6,20 @@ Component **B · Serve** from the decomposition. Input contract: `gold.*`. Outpu
 
 Plan altitude: legs, responsibilities, dependencies, build order, tests.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  GOLD[(gold.*)] --> Q["serve · leg-01 query core"]
+  Q --> API["answers · API + MCP"]
+```
+
+Step-by-step:
+
+1. gold.* published tables feed the query core.
+2. leg-01 exposes contract-only readers.
+3. transports frame the same rows for API + MCP.
+
 ## Legs
 
 - **leg-01** — query core: one read-only function per published gold table. Proves: each function reads only `gold.*`.
