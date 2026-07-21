@@ -209,8 +209,24 @@ complete vertical slice. The five beats, in order, never bundled:
     documented): Converge ADRs record terrain facts, not design choices —
     design choices live in Pass 3+. Optional future: an index/README
     table per ADR dir (field convention; 0000 partially serves).
-  - [ ] R2.R run — ground the canonical tech-spec against the real
-    Postgres terrain; ADRs born on the proving ground
+  - [x] R2.R run ✅ 2026-07-21 — booted the real Postgres terrain
+    (`uc-analytics-postgres`, seed 42: 50/20/200/200), grounded the
+    canonical tech-spec against the live schema, owner verdict **approved**.
+    Six records born `proposed` on the proving ground
+    (`tests/uc-analytics/cvg/docs/adrs/`): `0000-context` (greenfield;
+    given vs build surface), `0001-analytical-reads-fenced-to-public`
+    (R-3/scope-out), `0002-no-row-level-change-timestamp` (R-1/R-4/R-10 —
+    zero CDC columns, freshness must come from the log stream),
+    `0003-single-principal-no-analytical-query-seam` (R-2/R-5 — one login
+    role, the by-principal seam doesn't exist yet),
+    `0004-revenue-is-captured-not-paid` (R-3 — spec's "paid" absent;
+    revenue = `captured`), `0005-payments-order-cardinality-not-enforced`
+    (R-3 — non-unique FK, seed 1:1 is data not guarantee). Glossary
+    `docs/CONTEXT.md` pins 10 terms, each tracing to evidence. Every
+    Evidence block carries a re-runnable command (two re-executed verbatim
+    to prove the living-terrain-contract idea). `--check` green,
+    `CHECK_ADR=OK`, no advisory NOTEs. Records stay `proposed` → flipped
+    `accepted` at R2.C. Next: R2.C (second-eyes review → accept → TEACH).
   - [ ] R2.C canonize + TEACH (Gate: owner calls the ADR set canonical)
   - [ ] R2.I implement — `cvg structure` subcommand
   - [ ] R2.P prove — golden diff vs the manual run
