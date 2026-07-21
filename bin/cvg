@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.4.0"
+CVG_VERSION="0.5.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -74,6 +74,8 @@ cmd_help() {
   printf '  structure [--final] [--dir d]\n'
   printf '                           Pass 2 gate — finds cvg/docs/adrs/ (then\n'
   printf '                           docs/adrs/); --final requires nothing proposed\n'
+  printf '  decompose [--dir d]      Pass 3 gate — finds cvg/sketch/ (then sketch/)\n'
+  printf '                           swimlane-*/ tree; CHECK_PLAN token\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
@@ -275,6 +277,54 @@ case "$CMD" in
     fi
     # shellcheck disable=SC2086  # STR_FLAGS is a controlled flag list (--final only)
     exec bash "$GATE" --check $STR_FLAGS --dir "$STR_DIR"
+    ;;
+  decompose)
+    # Pass 3 gate: locate the sketch/ tree, route to the reqs-to-swimlane-plans
+    # checker. Exact exec pass-through (R3.P proves by byte-diff). Discovery/flag
+    # errors exist ONLY on the exit-2 path and end in CHECK_PLAN=USAGE_ERROR.
+    GATE="$CVG_HOME_DIR/skills/reqs-to-swimlane-plans/scripts/new-plan.sh"
+    DEC_DIR=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --dir)
+          if [ $# -lt 2 ]; then
+            ui_err "--dir needs a path — cvg decompose --dir <sketch-dir>"
+            printf 'CHECK_PLAN=USAGE_ERROR\n'
+            exit 2
+          fi
+          DEC_DIR="$2"; shift 2 ;;
+        --dir=*) DEC_DIR="${1#--dir=}"; shift ;;
+        -*)
+          ui_err "unknown decompose flag '$1' — expected --dir <path>"
+          printf 'CHECK_PLAN=USAGE_ERROR\n'
+          exit 2 ;;
+        *)       DEC_DIR="$1"; shift ;;
+      esac
+    done
+    if [ -z "$DEC_DIR" ]; then
+      DEC_N=0
+      DEC_LIST=""
+      for D in cvg/sketch sketch; do
+        [ -d "$D" ] || continue
+        ls -d "$D"/swimlane-*/ >/dev/null 2>&1 || continue
+        DEC_N=$((DEC_N + 1))
+        DEC_DIR="$D"
+        DEC_LIST="${DEC_LIST}  ${D}
+"
+      done
+      if [ "$DEC_N" -eq 0 ]; then
+        ui_err "no swimlane set (sketch/swimlane-*/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
+        printf 'CHECK_PLAN=USAGE_ERROR\n'
+        exit 2
+      fi
+      if [ "$DEC_N" -gt 1 ]; then
+        ui_err "ambiguous: $DEC_N sketch trees found — pass one explicitly:"
+        printf '%s' "$DEC_LIST" >&2
+        printf 'CHECK_PLAN=USAGE_ERROR\n'
+        exit 2
+      fi
+    fi
+    exec bash "$GATE" --check --dir "$DEC_DIR"
     ;;
   eval)       route run-task-spec.sh "$@" ;;
   lint)       route lint-backlog.sh "$@" ;;

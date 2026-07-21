@@ -25,13 +25,14 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.4.0)
+## Command surface (v0.5.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
 | `cvg capture [--draft\|--no-go] [brief]` | `idea-to-brd/scripts/check-brd.sh` (Pass 0 exit contract) | golden byte-parity with the direct gate on the signed proving-ground BRD (R0.P); discovery contract (0→exit 2, 2→exit 2 naming both, 1→gates) |
 | `cvg intent [--draft] [spec]` | `brd-docs-to-tech-req/scripts/check-tech-spec.sh` (Pass 1 exit contract, v0.4.0) | golden byte-parity with the direct gate on the signed proving-ground tech-spec (R1.P); same discovery contract; exit-2 paths end in `CHECK_TECH_SPEC=USAGE_ERROR` |
 | `cvg structure [--final] [--dir d]` | `tech-req-to-adrs/scripts/scaffold-adr.sh --check` (Pass 2 ADR gate, v0.4.0) | golden byte-parity with the direct gate on the canonical proving-ground ADR set (R2.P, EMPTY diff); discovery over `cvg/docs/adrs/` then `docs/adrs/` (0→exit 2, 2→exit 2 naming both, 1→gates); FAIL passed through unmasked; exit-2 paths end in `CHECK_ADR=USAGE_ERROR` |
+| `cvg decompose [--dir d]` | `reqs-to-swimlane-plans/scripts/new-plan.sh --check` (Pass 3 swimlane gate, v0.7.0) | golden byte-parity with the direct gate on the proving-ground swimlane tree (R3.P, EMPTY diff); discovery over `cvg/sketch/` then `sketch/` `swimlane-*/` (0→exit 2, 2→exit 2 naming both, 1→gates); FAIL passed through unmasked; exit-2 paths end in `CHECK_PLAN=USAGE_ERROR` |
 | `cvg tasks validate <spec>` | `validate-task-spec.sh` | routed pass-through (same mechanism as `gate`, byte-parity eval'd there) |
 | `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |

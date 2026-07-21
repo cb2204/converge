@@ -270,7 +270,15 @@ complete vertical slice. The five beats, in order, never bundled:
     `scaffold-adr.sh --check --final --dir cvg/docs/adrs` run (same stdout,
     exit 0, `CHECK_ADR=OK`), proven in eval_1 AND by hand. **R2 = third pass
     fully closed end-to-end; next: R3.U (Pass 3 Decompose — reqs-to-swimlane-plans).**
-- [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
+- [x] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` ✅ **CLOSED
+  END-TO-END 2026-07-21, all five beats.** U ✅ (skill hardened 0.3.0→**0.7.0**:
+  H1–H7 seam economics · .plan.md · leg-NN-tech nomenclature · mermaid ·
+  **swimlane = directory** = lean PRD + one file per leg, internal structure
+  MCP-grounded) · R ✅ (3 swimlanes on the proving ground, 9 legs, owner-approved,
+  b02feca) · C ✅ (canonical + easy-first lesson w/ teaching modes, check-lesson
+  PASS) · I ✅ (`cvg decompose`, cvg 0.5.0, T-20260721-cvg-decompose gold-sanity
+  ACCEPT) · P ✅ (golden diff EMPTY: `cvg decompose` byte-identical to the direct
+  gate, `CHECK_PLAN=OK`). Next: R4 (Pass 4 Consensus — adversarial review + the fork).
   - [x] R3.U understand + harden ✅ 2026-07-21 — read the skill + both
     references (plan-altitude, seams-and-swimlanes) + `new-plan.sh` end to end;
     **MCP field verification** (Exa/Firecrawl/Tavily, source-linked) graded the
