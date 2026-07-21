@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.9.0"
+CVG_VERSION="0.10.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -88,6 +88,7 @@ cmd_help() {
   printf '  tasks gate <spec>        sign-off gate (safe-to-delegate) — refuses an\n'
   printf '                           XL/XXL node (dispatch its children, not the node)\n'
   printf '  tasks accept <spec>      acceptance after execution\n'
+  printf '  tasks dod <spec>         definition-of-done + traceability matrix (DOD token)\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  ready                    list ready-to-run tasks\n'
@@ -231,8 +232,9 @@ case "$CMD" in
       validate) route validate-task-spec.sh "$@" ;;
       gate)     route safe-to-delegate.sh "$@" ;;
       accept)   route accept-task.sh "$@" ;;
+      dod)      route definition-of-done.sh "$@" ;;
       *)
-        ui_err "unknown tasks subcommand '${SUB:-}' — expected: validate | gate | accept"
+        ui_err "unknown tasks subcommand '${SUB:-}' — expected: validate | gate | accept | dod"
         exit 2
         ;;
     esac
@@ -534,6 +536,7 @@ m = {
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),
+    c("tasks dod <spec>", "5B", "task-spec/definition-of-done.sh", ["DOD=COMPLETE|GAPS|USAGE_ERROR"], False, "cvg tasks dod T-...md", "Definition-of-Done + traceability matrix (every behavior B-N → its verifying eval); gates DOD=GAPS if a behavior is untraced. The 2026 agent-spec SOTA review artifact."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),

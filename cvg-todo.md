@@ -440,7 +440,21 @@ complete vertical slice. The five beats, in order, never bundled:
     declared, fork atop every PRD, provenance intact). Pass 3 structure still
     `CHECK_PLAN=OK` after the fork lines. **Pass 4 CLOSED on a real adversarial
     consensus.** Backbone hands off to R5 (Pass 5B) per the fork.
-- [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
+- [~] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
+  - [x] R5.R tasking ✅ 2026-07-21 — **the whole backbone cut into task-specs**. All 9
+    legs → 9 task-specs in `tests/uc-analytics/cvg/tasks/` (steel-thread L on glm;
+    the rest M/S leaves), each grounded in its leg's acceptance criteria + the
+    sharpened Pass-4 seam contracts, wired into a clean depends_on DAG
+    (steelthread→alldomains→{freshness,silver}→gold→publish→core→honest→mcp). **Every
+    task: `validate` ok · `gate` DELEGATE · `dod` COMPLETE.** Research (Exa/Tavily/
+    Firecrawl) confirmed the task-spec is at/above the 2026 agent-spec SOTA; the one
+    high-value gap — a reviewable Definition-of-Done / traceability matrix
+    (Brodner/Moai/Thread AI) — is now a CLI command: **`cvg tasks dod`** (cvg 0.9.0→
+    **0.10.0**) renders `every behavior B-N → its verifying eval → terminal` and gates
+    `DOD=COMPLETE|GAPS`, inheriting `--json`. New `definition-of-done.sh` (bash + py
+    stdlib). Next: sign the tasks Tier-1 (`gate --stamp`) → execute → `accept
+    --gold-sanity`, or continue widening. (Repo-root backlog has a pre-existing
+    duplicate-id `T-20260721-cvg-decompose` in tasks/done/ — flagged, out of R5 scope.)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)
 - [ ] **R8 · Pass 8 The Loop** — `task-loop --issue N` by hand, one issue at a
