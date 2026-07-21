@@ -177,7 +177,43 @@ complete vertical slice. The five beats, in order, never bundled:
     byte-identical to the direct check-tech-spec run (golden diff EMPTY,
     exit 0, `CHECK_TECH_SPEC=PASS`), proven in eval_3 AND re-proven by
     hand post-acceptance.
-- [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs` (five beats)
+- [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs`
+  - [x] R2.U understand + harden ✅ 2026-07-19 — field comparison (Nygard /
+    MADR 4.0 / YADR / AWS / fitness functions, source-linked) delivered
+    H1–H12; owner approved ALL. Applied: scaffold-adr.sh v0.3.0→**v0.4.0**
+    (YAML frontmatter w/ `spec_ref` requirement-ID traceability; lifecycle
+    proposed→accepted→deprecated|superseded, born `proposed`, accepted
+    ADRs immutable; `--supersede NNNN` stamps bidirectional links;
+    `--context` mode births 0000-context.md (Terrain/Given/Build/Spec);
+    `--check` now fails unfilled scaffolds (template comments + empty
+    sections), validates the status enum + supersede back-links, requires
+    0000 + CONTEXT.md, catches mid-sentence modal drift in Decision
+    ("…must therefore build…"), advisory NOTEs for missing Rejected
+    reading / empty spec_ref / no runnable-evidence block; `--final` for
+    pass close (nothing `proposed`); machine token
+    `CHECK_ADR=OK|FAIL|EMPTY|USAGE_ERROR`). Template gains Rejected
+    reading (H1), runnable-command Evidence block (H6), "Re-verify when:"
+    (H12), `deciders` (H11). SKILL.md 0.4.0: lifecycle + agents-first
+    sections; `compatibility` moved under metadata (P-8 packaging rule).
+    Rule 8/9 proof: unfilled scaffold NEW=FAIL vs v0.3.0=wrong-OK (live
+    repro both ways); modal drift caught (pattern absent from v0.3.0 by
+    construction); status-enum + supersede-link negatives each flag for
+    their intended reason; good DevOps set (non-data, rule 9) exits 0
+    `CHECK_ADR=OK` incl. `--final`. shellcheck -x clean, bash 3.2 parse
+    OK, quick_validate green. Post-apply validation via Tavily+Firecrawl:
+    frontmatter=MADR ADR-0013, lifecycle enum + supersede semantics =
+    field canon (adr-tools `-s`), Rejected reading ≈ Alternatives
+    Considered, runnable Evidence ⊃ MADR Confirmation; Structured MADR
+    names "AI Optimization / LLM context injection" as the direction —
+    matches the agents-first design. Noted deviation (deliberate,
+    documented): Converge ADRs record terrain facts, not design choices —
+    design choices live in Pass 3+. Optional future: an index/README
+    table per ADR dir (field convention; 0000 partially serves).
+  - [ ] R2.R run — ground the canonical tech-spec against the real
+    Postgres terrain; ADRs born on the proving ground
+  - [ ] R2.C canonize + TEACH (Gate: owner calls the ADR set canonical)
+  - [ ] R2.I implement — `cvg structure` subcommand
+  - [ ] R2.P prove — golden diff vs the manual run
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)

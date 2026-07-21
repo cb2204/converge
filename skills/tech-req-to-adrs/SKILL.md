@@ -12,11 +12,11 @@ description: >-
   — that is Pass 3 planning; stay at terrain altitude.
   Engine is Claude Code on the repo; engine/tracker-agnostic, no baked names.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
   converge_pass: 2
   pass_name: structure
+  compatibility: "Claude Code; bash 3.2+ (macOS system bash safe)"
 license: Complete terms in LICENSE
-compatibility: "Claude Code; bash 3.2+ (macOS system bash safe)"
 ---
 
 # tech-req-to-adrs — Converge Pass 2 (Structure)
@@ -39,6 +39,21 @@ stand on it.
 - **Run the brownfield; do not assume it.** Grounding requires reading and *running* the real source, not summarizing a doc. Reconcile the real state of your data store (row counts, contents, freshness) against what the spec assumed before you write a word.
 - **Evidence over assertion.** Every ADR cites the line, count, or command output that makes it true (for example, a schema constraint such as `payments.order_id ... REFERENCES orders(order_id)` in a relational project, or the equivalent grounding fact for your stack), so the next engine trusts the file, not the author.
 - **No engine/tracker flags.** The engine is fixed (Claude Code on the repo). There is no adversary and no tracker here; those bind in Pass 4 (`--adversary`) and the Fork B register (`--tracker`).
+- **Lifecycle: proposed → accepted → deprecated | superseded (v0.4.0).**
+  Records are born `proposed` and become `accepted` at review — never at
+  scaffold time. **Accepted ADRs are immutable**: when a recorded fact stops
+  being true (a fenced absence gets built, a schema migrates), do not edit
+  history — scaffold the replacement with `--supersede NNNN`; the script
+  stamps both directions (`supersedes:` / `superseded_by:`) and `--check`
+  verifies the links. The pass cannot close while any record is still
+  `proposed` (`--check --final`).
+- **Records speak machine (agents are first-class consumers).** Metadata
+  lives in YAML frontmatter (`status`, `date`, `ground`, `spec_ref`,
+  `supersedes`, `superseded_by`, `deciders`) so Pass 3 / Pass 5B agents grep
+  fields, never prose. `spec_ref` cites the requirement ID(s) (`R-n`) the
+  fact grounds — the chain the whole descent stands on: R-n in the spec →
+  ADR grounds it → plan cites the ADR → task eval verifies R-n. `--check`
+  ends in a stable token: `CHECK_ADR=OK|FAIL|EMPTY|USAGE_ERROR`.
 
 ## Instructions
 
@@ -50,8 +65,10 @@ recording first would enshrine assumptions.
 
 State plainly whether this is **greenfield** (nothing exists; the ADRs record the
 constraints the spec imposes) or **brownfield** (a working base exists; the ADRs
-record what is already true). Write it in the first record — `0000-context.md` or
-the first numbered ADR — so every later decision is anchored to known terrain.
+record what is already true). Write it in the first record — scaffold it with
+`scaffold-adr.sh --context` → `docs/adrs/0000-context.md` (Terrain / Given
+surface / Build surface / Spec pointer) — so every later decision is anchored
+to known terrain. `--check` requires the 0000 record to exist.
 
 Inventory the *given* surface concretely: which sources, stores, build steps, and
 serving components already run today, and which the spec still asks to build.
@@ -84,11 +101,17 @@ bash .claude/skills/tech-req-to-adrs/scripts/scaffold-adr.sh "payments join on o
 ```
 
 The script auto-increments `NNNN`, slugifies the title, stamps the date, and lays
-down a fixed ADR skeleton (Status / Ground type / Context / Decision / Evidence /
-Consequences). Fill it so each record states **what is** and **what must hold**,
-cites its evidence, and names its consequence for downstream passes — never a
-build instruction. Example — the representative set for a relational/warehouse
-project might be:
+down a fixed skeleton: YAML frontmatter (status born `proposed`, `spec_ref` for
+the requirement IDs) + Context / Decision / **Rejected reading** (the worthiness
+test says the fact could have been otherwise — record the otherwise so no later
+agent re-litigates it) / Evidence (the observation AND the runnable command that
+re-proves it, in a fenced block) / Consequences (ending in "Re-verify when: …" —
+the event that would invalidate the fact). Fill it so each record states
+**what is** and **what must hold**, cites its evidence, and names its
+consequence for downstream passes — never a build instruction. Delete every
+template comment as you fill: `--check` fails any record still carrying one,
+and any required section left empty. Example — the representative set for a
+relational/warehouse project might be:
 
 - `0001-payments-join-on-order-id` — the only orders↔payments seam.
 - `0002-utc-date-grain` — all time columns are `TIMESTAMPTZ`; the date grain is UTC.
@@ -125,7 +148,9 @@ Run the checker, then eyeball the invariant:
 bash .claude/skills/tech-req-to-adrs/scripts/scaffold-adr.sh --check
 ```
 
-- [ ] The terrain is **named** (greenfield or brownfield) in writing.
+- [ ] The terrain is **named** (greenfield or brownfield) in `0000-context.md` (`--check` enforces its presence).
+- [ ] Every record's frontmatter `status` sits in the lifecycle enum; the pass closes with `--check --final` — nothing left `proposed`, supersede links bidirectional.
+- [ ] Every ADR cites the requirement ID(s) it grounds (`spec_ref: R-n`) — the spec→ADR→plan→eval chain starts here.
 - [ ] For brownfield, the base was *run*, not assumed: the project's data-prep/build step was executed and its real state reconciled against the spec's assumptions; the current layer inventory is confirmed.
 - [ ] Every grounding decision is its own `docs/adrs/NNNN-<slug>.md` file.
 - [ ] Each ADR records a **fact/constraint** with cited evidence — none says "build X" or designs a solution (`--check` greps for build-verbs and flags drift).
