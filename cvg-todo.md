@@ -177,7 +177,12 @@ complete vertical slice. The five beats, in order, never bundled:
     byte-identical to the direct check-tech-spec run (golden diff EMPTY,
     exit 0, `CHECK_TECH_SPEC=PASS`), proven in eval_3 AND re-proven by
     hand post-acceptance.
-- [ ] **R2 · Pass 2 Structure** — `tech-req-to-adrs`
+- [x] **R2 · Pass 2 Structure** — `tech-req-to-adrs` ✅ **CLOSED END-TO-END
+  2026-07-21, all five beats.** Beat state: U ✅ · R ✅ (6 grounding ADRs on
+  live terrain) · C ✅ (7 ADRs CANONICAL + second-eyes fixes + lesson) · I ✅
+  (`cvg structure`, cvg 0.4.0, T-20260721-cvg-structure gold-sanity ACCEPT) ·
+  P ✅ (golden diff EMPTY: `cvg structure` byte-identical to the direct gate,
+  `CHECK_ADR=OK`).
   - [x] R2.U understand + harden ✅ 2026-07-19 — field comparison (Nygard /
     MADR 4.0 / YADR / AWS / fitness functions, source-linked) delivered
     H1–H12; owner approved ALL. Applied: scaffold-adr.sh v0.3.0→**v0.4.0**
@@ -246,8 +251,25 @@ complete vertical slice. The five beats, in order, never bundled:
     backbone.md`, check-lesson `GATE: PASS` (8 components each w/ downstream
     failure, decisions table w/ alternatives, 5 check-yourself Qs). Next: R2.I
     (`cvg structure` subcommand) → R2.P (golden diff vs this manual run).
-  - [ ] R2.I implement — `cvg structure` subcommand
-  - [ ] R2.P prove — golden diff vs the manual run
+  - [x] R2.I implement ✅ 2026-07-21 — `cvg structure` born (cvg 0.3.0→
+    **0.4.0**), one atomic dogfooded ceremony (`T-20260721-cvg-structure`,
+    effort S, TIER=1 sign-off, 3/3 evals + Exit Check, `--gold-sanity`
+    ACCEPT — discriminating: evals FAIL on baseline HEAD, PASS now). Mirrors
+    `intent`/`capture`: locate the ADR set (`cvg/docs/adrs/` then
+    `docs/adrs/`; 0→exit 2, >1→exit 2 naming both, 1→gates) then exact `exec`
+    pass-through to `scaffold-adr.sh --check [--final] --dir <dir>`; `--dir`
+    override; unknown flags + every exit-2 path end in
+    `CHECK_ADR=USAGE_ERROR`; FAIL passed through unmasked (exit 1
+    `CHECK_ADR=FAIL`). Gate path undecorated (byte-parity is the proof).
+    shellcheck -x + bash 3.2 -n clean; help/version/bin-README carry the
+    structure row. Blast-radius note: pre-existing unrelated scratch
+    (`docs/…v4.pdf`, `temp/*.png`) set aside via `git stash` for the clean
+    accept, then restored.
+  - [x] R2.P prove ✅ 2026-07-21 — **golden diff EMPTY**: `cvg structure
+    --final` on the proving ground byte-identical to the direct
+    `scaffold-adr.sh --check --final --dir cvg/docs/adrs` run (same stdout,
+    exit 0, `CHECK_ADR=OK`), proven in eval_1 AND by hand. **R2 = third pass
+    fully closed end-to-end; next: R3.U (Pass 3 Decompose — reqs-to-swimlane-plans).**
 - [ ] **R3 · Pass 3 Decompose** — `reqs-to-swimlane-plans` (five beats)
 - [ ] **R4 · Pass 4 Consensus** — `sketch-plans-adversarial-review`;
   real `--adversary`; **Gate H2 + the fork** (five beats)

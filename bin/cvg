@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.3.0"
+CVG_VERSION="0.4.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -71,6 +71,9 @@ cmd_help() {
   printf '                           docs/) when no path is given\n'
   printf '  intent [--draft] [spec]  Pass 1 gate — finds cvg/docs/tech-spec-*.md\n'
   printf '                           (then docs/) when no path is given\n'
+  printf '  structure [--final] [--dir d]\n'
+  printf '                           Pass 2 gate — finds cvg/docs/adrs/ (then\n'
+  printf '                           docs/adrs/); --final requires nothing proposed\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
@@ -220,6 +223,58 @@ case "$CMD" in
     fi
     # shellcheck disable=SC2086  # INT_FLAGS is a controlled flag list (--draft only)
     exec bash "$GATE" $INT_FLAGS "$INT_TARGET"
+    ;;
+  structure)
+    # Pass 2 gate: locate the ADR set, route to the tech-req-to-adrs checker.
+    # Gate path is an exact pass-through (exec, zero decoration) — R2.P proves
+    # by byte-diff. Discovery/flag errors exist ONLY on the exit-2 path and
+    # still end in the machine token CHECK_ADR=USAGE_ERROR (agents are users).
+    GATE="$CVG_HOME_DIR/skills/tech-req-to-adrs/scripts/scaffold-adr.sh"
+    STR_FLAGS=""
+    STR_DIR=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --final) STR_FLAGS="$STR_FLAGS --final"; shift ;;
+        --dir)
+          if [ $# -lt 2 ]; then
+            ui_err "--dir needs a path — cvg structure [--final] --dir <adr-dir>"
+            printf 'CHECK_ADR=USAGE_ERROR\n'
+            exit 2
+          fi
+          STR_DIR="$2"; shift 2 ;;
+        --dir=*) STR_DIR="${1#--dir=}"; shift ;;
+        -*)
+          ui_err "unknown structure flag '$1' — expected --final or --dir <path>"
+          printf 'CHECK_ADR=USAGE_ERROR\n'
+          exit 2 ;;
+        *)       STR_DIR="$1"; shift ;;
+      esac
+    done
+    if [ -z "$STR_DIR" ]; then
+      STR_N=0
+      STR_LIST=""
+      for D in cvg/docs/adrs docs/adrs; do
+        [ -d "$D" ] || continue
+        ls "$D"/[0-9][0-9][0-9][0-9]-*.md >/dev/null 2>&1 || continue
+        STR_N=$((STR_N + 1))
+        STR_DIR="$D"
+        STR_LIST="${STR_LIST}  ${D}
+"
+      done
+      if [ "$STR_N" -eq 0 ]; then
+        ui_err "no ADR set (docs/adrs/ with NNNN-*.md) found under cvg/docs/ or docs/ from '$PWD' — pass it: cvg structure [--final] --dir <adr-dir>"
+        printf 'CHECK_ADR=USAGE_ERROR\n'
+        exit 2
+      fi
+      if [ "$STR_N" -gt 1 ]; then
+        ui_err "ambiguous: $STR_N ADR directories found — pass one explicitly:"
+        printf '%s' "$STR_LIST" >&2
+        printf 'CHECK_ADR=USAGE_ERROR\n'
+        exit 2
+      fi
+    fi
+    # shellcheck disable=SC2086  # STR_FLAGS is a controlled flag list (--final only)
+    exec bash "$GATE" --check $STR_FLAGS --dir "$STR_DIR"
     ;;
   eval)       route run-task-spec.sh "$@" ;;
   lint)       route lint-backlog.sh "$@" ;;
