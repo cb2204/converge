@@ -2,7 +2,7 @@
 
 `evals.json` holds 6 task-benchmark cases (prompt + expectations) that exercise the
 crown jewels: the 6 zones, the behavior-to-eval traceability chain, runnable bash
-evals (the moat), the effort gate (refuse L/XL), the closed loop
+evals (the moat), the six-tier effort gate (XL/XXL decompose into children), the closed loop
 (validate → safe-to-delegate), and vendor-neutral frontmatter. Grounded in this
 repo's postgres → duckdb → dbt → MCP stack.
 

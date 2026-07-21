@@ -4,7 +4,7 @@ title: {{TITLE}}
 status: {{STATUS}}
 format_version: 3
 profile: {{PROFILE}}  # lite | standard | full — scales required zones to effort/blast-radius (see references/concepts/profiles.md)
-effort: {{EFFORT}}  # XS | S | M → Kimi ; L → GLM (requires execution_backend: glm) ; XL → route to SDD (see references/concepts/effort-gate.md)
+effort: {{EFFORT}}  # LEAF: XS|S|M → Kimi ; L → GLM (execution_backend: glm) . NODE: XL|XXL → add a children: block, decompose (see references/concepts/effort-gate.md)
 budget_iterations: {{BUDGET_ITERATIONS}}
 agent: {{AGENT}}
 parent: (none)  # FEATURE-altitude PRD/SDD this task decomposes from (path or url); the task DISTILLS it, never embeds it

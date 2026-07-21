@@ -60,8 +60,8 @@
     },
     "effort": {
       "type": "string",
-      "enum": ["XS", "S", "M", "L", "XL"],
-      "description": "T-shirt sized effort estimate. Gate (v3.2): XS/S/M accepted (recommend Kimi); L accepted ONLY with execution_backend:glm and one coherent done-condition (recommend GLM); XL rejected → route to SDD (AgentSpec/OpenSpec/SpecKit). See references/concepts/effort-gate.md."
+      "enum": ["XS", "S", "M", "L", "XL", "XXL"],
+      "description": "Six-tier t-shirt size (v3.4). LEAVES (runnable atoms): XS/S/M (recommend Kimi) and L (recommend GLM, requires execution_backend:glm + ONE coherent done-condition). The leaf write-surface (|touches_paths ∪ creates_paths|) is gate-checked: XS<=1, S<=2, M<=3, L<=5. NODES (decomposition directives, NOT runnable): XL/XXL MUST declare a `children:` list (>=2 for XL, >=3 for XXL) and expand into leaf slices — there is NO route out to SDD. See references/concepts/effort-gate.md."
     },
     "budget_iterations": {
       "type": "integer",
@@ -78,11 +78,16 @@
       "items": {"type": "string", "pattern": "^T-[0-9]{8}-[a-z0-9][a-z0-9-]*$"},
       "description": "List of T-IDs that must be done before this task is ready."
     },
+    "children": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^T-[0-9]{8}-[a-z0-9][a-z0-9-]*$"},
+      "description": "The leaf/child Task-Specs an XL/XXL NODE decomposes into (>=2 for XL, >=3 for XXL). Only nodes carry this; a worker dispatches the children, never the node. Leaves omit it. See references/concepts/effort-gate.md."
+    },
     "touches_paths": {
       "type": "array",
       "items": {"type": "string", "minLength": 1},
-      "minItems": 1,
-      "description": "Authoritative list of paths this task is allowed to modify."
+      "minItems": 0,
+      "description": "Authoritative list of paths this task is allowed to modify. Leaves declare their write surface here (gate-checked against the tier budget); an XL/XXL NODE owns no write surface, so it declares `touches_paths: []` (its children do the writing)."
     },
     "source_note": {
       "type": "string",

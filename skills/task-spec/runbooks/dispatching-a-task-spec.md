@@ -33,7 +33,7 @@ the agent contract treats the model inside a backend as a black box (clause C9).
 |----------|--------------------|-----------|
 | `XS` / `S` / `M` | **Kimi** | Sprinter: reflex-grade, fast tool loops; ideal for atomic single-eval cranks |
 | `L` | **GLM** (required) | Marathoner: 1M-context, long-horizon; the gate accepts L only with `execution_backend: glm` |
-| `XL` | **route to SDD** | Too big for one Task-Spec → AgentSpec / OpenSpec / SpecKit; decompose the build phase into S/M atoms |
+| `XL` / `XXL` | **not dispatched — decompose** | A node is never run: a worker dispatches its `children:` (leaf atoms), then composes their results. safe-to-delegate refuses the node. |
 
 > `glm` and `gemini` currently share the generic completion-API recipe
 > ([dispatch-recipes/gemini.md](dispatch-recipes/gemini.md)) until a dedicated `glm` recipe

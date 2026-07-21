@@ -120,7 +120,7 @@ tags: ["observability", "verification", "langfuse"]
 | `id` | string | yes | Format: `T-YYYYMMDD-<kebab-slug>`. Deterministic, unique within `tasks/`. |
 | `title` | string | yes | Single line, ≤120 chars. Imperative voice preferred ("Verify X" not "Verifying X"). |
 | `status` | enum | yes | One of: `ready`, `in-progress`, `blocked`, `done`, `parked`. |
-| `effort` | enum | yes | One of: `S`, `M`. `L` and `XL` are REJECTED by the format (route to AgentSpec SDD instead). |
+| `effort` | enum | yes | Six-tier: `XS`/`S`/`M`/`L` are runnable leaves (write-surface budget-checked; `L` needs `execution_backend: glm`); `XL`/`XXL` are NODES that MUST carry a `children:` block and decompose (no route out). See effort-gate.md. |
 | `budget_iterations` | int | yes | Max retry cycles in the eval loop. Default 15. Hard cap 30. |
 | `agent` | string | yes | `any` (vendor-portable) OR specific agent name (`python-developer`, `tsys-adf-parser`, etc.). |
 | `depends_on` | list[string] | yes | List of Task-Spec IDs that must complete before this one. Empty `[]` if none. |

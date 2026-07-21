@@ -42,7 +42,7 @@ color: green
 ┌─────────────────────────────────────────────────────────────┐
 │  TASK-ARCHITECT DECISION FLOW                                │
 ├─────────────────────────────────────────────────────────────┤
-│  1. CLASSIFY    → S/M only (refuse L/XL, route to AgentSpec)│
+│  1. CLASSIFY    → 6 tiers; XL/XXL decompose into children   │
 │  2. CHECK       → subjectivity guard (refuse fuzzy outputs) │
 │  3. RESEARCH    → Context7 + Exa + Ref for domain           │
 │  4. SCAN        → host repo for touches_paths, conventions  │
@@ -108,7 +108,7 @@ compatibility.
 
 | Category | Threshold | Action If Below | Examples |
 |----------|-----------|-----------------|----------|
-| CRITICAL | 0.98 | REFUSE | Subjective outputs, L/XL effort |
+| CRITICAL | 0.98 | ENFORCE | XL/XXL must decompose (children:); L must be glm + one goal |
 | IMPORTANT | severity-scaled | ASK user | Standard Task-Spec generation |
 | STANDARD | 0.90 | PROCEED + disclaimer | Converting existing legacy tasks |
 | ADVISORY | 0.80 | PROCEED freely | Format validation, lint checks |
@@ -168,10 +168,10 @@ mcp__ref__ref_search_documentation({ query: "<domain> <topic>" })
 
 **Process:**
 1. Read user intent
-2. Estimate effort: S (≤1 day), M (1-3 days), L (multi-day), XL (multi-week)
-3. If L or XL → REFUSE; instruct user to route to AgentSpec SDD
+2. Classify effort (six tiers): XS/S/M/L are runnable LEAVES (L needs execution_backend: glm + one coherent goal); XL/XXL are decomposition NODES
+3. If XL or XXL → DECOMPOSE: emit a parent node (touches_paths: [], a children: block ≥2/≥3) + leaf slices along the seams (layers, lanes, independent test-suites). Never route to SDD — there is no route out.
 4. Estimate subjectivity: can success be checked by bash evals?
-5. If subjective → REFUSE; route to AgentSpec SDD with rationale
+5. If subjective → author with a human-checkpoint eval (or lite profile) — not a refusal
 
 This is the CRITICAL gate. Wrong classification produces broken Task-Specs.
 
@@ -369,8 +369,8 @@ and [../references/concepts/conformance-levels.md](../references/concepts/confor
 
 | Anti-Pattern | Why It's Bad | Do This Instead |
 |--------------|--------------|-----------------|
-| Skip the effort gate | L/XL tasks fail EDD; user wastes a day | ALWAYS classify first; refuse L/XL |
-| Eval anything subjective | "Looks good" can't be bash-checked | Refuse + route to AgentSpec SDD |
+| Skip the effort gate | mis-sized leaves fail; nodes get run instead of decomposed | ALWAYS classify first; XL/XXL → children |
+| Eval anything subjective | "Looks good" can't be bash-checked | Use a human-checkpoint eval (no SDD escape) |
 | Skip MCP research | Anti-patterns become guesswork | Always query Context7 + Exa before drafting |
 | Write 1-eval tasks | Can't catch multi-mode failures | Minimum 3 evals; ordered cheap → expensive |
 | Hardcode user's repo paths in template | Breaks portability | Use placeholders; substitute at compose time |
@@ -383,7 +383,7 @@ and [../references/concepts/conformance-levels.md](../references/concepts/confor
 
 ```text
 VALIDATION
-[ ] Effort classified (S/M only; L/XL refused)
+[ ] Effort classified (XS/S/M/L leaf within budget; XL/XXL node with children:)
 [ ] Subjectivity guard applied
 [ ] KB consulted for format requirements
 [ ] MCP queried for domain freshness

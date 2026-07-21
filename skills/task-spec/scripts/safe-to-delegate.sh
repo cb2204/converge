@@ -99,10 +99,9 @@ echo "────────────────────────�
 # children. Block early and point at the slices. (effort-gate.md)
 STD_EFFORT=$(grep -m1 '^effort:' "$FILE" | awk '{print $2}' || true)
 if ts_size_is_valid "$STD_EFFORT" && ! ts_size_is_leaf "$STD_EFFORT"; then
-  STD_KIDS=$(sed -n '/^children:/,/^[^[:space:]-]/p' "$FILE" | grep -cE '^[[:space:]]*-[[:space:]]' || true)
   echo "0. Delegatability (leaf-only) ..."
   echo "   ${RED}BLOCK${RESET} — '$STD_EFFORT' is a decomposition NODE, not a runnable unit."
-  echo "     A worker must dispatch its ${STD_KIDS} child task-spec(s) (leaves), never the node itself."
+  echo "     A worker must dispatch its child task-specs (the leaves in 'children:'), never the node itself."
   echo "     See references/concepts/effort-gate.md."
   echo "${BOLD}${RED}VERDICT: DO NOT DELEGATE${RESET} — node, not a leaf; dispatch its children."
   exit 1

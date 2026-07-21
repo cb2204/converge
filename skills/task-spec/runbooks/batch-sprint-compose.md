@@ -8,7 +8,7 @@
 ## Inputs
 
 - A text file with one intent per line in `slug: description` form
-- Effort class (S or M) — applies to every generated spec
+- Effort class (leaf tier XS/S/M/L) — applies to every generated leaf spec
 - (optional) `--agent` hint, `--source-note` path, `--queue` flag
 
 ## Pre-condition: verify Fast Batch is appropriate
@@ -135,7 +135,7 @@ Total time: ~20 min for 11 specs (vs. ~4 hours if each ran the full 6-phase work
 - You only need 1–2 specs → use [from-fuzzy-intent.md](./from-fuzzy-intent.md)
 - The user intent is a paragraph, not a structured list → use [from-fuzzy-intent.md](./from-fuzzy-intent.md)
 - You need the agent to draft evals or research failure modes → use [from-fuzzy-intent.md](./from-fuzzy-intent.md)
-- Effort is L or XL → refuse and route to AgentSpec SDD
+- Effort is XL or XXL → it's a decomposition NODE: emit a parent + a `children:` block of leaf specs (no route out)
 
 ## Remember
 

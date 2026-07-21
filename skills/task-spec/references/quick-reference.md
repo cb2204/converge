@@ -8,7 +8,7 @@
 ## Generate a new Task-Spec
 
 ```bash
-# Required: slug, effort (S or M)
+# Required: slug, effort (XS/S/M/L leaf, or XL/XXL node)
 # Optional: agent (default: any), source_note
 bash ~/.claude/skills/task-spec/scripts/generate-task-spec.sh \
     verify-langfuse-otel S any notes/2026-05-04.md
@@ -60,7 +60,7 @@ title: One-line imperative
 status: ready                  # ready | in-progress | blocked | done | parked
 format_version: 3
 profile: standard              # lite | standard | full (absent → standard)
-effort: S                      # S | M (L/XL refused; route to AgentSpec)
+effort: S                      # XS/S/M/L = runnable leaf · XL/XXL = node (needs children:)
 budget_iterations: 15
 agent: any                     # any | python-developer | ...
 parent: (none)                 # FEATURE-altitude PRD/SDD this task distills from
@@ -118,9 +118,9 @@ eval_4() { pytest -q tests/path; }           # tests     (30s)
 
 | Task is... | Use |
 |------------|-----|
-| S or M effort, bash-checkable success | **Task-Spec (EDD)** |
-| L or XL effort | AgentSpec (SDD) |
-| Subjective output (UI feel, copy) | AgentSpec (SDD) |
+| XS/S/M/L effort, bash-checkable success | **Task-Spec leaf** (run it) |
+| XL/XXL effort | **Task-Spec node** — decompose into `children:` (leaves) |
+| Subjective output (UI feel, copy) | Task-Spec with a human-checkpoint eval (or `lite` profile) — no SDD escape |
 | One-off exploration ("what would X look like?") | Just prompt; no spec needed |
 
 ---
@@ -137,7 +137,7 @@ acceptance gate, `backend_metadata`). For what shipped in each release, see
 ## Anti-patterns (don't)
 
 - ❌ Edit frontmatter directly — use `transition-status.sh`
-- ❌ Author L/XL as Task-Spec — refused; use AgentSpec
+- ❌ Author XL/XXL as a runnable leaf — they're NODES; give them a `children:` block
 - ❌ Skip evals for "simple" tasks — every spec needs ≥3
 - ❌ Verbose Zone 1 (>100 lines Context) — you wrote a PRD
 - ❌ Vague Zone 3 ("be careful") — be specific

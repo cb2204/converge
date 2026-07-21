@@ -1,18 +1,18 @@
 {
   "skill_name": "task-spec",
-  "notes": "Evals for the task-spec skill (v3.1.1). Each prompt is what a real user/agent would say to invoke Task-Spec authoring. Expectations verify the crown jewels: the 6 zones, the behavior-to-eval traceability chain, runnable bash evals (the moat), the effort gate (refuse L/XL), the closed loop (validate -> safe-to-delegate), and vendor-neutral frontmatter. Prompts 1-4 are authoring cases; 5 tests the effort gate refusal; 6 tests legacy conversion. Grounded in this repo's postgres->duckdb->dbt->MCP stack where a codebase is needed.",
+  "notes": "Evals for the task-spec skill (v3.4). Each prompt is what a real user/agent would say to invoke Task-Spec authoring. Expectations verify the crown jewels: the 6 zones, the behavior-to-eval traceability chain, runnable bash evals (the moat), the SIX-TIER effort gate (XS/S/M/L leaves run; XL/XXL nodes decompose into children — no route out to SDD), the closed loop (validate -> safe-to-delegate), and vendor-neutral frontmatter. Prompts 1-4 are authoring cases; 5 tests XL/XXL DECOMPOSITION (not refusal); 6 tests legacy conversion. Grounded in this repo's postgres->duckdb->dbt->MCP stack where a codebase is needed.",
   "evals": [
     {
       "id": 1,
       "prompt": "Create a task-spec to add a dbt gold model gold_daily_revenue_by_category over the landed raw.* tables in the DuckDB warehouse. Revenue = SUM(payments.amount) where status='captured', grouped by product category and UTC order date.",
-      "expected_output": "A T-*.md Task-Spec file with all 6 zones, a Behavior section (Given/When/Then, B-N ids), at least 3 runnable bash evals each carrying verifies:[B-N], a validation_card, and an Exit Check that calls every eval. Frontmatter names effort S or M, touches_paths, and format_version 3.",
+      "expected_output": "A T-*.md Task-Spec file with all 6 zones, a Behavior section (Given/When/Then, B-N ids), at least 3 runnable bash evals each carrying verifies:[B-N], a validation_card, and an Exit Check that calls every eval. Frontmatter names a valid leaf tier (this one is S or M), touches_paths within the tier budget, and format_version 3.",
       "expectations": [
         "The output creates a T-*.md file under a tasks/ directory",
         "The file contains a '## Behavior' section with at least one Given/When/Then clause using a B-N identifier",
         "The file contains at least 3 bash eval functions (eval_1, eval_2, eval_3 or more)",
         "Each behavior B-N is referenced by at least one eval's verifies: field (behavior-to-eval traceability)",
         "The file contains an Exit Check that invokes every eval_N defined",
-        "The frontmatter declares format_version: 3 (or profile standard/full) and an effort class of S or M",
+        "The frontmatter declares format_version: 3 (or profile standard/full) and a valid leaf effort class (XS/S/M/L; here S or M) within the tier write-surface budget",
         "The output does NOT hardcode 'paid' as the payment status (the real status is 'captured')"
       ]
     },
@@ -52,12 +52,12 @@
     {
       "id": 5,
       "prompt": "Create a task-spec to migrate our entire analytics platform from Postgres to Snowflake, including re-architecting all pipelines and the serving layer. It's a multi-week effort.",
-      "expected_output": "The skill REFUSES to author this as a Task-Spec because it is L/XL effort, and routes the user to AgentSpec SDD (the 5-phase spec-driven path) instead. The effort gate refuses rather than asking.",
+      "expected_output": "The skill classifies this as an XXL decomposition NODE and DECOMPOSES it — never routing out to SDD. It produces a parent node Task-Spec with effort: XXL and a children: block (>=3 child task-spec ids), and the children are runnable leaf atoms (XS/S/M/L) sliced along the natural seams (e.g. per pipeline / per layer). The node owns no write surface (touches_paths: []); a worker dispatches the children, and safe-to-delegate refuses to delegate the node directly.",
       "expectations": [
-        "The skill does NOT produce a normal single Task-Spec for this multi-week request",
-        "The response identifies the work as L or XL effort",
-        "The response routes to AgentSpec / SDD (spec-driven development) as the correct tool for L/XL work",
-        "Optionally, the response offers to DECOMPOSE the effort into N atomic S/M task-specs with a parent index"
+        "The skill does NOT produce a single runnable Task-Spec for this multi-week request, and does NOT route to SDD/AgentSpec (that path is retired)",
+        "The response identifies the work as an XL/XXL decomposition NODE",
+        "The response DECOMPOSES into child task-specs: a parent node (effort XL/XXL, touches_paths: [], a children: list) plus runnable leaf atoms (XS/S/M/L) sliced along seams",
+        "It notes the node itself is not delegated — a worker runs the leaves and composes their results back up"
       ]
     },
     {

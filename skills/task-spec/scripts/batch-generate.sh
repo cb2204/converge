@@ -107,12 +107,16 @@ if [[ ! -f "$INTENT_FILE" ]]; then
 fi
 
 if [[ -z "$EFFORT" ]]; then
-  echo "ERROR: --effort is required (S or M)" >&2
+  echo "ERROR: --effort is required (a leaf tier: XS|S|M|L)" >&2
   exit 1
 fi
 
-if [[ "$EFFORT" != "S" && "$EFFORT" != "M" ]]; then
-  echo "ERROR: effort must be S or M. L/XL belong in AgentSpec SDD." >&2
+if ! ts_size_is_leaf "$EFFORT"; then
+  if ts_size_is_valid "$EFFORT"; then
+    echo "ERROR: '$EFFORT' is a decomposition NODE — nodes are not batch-generated. Author the node individually with a children: block, then batch-generate its leaves. See references/concepts/effort-gate.md" >&2
+  else
+    echo "ERROR: --effort must be a leaf tier (XS|S|M|L) (got: '$EFFORT')" >&2
+  fi
   exit 1
 fi
 

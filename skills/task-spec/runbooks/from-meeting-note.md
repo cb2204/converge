@@ -22,7 +22,7 @@ grep -A 3 -E '^(AI #|[0-9]+\.) ' notes/2026-05-04-handoff.md
 For each AI:
 
 1. Extract the action verb + object → becomes the title
-2. Estimate effort (S or M; route L/XL elsewhere)
+2. Estimate effort (leaf XS/S/M/L; XL/XXL → decompose into a node + children)
 3. Identify touches_paths from context
 4. Set `source_note: <meeting note path>`
 5. Set `source_action_item: "AI #N — <description>"`

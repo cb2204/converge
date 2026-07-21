@@ -304,12 +304,15 @@ One format. Many executors.
 | Cross-vendor portability | Vendor-specific | Universal | EDD |
 | Authoring time | Faster (prose) | Slower (evals harder) | SDD |
 | Audit trail | Narrative | Machine ledger | EDD |
-| Subjective output (UX, copy) | Works fine | Doesn't work | SDD |
-| L/XL effort | Designed for it | Refuses it | SDD |
+| Subjective output (UX, copy) | Works fine | Human-checkpoint eval | ~tie |
+| L/XL/XXL effort | Designed for it | **Decomposes into a node + children** | EDD |
 | Catches ambiguity | Maybe | Yes (eval fails) | EDD |
 
-**EDD wins 5/8.** Use SDD for L/XL and subjective work; EDD for S/M with
-bash-checkable success. Full analysis: [references/concepts/edd-vs-sdd-honest-comparison.md](references/concepts/edd-vs-sdd-honest-comparison.md)
+**EDD is the single path (v3.4).** The fork to SDD is retired: big work is a
+**decomposition node** (XL/XXL) that expands into leaf task-specs, not a route out to a
+spec-driven paradigm; subjective work uses a human-checkpoint eval. This section is kept
+as the honest historical comparison — the six-tier engine absorbed SDD's only remaining
+advantage (large work). Full analysis: [references/concepts/edd-vs-sdd-honest-comparison.md](references/concepts/edd-vs-sdd-honest-comparison.md)
 
 ---
 
@@ -336,8 +339,8 @@ What people try that doesn't work:
 - ❌ Skipping evals because "the task is simple" — every spec needs ≥3 evals
 - ❌ Verbose Zone 1 (Context > 100 lines) — you wrote a PRD; trim
 - ❌ Vague Zone 3 ("be careful") — anti-patterns must be specific
-- ❌ Including subjective evals ("looks good") — bash can't check beauty; use SDD
-- ❌ Effort = L/XL — Task-Spec refuses; route to AgentSpec
+- ❌ Including subjective evals ("looks good") — bash can't check beauty; use a human-checkpoint eval
+- ❌ Authoring XL/XXL as a runnable leaf — they're decomposition NODES; give them a `children:` block
 
 ---
 

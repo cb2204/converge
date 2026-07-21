@@ -42,7 +42,7 @@ Profiles are the source of truth for which zones are required — see [../refere
 | Failure | Fix |
 |---------|-----|
 | Missing frontmatter field | Add to YAML at top of file |
-| Effort is L/XL | Decompose into multiple S/M tasks OR route to AgentSpec |
+| Effort is XL/XXL | It's a NODE — decompose into a `children:` block of leaf tasks (XS/S/M/L). No route out. |
 | Missing zone | Add the section header + content |
 | No eval_N() functions | Write at least 3 runnable bash evals |
 | Validation Card YAML missing | Add the YAML block under `## Validation Card` |

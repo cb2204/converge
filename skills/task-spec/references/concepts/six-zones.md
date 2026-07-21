@@ -141,7 +141,7 @@ The YAML frontmatter carries machine-parseable metadata:
 | `id` | yes | T-YYYYMMDD-<kebab-slug> |
 | `title` | yes | Human-readable task name |
 | `status` | yes | ready \| in-progress \| blocked \| done \| parked |
-| `effort` | yes | S or M (L/XL → AgentSpec SDD) |
+| `effort` | yes | XS/S/M/L leaf · XL/XXL node (needs `children:`) |
 | `budget_iterations` | yes | Max retry iterations |
 | `agent` | yes | Agent hint (any, python-developer, etc.) |
 | `depends_on` | yes | List of blocking task IDs |
