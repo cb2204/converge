@@ -1,14 +1,14 @@
 ---
 name: sketch-plans-adversarial-review
-description: Runs the Pass 3 swimlane plans through a different model as adversary, sharpens them in place, and decides THE FORK (whole-system plan-driven vs. per-unit task-driven). Implements Converge Pass 4 (Consensus). Use when the user says "adversarial review", "consensus pass", "attack the plans", "have Codex refute this", "find what bites us at build time", or "decide the fork". Engine-agnostic via flags — the adversary is --adversary codex|gemini|gpt (default codex), never baked into the name; no tracker. Do NOT use to write new plans (that is Pass 3 reqs-to-swimlane-plans) or to cut a spec or tasks (that is Pass 5A plans-to-coherent-spec or Pass 5B task-spec) — this pass only hardens existing plans and names the fork.
+description: Runs the Pass 3 swimlane plans through a different model as adversary, sharpens them in place, and hands off to task-driven decomposition (Pass 5B). Implements Converge Pass 4 (Consensus). The fork is COLLAPSED (v3.4): consensus always flows to task-driven — the plan-driven path (Fork A / SDD) is retired now that task-spec is a six-tier sizing engine that scales from a one-liner to a whole backbone. Use when the user says "adversarial review", "consensus pass", "attack the plans", "have Codex refute this", or "find what bites us at build time". Engine-agnostic via flags — the adversary is --adversary codex|gemini|gpt (default codex), never baked into the name; no tracker. Do NOT use to write new plans (that is Pass 3 reqs-to-swimlane-plans) or to cut tasks (that is Pass 5B task-spec) — this pass only hardens existing plans; the gate stamps FORK: B (task-driven).
 metadata:
-  version: "0.4.0"
-compatibility: "Converge chain Pass 4 · Consensus. Runs after Pass 3 (reqs-to-swimlane-plans), before the Pass 5 fork (5A plans-to-coherent-spec / 5B task-spec). Engine/tracker-agnostic."
+  version: "0.5.0"
+compatibility: "Converge chain Pass 4 · Consensus. Runs after Pass 3 (reqs-to-swimlane-plans), before Pass 5B (task-spec) — the fork is collapsed to task-driven. Engine/tracker-agnostic."
 ---
 
 # sketch-plans-adversarial-review
 
-Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan default-to-refuted, every objection is FIXED or ACCEPTED-with-owner, and THE FORK is named — whole-system (plan-driven) or per-unit (task-driven) — before any spec or task is cut.
+Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan default-to-refuted, every objection is FIXED or ACCEPTED-with-owner, and the hardened plans hand off to **task-driven decomposition** (Pass 5B). The fork is collapsed (v3.4): there is no plan-vs-task choice — `FORK: B (task-driven)` is stamped as a constant.
 
 ## Important
 
@@ -16,7 +16,7 @@ Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan defa
 - **Default to refuted.** A merely-plausible plan step is not "fine" — the adversary must state why it *might* be wrong or the objection stands. Silence is not passing.
 - **Altitude lowers, it does not invert.** Pass 4 hardens what Pass 3 sketched. It creates NO new files and adds NO scope. New requirements are drift — push them back up the chain, never smuggle them in here. The diff on `sketch/*.plan` IS the record of what consensus changed.
 - **Nothing is silently dropped.** Every logged objection ends in exactly one of FIX (revised in a plan) or ACCEPT (recorded risk + named owner + reason to proceed).
-- **The fork is the decision of this pass, not a footnote.** It must precede Pass 5 because spec-vs-task is a structural choice about where the trust boundary sits. The rest of the chain forks on it; it cannot be deferred.
+- **The fork is a constant, not a decision (v3.4).** Consensus always hands off to task-driven decomposition (Pass 5B); `FORK: B (task-driven)` is stamped on every plan. The plan-driven path (Fork A / SDD) is retired — task-spec's six-tier sizing engine absorbs the whole range (a coupled slice is an L leaf, not a separate paradigm).
 
 ## Inputs / Outputs / Gate
 
@@ -32,7 +32,7 @@ Converge Pass 4 (Consensus): a *different* model attacks each swimlane plan defa
 |------|--------|---------|--------|
 | `--adversary` | `codex` \| `kimi` \| `gemini` | `codex` | Which *different-**family*** model runs the refutation. The invariant is a **different family** than the author (Claude = anthropic): `codex`=openai, `kimi`=moonshot, `gemini`=google. Self-preference bias is measured and family-correlated, so same-family review under-reports its own flaws. `claude -p` (fresh, no memory) is the explicitly-**weaker fallback** only. Dispatched headless by `cvg review --adversary <e>` (see `references/engine-adapter.md`). |
 
-No `--tracker` flag: this pass registers nothing and produces no issues. It sharpens plans in place and decides one fork.
+No `--tracker` flag: this pass registers nothing and produces no issues. It sharpens plans in place and stamps the constant fork (task-driven).
 
 ## Instructions
 
@@ -82,12 +82,12 @@ prototype — never the working demo itself, and never as implementation code
 
 Every cross-lane interface (the contract each lane hands to the next) must survive scrutiny or be corrected. Finish with a short **open-questions list**: each remaining item, its owner, and whether it blocks the build. Nothing may be silently dropped.
 
-### Step 4 — DECIDE THE FORK (name the trust boundary)
+### Step 4 — STAMP THE FORK (constant: task-driven)
 
-State the fork explicitly **at the top of every plan**. The fork is *where the trust boundary sits*:
+Stamp the fork **at the top of every plan** — it is now a constant: `FORK: B (task-driven)` + a one-line reason.
 
-- **Fork A (plan-driven)** — wraps the whole system in one trust boundary and hands one coherent spec to a single autonomous agent. Choose when the system is small and tightly coupled and only verifies as a whole, and a human will hold one big end-to-end gate.
-- **Fork B (task-driven)** — draws the boundary around each unit and cuts the plans into atomic, individually eval-bearing tasks dispatched per unit. Choose when every layer and endpoint has a cheap, runnable eval, so task-by-task convergence beats one big autonomous run.
+- **Fork B (task-driven) — THE path.** Draw the boundary around each unit and decompose the plans into task-specs, sized XS→XXL by the task-spec engine (XL/XXL nodes decompose further into leaf atoms). Every unit carries a cheap runnable eval; task-by-task convergence composes back up.
+- **Fork A (plan-driven) — RETIRED.** It wrapped the whole system in one SDD spec. Removed in v3.4: frontier models execute well-scoped atoms reliably, and a tree of verified atoms composes more safely than one monolith. If a slice "only verifies as a whole," make it an L leaf (one coherent goal, glm) — not a separate paradigm. See `references/the-fork.md`.
 
 Record the choice AND the why. Pass 5 only makes sense once the fork is committed.
 
@@ -109,7 +109,7 @@ un-spoofable):
 - [ ] Plans were grilled against the tech-spec AND the ADRs for drift, each conflict citing both sides.
 - [ ] Every logged objection is FIXED in a plan or ACCEPTED with a named owner — grep finds one resolution per objection.
 - [ ] Every cross-lane interface (the contract each lane hands to the next) survived scrutiny or was corrected.
-- [ ] **The fork is declared at the top of every plan** — Fork A or Fork B — with a reason.
+- [ ] **`FORK: B (task-driven)` is declared at the top of every plan** — with a reason (the fork is a constant now).
 - [ ] An open-questions list exists; blockers are flagged.
 
 When the gate is green, hand off per the fork (see Examples). *Optional debrief:* **`pass-to-lesson`** teaches what this pass just sharpened — the surviving objections, the fork and why it won — before the descent continues.
@@ -122,12 +122,12 @@ User says *"have Codex refute the swimlane plans."* → Run Step 1 with `--adver
 **Example 2 — "consensus pass" end-to-end**
 User says *"run the consensus pass and decide the fork."* → Steps 1–2 surface 7 objections + 2 drifts (e.g. a freshness or latency number that contradicts the tech-spec). Step 3 FIXes 6 in place, ACCEPTs 1 to a named owner (a data-store constraint under concurrent load), reconciles the drifting number to the spec. Step 4: every lane and endpoint has a cheap, runnable eval → **Fork B (task-driven)** written to the top of every plan with the reason. Step 5 gate is green. → Hand off to `task-spec --tracker repo` (Pass 5B).
 
-**Example 3 — decide Fork A**
-Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 records **Fork A (plan-driven)** at the top of every plan with the reason. → Hand off to `plans-to-coherent-spec` (Pass 5A), which fuses the sharpened plans into one coherent, coupled spec with a single end-to-end eval.
+**Example 3 — a tightly-coupled slice that "only verifies as a whole"**
+Previously this was Fork A. Now: record **`FORK: B (task-driven)`** like everything else, and make the coupled slice a single **L leaf** (one coherent done-condition, `execution_backend: glm`) inside the task tree — not a separate plan-driven paradigm. → Hand off to `task-spec` (Pass 5B).
 
 ## Troubleshooting
 
-- **Gate fails: "no fork declared."** → Cause: Step 4 skipped, or the fork line isn't at the top of a plan. → Solution: write `FORK: A (plan-driven)` or `FORK: B (task-driven)` + one-line reason at the top of *every* `sketch/*.plan`, then re-run the gate.
+- **Gate fails: "no fork declared."** → Cause: the fork line isn't at the top of a plan. → Solution: write `FORK: B (task-driven)` + one-line reason at the top of *every* `sketch/*.plan`, then re-run the gate. (Fork A is retired; the gate rejects `fork.choice: A`.)
 - **Gate fails: "objection without resolution."** → Cause: an objection was logged but never marked FIX or ACCEPT. → Solution: for each, either revise the plan in place (FIX) or add `ACCEPT — owner: <name> — reason: ...` (ACCEPT). No silent drops.
 - **Adversary blesses everything.** → Cause: not framed default-to-refuted, or the same model is reviewing itself. → Solution: re-frame as a skeptical principal engineer who did NOT write the plans; confirm `--adversary` differs from the author model. If the adversary is down, use a fresh same-model session with no memory of authoring.
 - **A new requirement appears during review.** → Cause: scope creep — that is drift, not sharpening. → Solution: log it as an open question and push it back up the chain (Pass 1/2/3). Do not add scope in Pass 4.
@@ -139,5 +139,5 @@ Tiny, tightly-coupled system where nothing verifies in isolation. → Step 4 rec
 - `references/attack-playbook.md` — the adversary's system prompt (default-to-refuted), the cross-family + per-leg dispatch contract, and the stack's build-time bite list.
 - `references/engine-adapter.md` — how `cvg review` dispatches a headless engine (the read-only + schema-JSON + timeout + provenance contract, the invocation cheatsheet, `cvg doctor`).
 - `references/objection-log.schema.json` — the stamped review-record schema the gate validates.
-- `references/the-fork.md` — Fork A vs. Fork B decision rubric, the trust-boundary framing, and how each fork feeds Pass 5A / 5B.
+- `references/the-fork.md` — why the fork existed and why task-driven (B) won; the collapse to a single path (v3.4).
 - `scripts/check-consensus-gate.sh` — the falsifiable gate on the objection log (see Step 5); `tests/run-tests.sh` proves it discriminates.

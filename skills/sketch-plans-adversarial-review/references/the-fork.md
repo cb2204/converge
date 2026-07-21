@@ -1,13 +1,24 @@
-# The Fork — plan-driven (A) vs. task-driven (B)
+# The Fork — RETIRED (v3.4): Converge is single-path (task-driven)
 
-Converge Pass 4 (Consensus), Step 4. Naming the fork is **the decision of this
-pass**, not a footnote. It must precede Pass 5 because spec-vs-task is a
-*structural* choice about **where the trust boundary sits** — the rest of the
-chain forks on it, and it cannot be deferred.
+> **The fork is collapsed.** Converge no longer chooses between plan-driven (A) and
+> task-driven (B). Consensus **always** hands off to task-driven decomposition, because
+> `task-spec` is now a six-tier sizing engine (XS/S/M/L leaves + XL/XXL decomposition
+> nodes) that scales from a one-liner to a whole backbone — tasks all the way down. The
+> old Fork A (wrap the whole system in one plan-driven spec / SDD) is retired: frontier
+> models execute well-scoped atoms reliably, and a tree of verified atoms composes back
+> up more safely than one monolithic spec. See `../../task-spec/references/concepts/effort-gate.md`.
+>
+> **What the gate enforces now:** the objection-log's `fork.choice` must be **B**
+> (task-driven) with a reason, and every PRD carries a `FORK: B (task-driven)` line. A
+> log with `fork.choice: A` is rejected. The rest of this doc is kept as historical
+> rationale for *why* the two paths existed and why B won.
 
-The fork is declared **at the top of every plan** (`sketch/*.plan`), as a
-letter + a one-line reason. The gate (`scripts/check-consensus-gate.sh`) fails
-unless every plan carries it.
+---
+
+Converge Pass 4 (Consensus), Step 4. Naming the fork *was* the decision of this pass;
+it is now a constant (B). The fork is still declared **at the top of every plan**
+(`sketch/*.plan`) as `FORK: B (task-driven)` + a one-line reason, and the gate
+(`scripts/check-consensus-gate.sh`) fails unless every plan carries it.
 
 ## The one question the fork answers
 

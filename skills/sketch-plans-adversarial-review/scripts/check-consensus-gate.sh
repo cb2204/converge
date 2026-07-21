@@ -116,14 +116,19 @@ else:
     if not any(s in ("high", "critical") for s in sev) and verdict != "PASS":
         fail("no high/critical objection and verdict != PASS — weak/blessing review (H6)")
 
-# [4] fork declared in the artifact, with a reason
+# [4] fork is the single task-driven path (v3.4 — the fork is collapsed).
+# Converge no longer chooses between plan-driven (A) and task-driven (B): everything
+# decomposes to task-specs (task-spec is the six-tier sizing engine). The field is
+# kept for the provenance record but must be B; A (plan-driven / SDD) is retired.
 fork = art.get("fork", {}) or {}
-if fork.get("choice") not in ("A", "B"):
-    fail("fork.choice must be A or B (got %r)" % fork.get("choice"))
+if fork.get("choice") == "A":
+    fail("fork.choice is 'A' (plan-driven) — RETIRED. Converge is single-path: consensus always hands off to task-driven decomposition (Fork B). Set fork.choice: B. See references/the-fork.md")
+elif fork.get("choice") != "B":
+    fail("fork.choice must be B (task-driven — the single path) (got %r)" % fork.get("choice"))
 elif not (fork.get("reason") or "").strip():
     fail("fork declared but carries no reason")
 else:
-    ok("fork: %s — %s" % (fork["choice"], (fork["reason"] or "")[:60]))
+    ok("fork: B (task-driven, single path) — %s" % ((fork.get("reason") or "")[:60]))
 
 # [5] fork line at the top of EVERY swimlane PRD (dir-per-swimlane)
 prds = sorted(glob.glob(os.path.join(sketch, "swimlane-*", "swimlane-*.plan.md")))

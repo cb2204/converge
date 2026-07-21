@@ -34,6 +34,10 @@ S="$(newtree)"; python3 "$GEN" "$S" same-family >/dev/null;    check same-family
 S="$(newtree)"; python3 "$GEN" "$S" unresolved >/dev/null;     check unresolved      "$S" 1 'FIX or ACCEPT'        '^CHECK_CONSENSUS=OK'
 S="$(newtree)"; python3 "$GEN" "$S" accept-no-owner >/dev/null; check accept-no-owner "$S" 1 'ACCEPT requires'      '^CHECK_CONSENSUS=OK'
 S="$(newtree)"; python3 "$GEN" "$S" no-fork >/dev/null;        check no-fork         "$S" 1 'fork.choice'          '^CHECK_CONSENSUS=OK'
+# fork A (plan-driven) is RETIRED — Converge is single-path (task-driven); the gate rejects A
+S="$(newtree)"; python3 "$GEN" "$S" good >/dev/null
+python3 -c "import json;p='$S/.consensus/objection-log.json';d=json.load(open(p));d['fork']['choice']='A';json.dump(d,open(p,'w'))"
+check fork-a-retired  "$S" 1 'RETIRED|plan-driven'   '^CHECK_CONSENSUS=OK'
 S="$(newtree)"; python3 "$GEN" "$S" no-objections >/dev/null;  check no-objections   "$S" 1 'blessed everything'   '^CHECK_CONSENSUS=OK'
 # provenance: tamper a plan AFTER stamping -> hash mismatch
 S="$(newtree)"; python3 "$GEN" "$S" good >/dev/null; printf '\nedited after review\n' >> "$S"/swimlane-alpha/swimlane-alpha-leg-01-tool.md
