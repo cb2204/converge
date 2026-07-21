@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.7.0"
+CVG_VERSION="0.8.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -100,6 +100,8 @@ cmd_help() {
   printf '%smeta%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  help                     this screen\n'
   printf '  version                  cvg + wrapped toolchain versions\n'
+  printf '  agent-context            machine-readable manifest (JSON): command tree,\n'
+  printf '                           exit-code taxonomy, tokens, contracts (for agents)\n'
   ui_rule
   printf '%senv: CVG_HOME (repo override) · NO_COLOR / CVG_COLOR=0|1%s\n' "$UI_DIM" "$UI_RESET"
 }
@@ -385,6 +387,60 @@ case "$CMD" in
   version|--version|-v)
     cmd_version
     exit 0
+    ;;
+  agent-context|manifest)
+    # Machine-readable self-description (agent-native CLI SOTA — clispec.dev /
+    # cli-agent-spec, 2026): the full command tree + exit-code taxonomy
+    # (retryable / side_effects) + the token each command emits + the global
+    # contracts, versioned. ONE call replaces N `help` iterations for an agent.
+    # Emits a single JSON document to stdout. Python is stdlib-only (no deps).
+    CVG_MF_VERSION="$CVG_VERSION" exec python3 - <<'PY'
+import json, os
+v = os.environ.get("CVG_MF_VERSION", "0")
+def c(name, p, wraps, tokens, mutating, example, desc):
+    return {"name": name, "converge_pass": p, "wraps": wraps,
+            "emits_tokens": tokens, "mutating": mutating, "example": example, "description": desc}
+m = {
+  "schema_version": "1.0", "tool": "cvg", "version": v, "role": "referee",
+  "description": "Referee CLI for the Converge 8-pass method. Never a player: zero model credentials, no LLM calls. It frames prompts, dispatches engine CLIs headlessly, and gates their output; wrapped gates are byte-exact pass-throughs (exec).",
+  "contracts": {
+    "stdout": "results + wrapped-gate output (parse-stable; no ANSI when piped)",
+    "stderr": "diagnostics + progress only",
+    "token": "every gate/verdict surface ends in ONE stable greppable token on its own final line (e.g. CHECK_BRD=PASS)",
+    "color": "TTY-only; NO_COLOR (non-empty) or CVG_COLOR=0 disable; color never carries meaning alone",
+    "determinism": "gate commands are read-only, idempotent, byte-parity pass-throughs to the wrapped script",
+    "resolution": "CVG_HOME wins when set; else walk up from cwd to the first repo carrying skills/task-spec/scripts/"
+  },
+  "exit_codes": [
+    {"code": 0,  "name": "OK",           "meaning": "gate passed / command succeeded",                              "retryable": False, "side_effects": "none"},
+    {"code": 1,  "name": "GATE_FAIL",    "meaning": "the gate failed (verdict RED); the artifact is not acceptable", "retryable": False, "side_effects": "none"},
+    {"code": 2,  "name": "USAGE_ERROR",  "meaning": "bad/unknown flag, no unique discovery target, or nothing to gate", "retryable": False, "side_effects": "none"},
+    {"code": 20, "name": "SKIP",         "meaning": "dispatch: the requested engine is not installed",               "retryable": True,  "side_effects": "none"},
+    {"code": 21, "name": "TIMEOUT",      "meaning": "dispatch: engine exceeded the wall-clock cap (fail-closed)",    "retryable": True,  "side_effects": "none"},
+    {"code": 22, "name": "ENGINE_ERROR", "meaning": "dispatch: engine produced no parseable judgment (fail-closed)", "retryable": True,  "side_effects": "none"}
+  ],
+  "commands": [
+    c("capture", 0, "idea-to-brd/check-brd.sh", ["CHECK_BRD=PASS|FAIL|USAGE_ERROR"], False, "cvg capture", "Pass 0 gate — the BRD exit contract."),
+    c("intent", 1, "brd-docs-to-tech-req/check-tech-spec.sh", ["CHECK_TECH_SPEC=PASS|FAIL|USAGE_ERROR"], False, "cvg intent", "Pass 1 gate — the tech-spec exit contract."),
+    c("structure", 2, "tech-req-to-adrs/scaffold-adr.sh --check", ["CHECK_ADR=OK|FAIL|USAGE_ERROR"], False, "cvg structure", "Pass 2 gate — the ADR set."),
+    c("decompose", 3, "reqs-to-swimlane-plans/new-plan.sh --check", ["CHECK_PLAN=OK|FAIL|USAGE_ERROR"], False, "cvg decompose", "Pass 3 gate — the swimlane tree."),
+    c("review --adversary <e[,e]>", 4, "sketch-plans-adversarial-review/dispatch-review[-multi].sh", ["REVIEW=OK|ERROR|SKIP|TIMEOUT|USAGE_ERROR"], True, "cvg review --adversary codex,kimi", "Pass 4 dispatch — a different-family adversary (or several, merged) attacks the plans; writes a provenance-stamped objection log."),
+    c("review --check", 4, "sketch-plans-adversarial-review/check-consensus-gate.sh", ["CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR"], False, "cvg review --check", "Pass 4 gate — validates the stamped objection log (cross-family, resolutions, fork B, provenance)."),
+    c("doctor", 4, "sketch-plans-adversarial-review/doctor.sh", ["DOCTOR=OK|FAIL"], False, "cvg doctor", "Engine readiness for Pass 4 dispatch (>=2 engines, >=1 cross-family)."),
+    c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
+    c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
+    c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),
+    c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
+    c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
+    c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
+    c("ready", "5B", "task-spec/list-ready.sh", ["ready task list"], False, "cvg ready", "List ready-to-run tasks."),
+    c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
+    c("version", None, "native", ["cvg <semver>"], False, "cvg version", "Print the version."),
+    c("agent-context", None, "native", ["this JSON document"], False, "cvg agent-context", "This machine-readable manifest (also: cvg manifest).")
+  ]
+}
+print(json.dumps(m, indent=2))
+PY
     ;;
   *)
     ui_err "unknown command '$CMD' — run 'cvg help' for the command map"

@@ -7,7 +7,7 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.7.0** · (0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
+**cvg v0.8.0** · (0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
 **dispatching** subcommand + the engine-adapter/doctor layer, Milestone 3.1;
 0.7.0 R4.build — multi-engine adversary `review --adversary codex,kimi` merges two
 cross-family views into one referee-stamped log, the ATTACK half of the auto-loop) · born
@@ -29,7 +29,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.7.0)
+## Command surface (v0.8.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
@@ -49,6 +49,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg transition <id> <state>` | `transition-status.sh` | moved `T-20260719-cvg-router` ready → done |
 | `cvg ready` | `list-ready.sh` | listed the fixture backlog |
 | `cvg help` / `cvg version` | native | eval_2 (completeness), eval_3 (no ANSI when piped / `NO_COLOR`) |
+| `cvg agent-context` (alias `manifest`) | native (python3 stdlib) | **agent-native self-description (2026 SOTA — clispec.dev / cli-agent-spec):** one JSON document — `schema_version` + full command tree + the token each command emits + the **exit-code taxonomy** (`retryable` / `side_effects`) + the global contracts. One call replaces N `help` iterations for an agent. |
 
 Resolution: `CVG_HOME` wins when set; otherwise walk up from the working
 directory to the first repo carrying `skills/task-spec/scripts/`.
@@ -70,7 +71,11 @@ directory to the first repo carrying `skills/task-spec/scripts/`.
    gate/verdict surface ends in ONE stable greppable machine token (e.g.
    `CHECK_BRD=PASS`, `TIER=1`, `CONFORMANCE=L2`), exit codes are contracts,
    and piped output is plain and parse-stable. A harness should never have
-   to parse prose. `--json`/`--ci` modes deepen this at Milestone 2.1.
+   to parse prose. **`cvg agent-context` (v0.8.0)** makes the whole surface
+   machine-discoverable (2026 agent-native-CLI SOTA). The remaining SOTA gap —
+   a uniform `--json` response envelope `{ok,data,error,meta}` on every gate
+   command — is Milestone 2.1 (it touches the byte-parity pass-throughs, so it
+   lands as an opt-in `--json` layer, never changing default output).
 
 ## Not yet built (see cvg-todo.md for order and detail)
 
