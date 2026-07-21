@@ -389,6 +389,25 @@ complete vertical slice. The five beats, in order, never bundled:
     structure→decompose→doctor). **Pass 4 is now RUNNABLE end-to-end via the CLI.**
     Next: R4.R (dispatch a REAL codex/kimi adversary on the 3 backbone swimlanes)
     → sharpen → name the fork → R4.C/R4.P.
+  - [~] R4.R review — **FIRST REAL DISPATCH** ✅ hardening 2026-07-21 (07b51be);
+    real objection SET still pending (env-blocked). Fired live codex + kimi at the
+    backbone. The real engines exposed **3 defects the fake engine never could, all
+    fixed + tested (suite 13→14/14):** (1) greedy `{.*}` judgment extractor swallowed
+    the prose a real engine wraps JSON in → **raw_decode scan** picking the richest
+    judgment object; (2) macOS ships no `timeout`/`gtimeout` so the cap was a WARN and
+    ran **UNCAPPED** — a hung `codex exec` (0% CPU, 0 bytes, forever) hung the referee
+    → **pure-bash watchdog** (bg + sibling sleeper TERM/KILL + marker → 124 →
+    `REVIEW=TIMEOUT`), new `dispatch-timeout` suite row; (3) wrong kimi flags
+    (`--print`/`stream-json` → real `-p`/`text`; `-p` ✗ with `--auto`). **Fail-closed
+    proven LIVE:** kimi outran a 280s cap (full backbone) AND a 420s cap (serve-only)
+    → clean `REVIEW=TIMEOUT`, **no objection-log written** — the referee never
+    fabricates a consensus. `engine-adapter.md` corrected to the flags the live CLIs
+    accept. **Env finding:** in this headless sandbox codex blocks on the model
+    round-trip and kimi is too slow (>420s/swimlane) to complete a structured attack
+    — a latency/auth constraint, not a pipe defect. **To land a real objection set:**
+    run the dispatch in an interactive/authed engine session (or a faster `kimi -m`
+    alias) with a longer budget; the pipe + gate + provenance are ready and honest.
+    Then: sharpen (FIX/ACCEPT) → name the fork → R4.C/R4.P.
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)
