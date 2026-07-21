@@ -84,6 +84,30 @@ TOTAL=$((TOTAL + 1)); OUT="$(CVG_CODEX_CMD="$SLEEPER" CVG_TIMEOUT_SECS=1 bash "$
 if [ "$RC" -eq 21 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=TIMEOUT$'; then printf 'ok    %-22s (exit %s)\n' dispatch-timeout "$RC"
 else printf 'FAIL  %-22s exit %s\n' dispatch-timeout "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
 
+# multi-engine adversary: dispatch codex,kimi (two fakes, two FAMILIES) → ONE merged log → gate.
+# Proves the ATTACK half of the auto-loop: two cross-family views, deduped+renumbered, provenance by referee.
+MULTI="$HERE/../scripts/dispatch-review-multi.sh"
+FAKEK="$(mktemp -d)/fake-kimi"
+cat > "$FAKEK" <<'SH'
+#!/bin/bash
+[ "$1" = "--version" ] && { echo "fake-kimi 9.9"; exit 0; }
+cat >/dev/null 2>&1
+echo '{"verdict":"REVISE","model":"fake-kimi","objections":[{"id":"C1","severity":"medium","attack_class":"grain","swimlane":"swimlane-alpha","location":{"plan_file":"y","section":"Grain"},"evidence":"grain gap","resolution":{"disposition":"FIX","fixed_in":"y"}}],"fork":{"choice":"B","reason":"cheap"}}'
+SH
+chmod +x "$FAKEK"
+S="$(newtree)"
+TOTAL=$((TOTAL + 1)); OUT="$(CVG_CODEX_CMD="$FAKE" CVG_KIMI_CMD="$FAKEK" bash "$MULTI" --adversary codex,kimi --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=OK$' \
+   && python3 -c "import json,sys; d=json.load(open('$S/.consensus/objection-log.json')); sys.exit(0 if len(d.get('adversaries',[]))==2 and len(d['objections'])==2 and d.get('cross_family') and d['objections'][1]['id']=='C2' else 1)"; then
+  printf 'ok    %-22s (exit %s)\n' dispatch-multi "$RC"
+else printf 'FAIL  %-22s exit %s\n' dispatch-multi "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
+check multi-then-gate "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
+# fail-closed: a single SAME-family engine (claude only) → no cross-family → ERROR, never a pass
+S="$(newtree)"; TOTAL=$((TOTAL + 1))
+OUT="$(CVG_CLAUDE_CMD="$FAKE" bash "$MULTI" --adversary claude --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 22 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=ERROR$'; then printf 'ok    %-22s (exit %s)\n' multi-no-xfamily "$RC"
+else printf 'FAIL  %-22s exit %s\n' multi-no-xfamily "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then echo "PASS — all $TOTAL rows green."; exit 0
 else echo "FAIL — $FAILED of $TOTAL rows red." >&2; exit 1; fi

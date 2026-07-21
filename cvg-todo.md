@@ -408,6 +408,29 @@ complete vertical slice. The five beats, in order, never bundled:
     run the dispatch in an interactive/authed engine session (or a faster `kimi -m`
     alias) with a longer budget; the pipe + gate + provenance are ready and honest.
     Then: sharpen (FIX/ACCEPT) → name the fork → R4.C/R4.P.
+  - [x] R4.R real objection set + SHARPEN ✅ 2026-07-21 (via kimi:kimi:challenge
+    broker path; raw `-p` too slow but a FOCUSED attack on the 3 PRDs completed).
+    kimi (moonshot) raised **1 blocker + 3 high + 1 medium**, all cross-lane seam
+    gaps (change-record dedup key/ordering/tombstone; freshness-through-aggregation;
+    idempotency/backfill/atomic-publish; revenue-join grain + freeze authority;
+    publish/read concurrency). **Sharpened** all 5 into the 3 PRDs (seam-contract
+    sections, plan altitude held), **re-attacked** → verdict **REVISE→PASS**, all
+    RESOLVED; 3 new low nits (incl. leg-01 "business signature" → max-`_lsn`) also
+    fixed. Pass 3 structure still `CHECK_PLAN=OK`. Evidence in `sketch/.consensus/`
+    (attack + re-attack transcripts + resolved `objection-log.attack.json`).
+    **Plans + consensus close (R4.C/R4.P) held pending the owner's fork call.**
+  - [x] R4.build auto-loop · multi-engine adversary ✅ 2026-07-21 — cvg 0.6.0→
+    **0.7.0**. `cvg review --adversary codex,kimi` (comma-list) → `dispatch-review-
+    multi.sh` runs each engine through the **proven single-engine path** (reused via
+    `--out`, untouched) and **merges** into ONE referee-stamped log: objections
+    unioned + renumbered C1..CN + tagged `raised_by`, `adversaries[]` recorded,
+    provenance recomputed by the referee, singular `adversary`=first cross-family for
+    gate-compat. Fail-closed: no cross-family → `REVIEW=ERROR`; all absent →
+    `REVIEW=SKIP`. Rule 9: Pass 4 suite **17/17** (+dispatch-multi, multi-then-gate
+    GREEN, multi-no-xfamily fail-closed); shellcheck + bash 3.2 clean; router e2e
+    proven (codex,kimi fakes → merge → `CHECK_CONSENSUS=OK`). This is the ATTACK half
+    of the auto-loop (referee never a player); SHARPEN/SIGN/COMMIT tail lands with
+    Track M's worker (M3/M4) — full green needs the deferred fork.
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)

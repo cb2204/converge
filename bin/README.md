@@ -7,8 +7,10 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.6.0** · (0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
-**dispatching** subcommand + the engine-adapter/doctor layer, Milestone 3.1) · born
+**cvg v0.7.0** · (0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
+**dispatching** subcommand + the engine-adapter/doctor layer, Milestone 3.1;
+0.7.0 R4.build — multi-engine adversary `review --adversary codex,kimi` merges two
+cross-family views into one referee-stamped log, the ATTACK half of the auto-loop) · born
 2026-07-19 at R0.I (Milestone 1.1 executed early per
 the owner's pivot; `capture` added same day; 0.2.1 same day — second-eyes
 hardening: `capture` refuses unknown flags and flag conflicts, every exit-2
@@ -27,7 +29,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.6.0)
+## Command surface (v0.7.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
@@ -35,7 +37,8 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg intent [--draft] [spec]` | `brd-docs-to-tech-req/scripts/check-tech-spec.sh` (Pass 1 exit contract, v0.4.0) | golden byte-parity with the direct gate on the signed proving-ground tech-spec (R1.P); same discovery contract; exit-2 paths end in `CHECK_TECH_SPEC=USAGE_ERROR` |
 | `cvg structure [--final] [--dir d]` | `tech-req-to-adrs/scripts/scaffold-adr.sh --check` (Pass 2 ADR gate, v0.4.0) | golden byte-parity with the direct gate on the canonical proving-ground ADR set (R2.P, EMPTY diff); discovery over `cvg/docs/adrs/` then `docs/adrs/` (0→exit 2, 2→exit 2 naming both, 1→gates); FAIL passed through unmasked; exit-2 paths end in `CHECK_ADR=USAGE_ERROR` |
 | `cvg decompose [--dir d]` | `reqs-to-swimlane-plans/scripts/new-plan.sh --check` (Pass 3 swimlane gate, v0.7.0) | golden byte-parity with the direct gate on the proving-ground swimlane tree (R3.P, EMPTY diff); discovery over `cvg/sketch/` then `sketch/` `swimlane-*/` (0→exit 2, 2→exit 2 naming both, 1→gates); FAIL passed through unmasked; exit-2 paths end in `CHECK_PLAN=USAGE_ERROR` |
-| `cvg review --adversary E` | `sketch-plans-adversarial-review/scripts/dispatch-review.sh` (Pass 4 dispatch, v0.4.0) | **first dispatching subcommand** — frames the attack-playbook + swimlane plans, shells out to a **different-family** engine headless (`codex exec`/`kimi --print`/`claude -p`, read-only, `timeout`), and **stamps provenance itself** (input sha256s) into `sketch/.consensus/objection-log.json`. Fail-closed: `REVIEW=OK\|ERROR\|SKIP\|TIMEOUT\|USAGE_ERROR`. Referee never a player — zero creds; the engine CLI authenticates itself. Engine cmd env-overridable for tests (`CVG_CODEX_CMD` …). |
+| `cvg review --adversary E` | `sketch-plans-adversarial-review/scripts/dispatch-review.sh` (Pass 4 dispatch, v0.4.0) | **first dispatching subcommand** — frames the attack-playbook + swimlane plans, shells out to a **different-family** engine headless (`codex exec`/`kimi -p`/`claude -p`, read-only, `timeout`-or-bash-watchdog), and **stamps provenance itself** (input sha256s) into `sketch/.consensus/objection-log.json`. Fail-closed: `REVIEW=OK\|ERROR\|SKIP\|TIMEOUT\|USAGE_ERROR`. Referee never a player — zero creds; the engine CLI authenticates itself. Engine cmd env-overridable for tests (`CVG_CODEX_CMD` …). |
+| `cvg review --adversary codex,kimi` | `sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh` (Pass 4 multi-adversary) | a **comma-list** dispatches each engine through the proven single-engine path (reused via `--out`) and **merges** the judgments into ONE referee-stamped log: objections unioned + renumbered + tagged `raised_by`, `adversaries[]` recorded, provenance recomputed by the referee. Fail-closed if **no cross-family** engine ran (`REVIEW=ERROR`) or all absent (`REVIEW=SKIP`). Two independent cross-family views beat one — the ATTACK half of the auto-loop. |
 | `cvg review [--check]` | `sketch-plans-adversarial-review/scripts/check-consensus-gate.sh` (Pass 4 gate, v0.4.0) | validates the stamped objection log (structure + semantics + **provenance re-hash** of the live plans); `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR` |
 | `cvg doctor` | `sketch-plans-adversarial-review/scripts/doctor.sh` | engine readiness for Pass 4 dispatch — per-engine PASS/SKIP; requires ≥2 engines + ≥1 cross-family; `DOCTOR=OK\|FAIL` |
 | `cvg tasks validate <spec>` | `validate-task-spec.sh` | routed pass-through (same mechanism as `gate`, byte-parity eval'd there) |

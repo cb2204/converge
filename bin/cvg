@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.6.0"
+CVG_VERSION="0.7.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -77,7 +77,8 @@ cmd_help() {
   printf '  decompose [--dir d]      Pass 3 gate — finds cvg/sketch/ (then sketch/)\n'
   printf '                           swimlane-*/ tree; CHECK_PLAN token\n'
   printf '  review --adversary E     Pass 4 dispatch — a different-family model\n'
-  printf '                           (codex|kimi|claude) attacks the swimlanes headless\n'
+  printf '                           (codex|kimi|claude) attacks the swimlanes headless;\n'
+  printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
   printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
   printf '\n'
@@ -338,6 +339,7 @@ case "$CMD" in
     # CLI authenticates itself). Discovery mirrors decompose.
     GATE="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh"
     DISPATCH="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/dispatch-review.sh"
+    DISPATCH_MULTI="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh"
     REV_MODE="check"; REV_ADV=""; REV_DIR=""
     while [ $# -gt 0 ]; do
       case "$1" in
@@ -363,7 +365,10 @@ case "$CMD" in
       fi
     fi
     if [ "$REV_MODE" = "dispatch" ]; then
-      exec bash "$DISPATCH" --adversary "$REV_ADV" --dir "$REV_DIR"
+      case "$REV_ADV" in
+        *,*) exec bash "$DISPATCH_MULTI" --adversary "$REV_ADV" --dir "$REV_DIR" ;;
+        *)   exec bash "$DISPATCH" --adversary "$REV_ADV" --dir "$REV_DIR" ;;
+      esac
     else
       exec bash "$GATE" --dir "$REV_DIR"
     fi
