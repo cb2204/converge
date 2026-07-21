@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.8.0"
+CVG_VERSION="0.9.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -107,10 +107,110 @@ cmd_help() {
 }
 
 # ---------------------------------------------------------------------------
+# Agent-native output layer (2026 SOTA): --json envelope + --dry-run on mutations
+# ---------------------------------------------------------------------------
+# Both are GLOBAL flags, recognized in ANY position and stripped before routing.
+# The DEFAULT path is byte-parity-untouched; --json is a pure WRAPPER that
+# re-invokes the command, captures its output+exit, and emits one uniform envelope
+# {ok, data, error, meta}. One interception point → zero per-gate refactor, so no
+# proven gate loses its behavior. --dry-run short-circuits a mutating command.
+
+# is_mutating <cmd> [args...] — 0 if the command changes state on disk.
+is_mutating() {
+  local c="$1"; shift
+  case "$c" in
+    transition) return 0 ;;
+    tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
+    review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
+    *)          return 1 ;;
+  esac
+}
+
+# cvg_envelope <cmd> <args-joined> <exit_code> <dry_run> [raw_output_file]
+# Emits the uniform {ok,command,token,verdict,exit_code,changed,dry_run,data,error,
+# warnings,meta} envelope. Python stdlib only (no deps). The raw output is passed via
+# a FILE, not stdin — `python3 - <<'PY'` already owns stdin (the program).
+cvg_envelope() {
+  CVG_ENV_VERSION="$CVG_VERSION" python3 - "$1" "$2" "$3" "$4" "${5:-}" <<'PY'
+import json, sys, os, re
+cmd, args, rc, dry, rawfile = sys.argv[1], sys.argv[2], int(sys.argv[3]), (sys.argv[4] == "1"), sys.argv[5]
+raw = open(rawfile, encoding="utf-8", errors="replace").read() if (rawfile and os.path.exists(rawfile)) else ""
+token = verdict = None
+for line in raw.splitlines():
+    m = re.match(r'^([A-Z][A-Z0-9_]*)=([A-Za-z0-9_.|-]+)\s*$', line.strip())
+    if m:
+        token, verdict = line.strip(), m.group(2)   # last token wins
+ok = (rc == 0)
+disp, mutating = cmd, False
+parts = args.split()
+if cmd == "tasks":
+    sub = parts[0] if parts else ""
+    disp = ("tasks " + sub).strip()
+    mutating = (sub == "accept")
+elif cmd == "review":
+    mutating = ("--adversary" in parts)
+elif cmd == "transition":
+    mutating = True
+PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4}
+env = {
+    "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
+    "token": token, "verdict": verdict, "exit_code": rc,
+    "changed": (mutating and ok and not dry), "dry_run": dry,
+    "data": {"output": raw.rstrip("\n")},
+    "error": (None if ok else {"code": (verdict or "ERROR"),
+              "message": (raw.strip().splitlines()[-1] if raw.strip() else "command failed")}),
+    "warnings": [],
+    "meta": {"schema_version": "1.0", "tool": "cvg",
+             "cvg_version": os.environ.get("CVG_ENV_VERSION", "0")},
+}
+print(json.dumps(env, indent=2))
+PY
+}
+
+# ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
+CVG_JSON=0; CVG_DRY_RUN=0
+_ARGS=()
+for _a in "$@"; do
+  case "$_a" in
+    --json)    CVG_JSON=1 ;;
+    --dry-run) CVG_DRY_RUN=1 ;;
+    *)         _ARGS+=("$_a") ;;
+  esac
+done
+# shellcheck disable=SC2086  # intentional: empty-array-safe re-set of positional args (bash 3.2)
+set -- ${_ARGS[@]+"${_ARGS[@]}"}
 CMD="${1:-help}"
 [ $# -gt 0 ] && shift
+
+# --dry-run on a MUTATING command: report the intended action, change nothing.
+if [ "$CVG_DRY_RUN" -eq 1 ] && is_mutating "$CMD" "$@"; then
+  if [ "$CVG_JSON" -eq 1 ]; then
+    cvg_envelope "$CMD" "$*" 0 1 ""
+  else
+    printf 'DRY-RUN: would run: cvg %s %s — no changes made.\n' "$CMD" "$*" >&2
+    printf 'DRY_RUN=OK\n'
+  fi
+  exit 0
+fi
+
+# --json: re-invoke the command (flags already stripped), capture output+exit,
+# envelope it. agent-context/manifest are already machine-format; help/version are
+# meta — all four run as-is (no envelope) since --json is stripped from their args.
+if [ "$CVG_JSON" -eq 1 ]; then
+  case "$CMD" in
+    agent-context|manifest|help|--help|-h|version|--version|-v) : ;;
+    *)
+      _J_RC=0
+      _J_TMP="$(mktemp)"
+      bash "$0" "$CMD" "$@" > "$_J_TMP" 2>&1 || _J_RC=$?   # || : a failing gate must not abort set -e
+      cvg_envelope "$CMD" "$*" "$_J_RC" 0 "$_J_TMP"
+      rm -f "$_J_TMP"
+      exit "$_J_RC"
+      ;;
+  esac
+fi
 
 case "$CMD" in
   help|--help|-h)
@@ -411,6 +511,10 @@ m = {
     "determinism": "gate commands are read-only, idempotent, byte-parity pass-throughs to the wrapped script",
     "resolution": "CVG_HOME wins when set; else walk up from cwd to the first repo carrying skills/task-spec/scripts/"
   },
+  "global_flags": [
+    {"flag": "--json", "position": "any", "effect": "emit a uniform response envelope {ok, command, token, verdict, exit_code, changed, dry_run, data, error, warnings, meta{schema_version, tool, cvg_version}} as ONE JSON document on stdout, instead of prose. The underlying exit code is preserved. agent-context/help/version are unaffected (already machine/meta)."},
+    {"flag": "--dry-run", "position": "any", "applies_to": "mutating commands only (review --adversary, tasks accept, transition)", "effect": "report the intended action and change nothing; envelope carries changed=false, dry_run=true (token DRY_RUN=OK in text mode)."}
+  ],
   "exit_codes": [
     {"code": 0,  "name": "OK",           "meaning": "gate passed / command succeeded",                              "retryable": False, "side_effects": "none"},
     {"code": 1,  "name": "GATE_FAIL",    "meaning": "the gate failed (verdict RED); the artifact is not acceptable", "retryable": False, "side_effects": "none"},
