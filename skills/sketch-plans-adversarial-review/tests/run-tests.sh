@@ -68,6 +68,21 @@ check dispatch-then-gate "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
 TOTAL=$((TOTAL + 1)); OUT="$(bash "$DISPATCH" --adversary bogus --dir "$S" 2>&1)"; RC=$?
 if [ "$RC" -eq 2 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=USAGE_ERROR$'; then printf 'ok    %-22s (exit %s)\n' dispatch-bad-adv "$RC"
 else printf 'FAIL  %-22s exit %s\n' dispatch-bad-adv "$RC"; FAILED=$((FAILED + 1)); fi
+# watchdog: a HUNG engine (sleeps past the cap) must fail-closed to TIMEOUT, never hang the referee.
+# Proves the pure-bash watchdog holds the mandatory-timeout invariant WITHOUT coreutils (the live
+# codex exec sat at 0% CPU forever). cap=1s vs a 30s sleeper → REVIEW=TIMEOUT in ~1s.
+SLEEPER="$(mktemp -d)/fake-sleeper"
+cat > "$SLEEPER" <<'SH'
+#!/bin/bash
+[ "$1" = "--version" ] && { echo "fake-sleeper 0.0"; exit 0; }
+sleep 30
+echo '{"verdict":"REVISE","objections":[]}'
+SH
+chmod +x "$SLEEPER"
+S="$(newtree)"
+TOTAL=$((TOTAL + 1)); OUT="$(CVG_CODEX_CMD="$SLEEPER" CVG_TIMEOUT_SECS=1 bash "$DISPATCH" --adversary codex --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 21 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=TIMEOUT$'; then printf 'ok    %-22s (exit %s)\n' dispatch-timeout "$RC"
+else printf 'FAIL  %-22s exit %s\n' dispatch-timeout "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
 
 echo
 if [ "$FAILED" -eq 0 ]; then echo "PASS — all $TOTAL rows green."; exit 0

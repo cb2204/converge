@@ -26,14 +26,30 @@ One driver per engine behind a stable contract.
 
 ## Headless invocation cheatsheet (real flags)
 
-| Engine | family | headless command (read-only + schema) | exit-code gotcha |
+Flags below are what the live CLIs on this box actually accept (verified against
+`kimi 0.28.1` / `codex exec` / `claude -p`), not what the vendors' blog posts show —
+the first real dispatch corrected several guesses.
+
+| Engine | family | headless command (read-only) | exit-code / behavior gotcha |
 |---|---|---|---|
-| **codex** | openai | `codex exec --sandbox read-only --output-schema objection-log.schema.json -o "$CVG_OUT" -` (prompt on stdin) | **exits 0 even on failure** → gate the artifact, not `$?` |
-| **kimi** | moonshot | `kimi --print --output-format stream-json -p "…"` in an isolated worktree (print mode auto-approves tools) → validate JSON yourself | clean codes: `0` ok · `1` permanent · `75` retry |
-| **claude** | anthropic | `claude -p --json-schema "$(cat objection-log.schema.json)" --tools "Read,Grep" --disallowedTools "Edit,Write,mcp__*"` | `stream-json` can **hang** with no TTY → **mandatory `timeout`** |
+| **codex** | openai | `codex exec --sandbox read-only - < prompt` (prompt on stdin) | **exits 0 even on failure** → gate the artifact, not `$?`. Observed **blocking at 0% CPU** headless (model round-trip / approval it can't get) → the wall-clock cap is what saves you. |
+| **kimi** | moonshot | `kimi --output-format text -p "$(cat prompt)"` — flag is **`-p/--prompt`, NOT `--print`**; **cannot combine `-p` with `--auto`** (prompt mode is already non-interactive). `text` beats `stream-json` for a single judgment (the JSON object is emitted inline in prose, not nested in event envelopes). | clean codes: `0` ok · `1` permanent · `75` retry. Full multi-file attacks can exceed a 280s cap → scope per-swimlane or raise the cap. |
+| **claude** | anthropic | `claude -p "$(cat prompt)" --output-format json --tools Read,Grep --disallowedTools "Edit,Write"` | `stream-json` can **hang** with no TTY → **mandatory cap** |
 
 `claude` is the **fallback only** (same family as the author → weak independence);
 default to a cross-family engine (`codex` or `kimi`).
+
+**The cap is mandatory and dependency-free.** `timeout(1)`/`gtimeout` are GNU
+coreutils and macOS ships neither, so the adapter uses them when present and
+otherwise a **pure-bash watchdog** (background the engine; a sibling sleeper
+`TERM`/`KILL`s it past the cap, leaving a marker → normalize to exit `124` →
+`REVIEW=TIMEOUT`). Proven live: kimi outran a 280s cap → clean `TIMEOUT`, no
+objection-log written — the referee never fabricates a consensus.
+
+**Parse tolerantly.** A real engine wraps the judgment JSON in reasoning prose (and
+kimi prepends `• …` bullets + a `To resume this session:` trailer). Scan every `{`
+with a `raw_decode` pass and take the richest judgment object — never a greedy
+`{.*}` match (it swallows the whole span and fails to parse).
 
 ## Provenance stamp (every run — makes the gate un-spoofable)
 

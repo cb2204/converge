@@ -72,19 +72,40 @@ trap 'rm -f "$PROMPT" "$JUDG"' EXIT
 } > "$PROMPT"
 
 # ── DISPATCH: headless, read-only, wrapped in a wall-clock cap ────────────────
-# timeout(1) is GNU coreutils; macOS ships neither by default → try timeout, then
-# gtimeout, else run uncapped with a warning (mandatory-timeout is best-effort here).
+# The mandatory-timeout invariant is NON-negotiable: a hung engine (observed live
+# — codex exec blocking at 0% CPU on the model round-trip) must not hang the
+# referee forever. timeout(1) is GNU coreutils and macOS ships neither timeout nor
+# gtimeout, so we cannot depend on them. If present we use them; otherwise a pure-
+# bash watchdog enforces the SAME cap with zero dependencies (rule 5). Either way a
+# timeout normalizes to exit 124 → REVIEW=TIMEOUT (fail-closed). bash 3.2-safe.
 TIMEOUT_BIN=""
 if command -v timeout >/dev/null 2>&1; then TIMEOUT_BIN="timeout"
-elif command -v gtimeout >/dev/null 2>&1; then TIMEOUT_BIN="gtimeout"
-else echo "WARN: no timeout binary (brew install coreutils for gtimeout) — running uncapped." >&2; fi
-to() { if [ -n "$TIMEOUT_BIN" ]; then "$TIMEOUT_BIN" "$TIMEOUT" "$@"; else "$@"; fi; }
+elif command -v gtimeout >/dev/null 2>&1; then TIMEOUT_BIN="gtimeout"; fi
+to() {
+  if [ -n "$TIMEOUT_BIN" ]; then "$TIMEOUT_BIN" "$TIMEOUT" "$@"; return $?; fi
+  # pure-bash watchdog: background the engine; a sibling sleeper TERM/KILLs it if it
+  # outlives $TIMEOUT, leaving a marker so we can report 124 like timeout(1) does.
+  local flag rc=0 cmd_pid wd_pid
+  flag="$(mktemp)"
+  "$@" &
+  cmd_pid=$!
+  ( sleep "$TIMEOUT"
+    if kill -0 "$cmd_pid" 2>/dev/null; then
+      printf T > "$flag"; kill -TERM "$cmd_pid" 2>/dev/null
+      sleep 2; kill -KILL "$cmd_pid" 2>/dev/null
+    fi ) &
+  wd_pid=$!
+  wait "$cmd_pid" 2>/dev/null || rc=$?
+  kill "$wd_pid" 2>/dev/null || true; wait "$wd_pid" 2>/dev/null || true
+  if [ -s "$flag" ]; then rm -f "$flag"; return 124; fi
+  rm -f "$flag"; return "$rc"
+}
 
-echo "cvg review · dispatch → $ADVERSARY ($FAMILY) · read-only · cap ${TIMEOUT}s${TIMEOUT_BIN:+ ($TIMEOUT_BIN)}" >&2
+echo "cvg review · dispatch → $ADVERSARY ($FAMILY) · read-only · cap ${TIMEOUT}s (${TIMEOUT_BIN:-bash-watchdog})" >&2
 RC=0
 case "$KIND" in
   codex)  to "$CMD" exec --sandbox read-only - < "$PROMPT" > "$JUDG" 2>/dev/null || RC=$? ;;
-  kimi)   to "$CMD" --print --output-format stream-json -p "$(cat "$PROMPT")" > "$JUDG" 2>/dev/null || RC=$? ;;
+  kimi)   to "$CMD" --output-format text -p "$(cat "$PROMPT")" > "$JUDG" 2>/dev/null || RC=$? ;;
   claude) to "$CMD" -p "$(cat "$PROMPT")" --output-format json --tools Read,Grep --disallowedTools "Edit,Write" > "$JUDG" 2>/dev/null || RC=$? ;;
 esac
 if [ "$RC" -eq 124 ]; then echo "TIMEOUT after ${TIMEOUT}s." >&2; echo "REVIEW=TIMEOUT"; exit 21; fi
@@ -97,15 +118,29 @@ python3 - "$JUDG" "$SKETCH_DIR" "$OUT" "$ADVERSARY" "$FAMILY" "$ENGINE_VERSION" 
 import json, sys, hashlib, glob, os, re
 judg_p, sketch, out, engine, family, ver, kind = sys.argv[1:8]
 raw = open(judg_p, encoding="utf-8", errors="replace").read()
-# extract the engine's JUDGMENT json (objections/verdict/fork) — the first {...} that parses
+# extract the engine's JUDGMENT json (objections/verdict/fork). A real engine wraps
+# the JSON in reasoning prose (and may emit ndjson/stream-json event lines), so we
+# scan every '{' with raw_decode — tolerant of surrounding text — and take the first
+# object that looks like a judgment. Prefer the RICHEST such object (most objections)
+# so a stream-json envelope's inner judgment beats a bare {"type":...} event.
 judg = None
-for m in re.finditer(r'\{.*\}', raw, re.S):
+_best = -1
+dec = json.JSONDecoder()
+i, n = 0, len(raw)
+while i < n:
+    b = raw.find("{", i)
+    if b < 0:
+        break
     try:
-        c = json.loads(m.group(0))
-        if isinstance(c, dict) and ("objections" in c or "verdict" in c):
-            judg = c; break
-    except Exception:
+        c, end = dec.raw_decode(raw, b)
+    except ValueError:
+        i = b + 1
         continue
+    i = max(end, b + 1)
+    if isinstance(c, dict) and ("objections" in c or "verdict" in c):
+        score = len(c.get("objections", [])) if isinstance(c.get("objections"), list) else 0
+        if score > _best:
+            judg, _best = c, score
 if judg is None:
     sys.stderr.write("ERROR: adversary produced no parseable judgment JSON (fail-closed)\n"); sys.exit(22)
 # provenance the REFEREE computes (not self-reported)
