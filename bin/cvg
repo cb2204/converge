@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.5.0"
+CVG_VERSION="0.6.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -76,6 +76,10 @@ cmd_help() {
   printf '                           docs/adrs/); --final requires nothing proposed\n'
   printf '  decompose [--dir d]      Pass 3 gate — finds cvg/sketch/ (then sketch/)\n'
   printf '                           swimlane-*/ tree; CHECK_PLAN token\n'
+  printf '  review --adversary E     Pass 4 dispatch — a different-family model\n'
+  printf '                           (codex|kimi|claude) attacks the swimlanes headless\n'
+  printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
+  printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint of one Task-Spec\n'
@@ -325,6 +329,47 @@ case "$CMD" in
       fi
     fi
     exec bash "$GATE" --check --dir "$DEC_DIR"
+    ;;
+  review)
+    # Pass 4 · Consensus. Two modes:
+    #   cvg review --adversary codex|kimi|claude   dispatch a headless adversary
+    #   cvg review [--check]                        gate the stamped objection log
+    # The referee frames + dispatches + gates; it never calls an LLM (the engine
+    # CLI authenticates itself). Discovery mirrors decompose.
+    GATE="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh"
+    DISPATCH="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/dispatch-review.sh"
+    REV_MODE="check"; REV_ADV=""; REV_DIR=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --check)     REV_MODE="check"; shift ;;
+        --adversary) REV_MODE="dispatch"; REV_ADV="${2:-}"; shift 2 ;;
+        --dir)       REV_DIR="${2:-}"; shift 2 ;;
+        --dir=*)     REV_DIR="${1#--dir=}"; shift ;;
+        -*)          ui_err "unknown review flag '$1' — expected --check or --adversary <e> [--dir <sketch>]"
+                     printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2 ;;
+        *)           REV_DIR="$1"; shift ;;
+      esac
+    done
+    if [ -z "$REV_DIR" ]; then
+      REV_N=0
+      for D in cvg/sketch sketch; do
+        [ -d "$D" ] || continue
+        ls -d "$D"/swimlane-*/ >/dev/null 2>&1 || continue
+        REV_N=$((REV_N + 1)); REV_DIR="$D"
+      done
+      if [ "$REV_N" -ne 1 ]; then
+        ui_err "no unique swimlane tree (sketch/swimlane-*/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
+        printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2
+      fi
+    fi
+    if [ "$REV_MODE" = "dispatch" ]; then
+      exec bash "$DISPATCH" --adversary "$REV_ADV" --dir "$REV_DIR"
+    else
+      exec bash "$GATE" --dir "$REV_DIR"
+    fi
+    ;;
+  doctor)
+    exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh"
     ;;
   eval)       route run-task-spec.sh "$@" ;;
   lint)       route lint-backlog.sh "$@" ;;

@@ -48,6 +48,27 @@ TOTAL=$((TOTAL + 1)); OUT="$(bash "$GATE" --bogus 2>&1)"; RC=$?
 if [ "$RC" -eq 2 ] && printf '%s\n' "$OUT" | grep -q '^CHECK_CONSENSUS=USAGE_ERROR$'; then printf 'ok    %-22s (exit %s)\n' usage-error "$RC"
 else printf 'FAIL  %-22s exit %s\n' usage-error "$RC"; FAILED=$((FAILED + 1)); fi
 
+# dispatch pipe (fake cross-family engine → stamp → gate) — proves end-to-end
+DISPATCH="$HERE/../scripts/dispatch-review.sh"
+FAKE="$(mktemp -d)/fake-codex"
+cat > "$FAKE" <<'SH'
+#!/bin/bash
+[ "$1" = "--version" ] && { echo "fake-codex 9.9"; exit 0; }
+cat >/dev/null 2>&1
+echo '{"verdict":"REVISE","model":"fake-codex","objections":[{"id":"C1","severity":"high","attack_class":"cross-lane-interface","swimlane":"swimlane-alpha","location":{"plan_file":"x","section":"Seam"},"evidence":"gap","resolution":{"disposition":"FIX","fixed_in":"x"}}],"fork":{"choice":"B","reason":"cheap evals"}}'
+SH
+chmod +x "$FAKE"
+S="$(newtree)"
+TOTAL=$((TOTAL + 1)); OUT="$(CVG_CODEX_CMD="$FAKE" bash "$DISPATCH" --adversary codex --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=OK$' && [ -f "$S/.consensus/objection-log.json" ]; then
+  printf 'ok    %-22s (exit %s)\n' dispatch-stamps "$RC"
+else printf 'FAIL  %-22s exit %s\n' dispatch-stamps "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
+check dispatch-then-gate "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
+# unknown adversary -> usage error
+TOTAL=$((TOTAL + 1)); OUT="$(bash "$DISPATCH" --adversary bogus --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 2 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=USAGE_ERROR$'; then printf 'ok    %-22s (exit %s)\n' dispatch-bad-adv "$RC"
+else printf 'FAIL  %-22s exit %s\n' dispatch-bad-adv "$RC"; FAILED=$((FAILED + 1)); fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then echo "PASS — all $TOTAL rows green."; exit 0
 else echo "FAIL — $FAILED of $TOTAL rows red." >&2; exit 1; fi

@@ -369,6 +369,26 @@ complete vertical slice. The five beats, in order, never bundled:
     reason); quick_validate green; shellcheck + bash 3.2 clean; gen-log.py stdlib.
     Next: R4.R (dispatch codex/kimi on the 3 swimlanes) → R4.I (`cvg review` +
     `cvg doctor` + engine adapters).
+  - [x] R4.I implement ✅ 2026-07-21 — **cvg's first DISPATCHING subcommand** +
+    the engine-adapter/doctor layer (Milestone 3.1, reused by 5B/8). cvg 0.5.0→
+    **0.6.0**. `dispatch-review.sh` frames the attack-playbook + swimlane plans,
+    shells out to a **different-family** engine headless (codex/kimi/claude,
+    read-only, timeout(1)-or-gtimeout-or-uncapped), and **stamps provenance
+    itself** (input sha256s — the referee computes them, never trusts the engine)
+    into `sketch/.consensus/objection-log.json`; fail-closed (Codex-exits-0
+    guarded), `REVIEW=OK|ERROR|SKIP|TIMEOUT|USAGE_ERROR`. `doctor.sh` reports
+    per-engine PASS/SKIP (needs ≥2 + ≥1 cross-family; `DOCTOR=OK`). `bin/cvg`:
+    `review --adversary E` (dispatch) / `review [--check]` (gate) / `doctor`;
+    discovery mirrors decompose. **Referee never a player** — zero creds; the
+    engine CLI authenticates itself; engine cmd env-overridable (`CVG_CODEX_CMD`)
+    for tests. **End-to-end proven** with an injectable fake engine: dispatch →
+    stamp (REVIEW=OK) → gate (CHECK_CONSENSUS=OK); tamper a plan → FAIL (hash
+    mismatch). Rule 9: Pass 4 suite 13/13 (gate 10 + dispatch pipe 3);
+    quick_validate green; shellcheck -x + bash 3.2 -n clean; DOCTOR=OK (3 engines
+    live: codex/kimi/claude). Full CLI e2e regression green (capture→intent→
+    structure→decompose→doctor). **Pass 4 is now RUNNABLE end-to-end via the CLI.**
+    Next: R4.R (dispatch a REAL codex/kimi adversary on the 3 backbone swimlanes)
+    → sharpen → name the fork → R4.C/R4.P.
 - [ ] **R5 · Pass 5B Tasking** — `task-spec` on the real plans (five beats)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
 - [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)
