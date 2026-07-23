@@ -89,6 +89,7 @@ gh_upsert() {
       --title)     title="$2"; shift 2 ;;
       --body-file) body_file="$2"; shift 2 ;;
       --label)     labels="${labels},$2"; shift 2 ;;
+      --priority)  shift 2 ;;  # GitHub has no native priority field; carried as a label instead
       *) tsi_gh_die "upsert: unknown arg '$1'" ;;
     esac
   done

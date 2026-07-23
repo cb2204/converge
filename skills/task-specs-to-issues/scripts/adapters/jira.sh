@@ -87,6 +87,7 @@ jira_upsert() {
       --title) title="$2"; shift 2 ;;
       --body-file) body_file="$2"; shift 2 ;;
       --label) shift 2 ;;
+      --priority) shift 2 ;;  # Jira priority ids are project-specific; not seeded here
       *) tsi_jira_die "upsert: unknown arg '$1'" ;;
     esac
   done

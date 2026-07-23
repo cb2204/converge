@@ -60,12 +60,16 @@ tsi_frontmatter() {
 # script-controlled (never user input), so a fixed-string grep anchor is safe.
 tsi_field() {
   local file="$1" name="$2"
+  # The trailing `|| true` is load-bearing: an ABSENT field is not an error (see
+  # the contract above), but `grep -m1` exits 1 when it matches nothing, and under
+  # the callers' `set -e -o pipefail` a bare `x="$(tsi_field …)"` assignment would
+  # propagate that and kill the run. Optional fields are the common case.
   tsi_frontmatter "$file" \
     | grep -m1 "^${name}:" \
     | sed -E "s/^${name}:[[:space:]]*//" \
     | sed -E 's/[[:space:]]*$//' \
     | sed -E -e 's/^"(.*)"$/\1/' -e "s/^'(.*)'$/\1/" \
-    | tr -d '\r'
+    | tr -d '\r' || true
 }
 
 tsi_id()       { tsi_field "$1" id; }
@@ -144,6 +148,147 @@ tsi_list_specs() {
     [[ -f "$f" ]] || continue
     echo "$f"
   done
+}
+
+# ----- Section + behavior accessors (for the rich issue body) -----------------
+# tsi_section FILE HEADING — the lines under `## HEADING` up to the next `## `.
+tsi_section() {
+  awk -v h="$2" '
+    $0 ~ "^##[[:space:]]+" h { f=1; next }
+    f && /^## / { exit }
+    f { print }
+  ' "$1"
+}
+
+# tsi_behaviors FILE — one `- **B-N** — text` per line, wrapped lines re-joined.
+# Specs wrap long Given/When/Then prose across lines; a naive grep would truncate
+# each scenario mid-sentence on the board.
+tsi_behaviors() {
+  awk '
+    /^##[[:space:]]+Behavior/ { inb=1; next }
+    inb && /^## / { if (buf != "") print buf; buf=""; exit }
+    inb {
+      if ($0 ~ /^[[:space:]]*-[[:space:]]*\*\*B-[0-9]+\*\*/) {
+        if (buf != "") print buf
+        buf = $0; next
+      }
+      if ($0 ~ /^[[:space:]]*$/) { if (buf != "") { print buf; buf="" } next }
+      if (buf != "") { line=$0; sub(/^[[:space:]]+/, "", line); buf = buf " " line }
+    }
+    END { if (buf != "") print buf }
+  ' "$1"
+}
+
+# tsi_paths FILE — the write surface: touches_paths ∪ creates_paths, de-duped,
+# with the `(none)` sentinel and empty inline lists dropped.
+tsi_paths() {
+  printf '%s\n%s\n' "$(tsi_field "$1" touches_paths)" "$(tsi_field "$1" creates_paths)" \
+    | sed -E 's/^\[//; s/\]$//' \
+    | tr ',' '\n' \
+    | sed -E 's/^[[:space:]]*//; s/[[:space:]]*$//' \
+    | grep -v '^$' | grep -vxF '(none)' | sort -u || true
+}
+
+# ----- The issue body renderer (tracker-agnostic Markdown) --------------------
+# tsi_issue_body FILE ["dep-id dep-id ..."]
+#
+# Renders the spec as a well-shaped issue description. Markdown only, so every
+# backend benefits; Linear converts pasted Markdown to rich text and renders a
+# ```mermaid block as a real diagram (linear.app/docs/editor), which is why the
+# dependency graph is emitted that way.
+#
+# Design rules learned from the first live registration:
+#   - NEVER repeat the title as an H1 — the tracker already shows it.
+#   - Omit empty sections entirely rather than printing `touches_paths: []`.
+#   - Lead with the goal and the done-condition; those are what a picker-upper needs.
+tsi_issue_body() {
+  local f="$1" deps="${2:-}"
+  # The dep list is split by an unquoted `for d in $deps`, so pin IFS to the
+  # default rather than trust whatever a caller left in the environment.
+  # (NB: this file is bash — sourcing it into zsh will NOT word-split, since zsh
+  # needs SH_WORD_SPLIT. Preview it with `bash -c`, or every dep collapses into
+  # one mermaid node and you'll chase a bug that isn't there.)
+  local IFS=$' \t\n'
+  local id eff prof backend sev prio goal paths beh dnt exitck n
+  id="$(tsi_id "$f")"
+  eff="$(tsi_field "$f" effort)"
+  prof="$(tsi_field "$f" profile)"
+  backend="$(tsi_field "$f" execution_backend)"
+  sev="$(tsi_severity "$f")"
+  prio="$(tsi_priority "$f")"
+  goal="$(tsi_goal "$f")"
+
+  # --- Summary (blockquote) ---
+  if [ -n "$goal" ]; then
+    printf '> %s\n\n' "$(printf '%s' "$goal" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g')"
+  fi
+
+  # --- At-a-glance table ---
+  printf '| | |\n|---|---|\n'
+  printf '| **Spec** | `%s` |\n' "$id"
+  [ -n "$eff" ]     && printf '| **Size** | `%s` |\n' "$eff"
+  [ -n "$prof" ]    && printf '| **Profile** | `%s` |\n' "$prof"
+  [ -n "$backend" ] && printf '| **Executor** | `%s` |\n' "$backend"
+  [ -n "$sev" ] && [ "$sev" != "(none)" ]   && printf '| **Severity** | `%s` |\n' "$sev"
+  [ -n "$prio" ] && [ "$prio" != "(none)" ] && printf '| **Priority** | `%s` |\n' "$prio"
+  printf '\n'
+
+  # --- Definition of done (the contract) ---
+  exitck="$(tsi_exit_check "$f")"
+  if [ -n "$exitck" ]; then
+    printf '### Definition of done\n\n'
+    printf 'Only a **GREEN eval** moves this issue to Done — nothing else.\n\n'
+    printf '```bash\n%s\n```\n\n' "$exitck"
+  fi
+
+  # --- Behaviors as a checklist ---
+  beh="$(tsi_behaviors "$f")"
+  if [ -n "$beh" ]; then
+    printf '### Behavior — what gets verified\n\n'
+    printf '%s\n' "$beh" | sed -E 's/^[[:space:]]*-[[:space:]]*/- [ ] /'
+    printf '\n'
+  fi
+
+  # --- Write surface ---
+  paths="$(tsi_paths "$f")"
+  printf '### Write surface\n\n'
+  if [ -n "$paths" ]; then
+    printf '%s\n' "$paths" | sed -E 's/^/- `/; s/$/`/'
+  else
+    printf '_None declared — verification-only, or the surface lives in the spec._\n'
+  fi
+  printf '\n'
+
+  # --- Dependencies (Linear renders mermaid) ---
+  printf '### Dependencies\n\n'
+  if [ -n "$deps" ]; then
+    printf '```mermaid\ngraph LR\n'
+    n=0
+    for d in $deps; do
+      n=$((n + 1))
+      printf '  d%s["%s"] --> me["%s"]\n' "$n" "$d" "$id"
+    done
+    printf '  style me fill:#5e6ad2,stroke:#5e6ad2,color:#fff\n'
+    printf '```\n\n'
+    printf 'Blocked by: '
+    for d in $deps; do printf '`%s` ' "$d"; done
+    printf '\n\n'
+  else
+    printf '**None** — this is a root. It is takeable as soon as it is picked up.\n\n'
+  fi
+
+  # --- Guardrails ---
+  dnt="$(tsi_section "$f" "Do-Not-Touch" | grep -v '^[[:space:]]*$' || true)"
+  if [ -n "$dnt" ]; then
+    printf '### Guardrails — do not touch\n\n'
+    printf '%s\n\n' "$dnt"
+  fi
+
+  # --- Provenance footer ---
+  printf -- '---\n\n'
+  printf 'Projected from `%s` by `cvg register` (REGISTER ①).\n' "$f"
+  printf '**The spec is the source of truth** — edits here are overwritten on the next\n'
+  printf 'register; only a green eval closes this issue.\n'
 }
 
 # ----- Write-back: stamp the tracker_ref RECEIPT into a spec's frontmatter -----

@@ -92,6 +92,44 @@ _ln_resolve_team_id() {
 }
 
 # ---------------------------------------------------------------------------
+# Triage metadata: priority + labels. Seeded at CREATE only — never on update,
+# because triage belongs to the tracker (SKILL.md: sync never overwrites the
+# board's own organization). Both are FAIL-SOFT: a cosmetic problem here must
+# never break a registration, so errors degrade to "no priority / no labels".
+# ---------------------------------------------------------------------------
+# Linear priority is an Int: 0 none, 1 Urgent, 2 High, 3 Medium, 4 Low.
+_ln_priority_int() {
+  case "$1" in
+    P0|p0)          printf '1' ;;
+    P1|p1)          printf '2' ;;
+    P2|p2)          printf '3' ;;
+    P3|p3|P4|p4)    printf '4' ;;
+    0|1|2|3|4)      printf '%s' "$1" ;;
+    *)              printf '0' ;;
+  esac
+}
+
+# Resolve label NAMES (space-separated) to a JSON array of label ids, creating
+# any that don't exist yet. Echoes `[]` on any failure.
+_ln_label_ids() {
+  local names="$1" resp id nm ids=""
+  [[ -n "$names" ]] || { printf '[]'; return 0; }
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name } } }' '{}' 2>/dev/null)" || { printf '[]'; return 0; }
+  for nm in $names; do
+    id="$(printf '%s' "$resp" | jq -r --arg n "$nm" '.data.issueLabels.nodes[]? | select(.name==$n) | .id' 2>/dev/null | head -1)"
+    if [[ -z "$id" ]]; then
+      id="$(_linear_gql \
+        'mutation($name:String!,$team:String!){ issueLabelCreate(input:{ name:$name, teamId:$team }){ success issueLabel{ id } } }' \
+        "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" 2>/dev/null \
+        | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
+    fi
+    [[ -n "$id" ]] && ids="${ids}${ids:+ }${id}"
+  done
+  [[ -n "$ids" ]] || { printf '[]'; return 0; }
+  printf '%s\n' $ids | jq -R . 2>/dev/null | jq -s -c . 2>/dev/null || printf '[]'
+}
+
+# ---------------------------------------------------------------------------
 # VERB: teams — list every team as  key<TAB>name<TAB>uuid  (the setup picker).
 # ---------------------------------------------------------------------------
 ln_teams() {
@@ -152,13 +190,14 @@ _ln_find_by_external_id() {
 ln_upsert() {
   _ln_require_tools
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
-  local id="" title="" body_file=""
+  local id="" title="" body_file="" labels="" prio=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --id)        id="$2"; shift 2 ;;
       --title)     title="$2"; shift 2 ;;
       --body-file) body_file="$2"; shift 2 ;;
-      --label)     shift 2 ;;  # labels map to Linear labelIds; omitted in this core path
+      --label)     labels="${labels}${labels:+ }$2"; shift 2 ;;
+      --priority)  prio="$2"; shift 2 ;;
       *) tsi_ln_die "upsert: unknown arg '$1'" ;;
     esac
   done
@@ -184,11 +223,16 @@ ln_upsert() {
     echo "updated $ident ($id)" >&2
     echo "$ident"
   else
-    local resp new new_uuid new_ident murl
+    local resp new new_uuid new_ident murl pint lids
+    # Triage is seeded ONCE, at create. A re-register never touches priority or
+    # labels again, so a human's triage on the board is never clobbered.
+    pint="$(_ln_priority_int "${prio:-}")"
+    lids="$(_ln_label_ids "$labels")"
     resp="$(_linear_gql \
-      'mutation($team:String!,$title:String!,$desc:String!){ issueCreate(input:{ teamId:$team, title:$title, description:$desc }){ success issue{ id identifier } } }' \
+      'mutation($team:String!,$title:String!,$desc:String!,$prio:Int,$labels:[String!]){ issueCreate(input:{ teamId:$team, title:$title, description:$desc, priority:$prio, labelIds:$labels }){ success issue{ id identifier } } }' \
       "$(jq -n --arg team "$LINEAR_TEAM_ID" --arg title "$title" --arg desc "$body" \
-        '{team:$team,title:$title,desc:$desc}')")"
+             --argjson prio "$pint" --argjson labels "$lids" \
+        '{team:$team,title:$title,desc:$desc,prio:$prio,labels:$labels}')")"
     new_uuid="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.id // empty')"
     new_ident="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.identifier // empty')"
     [[ -n "$new_uuid" ]] || tsi_ln_die "issueCreate returned no issue id for $id"

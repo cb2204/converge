@@ -66,16 +66,20 @@ fake_preflight() {
 # stdout; the created/updated note goes to stderr (register.sh greps it).
 fake_upsert() {
   _fake_init
-  local id="" title="" body_file=""
+  local id="" title="" body_file="" labels="" prio=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --id)        id="$2"; shift 2 ;;
       --title)     title="$2"; shift 2 ;;
       --body-file) body_file="$2"; shift 2 ;;
-      --label)     shift 2 ;;
+      --label)     labels="${labels}${labels:+ }$2"; shift 2 ;;
+      --priority)  prio="$2"; shift 2 ;;
       *) tsi_fake_die "upsert: unknown arg '$1'" ;;
     esac
   done
+  # Record the triage the driver passed so tests can assert the wiring offline.
+  mkdir -p "$STORE/meta"
+  printf 'labels=%s\npriority=%s\n' "$labels" "$prio" > "$STORE/meta/$id.txt"
   [[ -n "$id" ]]    || tsi_fake_die "upsert: --id required"
   [[ -n "$title" ]] || tsi_fake_die "upsert: --title required"
 

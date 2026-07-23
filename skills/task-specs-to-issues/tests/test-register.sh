@@ -52,6 +52,7 @@ title: fixture $id
 status: ready
 signed_off: $signed
 depends_on: $deps
+effort: S
 severity: feature
 priority: P2
 ---
@@ -254,6 +255,28 @@ if printf '%s' "$QTITLE" | grep -q '^"'; then
 else
   ok "title arrives unquoted on the board: <$QTITLE>"
 fi
+
+# -----------------------------------------------------------------------------
+echo; echo "[M] the issue body is well-shaped, and triage reaches the adapter"
+D="$WORK/m/tasks"; S="$WORK/m/store"; build_diamond "$D"
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "rich-body register exits 0" "$RC" "0"
+BODY="$(cat "$S/bodies/1.md" 2>/dev/null)"
+hasnt "body does not repeat the title as an H1" "$BODY" "## fixture T-$DATE-reg-root"
+hasnt "body has no raw empty touches_paths" "$BODY" "touches_paths: []"
+has "body carries the done-condition section" "$BODY" "### Definition of done"
+has "body carries a dependencies section" "$BODY" "### Dependencies"
+has "a root body says so explicitly" "$BODY" "**None** — this is a root"
+has "body cites the spec as source of truth" "$BODY" "source of truth"
+if grep -l '```mermaid' "$S"/bodies/*.md >/dev/null 2>&1; then
+  ok "a dependent issue renders a mermaid dependency graph"
+else
+  bad "no mermaid graph rendered for any dependent issue"
+fi
+META="$(cat "$S/meta/T-$DATE-reg-root.txt" 2>/dev/null)"
+has "triage: cvg marker label passed to the adapter" "$META" "cvg"
+has "triage: effort label passed" "$META" "effort:S"
+has "triage: priority passed" "$META" "priority=P2"
 
 # -----------------------------------------------------------------------------
 echo

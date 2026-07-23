@@ -248,28 +248,25 @@ while read -r id; do
   file="$(awk -F'\t' -v x="$id" '$1==x{print $2}' "$SIGNED")"
   title="$(awk -F'\t' -v x="$id" '$1==x{print $3}' "$SIGNED")"
 
-  # Build the issue body: goal + touches_paths + the Exit Check VERBATIM.
+  # Build the issue body — the full, well-shaped projection of the spec (goal,
+  # sizing, done-condition, behaviors, write surface, dependency graph, guardrails).
+  # The dep list comes from the edge table so the body can draw the blocked-by graph.
   body="$WORK/body.$id.md"
-  {
-    echo "## $title"
-    echo
-    tsi_goal "$file"
-    echo
-    echo "**touches_paths:** $(tsi_field "$file" touches_paths | sed 's/^$/(see spec)/')"
-    echo
-    echo "### Exit Check (close condition — only a GREEN eval moves this to done)"
-    echo
-    echo '```bash'
-    tsi_exit_check "$file"
-    echo '```'
-  } > "$body"
+  BODY_DEPS="$(awk -F'\t' -v x="$id" '$1==x{printf "%s ", $2}' "$EDGES")"
+  tsi_issue_body "$file" "$BODY_DEPS" > "$body"
 
-  out="$(bash "$ADAPTER" upsert \
-    --id "$id" \
-    --title "$title" \
-    --body-file "$body" \
-    --label "$(tsi_severity "$file")" \
-    --label "$(tsi_priority "$file")" 2>>"$WORK/adapter.log")" \
+  # Triage seed: a `cvg` marker label plus real sizing/severity signal, and a
+  # priority when the spec declares one. Empty fields are OMITTED — never ship a
+  # bare `severity:` or an invented priority. Adapters seed this at create only.
+  UP_ARGS=(--id "$id" --title "$title" --body-file "$body" --label "cvg")
+  UP_EFF="$(tsi_field "$file" effort)"
+  [ -n "$UP_EFF" ] && UP_ARGS+=(--label "effort:$UP_EFF")
+  UP_SEV="$(tsi_severity "$file")"
+  [ -n "$UP_SEV" ] && [ "$UP_SEV" != "(none)" ] && UP_ARGS+=(--label "$UP_SEV")
+  UP_PRI="$(tsi_priority "$file")"
+  [ -n "$UP_PRI" ] && [ "$UP_PRI" != "(none)" ] && UP_ARGS+=(--priority "$UP_PRI")
+
+  out="$(bash "$ADAPTER" upsert "${UP_ARGS[@]}" 2>>"$WORK/adapter.log")" \
     || { echo "ERROR: upsert failed for $id (see adapter.log)"; cat "$WORK/adapter.log" >&2; echo "REGISTER=FAIL"; exit 1; }
   echo "  upsert $id -> issue $out"
 
