@@ -230,6 +230,32 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+echo; echo "[L] YAML-quoted scalars are unquoted before they reach the tracker"
+# Regression: the first live Linear registration shipped a title wrapped in
+# literal quote marks because tsi_field stripped the key but not YAML's delimiters.
+D="$WORK/l/tasks"; S="$WORK/l/store"; mkdir -p "$D"
+cat > "$D/T-$DATE-reg-quoted.md" <<'QSPEC'
+---
+id: T-20260723-reg-quoted
+title: "Quoted title — should arrive clean"
+status: ready
+signed_off: true
+depends_on: []
+---
+
+## Goal
+Quoted-scalar regression fixture.
+QSPEC
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "quoted-title spec registers" "$RC" "0"
+QTITLE="$(awk -F'\t' 'NR==1{print $3}' "$S/issues.tsv" 2>/dev/null)"
+if printf '%s' "$QTITLE" | grep -q '^"'; then
+  bad "title reached the tracker with literal YAML quotes: <$QTITLE>"
+else
+  ok "title arrives unquoted on the board: <$QTITLE>"
+fi
+
+# -----------------------------------------------------------------------------
 echo
 echo "=================================================================="
 echo "RESULTS: $PASS passed, $FAIL failed"

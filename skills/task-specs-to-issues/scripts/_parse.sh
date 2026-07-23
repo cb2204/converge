@@ -28,6 +28,11 @@
 #
 # Only the frontmatter (region between the first two `---` lines) is consulted
 # for fields; a body line that happens to start with `name:` is never matched.
+#
+# YAML scalars may be quoted (`title: "Capture steel thread …"`). Quotes are
+# DELIMITERS, not content, so tsi_field strips a matched surrounding pair — else
+# they ship straight onto the tracker and the board shows a title wrapped in
+# literal quote marks (exactly what the first live Linear registration produced).
 
 # ----- Error helper (mirrors task-spec's ts_die) -----
 tsi_die() {
@@ -59,6 +64,7 @@ tsi_field() {
     | grep -m1 "^${name}:" \
     | sed -E "s/^${name}:[[:space:]]*//" \
     | sed -E 's/[[:space:]]*$//' \
+    | sed -E -e 's/^"(.*)"$/\1/' -e "s/^'(.*)'$/\1/" \
     | tr -d '\r'
 }
 
