@@ -117,20 +117,26 @@ ln_upsert() {
   body="$(cat "$body_file")"
   existing="$(_ln_find_by_external_id "$id" || true)"
 
+  # stdout returns the HUMAN identifier (e.g. ENG-42) when available so the
+  # register report and the tracker_ref receipt read cleanly (`linear:ENG-42`),
+  # falling back to the node id. Link resolution never depends on this value — it
+  # re-resolves by externalId — so returning the identifier is safe.
   if [[ -n "$existing" ]]; then
-    _linear_gql \
+    local uresp ident
+    uresp="$(_linear_gql \
       'mutation($id:String!,$title:String!,$desc:String!){ issueUpdate(id:$id, input:{ title:$title, description:$desc }){ success issue{ id identifier } } }' \
-      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" '{id:$id,title:$title,desc:$desc}')" \
-      | jq -r '.data.issueUpdate.issue.id' | tee /dev/stderr >/dev/null
-    echo "updated $existing ($id)" >&2
-    echo "$existing"
+      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" '{id:$id,title:$title,desc:$desc}')")"
+    ident="$(printf '%s' "$uresp" | jq -r '.data.issueUpdate.issue.identifier // empty')"
+    ident="${ident:-$existing}"
+    echo "updated $ident ($id)" >&2
+    echo "$ident"
   else
     local resp new
     resp="$(_linear_gql \
       'mutation($team:String!,$ext:String!,$title:String!,$desc:String!){ issueCreate(input:{ teamId:$team, externalId:$ext, title:$title, description:$desc }){ success issue{ id identifier } } }' \
       "$(jq -n --arg team "$LINEAR_TEAM_ID" --arg ext "$id" --arg title "$title" --arg desc "$body" \
         '{team:$team,ext:$ext,title:$title,desc:$desc}')")"
-    new="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.id')"
+    new="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.identifier // .data.issueCreate.issue.id')"
     echo "created $new ($id)" >&2
     echo "$new"
   fi

@@ -46,9 +46,11 @@ share one key space.
   is what lookup keys on; the summary tag is redundancy for eyeballs.
 - **Lookup:** JQL `project = KEY AND labels = "task-spec:<id>"` → the first
   issue key; upsert `PUT`s if found, else `POST`s a new issue carrying the label.
-- **Status:** the Jira adapter is **partial** — the shapes are correct and the
-  lookup is real, but write verbs are gated behind `TSI_JIRA_ENABLE=1` until a
-  maintainer validates the create/transition payloads against a live project.
+- **Status:** the Jira adapter is **code-complete but gated** — every verb is
+  fully implemented (the lookup is real; the Done transition is resolved at
+  runtime via `.to.statusCategory.key=="done"`), but write verbs stay behind
+  `TSI_JIRA_ENABLE=1` until a maintainer validates the create/transition payloads
+  against a live project.
 
 ## Invariants every adapter upholds
 

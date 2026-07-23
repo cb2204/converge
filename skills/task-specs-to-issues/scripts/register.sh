@@ -9,11 +9,18 @@
 #
 # Usage:
 #   register.sh [--tracker github|linear|jira] [--tasks-dir DIR] [--dry-run]
+#               [--no-stamp-refs]
 #
-#   --tracker    backend to register onto (default: linear)
-#   --tasks-dir  where the specs live (default: tasks)
-#   --dry-run    parse + validate + PRINT the plan; make NO network calls and
-#                invoke NO adapter. Fully runnable offline with no creds.
+#   --tracker        backend to register onto (default: linear)
+#   --tasks-dir      where the specs live (default: tasks)
+#   --dry-run        parse + validate + PRINT the plan; make NO network calls and
+#                    invoke NO adapter. Fully runnable offline with no creds.
+#   --no-stamp-refs  do NOT write the tracker_ref receipt back into each spec.
+#                    Default is to stamp `tracker_ref: <tracker>:<issue>` into the
+#                    spec frontmatter after a successful upsert (a convenience
+#                    backlink; the issue-side marker stays the idempotency key).
+#                    Use this for read-only / CI contexts that must not touch the
+#                    repo — resolution still works by marker with an empty ref.
 #
 # Exit: 0 on a clean plan/registration; 1 on a cycle, a missing dependency, an
 # adapter preflight failure, or a mid-run adapter error (never half-silent).
@@ -32,6 +39,7 @@ source "$SELF_DIR/_parse.sh"
 TRACKER="linear"
 TASKS_DIR="${TSI_TASKS_DIR:-tasks}"
 DRY_RUN=0
+STAMP_REFS=1
 
 # ----- Arg parse -----
 while [[ $# -gt 0 ]]; do
@@ -41,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --tasks-dir)   TASKS_DIR="${2:?--tasks-dir needs a value}"; shift 2 ;;
     --tasks-dir=*) TASKS_DIR="${1#--tasks-dir=}"; shift ;;
     --dry-run)   DRY_RUN=1; shift ;;
+    --no-stamp-refs) STAMP_REFS=0; shift ;;
     -h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       exit 0 ;;
@@ -50,6 +59,7 @@ done
 
 case "$TRACKER" in
   github|linear|jira) ;;
+  fake) ;;  # test-only no-network reference adapter (scripts/adapters/fake.sh)
   *) tsi_die "unknown --tracker '$TRACKER' (want: github|linear|jira)" ;;
 esac
 
@@ -69,7 +79,7 @@ EDGES="$WORK/edges.tsv"       # from_id \t to_id     (from depends_on to_id)
 ALLIDS="$WORK/allids.txt"     # every spec id (signed or not) — for edge validation
 : > "$SIGNED"; : > "$EDGES"; : > "$ALLIDS"
 
-echo "REGISTER — tracker=$TRACKER tasks-dir=$TASKS_DIR dry-run=$DRY_RUN"
+echo "REGISTER — tracker=$TRACKER tasks-dir=$TASKS_DIR dry-run=$DRY_RUN stamp-refs=$STAMP_REFS"
 echo "----------------------------------------------------------------"
 
 # ----- Step 1: collect the signed-off backlog -----
@@ -104,6 +114,7 @@ if [[ -n "$SKIPPED" ]]; then
 fi
 if [[ "$SIGNED_COUNT" -eq 0 ]]; then
   echo "nothing to register (no signed_off specs)."
+  echo "REGISTER=EMPTY"
   exit 0
 fi
 
@@ -121,6 +132,7 @@ if [[ -n "$MISSING" ]]; then
   echo "ERROR: blocked-by target not found (dependency is un-gated or unknown):" >&2
   echo "  $MISSING" >&2
   echo "  either sign off + register the dependency, or fix the stale depends_on." >&2
+  echo "REGISTER=FAIL"
   exit 1
 fi
 
@@ -158,6 +170,7 @@ while [[ -s "$REMAIN" ]]; do
       [[ -n "$dl" ]] && echo "  $n depends_on: $dl" >&2
     done < "$REMAIN"
     echo "  a cycle is a spec bug (Pass 5B), not a board state. Fix depends_on upstream." >&2
+    echo "REGISTER=FAIL"
     exit 1
   fi
 
@@ -185,6 +198,9 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     title="$(awk -F'\t' -v x="$id" '$1==x{print $3}' "$SIGNED")"
     file="$(awk -F'\t' -v x="$id" '$1==x{print $2}' "$SIGNED")"
     echo "  $ADAPTER upsert --id $id --title \"$title\" --body-file <goal+exit-check of $file>"
+    if [[ "$STAMP_REFS" -eq 1 ]]; then
+      echo "    └─ would stamp receipt: tracker_ref: $TRACKER:<issue> into $file"
+    fi
   done < "$ORDER"
   echo
   echo "[link] depends_on -> blocked-by (from -> to):"
@@ -212,6 +228,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "ready set (no blocker): ${READY:-(none)}"
   echo
   echo "VERDICT: DRY-RUN OK (offline plan is consistent). Re-run without --dry-run to write."
+  echo "REGISTER=DRY_RUN"
   exit 0
 fi
 
@@ -219,11 +236,12 @@ fi
 echo "[preflight] $TRACKER"
 if ! bash "$ADAPTER" preflight; then
   echo "STOP: adapter preflight failed — not half-registering the board." >&2
+  echo "REGISTER=FAIL"
   exit 1
 fi
 echo
 
-CREATED=0; UPDATED=0; LINKS=0
+CREATED=0; UPDATED=0; LINKS=0; STAMPED=0
 
 echo "[upsert] one issue per signed-off spec (build order)"
 while read -r id; do
@@ -252,20 +270,33 @@ while read -r id; do
     --body-file "$body" \
     --label "$(tsi_severity "$file")" \
     --label "$(tsi_priority "$file")" 2>>"$WORK/adapter.log")" \
-    || { echo "ERROR: upsert failed for $id (see adapter.log)"; cat "$WORK/adapter.log" >&2; exit 1; }
+    || { echo "ERROR: upsert failed for $id (see adapter.log)"; cat "$WORK/adapter.log" >&2; echo "REGISTER=FAIL"; exit 1; }
   echo "  upsert $id -> issue $out"
+
+  # Stamp the RECEIPT back into the spec (best-effort — a receipt failure never
+  # aborts a written board; the issue-side marker remains the idempotency key).
+  if [[ "$STAMP_REFS" -eq 1 && -n "$out" ]]; then
+    if tsi_set_tracker_ref "$file" "$TRACKER:$out" 2>>"$WORK/adapter.log"; then
+      STAMPED=$((STAMPED + 1))
+      echo "     receipt: tracker_ref: $TRACKER:$out -> $file"
+    else
+      echo "     WARN: could not stamp tracker_ref into $file (board unaffected; see adapter.log)" >&2
+    fi
+  fi
 done < "$ORDER"
 
 # Count created vs updated from the adapter log (adapters emit "created"/"updated").
-CREATED="$(grep -c '^created ' "$WORK/adapter.log" 2>/dev/null || echo 0)"
-UPDATED="$(grep -c '^updated ' "$WORK/adapter.log" 2>/dev/null || echo 0)"
+# NB: `grep -c` prints "0" AND exits 1 on no match, so a `|| echo 0` fallback would
+# DOUBLE it to "0\n0". Swallow the status with `|| true` and normalise to an integer.
+CREATED="$(grep -c '^created ' "$WORK/adapter.log" 2>/dev/null || true)"; CREATED="${CREATED//[^0-9]/}"; CREATED="${CREATED:-0}"
+UPDATED="$(grep -c '^updated ' "$WORK/adapter.log" 2>/dev/null || true)"; UPDATED="${UPDATED//[^0-9]/}"; UPDATED="${UPDATED:-0}"
 
 echo
 echo "[link] depends_on -> blocked-by"
 while IFS=$'\t' read -r from dep; do
   [[ -n "$dep" ]] || continue
   bash "$ADAPTER" link --from "$from" --to "$dep" 2>>"$WORK/adapter.log" \
-    || { echo "ERROR: link failed for $from blocked-by $dep"; cat "$WORK/adapter.log" >&2; exit 1; }
+    || { echo "ERROR: link failed for $from blocked-by $dep"; cat "$WORK/adapter.log" >&2; echo "REGISTER=FAIL"; exit 1; }
   LINKS=$((LINKS + 1))
   echo "  $from blocked-by $dep"
 done < "$EDGES"
@@ -273,5 +304,7 @@ done < "$EDGES"
 echo
 echo "----------------------------------------------------------------"
 echo "REGISTERED: $SIGNED_COUNT issue(s) (created $CREATED, updated $UPDATED), $LINKS blocked-by link(s)."
+[[ "$STAMP_REFS" -eq 1 ]] && echo "stamped $STAMPED tracker_ref receipt(s) back into the specs."
 [[ -n "$SKIPPED" ]] && echo "skipped (un-gated): $SKIPPED"
 echo "next: run verify-registration.sh --tracker $TRACKER to gate the mapping."
+echo "REGISTER=OK"

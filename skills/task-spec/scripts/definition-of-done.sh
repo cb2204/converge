@@ -12,6 +12,14 @@
 # bash 3.2-safe; Python stdlib-only (no pip, no yaml lib).
 set -euo pipefail
 
+# Honor --version uniformly (doc-lint requires every task-spec script to answer
+# --version). Source the shared lib only for ts_version_flag / TASKSPEC_VERSION;
+# the analysis itself remains Python-stdlib.
+_DOD_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+# shellcheck source=./_lib.sh
+source "$_DOD_LIB"
+ts_version_flag "$@"
+
 FILE="${1:-}"
 if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
   echo "ERROR: usage: definition-of-done.sh <task-spec.md>" >&2

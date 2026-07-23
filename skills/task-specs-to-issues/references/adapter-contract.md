@@ -58,8 +58,13 @@ Every verb that mutates keys on the spec `id`. See
 | Adapter | preflight | upsert | link | list-ready | write-result | Notes |
 |---------|-----------|--------|------|------------|--------------|-------|
 | `github.sh` | live | live | live | live | live | pure `gh` + `jq`; blocked-by is a task-list line in a `### Blocked by` body section. |
-| `linear.sh` | live | live | live | live | live | GraphQL over `curl`; blocked-by is a native `issueRelation type: blocks`. All network calls isolated in `_linear_gql*`. |
-| `jira.sh` | live | **partial** | **partial** | **partial** | **partial** | REST v3 request shapes present; write verbs gated behind `TSI_JIRA_ENABLE=1` until validated. |
+| `linear.sh` | live | live | live | live | live | GraphQL over `curl`; blocked-by is a native `issueRelation type: blocks`. `upsert` returns the human identifier (`ENG-42`). All network calls isolated in `_linear_gql*`. |
+| `jira.sh` | live | code-complete¹ | code-complete¹ | code-complete¹ | code-complete¹ | REST v3 shapes complete incl. **runtime Done-transition resolution** (`.to.statusCategory.key=="done"`); write verbs gated behind `TSI_JIRA_ENABLE=1` until validated against a live project. |
+| `fake.sh` | live | live | live | live | live | **test-only, no network** — on-disk store under `$TSI_FAKE_STORE`, deterministic `FAKE-N` ids. The reference adapter and the backend for `tests/test-register.sh`; never a real board. |
+
+¹ *code-complete* = the request shapes are fully written and self-consistent, but
+the write verbs are held behind `TSI_JIRA_ENABLE=1` until they have been run once
+against a live Jira project. Promote by validating, then dropping the guard.
 
 ## Why an adapter and not a library
 
@@ -69,3 +74,47 @@ work is, the spec wins and the board is re-registered — the projection is
 one-way. Because the board is disposable and re-derivable, the backend that
 holds it is a detail behind this contract, and the day the team moves trackers
 is the day someone writes one more `adapters/<new>.sh` with these five verbs.
+
+## Adding a tracker (the recipe)
+
+The core (`register.sh` / `verify-registration.sh`) is **tracker-agnostic** — it
+speaks only the five verbs. Supporting a new backend is one new file, no core
+change. This is deliberately the opposite of shipping a dozen half-built
+backends: **thin adapters behind one agnostic core** beats broad-but-shallow
+(the same lesson production multi-tracker tools like *spectryn* encode — 13
+trackers, one ports-and-adapters core). Recipe:
+
+1. **Copy `adapters/fake.sh`** — it is the smallest COMPLETE adapter (~130 lines,
+   no network) and the clearest template for the five verbs, the stdout/stderr
+   discipline, and the dispatch block.
+2. **Pick the idempotency carrier** (see `idempotency-keys.md`): a native
+   external-id field (best), else a label + a body/description marker. `upsert`
+   MUST look up by it before creating.
+3. **Map the dependency edge** to the tracker's native "blocks / blocked-by"
+   relation (or, if none exists, a greppable convention like the GitHub
+   task-list line). `link --from X --to Y` sets X *blocked-by* Y.
+4. **`preflight`** asserts auth/reachability and exits non-zero with a one-line
+   remediation — this is what keeps a run from half-registering.
+5. **Exit 0 on success, always** — including `list-ready` with an empty result
+   (a trailing false `[[ … ]] && echo` must not leak a non-zero status, or a
+   caller doing `list-ready > f || …` will discard the output).
+6. **Add the tracker name** to the `--tracker` allow-list in `register.sh` and
+   `verify-registration.sh`, then prove it offline against `test-register.sh`'s
+   shape (point `TSI_*` env at a sandbox, or add a fake-style store).
+
+### Documented extension slots (not yet shipped)
+
+Shipped today: `github`, `linear`, `jira` (gated), `fake` (test). These are the
+common next backends — each is a ~130-line file following the recipe above; none
+is stubbed in-tree, so the surface stays lean and honest:
+
+| Tracker | Idempotency carrier | Blocked-by relation |
+|---------|---------------------|---------------------|
+| **GitLab** issues | issue description marker + label | linked issues, `blocks` type |
+| **Azure DevOps** work items | a tag + a field marker | `Predecessor/Successor` link |
+| **Asana** tasks | external-id (`external.gid`) | dependencies (`addDependencies`) |
+| **ClickUp** tasks | a custom field or tag | task `waiting_on` dependency |
+| **Shortcut** stories | external-id field | story links, `blocks` |
+| **Notion** DB pages | a `task-spec id` property | a relation property |
+
+Adding any of these is a pull request against this contract, not a redesign.

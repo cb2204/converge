@@ -29,3 +29,9 @@ temp/legs-e2e/
 
 # Engine session scratch (kimi/codex run dirs)
 .kimi/
+
+# task-specs-to-issues fake adapter test store (no-network)
+.tsi-fake-store/
+
+# cvg machine-local config overrides (non-secret .cvg/config is committable)
+.cvg/*.local

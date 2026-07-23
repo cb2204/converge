@@ -22,7 +22,7 @@ precondition: (none)
 blocked_reason: (none)
 security_class: (none)
 source_action_item: (none)
-linear_ref: (none)  # off-repo Intent crossing — Linear issue id/url this task traces to
+tracker_ref: (none)  # backlink to the tracker issue this task registers as (<tracker>:<ref>, e.g. linear:ENG-42, github:#42). Written BACK by Register ① (task-specs-to-issues) after upsert, never by the author. The issue-side marker is the idempotency key, so (none) is fine.
 execution_backend: any  # OPEN STRING — names the canonical executor (any|claude|codex|kimi|glm|gemini|<your-harness>). Adapters live in runbooks/dispatch-recipes/ (non-normative). Required to be 'glm' for effort: L.
 signed_off: false  # flipped true by safe-to-delegate.sh — the autonomy contract; nothing runs unattended without it
 signed_off_by: (none)  # who/what signed off (e.g. luan, safe-to-delegate.sh)

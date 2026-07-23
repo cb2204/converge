@@ -1,8 +1,8 @@
 ---
 name: task-specs-to-issues
-description: Register a backlog of signed-off Task-Specs (tasks/T-*.md) as tracker issues — one issue per task-spec, with blocked-by links carrying the dependency graph — so the execution loop reads a board instead of repo files. Implements the Converge REGISTER bridge (Fork B into the Loop). The tracker is a pluggable backend behind a two-method adapter (read ready issues, write result), selected by --tracker github|linear|jira (default linear), never baked into the name. Use when the user says register the tasks, push tasks to Linear, push tasks to GitHub issues, task-specs to issues, or bridge the backlog onto a tracker. Not for authoring tasks (that is Pass 5B task-spec) and not for running them (that is Pass 8 task-loop).
+description: Register a backlog of signed-off Task-Specs (tasks/T-*.md) as tracker issues — one issue per task-spec, with blocked-by links carrying the dependency graph — so the execution loop reads a board instead of repo files. Implements the Converge REGISTER bridge (Fork B into the Loop). The tracker is a pluggable backend behind a five-verb adapter (preflight · upsert · link · list-ready · write-result), selected by --tracker github|linear|jira (default linear), never baked into the name. After each upsert it stamps a tracker_ref backlink back into the spec (the issue-side marker stays the idempotency key). Use when the user says register the tasks, push tasks to Linear, push tasks to GitHub issues, task-specs to issues, or bridge the backlog onto a tracker. Not for authoring tasks (that is Pass 5B task-spec) and not for running them (that is Pass 8 task-loop).
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 license: Apache-2.0
 ---
 
@@ -17,8 +17,9 @@ The one-way bridge that projects repo-local Task-Specs onto a tracker board the 
 ## Important
 
 - **Register ONLY `signed_off: true` specs.** An un-gated spec on the board would shadow work that is not safe to delegate. Skip and report any spec with `signed_off: false`.
-- **The projection is one-way: task-spec → issue.** The board never edits the spec back. If the board and `tasks/*` ever disagree on what the work IS, the spec wins and the board is re-registered. The spec is the floor, exactly as Postgres is the floor below `raw.*` in this repo.
+- **The projection is one-way for the WORK: task-spec → issue.** The board never edits the spec's work back. If the board and `tasks/*` ever disagree on what the work IS, the spec wins and the board is re-registered. The spec is the floor, exactly as Postgres is the floor below `raw.*` in this repo. (The one write back into a spec is a *receipt*, not work — see the next bullet.)
 - **Idempotent by design.** Re-running must not create duplicate issues. Every adapter keys on the spec `id` (an external ident / title-tag / label), finds an existing issue first, and updates it instead of creating a second.
+- **The receipt is stamped back, but the marker is the key.** After a successful upsert, register writes `tracker_ref: <tracker>:<issue>` into the spec's frontmatter — a convenience backlink so a human or agent can jump spec→issue. This is the ONLY write this skill makes to a spec, and it touches frontmatter *metadata* only: a signed-off spec's HMAC covers `id + body digest + signed_off*`, so the seal survives the stamp. Critically, the **issue-side marker — not `tracker_ref` — is the idempotency key**, so resolution still works when the receipt is `(none)` (e.g. a CI run that must not write to the repo). Disable with `--no-stamp-refs`. (SOTA-grounded: workplans #62's `tracked_in` contract, sdlc-bridge / spec-kit frontmatter write-back.)
 - **The eval travels onto the board.** Copy the spec's Exit Check (or Success Criteria) into the issue body verbatim — it is the close condition, and only a green eval may move an issue to done. That single rule is why the board never lies.
 - **Only the loop writes result state.** Registration only ever creates/updates the shadow. Pass 8 (`task-loop --issue N`) writes result — failure-as-comment on a red eval, a linked PR on a green one. The Manager/fan-out that picks WHICH ready issue to run, and when, is future CI/CD (GitHub Actions), not an in-session skill.
 
@@ -40,7 +41,7 @@ Build a table of `{id, title, signed_off, depends_on[]}`. Drop every spec where 
 
 ### Step 2 — Bind the tracker adapter
 
-Pick the backend from `--tracker {github|linear|jira}` (default `linear`). Each adapter is the same two-method contract behind one CLI:
+Pick the backend from `--tracker {github|linear|jira}` (default `linear`; a no-network `fake` backend backs the offline test suite). Each adapter is the same **five-verb** contract behind one CLI (`preflight · upsert · link · list-ready · write-result`); the loop itself needs only two of them:
 
 - **read ready** — `adapter list-ready` → issues with no open `blocked-by` (what the loop pulls).
 - **write result** — `adapter write-result --issue N --status {pass|fail} ...` (what the loop writes; not used during registration).
@@ -56,6 +57,8 @@ Walk the signed-off specs in build order and `upsert` exactly one issue per spec
 - external key = spec `id` (github: `<!-- task-spec: T-... -->` marker + label; linear: title tag / external id; jira: a label + summary tag)
 
 Upsert semantics: look up by the `id` key first; update if found, create if not. A spec with no issue is invisible to the loop; an issue with no spec is a lie. Never fan-out (1 spec ≠ 2 issues) and never merge (2 specs ≠ 1 issue).
+
+After each upsert the driver stamps the returned issue ref back into the spec as `tracker_ref: <tracker>:<issue>` (the **receipt**), unless `--no-stamp-refs`. The receipt is a backlink for humans and agents, never the key — the next run still resolves by the issue-side marker, so a spec with `tracker_ref: (none)` registers exactly the same way.
 
 ### Step 4 — LINK: `depends_on` → `blocked-by`
 
@@ -118,7 +121,7 @@ The board this skill registers is the exact surface the execution loop reads. A 
 
 ## References
 
-- `references/adapter-contract.md` — the two-method adapter contract (read-ready / write-result) plus the `upsert` / `link` / `preflight` verbs every backend implements.
+- `references/adapter-contract.md` — the five-verb adapter contract (`preflight · upsert · link · list-ready · write-result`), the stdout/stderr discipline, the backend status table, and the ~40-line recipe for adding a new tracker.
 - `references/dependency-graph.md` — how `depends_on` (YAML inline list) maps to `blocked-by`, cycle detection, and the repo's canonical build-order graph.
 - `references/idempotency-keys.md` — how each tracker carries the spec `id` (github HTML marker + label, linear external id, jira label) so re-runs upsert instead of duplicate.
 ```

@@ -139,3 +139,61 @@ tsi_list_specs() {
     echo "$f"
   done
 }
+
+# ----- Write-back: stamp the tracker_ref RECEIPT into a spec's frontmatter -----
+# tsi_set_tracker_ref FILE VALUE
+#
+# Idempotently set `tracker_ref: VALUE` inside FILE's frontmatter (the region
+# between the first two `---` lines) and NOWHERE else. This is the ONLY write
+# this skill ever makes to a spec: a convenience BACKLINK (a receipt) to the
+# tracker issue, stamped after a successful upsert.
+#
+# It is NOT the idempotency key — the marker carried ON the issue is (see
+# references/idempotency-keys.md). It never touches the spec BODY, so a
+# signed-off spec stays sealed: the sign-off HMAC covers `id + body_digest +
+# the signed_off* values` (task-spec _lib.sh ts_signoff_payload), and
+# body_digest is the sha256 of everything AFTER the closing `---`. A frontmatter
+# receipt is outside that boundary by design, so the MAC still verifies.
+#
+# Resolution order (first match wins):
+#   1) an existing `tracker_ref:` line in the frontmatter -> replace its value
+#   2) else a deprecated `linear_ref:` line present        -> insert after it
+#   3) else                                                -> append before `---`
+#
+# bash-3.2-safe: awk over a temp file, atomic mv. Returns 1 on a missing file, an
+# empty/multi-line value, or a frontmatter with no closing '---' (never clobbers).
+tsi_set_tracker_ref() {
+  local file="$1" value="$2"
+  [[ -f "$file" ]]  || { echo "tsi_set_tracker_ref: '$file' not found" >&2; return 1; }
+  [[ -n "$value" ]] || { echo "tsi_set_tracker_ref: empty value" >&2; return 1; }
+  case "$value" in
+    *[$'\n\r']*) echo "tsi_set_tracker_ref: value must be single-line (got newline/CR)" >&2; return 1 ;;
+  esac
+
+  local has_tr=0 has_lr=0
+  if tsi_frontmatter "$file" | grep -q '^tracker_ref:'; then has_tr=1; fi
+  if tsi_frontmatter "$file" | grep -q '^linear_ref:';  then has_lr=1; fi
+
+  local tmp="${file}.tmp.$$"
+  awk -v val="$value" -v has_tr="$has_tr" -v has_lr="$has_lr" '
+    BEGIN { fm=0; done=0 }
+    /^---[[:space:]]*$/ {
+      fm++
+      if (fm==2 && !done) { print "tracker_ref: " val; done=1 }
+      print; next
+    }
+    (fm==1 && !done && has_tr+0>0 && /^tracker_ref:/)                { print "tracker_ref: " val; done=1; next }
+    (fm==1 && !done && has_tr+0==0 && has_lr+0>0 && /^linear_ref:/)  { print; print "tracker_ref: " val; done=1; next }
+    { print }
+  ' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+
+  # Conservative guard: the write only "took" if tmp now carries a tracker_ref
+  # line (replace or insert). If the frontmatter had no closing '---', the awk
+  # appended nothing — refuse rather than move a no-op/garbled file.
+  if ! grep -q '^tracker_ref:' "$tmp"; then
+    rm -f "$tmp"
+    echo "tsi_set_tracker_ref: no frontmatter closing '---' in $file; not written" >&2
+    return 1
+  fi
+  mv "$tmp" "$file"
+}

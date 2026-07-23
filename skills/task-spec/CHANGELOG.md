@@ -16,6 +16,29 @@ falls back to a legacy top-level `version:` for older specs.
 
 ---
 
+## [3.5.0] — 2026-07-23
+
+### Added
+- **`tracker_ref` — the vendor-neutral tracker backlink (receipt).** A new
+  optional frontmatter field carrying `<tracker>:<issue-ref>` (e.g.
+  `linear:ENG-42`, `github:#42`) or `(none)`. It is the *receipt* the
+  `task-specs-to-issues` REGISTER pass (Pass ①) writes BACK into the spec after
+  a successful upsert — **never authored by hand**. Design grounded in the SOTA
+  spec↔tracker contract (agnostical/workplans #62, sdlc-bridge,
+  spec-kit-github-issues): the **marker carried on the issue is the idempotency
+  key**, so `tracker_ref` is a convenience backlink only and tooling MUST
+  tolerate it being `(none)` (a CI run that cannot write back still resolves by
+  marker). One mirror per tracker; the spec always wins on content.
+- **Validator Check 2d** — `tracker_ref`, if present and not `(none)`, SHOULD be
+  `<tracker>:<issue-ref>` (open-string tracker, mirroring `execution_backend`);
+  a malformed value **warns, never blocks** — the field does not gate delegation.
+
+### Deprecated
+- **`linear_ref`** — the Linear-specific field is now a deprecated alias of
+  `tracker_ref`. Still accepted (legacy fixtures carry `linear_ref: (none)`); a
+  non-empty value warns and should migrate to `tracker_ref: linear:<ref>`. The
+  template now emits `tracker_ref: (none)` in its place.
+
 ## [3.4.0] — 2026-07-21
 
 ### Changed — the fork collapses; task-spec becomes the universal sizing engine

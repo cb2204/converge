@@ -219,6 +219,34 @@ if grep -q "^signed_off:" "$FILE"; then
   fi
 fi
 
+# Check 2d: tracker_ref receipt (Register ① backlink). OPTIONAL and vendor-neutral.
+# tracker_ref is the convenience backlink written BACK into the spec by the
+# task-specs-to-issues REGISTER pass after a successful upsert — never by the
+# author. The idempotency KEY is the marker carried ON the issue, not this field,
+# so tooling must tolerate tracker_ref being (none) (e.g. a CI run that cannot
+# write back to the repo). We therefore READ LIBERAL: if present and not (none)
+# it SHOULD be '<tracker>:<issue-ref>' (open-string tracker, mirroring
+# execution_backend), but a malformed value WARNS rather than blocks — the field
+# never gates delegation.
+if grep -q '^tracker_ref:' "$FILE"; then
+  TRACKER_REF=$(grep -m1 '^tracker_ref:' "$FILE" | sed -E 's/^tracker_ref:[[:space:]]*//' | sed -E 's/[[:space:]]*(#.*)?$//' || true)
+  if [[ -n "$TRACKER_REF" && "$TRACKER_REF" != "(none)" ]]; then
+    if ! printf '%s' "$TRACKER_REF" | grep -qE '^[A-Za-z0-9_.-]+:.+$'; then
+      WARNINGS+=("tracker_ref should be '<tracker>:<issue-ref>' (e.g. linear:ENG-42, github:#42) or (none) (got: '$TRACKER_REF'). It is a convenience backlink written by Register ①; the issue marker is the real idempotency key.")
+    fi
+  fi
+fi
+
+# linear_ref is the DEPRECATED Linear-specific alias of tracker_ref. Still
+# accepted (legacy fixtures carry `linear_ref: (none)`), but a non-empty value
+# should migrate to the vendor-neutral tracker_ref.
+if grep -q '^linear_ref:' "$FILE"; then
+  LINEAR_REF=$(grep -m1 '^linear_ref:' "$FILE" | sed -E 's/^linear_ref:[[:space:]]*//' | sed -E 's/[[:space:]]*(#.*)?$//' || true)
+  if [[ -n "$LINEAR_REF" && "$LINEAR_REF" != "(none)" ]]; then
+    WARNINGS+=("linear_ref is the deprecated Linear-specific field; migrate to the vendor-neutral tracker_ref (e.g. tracker_ref: linear:$LINEAR_REF)")
+  fi
+fi
+
 # Check 3: effort gate (v3.4 — six-tier, tasks-all-the-way-down)
 #   XS/S/M/L → runnable LEAF atoms; the write-surface must fit the tier budget.
 #              L is the ceiling: accepted only with execution_backend: glm + ONE goal.

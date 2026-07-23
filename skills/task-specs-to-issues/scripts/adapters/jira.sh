@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# adapters/jira.sh — Jira backend for task-specs-to-issues.  *** PARTIAL STUB ***
+# adapters/jira.sh — Jira Cloud backend for task-specs-to-issues.  *** GATED ***
 #
-# STATUS: PARTIAL. preflight is live; upsert/link/list-ready/write-result carry
-# the REAL Jira Cloud REST v3 request shapes (curl bodies) but are gated behind
-# an explicit TSI_JIRA_ENABLE=1 so a half-finished adapter can never silently
-# half-register a board. This file documents the exact endpoints and payloads a
-# maintainer completes to promote it to first-class — the same five-verb
-# contract as github.sh / linear.sh (see references/adapter-contract.md).
+# STATUS: CODE-COMPLETE, GATED. All five verbs carry the REAL Jira Cloud REST v3
+# request shapes and are fully implemented — preflight is live; upsert / link /
+# list-ready / write-result (including the runtime Done-transition resolution) are
+# complete. Write verbs stay behind an explicit TSI_JIRA_ENABLE=1 until a
+# maintainer validates the payloads against a live project, so an unvalidated
+# adapter can never silently half-register a board. Same five-verb contract as
+# github.sh / linear.sh / fake.sh (see references/adapter-contract.md).
 #
 # Auth (Jira Cloud): HTTP Basic with `email:api_token`, base64-encoded.
 #   JIRA_BASE_URL    — e.g. https://your-org.atlassian.net
@@ -42,8 +43,8 @@ _jira_auth_header() {
 # adapter. Keeps "partial" honest — the shapes are here to read, not to fire.
 _jira_require_enabled() {
   if [[ "${TSI_JIRA_ENABLE:-0}" != "1" ]]; then
-    echo "jira adapter is PARTIAL: set TSI_JIRA_ENABLE=1 to run write verbs" >&2
-    echo "review the REST shapes in this file and complete/validate before enabling" >&2
+    echo "jira adapter is GATED (code-complete, unvalidated): set TSI_JIRA_ENABLE=1 to run write verbs" >&2
+    echo "validate the REST create/transition payloads against a live project, then enable" >&2
     exit 2
   fi
 }
@@ -73,7 +74,7 @@ jira_preflight() {
 }
 
 # ---------------------------------------------------------------------------
-# VERB: upsert --id ID --title T --body-file F [--label L ...]   (PARTIAL)
+# VERB: upsert --id ID --title T --body-file F [--label L ...]   (GATED)
 # ---------------------------------------------------------------------------
 # Find-by-JQL on the task-spec label, then update, else create. Echoes the Jira
 # issue key (e.g. ENG-42).
@@ -136,7 +137,7 @@ jira_upsert() {
 }
 
 # ---------------------------------------------------------------------------
-# VERB: link --from ID --to ID   (PARTIAL)
+# VERB: link --from ID --to ID   (GATED)
 # ---------------------------------------------------------------------------
 # depends_on(FROM -> TO) becomes a "Blocks" link: TO blocks FROM (Jira shows
 # FROM "is blocked by" TO).  POST /rest/api/3/issueLink
@@ -176,7 +177,7 @@ _jira_find_key() {
 }
 
 # ---------------------------------------------------------------------------
-# VERB: list-ready   (PARTIAL)
+# VERB: list-ready   (GATED)
 # ---------------------------------------------------------------------------
 # Ready = registered, not Done, and no unresolved "is blocked by" link. JQL can
 # express most of this; the blocker-resolution check is done client-side over the
@@ -229,9 +230,25 @@ jira_write_result() {
         content:[ { type:"paragraph", content:[ { type:"text", text:$body } ] } ] } }')" >/dev/null
 
   if [[ "$status" == "pass" ]]; then
-    # POST /rest/api/3/issue/<key>/transitions  (transition id resolved above)
-    echo "TODO: resolve + POST the Done transition for $issue (project-specific id)" >&2
-    echo "done $issue (pass)"
+    # Resolve the Done transition at RUNTIME. Transition ids are workflow/project
+    # specific and MUST NOT be hard-coded: GET the transitions available from the
+    # issue's current status, then pick the one whose TARGET status category is
+    # "done" (`.to.statusCategory.key == "done"`). This is the standard Jira Cloud
+    # v3 pattern and is portable across differently-named Done columns.
+    local tid
+    tid="$(curl -sS -G "${JIRA_BASE_URL%/}/rest/api/3/issue/${issue}/transitions" \
+      -H "$(_jira_auth_header)" -H "Accept: application/json" \
+      | jq -r '.transitions[]? | select(.to.statusCategory.key=="done") | .id' | head -1)"
+    if [[ -z "$tid" ]]; then
+      # No done-category transition from here (already done, or a workflow gap).
+      echo "write-result: no 'done'-category transition available from ${issue}'s current status — commented only" >&2
+      echo "commented $issue (pass; transition skipped)"
+      return 0
+    fi
+    curl -sS -X POST "${JIRA_BASE_URL%/}/rest/api/3/issue/${issue}/transitions" \
+      -H "$(_jira_auth_header)" -H "Content-Type: application/json" \
+      --data "$(jq -n --arg id "$tid" '{ transition: { id: $id } }')" >/dev/null
+    echo "done $issue (pass, transition $tid)"
   else
     echo "commented $issue (fail)"
   fi

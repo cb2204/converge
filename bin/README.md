@@ -7,7 +7,15 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.10.0** · (0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
+**cvg v0.12.0** · (0.12.0 R.setup `setup`/`setup tracker` — the guided
+**connectivity surface** (engines · trackers · index/memory-planned): a status
+board + guided connect that records CHOICES in `.cvg/config` and **never
+credentials** (secrets stay in the environment / a secrets manager); `register`
+now defaults `--tracker` from it; 0.11.0 R①.I `register`/`register --check` — the REGISTER ①
+bridge (Fork B → the Loop) onto a **pluggable tracker** (`github|linear|jira`;
+`fake` for offline tests): 1 spec = 1 issue, `depends_on` → `blocked-by`, and a
+`tracker_ref` receipt stamped back into each spec; proven offline 42/42 via the
+`fake` adapter; 0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
 **dispatching** subcommand + the engine-adapter/doctor layer, Milestone 3.1;
 0.7.0 R4.build — multi-engine adversary `review --adversary codex,kimi` merges two
 cross-family views into one referee-stamped log, the ATTACK half of the auto-loop) · born
@@ -29,7 +37,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.10.0)
+## Command surface (v0.12.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
@@ -45,6 +53,10 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call. Gate 0 **refuses an XL/XXL node** — a worker dispatches its children (leaves), never the node itself |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |
 | `cvg tasks dod <spec>` | `definition-of-done.sh` (task-spec) | renders the **Definition of Done + traceability matrix** (every behavior `B-N` → its verifying eval → terminal); gates `DOD=COMPLETE\|GAPS` (an untraced behavior FAILS). The 2026 agent-spec SOTA review artifact (Brodner/Moai/Thread AI) — inherits `--json`. Proven across the 9-task backbone (all `DOD=COMPLETE`). |
+| `cvg register [--tracker T] [--no-stamp-refs]` | `task-specs-to-issues/scripts/register.sh` (REGISTER ①) | **the bridge Fork B → the Loop** — projects signed-off Task-Specs onto a tracker board (1 spec = 1 issue; `depends_on` → `blocked-by`), then stamps a `tracker_ref: <tracker>:<issue>` receipt back into each spec (the issue-side marker stays the idempotency key). Pluggable **five-verb** adapter `github\|linear\|jira` (default `linear`), `fake` for tests; the referee holds **no** tracker creds — the adapter authenticates itself. Idempotent (re-run upserts, never duplicates). `REGISTER=OK\|FAIL\|DRY_RUN\|EMPTY`. Proven offline: `skills/task-specs-to-issues/tests/test-register.sh` (46/46 via the `fake` adapter). |
+| `cvg register --check` | `task-specs-to-issues/scripts/verify-registration.sh` | gates the mapping is faithful (1:1 count, every `depends_on` is one `blocked-by`, no cycle, no un-gated leak); read-only. `CHECK_REGISTER=OK\|FAIL`. |
+| `cvg setup` | native (`doctor` + adapter `preflight`) | **connectivity status board** — per-part readiness (engines · trackers; index/memory as planned slots) + the exact next step. Records CHOICES in `.cvg/config`, **never credentials** (the referee-holds-no-creds rule, now security-grounded: *"if an agent can see it, it can leak it"* — Claude Code / Cursor have both leaked `.env` keys). `SETUP=READY\|INCOMPLETE`. |
+| `cvg setup tracker <t>` | native (+ adapter `preflight`) | guided connect — validates a backend and records it as the default in `.cvg/config`; `cvg register` then defaults `--tracker` from it. `SETUP_TRACKER=OK\|UNREACHABLE\|USAGE_ERROR`. |
 | `cvg eval <spec>` | `run-task-spec.sh` | ran its own birth task's evals, 3/3 + Exit Check |
 | `cvg lint` | `lint-backlog.sh` | routed pass-through |
 | `cvg transition <id> <state>` | `transition-status.sh` | moved `T-20260719-cvg-router` ready → done |

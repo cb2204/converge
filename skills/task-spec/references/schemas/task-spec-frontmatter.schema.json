@@ -124,7 +124,15 @@
     "blocked_reason": {"type": "string"},
     "security_class": {"type": "string"},
     "source_action_item": {"type": "string"},
-    "linear_ref": {"type": "string"},
+    "linear_ref": {
+      "type": "string",
+      "deprecated": true,
+      "description": "DEPRECATED Linear-specific alias of tracker_ref. Still accepted; migrate a non-empty value to the vendor-neutral tracker_ref."
+    },
+    "tracker_ref": {
+      "type": "string",
+      "description": "Convenience backlink to the tracker issue this spec is registered as: '<tracker>:<issue-ref>' (e.g. linear:ENG-42, github:#42, jira:PROJ-42) or (none). Written BACK into the spec by the task-specs-to-issues REGISTER pass (Pass ①) after a successful upsert — never by the author. The idempotency KEY is the marker carried on the issue, NOT this field, so tooling must tolerate tracker_ref being (none) (e.g. a CI run that cannot write back to the repo). One mirror per tracker; the spec always wins on content."
+    },
     "execution_backend": {
       "type": "string",
       "examples": [

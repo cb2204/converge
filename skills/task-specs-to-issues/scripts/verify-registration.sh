@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "$TRACKER" in github|linear|jira) ;; *) tsi_die "unknown --tracker '$TRACKER'" ;; esac
+case "$TRACKER" in github|linear|jira|fake) ;; *) tsi_die "unknown --tracker '$TRACKER'" ;; esac
 [[ -d "$TASKS_DIR" ]] || tsi_die "tasks dir '$TASKS_DIR' not found"
 ADAPTER="$SELF_DIR/adapters/${TRACKER}.sh"
 [[ -f "$ADAPTER" ]] || tsi_die "adapter not found: $ADAPTER"
@@ -175,8 +175,10 @@ echo "----------------------------------------------------------------"
 if [[ "$FAIL" -eq 0 ]]; then
   echo "1:1 mapping: $SPEC_COUNT spec(s) -> $SPEC_COUNT issue(s); $EDGE_COUNT edge(s) as blocked-by links."
   echo "VERDICT: REGISTERED"
+  echo "CHECK_REGISTER=OK"
   exit 0
 else
   echo "VERDICT: DO NOT PROCEED"
+  echo "CHECK_REGISTER=FAIL"
   exit 1
 fi
