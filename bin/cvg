@@ -194,13 +194,25 @@ cvg_setup_tracker_linear() {
   printf '%sconnecting linear …%s\n' "$UI_DIM" "$UI_RESET"
 
   # Discover teams (key<TAB>name<TAB>uuid). The key already knows them.
-  local teams n
-  teams="$(bash "$ad" teams 2>/dev/null || true)"
+  # Capture stderr instead of swallowing it: when this fails, the adapter's own
+  # message (bad/revoked key, missing tool, GraphQL error) IS the diagnosis.
+  local teams n errf
+  errf="$(mktemp)"
+  teams="$(bash "$ad" teams 2>"$errf" || true)"
   n="$(printf '%s' "$teams" | grep -c . || true)"; n="${n//[^0-9]/}"; n="${n:-0}"
   if [ "$n" -eq 0 ]; then
-    ui_err "could not list any teams — is LINEAR_API_KEY valid and does it have Read access?"
+    ui_err "could not list any Linear teams. The adapter reported:"
+    if [ -s "$errf" ]; then
+      sed 's/^/    /' "$errf" >&2
+    else
+      printf '    (no error output — the API returned an empty team list)\n' >&2
+    fi
+    printf '%s    check: key valid + not revoked · key has Read access · key can see the team%s\n' "$UI_DIM" "$UI_RESET" >&2
+    printf '%s    raw test: curl -s -X POST https://api.linear.app/graphql -H "Authorization: $LINEAR_API_KEY" -H "Content-Type: application/json" -d '"'"'{"query":"{ viewer { name email } }"}'"'"'%s\n' "$UI_DIM" "$UI_RESET" >&2
+    rm -f "$errf"
     printf 'SETUP_TRACKER=UNREACHABLE\n'; exit 1
   fi
+  rm -f "$errf"
 
   # Choose the team: --team wins; else the single team; else ask for --team <KEY>.
   local chosen="${team_flag:-${LINEAR_TEAM_ID:-}}"

@@ -43,7 +43,12 @@ _ln_require_tools() {
 #   is a JSON object (default {}). Echoes the raw response JSON. Fails hard on a
 #   transport error or a GraphQL `errors` array.
 _linear_gql() {
-  local query="$1" variables="${2:-{}}"
+  local query="$1"
+  # NB: do NOT write `${2:-{}}` — bash closes the expansion at the FIRST `}`, so an
+  # explicit `{}` comes back as `{}}` (invalid JSON -> jq fails -> empty POST body).
+  # That trap silently broke every Linear call until it was caught against the live API.
+  local variables="${2:-}"
+  [ -n "$variables" ] || variables='{}'
   [[ -n "${LINEAR_API_KEY:-}" ]] || tsi_ln_die "LINEAR_API_KEY unset"
   local payload resp
   payload="$(jq -n --arg q "$query" --argjson v "$variables" '{query:$q, variables:$v}')"
