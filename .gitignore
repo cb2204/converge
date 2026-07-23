@@ -33,5 +33,7 @@ temp/legs-e2e/
 # task-specs-to-issues fake adapter test store (no-network)
 .tsi-fake-store/
 
-# cvg machine-local config overrides (non-secret .cvg/config is committable)
-.cvg/*.local
+# cvg local setup state — tracker choice + the workspace's team UUID, written by
+# `cvg setup`. Not secret (cvg never stores credentials), but workspace-specific:
+# each user runs `cvg setup` for their own board rather than inheriting yours.
+.cvg/
