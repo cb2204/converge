@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.12.0"
+CVG_VERSION="0.13.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -76,6 +76,20 @@ cvg_config_set() {  # cvg_config_set KEY VALUE  (idempotent replace-or-append)
   mv "$tmp" "$f"
 }
 
+# Bridge the non-secret Linear team id from .cvg/config into the env the adapter
+# reads, unless the user already set it. The API KEY is NEVER stored or bridged —
+# it lives in the environment only. This is what lets `cvg register` work after
+# setup with just the one secret exported.
+cvg_export_linear_team() {
+  if [ -z "${LINEAR_TEAM_ID:-}" ]; then
+    local tid; tid="$(cvg_config_get linear_team_id)"
+    if [ -n "$tid" ]; then export LINEAR_TEAM_ID="$tid"; fi
+  fi
+  # MUST return 0: this is called as a bare statement under `set -e`, so a falsy
+  # trailing test would abort the whole command (it did — caught in review).
+  return 0
+}
+
 # ---------------------------------------------------------------------------
 # setup — the guided connectivity surface (a generalized doctor + config).
 # ---------------------------------------------------------------------------
@@ -101,6 +115,7 @@ cvg_setup_status() {
   # trackers — preflight each; mark the configured default.
   local cfg; cfg="$(cvg_config_get tracker)"
   printf '  trackers  %sdefault: %s%s\n' "$UI_DIM" "${cfg:-<none — cvg setup tracker linear>}" "$UI_RESET"
+  cvg_export_linear_team   # so a configured Linear team makes its preflight pass
   local t ad marker tracker_ok=0
   for t in linear github jira; do
     ad="$(_cvg_tracker_adapter "$t")"
@@ -129,15 +144,30 @@ cvg_setup_status() {
 }
 
 cvg_setup_tracker() {
-  local t="${1:-}"
+  local t="" team_flag=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --team)   team_flag="${2:-}"; shift 2 ;;
+      --team=*) team_flag="${1#--team=}"; shift ;;
+      -*) ui_err "unknown flag '$1' (expected: --team <key>)"; printf 'SETUP_TRACKER=USAGE_ERROR\n'; exit 2 ;;
+      *) [ -z "$t" ] && t="$1"; shift ;;
+    esac
+  done
   case "$t" in
     linear|github|jira) ;;
     fake) ;;  # test-only no-network backend (records tracker=fake for offline tests)
-    "") ui_err "usage: cvg setup tracker <linear|github|jira>"; printf 'SETUP_TRACKER=USAGE_ERROR\n'; exit 2 ;;
+    "") ui_err "usage: cvg setup tracker <linear|github|jira> [--team <key>]"; printf 'SETUP_TRACKER=USAGE_ERROR\n'; exit 2 ;;
     *)  ui_err "unknown tracker '$t' — expected: linear | github | jira"; printf 'SETUP_TRACKER=USAGE_ERROR\n'; exit 2 ;;
   esac
   local ad; ad="$(_cvg_tracker_adapter "$t")"
   [ -f "$ad" ] || { ui_err "adapter not found: $ad"; printf 'SETUP_TRACKER=USAGE_ERROR\n'; exit 2; }
+
+  # Linear has a team to discover; other trackers are a simple preflight + record.
+  if [ "$t" = "linear" ]; then
+    cvg_setup_tracker_linear "$ad" "$team_flag"
+    return
+  fi
+
   printf '%sconnecting %s …%s\n' "$UI_DIM" "$t" "$UI_RESET"
   if bash "$ad" preflight; then
     cvg_config_set tracker "$t"
@@ -149,6 +179,62 @@ cvg_setup_tracker() {
     printf '%snote: cvg never stores your key; it stays in your environment (or a secrets manager).%s\n' "$UI_DIM" "$UI_RESET"
     printf 'SETUP_TRACKER=UNREACHABLE\n'
     exit 1
+  fi
+}
+
+# Linear connect: ONE secret (LINEAR_API_KEY). The team is auto-discovered — a
+# single team auto-selects, several list for `--team <KEY>`, and the KEY (from the
+# Linear URL) resolves to a UUID we record in .cvg/config. The key is never stored.
+cvg_setup_tracker_linear() {
+  local ad="$1" team_flag="$2"
+  if [ -z "${LINEAR_API_KEY:-}" ]; then
+    ui_err "LINEAR_API_KEY unset — create one at linear.app/settings/account/security, then: export LINEAR_API_KEY=lin_api_..."
+    printf 'SETUP_TRACKER=UNREACHABLE\n'; exit 1
+  fi
+  printf '%sconnecting linear …%s\n' "$UI_DIM" "$UI_RESET"
+
+  # Discover teams (key<TAB>name<TAB>uuid). The key already knows them.
+  local teams n
+  teams="$(bash "$ad" teams 2>/dev/null || true)"
+  n="$(printf '%s' "$teams" | grep -c . || true)"; n="${n//[^0-9]/}"; n="${n:-0}"
+  if [ "$n" -eq 0 ]; then
+    ui_err "could not list any teams — is LINEAR_API_KEY valid and does it have Read access?"
+    printf 'SETUP_TRACKER=UNREACHABLE\n'; exit 1
+  fi
+
+  # Choose the team: --team wins; else the single team; else ask for --team <KEY>.
+  local chosen="${team_flag:-${LINEAR_TEAM_ID:-}}"
+  if [ -z "$chosen" ]; then
+    if [ "$n" -eq 1 ]; then
+      chosen="$(printf '%s' "$teams" | head -1 | cut -f1)"
+      printf '%sone team found — auto-selecting %s%s\n' "$UI_DIM" "$chosen" "$UI_RESET"
+    else
+      printf '%s%s teams found — re-run with --team <KEY>:%s\n' "$UI_YELLOW" "$n" "$UI_RESET"
+      printf '%s' "$teams" | awk -F'\t' '{printf "    %-8s %s\n", $1, $2}'
+      printf 'SETUP_TRACKER=NEEDS_TEAM\n'; exit 1
+    fi
+  fi
+
+  # Resolve the chosen key (or UUID) to its UUID from the discovered list.
+  local uuid
+  uuid="$(printf '%s' "$teams" | awk -F'\t' -v c="$chosen" 'toupper($1)==toupper(c) || $3==c {print $3; exit}')"
+  if [ -z "$uuid" ]; then
+    ui_err "team '$chosen' not found. Available: $(printf '%s' "$teams" | cut -f1 | paste -sd' ' -)"
+    printf 'SETUP_TRACKER=NEEDS_TEAM\n'; exit 1
+  fi
+
+  # Validate end-to-end with the resolved UUID, then record (never the key).
+  if LINEAR_TEAM_ID="$uuid" bash "$ad" preflight >/dev/null 2>&1; then
+    cvg_config_set tracker linear
+    cvg_config_set linear_team_id "$uuid"
+    local name; name="$(printf '%s' "$teams" | awk -F'\t' -v u="$uuid" '$3==u {print $2; exit}')"
+    printf '%s[ok]%s connected to Linear team %s%s\n' "$UI_GREEN" "$UI_RESET" "$chosen" "${name:+ ($name)}"
+    printf '%s     recorded tracker=linear + team UUID in %s (API key stays in your env)%s\n' "$UI_DIM" "$(cvg_config_file)" "$UI_RESET"
+    printf '%snext: cvg register --check   then   cvg register%s\n' "$UI_DIM" "$UI_RESET"
+    printf 'SETUP_TRACKER=OK\n'
+  else
+    printf '%s[--]%s resolved team %s but preflight failed — check the key'\''s team access.\n' "$UI_YELLOW" "$UI_RESET" "$chosen"
+    printf 'SETUP_TRACKER=UNREACHABLE\n'; exit 1
   fi
 }
 
@@ -208,7 +294,9 @@ cmd_help() {
   printf '%ssetup%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  setup                    connectivity status board (engines · trackers ·\n'
   printf '                           index · memory); records CHOICES, never keys\n'
-  printf '  setup tracker <t>        connect + record a tracker (linear|github|jira)\n'
+  printf '  setup tracker <t> [--team K]\n'
+  printf '                           connect + record a tracker (linear|github|jira);\n'
+  printf '                           linear auto-discovers your team (export just the key)\n'
   printf '\n'
   printf '%smeta%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  help                     this screen\n'
@@ -638,6 +726,7 @@ case "$CMD" in
         printf '%susing configured tracker: %s (from .cvg/config)%s\n' "$UI_DIM" "$CFG_TRACKER" "$UI_RESET" >&2
       fi
     fi
+    cvg_export_linear_team   # bridge the non-secret Linear team UUID from config (key stays in env)
     if [ "$REG_CHECK" -eq 1 ]; then
       # Read-only gate. cvg strips --dry-run into CVG_DRY_RUN; re-add it as the
       # verifier's spec-side-only flag so `cvg register --check --dry-run` is offline.
@@ -721,7 +810,7 @@ m = {
     c("register [--tracker T] [--no-stamp-refs]", "①", "task-specs-to-issues/register.sh", ["REGISTER=OK|FAIL|DRY_RUN|EMPTY"], True, "cvg register --tracker linear", "REGISTER ① — bridge signed-off Task-Specs onto a tracker board (1 spec = 1 issue, depends_on → blocked-by), then stamp a tracker_ref receipt back into each spec. Pluggable adapter github|linear|jira (default linear); the referee holds NO tracker credentials. Idempotent: re-runs upsert, never duplicate. --no-stamp-refs skips the write-back (CI-safe; the issue-side marker stays the key)."),
     c("register --check", "①", "task-specs-to-issues/verify-registration.sh", ["CHECK_REGISTER=OK|FAIL"], False, "cvg register --check --tracker linear", "Gate the mapping is faithful: 1:1 count, every depends_on edge is one blocked-by link, no cycle, no un-gated leak. Read-only; the offline spec-side half runs with --dry-run."),
     c("setup", None, "native (doctor + adapter preflight)", ["SETUP=READY|INCOMPLETE"], False, "cvg setup", "Connectivity status board — per-part readiness (engines · trackers; index/memory planned) + the exact next step. Records CHOICES in .cvg/config, NEVER credentials (secrets stay in the environment / a secrets manager — if cvg can't see them it can't leak them)."),
-    c("setup tracker <t>", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker backend via its preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. cvg never stores the API key."),
+    c("setup tracker <t> [--team K]", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|NEEDS_TEAM|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker via preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. For linear: export only LINEAR_API_KEY — the team is auto-discovered (a single team auto-selects; otherwise pass --team <KEY>, the key straight from the Linear URL), resolved to a UUID, and recorded. The API key is never stored."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),

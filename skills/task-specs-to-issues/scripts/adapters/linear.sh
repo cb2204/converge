@@ -8,7 +8,9 @@
 # vars:
 #   LINEAR_API_KEY   — a personal API key (lin_api_...). Sent as the raw
 #                      Authorization header value (Linear's scheme, NOT Bearer).
-#   LINEAR_TEAM_ID   — the team the issues live under (a UUID).
+#   LINEAR_TEAM_ID   — the team the issues live under: a team KEY (e.g. CVG,
+#                      straight from the Linear URL .../team/CVG/...) OR the UUID.
+#                      A key is resolved to its UUID automatically.
 #
 # Idempotency key: the spec id is stored as the issue's `externalId` (a
 # first-class Linear field designed for exactly this — see
@@ -54,6 +56,39 @@ _linear_gql() {
     tsi_ln_die "GraphQL returned errors"
   fi
   printf '%s' "$resp"
+}
+
+# ---------------------------------------------------------------------------
+# Team resolution — accept a team KEY (e.g. CVG, straight from the Linear URL)
+# OR a UUID. Issue mutations need the team's UUID, but humans have the key, so we
+# resolve key -> UUID transparently. cvg exports an already-resolved UUID (looked
+# up once during setup), so this only hits the network on the standalone path.
+# ---------------------------------------------------------------------------
+_ln_is_uuid() {
+  printf '%s' "$1" | grep -qiE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+}
+
+# Echo the team UUID for $LINEAR_TEAM_ID (a UUID passes through; a key is looked
+# up via teams(filter:{key:{eq}})). Empty if unset or unresolvable.
+_ln_resolve_team_id() {
+  local tid="${LINEAR_TEAM_ID:-}"
+  [[ -n "$tid" ]] || { printf ''; return 0; }
+  if _ln_is_uuid "$tid"; then printf '%s' "$tid"; return 0; fi
+  local resp
+  resp="$(_linear_gql 'query($k:String!){ teams(filter:{ key:{ eq:$k } }){ nodes{ id key name } } }' \
+    "$(jq -n --arg k "$tid" '{k:$k}')")" || { printf ''; return 1; }
+  printf '%s' "$resp" | jq -r '.data.teams.nodes[0].id // empty'
+}
+
+# ---------------------------------------------------------------------------
+# VERB: teams — list every team as  key<TAB>name<TAB>uuid  (the setup picker).
+# ---------------------------------------------------------------------------
+ln_teams() {
+  _ln_require_tools
+  [[ -n "${LINEAR_API_KEY:-}" ]] || tsi_ln_die "LINEAR_API_KEY unset"
+  local resp
+  resp="$(_linear_gql 'query{ teams{ nodes{ key name id } } }' '{}')"
+  printf '%s' "$resp" | jq -r '.data.teams.nodes[]? | "\(.key)\t\(.name)\t\(.id)"'
 }
 
 # ---------------------------------------------------------------------------
@@ -256,16 +291,28 @@ ln_write_result() {
 _ln_main() {
   local verb="${1:-}"
   [[ $# -gt 0 ]] && shift || true
+  # Resolve a team KEY (e.g. CVG) to its UUID for the verbs that need a team, so a
+  # human can pass the key straight from the Linear URL. A UUID passes through.
+  case "$verb" in
+    preflight|upsert|link|list-ready|write-result)
+      if [[ -n "${LINEAR_TEAM_ID:-}" ]] && ! _ln_is_uuid "$LINEAR_TEAM_ID"; then
+        local _r; _r="$(_ln_resolve_team_id 2>/dev/null || true)"
+        [[ -n "$_r" ]] && LINEAR_TEAM_ID="$_r"
+      fi
+      ;;
+  esac
   case "$verb" in
     preflight)    ln_preflight "$@" ;;
     upsert)       ln_upsert "$@" ;;
     link)         ln_link "$@" ;;
     list-ready)   ln_list_ready "$@" ;;
     write-result) ln_write_result "$@" ;;
+    teams)        ln_teams "$@" ;;
+    resolve-team) _ln_resolve_team_id ;;
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result)" ;;
+    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|teams|resolve-team)" ;;
   esac
 }
 

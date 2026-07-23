@@ -66,6 +66,12 @@ Every verb that mutates keys on the spec `id`. See
 the write verbs are held behind `TSI_JIRA_ENABLE=1` until they have been run once
 against a live Jira project. Promote by validating, then dropping the guard.
 
+**Adapter-specific helper verbs** (beyond the universal five): `linear.sh` adds
+`teams` (list `key<TAB>name<TAB>uuid`) and `resolve-team` (a team KEY like `CVG`
+→ its UUID). These power the one-secret setup — `LINEAR_TEAM_ID` accepts a team
+**key or UUID**, and `cvg setup tracker linear` discovers/records the team so the
+user only ever exports the API key. They don't change the five-verb contract.
+
 ## Why an adapter and not a library
 
 The spec is the floor; the board is a **shadow** of it (exactly as Postgres is

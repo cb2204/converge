@@ -7,7 +7,11 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.12.0** · (0.12.0 R.setup `setup`/`setup tracker` — the guided
+**cvg v0.13.0** · (0.13.0 R.setup.linear — `setup tracker linear` needs **only
+the API key**: it auto-discovers your team (single team auto-selects, else
+`--team <KEY>`), resolves the key→UUID, and records the UUID in `.cvg/config`
+(the API key stays in the env); the adapter also accepts a team KEY or UUID;
+0.12.0 R.setup `setup`/`setup tracker` — the guided
 **connectivity surface** (engines · trackers · index/memory-planned): a status
 board + guided connect that records CHOICES in `.cvg/config` and **never
 credentials** (secrets stay in the environment / a secrets manager); `register`
@@ -37,7 +41,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.12.0)
+## Command surface (v0.13.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
@@ -56,7 +60,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg register [--tracker T] [--no-stamp-refs]` | `task-specs-to-issues/scripts/register.sh` (REGISTER ①) | **the bridge Fork B → the Loop** — projects signed-off Task-Specs onto a tracker board (1 spec = 1 issue; `depends_on` → `blocked-by`), then stamps a `tracker_ref: <tracker>:<issue>` receipt back into each spec (the issue-side marker stays the idempotency key). Pluggable **five-verb** adapter `github\|linear\|jira` (default `linear`), `fake` for tests; the referee holds **no** tracker creds — the adapter authenticates itself. Idempotent (re-run upserts, never duplicates). `REGISTER=OK\|FAIL\|DRY_RUN\|EMPTY`. Proven offline: `skills/task-specs-to-issues/tests/test-register.sh` (46/46 via the `fake` adapter). |
 | `cvg register --check` | `task-specs-to-issues/scripts/verify-registration.sh` | gates the mapping is faithful (1:1 count, every `depends_on` is one `blocked-by`, no cycle, no un-gated leak); read-only. `CHECK_REGISTER=OK\|FAIL`. |
 | `cvg setup` | native (`doctor` + adapter `preflight`) | **connectivity status board** — per-part readiness (engines · trackers; index/memory as planned slots) + the exact next step. Records CHOICES in `.cvg/config`, **never credentials** (the referee-holds-no-creds rule, now security-grounded: *"if an agent can see it, it can leak it"* — Claude Code / Cursor have both leaked `.env` keys). `SETUP=READY\|INCOMPLETE`. |
-| `cvg setup tracker <t>` | native (+ adapter `preflight`) | guided connect — validates a backend and records it as the default in `.cvg/config`; `cvg register` then defaults `--tracker` from it. `SETUP_TRACKER=OK\|UNREACHABLE\|USAGE_ERROR`. |
+| `cvg setup tracker <t> [--team K]` | native (+ adapter `preflight`) | guided connect — validates a backend and records it as the default in `.cvg/config`; `cvg register` then defaults `--tracker` from it. **Linear needs only `LINEAR_API_KEY`** — the team is auto-discovered (one team auto-selects; else `--team <KEY>` from the URL), resolved key→UUID, and recorded (key never stored). `SETUP_TRACKER=OK\|NEEDS_TEAM\|UNREACHABLE\|USAGE_ERROR`. |
 | `cvg eval <spec>` | `run-task-spec.sh` | ran its own birth task's evals, 3/3 + Exit Check |
 | `cvg lint` | `lint-backlog.sh` | routed pass-through |
 | `cvg transition <id> <state>` | `transition-status.sh` | moved `T-20260719-cvg-router` ready → done |
