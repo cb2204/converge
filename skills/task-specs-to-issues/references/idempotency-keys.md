@@ -28,16 +28,29 @@ share one key space.
   lookup misses → a duplicate is created. Fix: paste the marker back into the
   original issue's body.
 
-## Linear — native `externalId`
+## Linear — an attachment with a unique URL
 
-- **Carrier:** Linear's first-class `externalId` field, set to the spec id at
-  `issueCreate`. This field exists precisely for "this issue mirrors an external
-  record" and is not shown in the title, so it never clutters the board.
-- **Lookup:** a GraphQL `issues(filter: { externalId: { eq: "<id>" }, team: {
-  id: { eq: $team } } })` query returns the node id; upsert updates it via
-  `issueUpdate`, else `issueCreate`.
-- **Failure mode:** creating the issue by hand (no `externalId`) → lookup misses.
-  Fix: set the `externalId` on the manually-created issue to the spec id.
+> **Correction (verified against the live API):** Linear has **no `externalId`
+> field** on `Issue` / `IssueCreateInput` / `IssueFilter`. An earlier version of
+> this adapter assumed one, and every call failed with *"Field 'externalId' is not
+> defined by type 'IssueCreateInput'"*. The mechanism below is Linear's own
+> documented pattern for stateless external integrations.
+
+- **Carrier:** an **attachment** whose `url` is deterministic and unique per spec —
+  `https://cvg.local/task-spec/<id>` by default (override the prefix with
+  `TSI_LINEAR_MARKER_BASE`). Per Linear's docs: *"Attachment URL is used as an
+  idempotent value if used in conjunction with the same issue id … you can also
+  query an attachment, and the associated issue, by its URL."*
+  ([linear.app/developers/attachments](https://linear.app/developers/attachments))
+- **Lookup:** `attachmentsForURL(url: "<marker>") { nodes { issue { id } } }`
+  returns the issue UUID; upsert then `issueUpdate`s it, else `issueCreate`s and
+  immediately `attachmentCreate`s the marker so the *next* run resolves it.
+- **Failure mode:** an issue created by hand (no marker attachment) → lookup
+  misses → a duplicate is created. Fix: add an attachment with the marker URL to
+  the hand-made issue. Deleting the attachment has the same effect as stripping
+  the GitHub HTML marker.
+- **Note:** because `attachmentsForURL` is workspace-wide, the marker is unique
+  across teams — the spec id alone identifies the mirror.
 
 ## Jira — label + summary tag
 

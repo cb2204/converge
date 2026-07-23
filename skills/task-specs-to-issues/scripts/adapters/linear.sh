@@ -12,9 +12,15 @@
 #                      straight from the Linear URL .../team/CVG/...) OR the UUID.
 #                      A key is resolved to its UUID automatically.
 #
-# Idempotency key: the spec id is stored as the issue's `externalId` (a
-# first-class Linear field designed for exactly this — see
-# references/idempotency-keys.md). Upsert looks the issue up by externalId first.
+# Idempotency key: an ATTACHMENT carrying a unique, deterministic URL derived from
+# the spec id (default https://cvg.local/task-spec/<id>, override with
+# TSI_LINEAR_MARKER_BASE). This is Linear's own documented mechanism for stateless
+# external integrations: "Attachment URL is used as an idempotent value ... you can
+# query an attachment, and the associated issue, by its URL"
+# (linear.app/developers/attachments). Upsert resolves the issue via
+# attachmentsForURL first, so a re-run updates instead of duplicating.
+# NOTE: Linear has NO `externalId` field on Issue/IssueCreateInput/IssueFilter —
+# an earlier version of this adapter assumed one and every call failed.
 #
 # Dependency edges use Linear's native `issueRelation` of type `blocks`: the
 # dependency issue `blocks` the dependent issue, which Linear surfaces as
@@ -124,12 +130,19 @@ ln_preflight() {
 # Internal: resolve a spec id -> Linear issue node id via externalId.
 # Echoes the issue id (empty if not found).
 # ---------------------------------------------------------------------------
+# The deterministic marker URL that carries a spec id onto a Linear issue.
+_ln_marker_url() {
+  printf '%s%s' "${TSI_LINEAR_MARKER_BASE:-https://cvg.local/task-spec/}" "$1"
+}
+
+# Resolve a spec id -> Linear issue UUID via the marker attachment. Empty if absent.
 _ln_find_by_external_id() {
-  local ext="$1" resp
+  local ext="$1" resp url
+  url="$(_ln_marker_url "$ext")"
   resp="$(_linear_gql \
-    'query($ext:String!,$team:ID!){ issues(filter:{ externalId:{ eq:$ext }, team:{ id:{ eq:$team } } }){ nodes{ id identifier } } }' \
-    "$(jq -n --arg ext "$ext" --arg team "$LINEAR_TEAM_ID" '{ext:$ext, team:$team}')")"
-  printf '%s' "$resp" | jq -r '.data.issues.nodes[0].id // empty'
+    'query($url:String!){ attachmentsForURL(url:$url){ nodes{ id issue{ id identifier } } } }' \
+    "$(jq -n --arg url "$url" '{url:$url}')")"
+  printf '%s' "$resp" | jq -r '.data.attachmentsForURL.nodes[0].issue.id // empty'
 }
 
 # ---------------------------------------------------------------------------
@@ -171,12 +184,22 @@ ln_upsert() {
     echo "updated $ident ($id)" >&2
     echo "$ident"
   else
-    local resp new
+    local resp new new_uuid new_ident murl
     resp="$(_linear_gql \
-      'mutation($team:String!,$ext:String!,$title:String!,$desc:String!){ issueCreate(input:{ teamId:$team, externalId:$ext, title:$title, description:$desc }){ success issue{ id identifier } } }' \
-      "$(jq -n --arg team "$LINEAR_TEAM_ID" --arg ext "$id" --arg title "$title" --arg desc "$body" \
-        '{team:$team,ext:$ext,title:$title,desc:$desc}')")"
-    new="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.identifier // .data.issueCreate.issue.id')"
+      'mutation($team:String!,$title:String!,$desc:String!){ issueCreate(input:{ teamId:$team, title:$title, description:$desc }){ success issue{ id identifier } } }' \
+      "$(jq -n --arg team "$LINEAR_TEAM_ID" --arg title "$title" --arg desc "$body" \
+        '{team:$team,title:$title,desc:$desc}')")"
+    new_uuid="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.id // empty')"
+    new_ident="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.identifier // empty')"
+    [[ -n "$new_uuid" ]] || tsi_ln_die "issueCreate returned no issue id for $id"
+    # Stamp the idempotency marker so the NEXT run RESOLVES this issue instead of
+    # creating a second one. Without this attachment the projection is not idempotent.
+    murl="$(_ln_marker_url "$id")"
+    _linear_gql \
+      'mutation($issue:String!,$url:String!,$title:String!){ attachmentCreate(input:{ issueId:$issue, url:$url, title:$title }){ success attachment{ id } } }' \
+      "$(jq -n --arg issue "$new_uuid" --arg url "$murl" --arg title "task-spec $id" \
+        '{issue:$issue,url:$url,title:$title}')" >/dev/null
+    new="${new_ident:-$new_uuid}"
     echo "created $new ($id)" >&2
     echo "$new"
   fi
@@ -222,8 +245,12 @@ ln_list_ready() {
   _ln_require_tools
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
   local resp
+  # NB: IssueFilter cannot cheaply filter on our marker attachment, so this returns
+  # the TEAM's takeable frontier (incomplete + no open blocker) rather than only
+  # registered issues. That is what the loop wants; a human-made issue on the same
+  # team will also appear.
   resp="$(_linear_gql \
-    'query($team:ID!){ issues(filter:{ team:{ id:{ eq:$team } }, externalId:{ null:false } }){ nodes{ identifier externalId state{ type } inverseRelations{ nodes{ type issue{ state{ type } } } } } } }' \
+    'query($team:ID!){ issues(filter:{ team:{ id:{ eq:$team } } }){ nodes{ identifier state{ type } inverseRelations{ nodes{ type issue{ state{ type } } } } } } }' \
     "$(jq -n --arg team "$LINEAR_TEAM_ID" '{team:$team}')")"
   # ready = not completed/canceled AND no incoming `blocks` from an unfinished issue.
   printf '%s' "$resp" | jq -r '
