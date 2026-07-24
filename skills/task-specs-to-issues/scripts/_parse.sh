@@ -218,6 +218,40 @@ tsi_paths() {
     | grep -v '^$' | grep -vxF '(none)' | sort -u || true
 }
 
+# tsi_goal_block FILE — the Goal, reflowed into a readable quoted summary.
+#
+# Spec authors hard-wrap prose at ~80 columns and mark parts with a bold lead
+# (`**(a) …**`, `**(b) …**`) on a new line but WITHOUT a blank line between them.
+# Markdown fuses that into a single paragraph, and an earlier version of this
+# renderer then collapsed every newline to a space on top of it — so a carefully
+# structured goal arrived on the board as one unreadable wall of text.
+#
+# So: UNWRAP soft-wrapped lines back into logical paragraphs, and start a new
+# paragraph at a blank line OR at a line that opens a block (bold lead, list
+# marker, numbered item). Paragraphs are emitted inside one blockquote separated
+# by `>`, which Linear renders as distinct paragraphs in a single summary block.
+tsi_goal_block() {
+  tsi_section "$1" "Goal" | awk '
+    function flush() {
+      if (buf != "") {
+        if (n > 0) print ">"
+        print "> " buf
+        n++; buf = ""
+      }
+    }
+    BEGIN { buf = ""; n = 0 }
+    /^[[:space:]]*---[[:space:]]*$/ { flush(); exit }   # a rule ends the section
+    /^[[:space:]]*$/               { flush(); next }    # blank line = paragraph break
+    {
+      line = $0
+      sub(/^[[:space:]]+/, "", line); sub(/[[:space:]]+$/, "", line)
+      if (buf != "" && line ~ /^(\*\*|[-*+][[:space:]]|[0-9]+\.[[:space:]])/) flush()
+      buf = (buf == "" ? line : buf " " line)
+    }
+    END { flush() }
+  '
+}
+
 # ----- The issue body renderer (tracker-agnostic Markdown) --------------------
 # tsi_issue_body FILE ["dep-id dep-id ..."]
 #
@@ -247,9 +281,11 @@ tsi_issue_body() {
   prio="$(tsi_priority "$f")"
   goal="$(tsi_goal "$f")"
 
-  # --- Summary (blockquote) ---
-  if [ -n "$goal" ]; then
-    printf '> %s\n\n' "$(printf '%s' "$goal" | tr '\n' ' ' | sed -E 's/[[:space:]]+/ /g')"
+  # --- Summary (quoted lead, paragraph structure preserved) ---
+  local goalblock
+  goalblock="$(tsi_goal_block "$f")"
+  if [ -n "$goalblock" ]; then
+    printf '%s\n\n' "$goalblock"
   fi
 
   # --- At-a-glance table ---

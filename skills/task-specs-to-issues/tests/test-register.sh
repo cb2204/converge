@@ -345,6 +345,32 @@ has "spec-url reaches the adapter" "$META" "specurl=https://github.com/o/r/blob/
 # `group:child` names stay flat in the DRIVER; only the Linear adapter nests them.
 has "driver still emits flat group:child labels" "$META" "effort:S"
 
+echo; echo "[Q] a multi-part Goal keeps its paragraph structure"
+# Specs hard-wrap prose and mark parts with a bold lead on a new line but no
+# blank line. Markdown fuses that into one paragraph, and the renderer used to
+# collapse newlines on top — arriving as an unreadable wall of text.
+D="$WORK/q/tasks"; mkdir -p "$D"
+cat > "$D/T-$DATE-reg-multi.md" <<'MSPEC'
+---
+id: T-20260723-reg-multi
+title: multi-part goal
+status: ready
+signed_off: true
+depends_on: []
+---
+
+## Goal
+
+**(a) First part.** This sentence is hard-wrapped
+across two source lines.
+**(b) Second part.** This one too, and it must NOT
+fuse into the first.
+MSPEC
+GB="$(bash -c "source '$PARSE'; tsi_goal_block '$D/T-$DATE-reg-multi.md'")"
+has "part (a) is a quoted paragraph" "$GB" "> **(a) First part.** This sentence is hard-wrapped across two source lines."
+has "part (b) is its OWN paragraph"  "$GB" "> **(b) Second part.** This one too, and it must NOT fuse into the first."
+if printf '%s' "$GB" | grep -q '^>$'; then ok "paragraphs separated by a blockquote break"; else bad "no paragraph separator between (a) and (b)"; fi
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="
