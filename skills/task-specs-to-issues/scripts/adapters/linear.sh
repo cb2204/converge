@@ -94,7 +94,7 @@ _ln_resolve_team_id() {
 # ---------------------------------------------------------------------------
 # Triage metadata. The split is by OWNERSHIP, not by create-vs-update:
 #
-#   * DERIVED labels — `cvg`, `effort:*`, `backend:*`, `severity:*` — are facts
+#   * DERIVED labels — `cvg`, `effort:*`, `backend:*`, `agent:*`, `severity:*` — are facts
 #     read off the spec, so they are part of the PROJECTION and are kept in sync
 #     on every register, exactly like the title and body. cvg owns that namespace
 #     and nothing outside it.
@@ -179,6 +179,7 @@ _ln_merge_label_ids() {   # _ln_merge_label_ids ISSUE_UUID "name name ..."
         | select((.name == "cvg"
                   or (.name | startswith("effort:"))
                   or (.name | startswith("backend:"))
+                  or (.name | startswith("agent:"))
                   or (.name | startswith("severity:"))) | not)
         | .id ]' 2>/dev/null)"
   [[ -n "$keep" ]] || keep='[]'

@@ -261,8 +261,14 @@ while read -r id; do
   UP_ARGS=(--id "$id" --title "$title" --body-file "$body" --label "cvg")
   UP_EFF="$(tsi_field "$file" effort)"
   [ -n "$UP_EFF" ] && UP_ARGS+=(--label "effort:$UP_EFF")
+  # Two INDEPENDENT fleet axes, both read off the spec:
+  #   backend: WHICH ENGINE runs it (claude|codex|kimi|glm|<your-harness>)
+  #   agent:   WHICH ROLE it needs (python-developer, …) — omitted when `any`,
+  #            since "any" carries no signal and would just be board noise.
   UP_BACKEND="$(tsi_field "$file" execution_backend)"
   [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ARGS+=(--label "backend:$UP_BACKEND")
+  UP_AGENT="$(tsi_field "$file" agent)"
+  [ -n "$UP_AGENT" ] && [ "$UP_AGENT" != "(none)" ] && [ "$UP_AGENT" != "any" ] && UP_ARGS+=(--label "agent:$UP_AGENT")
   UP_SEV="$(tsi_severity "$file")"
   [ -n "$UP_SEV" ] && [ "$UP_SEV" != "(none)" ] && UP_ARGS+=(--label "severity:$UP_SEV")
   # Native-field signal: the tier drives the tracker's own estimate (Linear's

@@ -17,7 +17,7 @@ creates_paths:
 source_note: "R5.R — Pass 5B tasking of swimlane-capture-leg-01 (steel thread); Fork B (task-driven)"
 created: 2026-07-21T00:00:00Z
 parent: ../sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
-execution_backend: glm
+execution_backend: claude
 signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-23T18:17:08Z
