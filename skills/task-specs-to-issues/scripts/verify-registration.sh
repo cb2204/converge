@@ -149,8 +149,19 @@ else
   else
     # The FULL registered set, keyed on the spec id its marker carries (list-issues,
     # not just list-ready roots), so the board can be diffed against the signed specs.
+    # NB: capture the adapter's stderr and SHOW it on failure. Swallowing it with
+    # 2>/dev/null once turned a broken GraphQL type into a silent "board: 0 registered",
+    # which reads like "nothing is registered" when the real cause was a query error.
+    # A gate that hides why it failed is worse than no gate.
     BOARD="$WORK/board.tsv"          # extid \t issue_ref  (one line per registered issue)
-    bash "$ADAPTER" list-issues > "$BOARD" 2>/dev/null || : > "$BOARD"
+    BOARD_ERR="$WORK/board.err"
+    if ! bash "$ADAPTER" list-issues > "$BOARD" 2>"$BOARD_ERR"; then
+      : > "$BOARD"
+      echo "  WARN: adapter list-issues failed — the parity check cannot see the board:" >&2
+      [[ -s "$BOARD_ERR" ]] && sed 's/^/    /' "$BOARD_ERR" >&2
+    elif [[ -s "$BOARD_ERR" ]]; then
+      sed 's/^/  note: /' "$BOARD_ERR" >&2   # e.g. the >250 truncation warning
+    fi
     BOARD_IDS="$WORK/board_ids.txt"; awk -F'\t' '$1!=""{print $1}' "$BOARD" | sort > "$BOARD_IDS"  # sorted, dups KEPT
     BOARD_UNIQ="$WORK/board_uniq.txt"; sort -u "$BOARD_IDS" > "$BOARD_UNIQ"
     BOARD_RAW="$(awk 'END{print NR+0}' "$BOARD_IDS")"

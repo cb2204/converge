@@ -520,6 +520,35 @@ OUT="$(TSI_FAKE_STORE="$S" bash "$VERIFY" --tracker fake --tasks-dir "$D" --dry-
 rc_is "dry-run gate exits 0 (spec-side only)"        "$RC" "0"
 has   "dry-run skips the board comparison"           "$OUT" "board comparison SKIPPED"
 
+echo; echo "[V] fail-soft GraphQL is SUBSHELL-contained (a hard exit must not kill the verb)"
+# _linear_gql calls tsi_ln_die (exit) on a GraphQL error, and `|| true` cannot catch an
+# exit — only a subshell can. Without this, one rejected OPTIONAL write kills the whole
+# adapter mid-verb (that is how an already-linked initiative truncated initiative-ensure).
+# Load linear.sh's FUNCTIONS (minus its trailing dispatch), stub the transport to
+# hard-exit, and prove the wrapper survives it.
+LNLIB="$WORK/linear-lib.sh"
+grep -vFx '_ln_main "$@"' "$SKILL_DIR/scripts/adapters/linear.sh" > "$LNLIB"
+OUT="$(bash -c '
+  set -euo pipefail
+  . "'"$LNLIB"'" >/dev/null 2>&1 || true
+  _linear_gql(){ tsi_ln_die "simulated GraphQL error"; }
+  _ln_gql_soft "query{x}" "{}"
+  echo SOFT_SURVIVED
+' 2>/dev/null)" || true
+has "a hard GraphQL exit is contained by _ln_gql_soft" "$OUT" "SOFT_SURVIVED"
+# And the control: the OLD bare-`|| true` shape does NOT survive (this is the bug).
+OUT="$(bash -c '
+  set -euo pipefail
+  die(){ exit 1; }; gql(){ die; }
+  gql >/dev/null 2>&1 || true
+  echo BARE_SURVIVED
+' 2>/dev/null)" || true
+hasnt "a bare-|| true does NOT contain the exit (control)" "$OUT" "BARE_SURVIVED"
+# No fail-soft caller may reach _linear_gql directly any more.
+LEFT="$(grep -nE '^\s*_linear_gql \\$' -A3 "$SKILL_DIR"/scripts/adapters/linear.sh "$SKILL_DIR"/scripts/adapters/linear-structure.sh 2>/dev/null | grep -c '|| true' || true)"
+LEFT="${LEFT//[^0-9]/}"; LEFT="${LEFT:-0}"
+rc_is "no fail-soft site still calls _linear_gql directly" "$LEFT" "0"
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="

@@ -74,6 +74,21 @@ _linear_gql() {
 }
 
 # ---------------------------------------------------------------------------
+# _ln_gql_soft QUERY [VARS] — fire-and-forget GraphQL for COSMETIC/optional writes.
+# ---------------------------------------------------------------------------
+# THE SUBSHELL IS LOAD-BEARING. _linear_gql hard-exits (tsi_ln_die) on a transport
+# or GraphQL error, and a bare `|| true` CANNOT contain an `exit` — it only catches
+# a non-zero RETURN. Without the subshell, one rejected optional field kills the
+# whole adapter process mid-verb. That is exactly how a re-run's already-linked
+# initiative truncated initiative-ensure's output and reported "(skipped)".
+# Every fail-soft caller must go through this wrapper. Callers that need the
+# RESPONSE are already safe, because `$( )` is itself a subshell.
+_ln_gql_soft() {
+  ( _linear_gql "$@" ) >/dev/null 2>&1 || true
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 # Team resolution — accept a team KEY (e.g. CVG, straight from the Linear URL)
 # OR a UUID. Issue mutations need the team's UUID, but humans have the key, so we
 # resolve key -> UUID transparently. cvg exports an already-resolved UUID (looked
@@ -141,11 +156,11 @@ _ln_stamp_marker() {   # _ln_stamp_marker ISSUE_UUID SPEC_ID ATTRS_JSON [spec_ur
   meta="$(jq -n --arg spec "$spec" --argjson attrs "$attrs" --arg src "${specurl:-}" \
     '{ specId:$spec, title:"Task-Spec", attributes:$attrs }
      + (if $src == "" then {} else {sourceUrl:$src} end)' 2>/dev/null)" || meta='{}'
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($issue:String!,$url:String!,$title:String!,$subtitle:String,$meta:JSONObject){ attachmentCreate(input:{ issueId:$issue, url:$url, title:$title, subtitle:$subtitle, metadata:$meta }){ success attachment{ id } } }' \
     "$(jq -n --arg issue "$issue" --arg url "$murl" --arg title "$spec" \
            --arg subtitle "Task-Spec · projected by cvg register" --argjson meta "$meta" \
-      '{issue:$issue,url:$url,title:$title,subtitle:$subtitle,meta:$meta}')" >/dev/null 2>&1 || true
+      '{issue:$issue,url:$url,title:$title,subtitle:$subtitle,meta:$meta}')"
   return 0
 }
 
@@ -155,9 +170,9 @@ _ln_stamp_marker() {   # _ln_stamp_marker ISSUE_UUID SPEC_ID ATTRS_JSON [spec_ur
 _ln_set_due() {   # _ln_set_due ISSUE_UUID YYYY-MM-DD
   local issue="$1" due="$2"
   [[ -n "$due" && "$due" != "(none)" ]] || return 0
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($id:String!,$due:TimelessDate){ issueUpdate(id:$id, input:{ dueDate:$due }){ success } }' \
-    "$(jq -n --arg id "$issue" --arg due "$due" '{id:$id,due:$due}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg id "$issue" --arg due "$due" '{id:$id,due:$due}')"
   return 0
 }
 
@@ -330,9 +345,20 @@ ln_list_issues() {
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
   local base resp
   base="$(_ln_marker_url "")"     # marker url PREFIX (empty id) — ltrimstr it off to recover the spec id
+  # $team MUST be ID! — IssueFilter's IDComparator rejects String! and the whole query
+  # fails validation (which _linear_gql turns into a hard exit, so the gate saw zero
+  # issues). Filter on the TEAM only — the exact shape ln_list_ready proves against the
+  # live API — and select the registered set CLIENT-SIDE on the marker attachment, which
+  # is the true idempotency key: an issue merely carrying the `cvg` label is not a
+  # projection, and a projected issue always carries the marker.
   resp="$(_linear_gql \
-    'query($team:String!){ issues(filter:{ team:{ id:{ eq:$team } }, labels:{ some:{ name:{ eq:"cvg" } } } }, first:250){ nodes{ identifier attachments{ nodes{ url } } } } }' \
+    'query($team:ID!){ issues(filter:{ team:{ id:{ eq:$team } } }, first:250){ nodes{ identifier attachments{ nodes{ url } } } pageInfo{ hasNextPage } } }' \
     "$(jq -n --arg team "$LINEAR_TEAM_ID" '{team:$team}')")"
+  # A truncated page would under-count and make the 1:1 gate cry "missing". Say so loudly
+  # rather than silently reporting a wrong set.
+  if printf '%s' "$resp" | jq -e '.data.issues.pageInfo.hasNextPage == true' >/dev/null 2>&1; then
+    echo "WARN: >250 issues on this team — list-issues is truncated; the 1:1 gate may under-count" >&2
+  fi
   printf '%s' "$resp" | jq -r --arg base "$base" '
     .data.issues.nodes[]?
     | . as $i
@@ -356,9 +382,9 @@ _ln_set_parent() {
   [ -n "$issue" ] && [ -n "$parent" ] || return 0
   input="$(jq -n --arg p "$parent" --arg s "$sort" \
     '{parentId:$p} + (if $s=="" then {} else {subIssueSortOrder:($s|tonumber? // 0)} end)' 2>/dev/null)" || return 0
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($id:String!,$in:IssueUpdateInput!){ issueUpdate(id:$id, input:$in){ success } }' \
-    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')"
   return 0
 }
 
@@ -367,9 +393,9 @@ _ln_set_parent() {
 _ln_set_sla() {
   local issue="$1" sla="$2"
   [ -n "$issue" ] && [ -n "$sla" ] && [ "$sla" != "(none)" ] || return 0
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($id:String!,$s:SLADayCountType){ issueUpdate(id:$id, input:{ slaType:$s }){ success } }' \
-    "$(jq -n --arg id "$issue" --arg s "$sla" '{id:$id,s:$s}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg id "$issue" --arg s "$sla" '{id:$id,s:$s}')"
   return 0
 }
 
@@ -395,9 +421,9 @@ _ln_apply_input() {
   local issue="$1" input="${2:-}"
   [ -n "$issue" ] || return 0
   [ -n "$input" ] && [ "$input" != "{}" ] || return 0
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($id:String!,$in:IssueUpdateInput!){ issueUpdate(id:$id, input:$in){ success } }' \
-    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')"
   return 0
 }
 

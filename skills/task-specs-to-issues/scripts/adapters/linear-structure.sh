@@ -146,9 +146,12 @@ _ln_ensure_initiative() {
 _ln_link_initiative_project() {
   local init="$1" proj="$2"
   [ -n "$init" ] && [ -n "$proj" ] || return 0
-  _linear_gql \
+  # MUST be _ln_gql_soft (a subshell): re-linking an ALREADY-linked pair makes Linear
+  # return an error, and _linear_gql exits on error — a bare `|| true` would not catch
+  # it, killing the verb before it printed the initiative id ("(skipped)" on re-runs).
+  _ln_gql_soft \
     'mutation($i:String!,$p:String!){ initiativeToProjectCreate(input:{ initiativeId:$i, projectId:$p }){ success } }' \
-    "$(jq -n --arg i "$init" --arg p "$proj" '{i:$i,p:$p}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg i "$init" --arg p "$proj" '{i:$i,p:$p}')"
   return 0
 }
 
@@ -205,9 +208,9 @@ ln_project_update() {
   elif [ "$r" -ge 60 ] 2>/dev/null; then health="atRisk"
   else health="offTrack"; fi
   body="cvg register — ${r}% of ${total:-?} signed-off eval(s) green. Projected by REGISTER ①."
-  _linear_gql \
+  _ln_gql_soft \
     'mutation($p:String!,$b:String!,$h:ProjectUpdateHealthType){ projectUpdateCreate(input:{ projectId:$p, body:$b, health:$h }){ success } }' \
-    "$(jq -n --arg p "$proj" --arg b "$body" --arg h "$health" '{p:$p,b:$b,h:$h}')" >/dev/null 2>&1 || true
+    "$(jq -n --arg p "$proj" --arg b "$body" --arg h "$health" '{p:$p,b:$b,h:$h}')"
   echo "project-update posted ($health)" >&2
   return 0
 }
@@ -234,14 +237,14 @@ ln_document() {
   existing="$(printf '%s' "$resp" | jq -r --arg t "$title" \
       '[.data.project.documents.nodes[]? | select(.title==$t) | .id][0] // empty' 2>/dev/null)" || existing=""
   if [ -n "$existing" ]; then
-    _linear_gql \
+    _ln_gql_soft \
       'mutation($id:String!,$c:String!){ documentUpdate(id:$id, input:{ content:$c }){ success } }' \
-      "$(jq -n --arg id "$existing" --arg c "$content" '{id:$id,c:$c}')" >/dev/null 2>&1 || true
+      "$(jq -n --arg id "$existing" --arg c "$content" '{id:$id,c:$c}')"
     echo "document updated ($title)" >&2
   else
-    _linear_gql \
+    _ln_gql_soft \
       'mutation($t:String!,$c:String!,$p:String!){ documentCreate(input:{ title:$t, content:$c, projectId:$p }){ success document{ id } } }' \
-      "$(jq -n --arg t "$title" --arg c "$content" --arg p "$proj" '{t:$t,c:$c,p:$p}')" >/dev/null 2>&1 || true
+      "$(jq -n --arg t "$title" --arg c "$content" --arg p "$proj" '{t:$t,c:$c,p:$p}')"
     echo "document created ($title)" >&2
   fi
   return 0
