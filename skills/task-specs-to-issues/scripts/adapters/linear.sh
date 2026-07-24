@@ -183,14 +183,14 @@ _ln_group_color() {
 # Find-or-create a LABEL GROUP (isGroup:true), echoing its id.
 _ln_group_id() {
   local group="$1" resp id
-  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup } } }' '{}' 2>/dev/null)" || { printf ''; return 0; }
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup } } }' '{}')" || { printf ''; return 0; }
   id="$(printf '%s' "$resp" | jq -r --arg n "$group" \
       '.data.issueLabels.nodes[]? | select(.name==$n and .isGroup==true) | .id' 2>/dev/null | head -1)"
   if [[ -z "$id" ]]; then
     id="$(_linear_gql \
       'mutation($name:String!,$team:String!,$color:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, color:$color, isGroup:true }){ success issueLabel{ id } } }' \
       "$(jq -n --arg name "$group" --arg team "$LINEAR_TEAM_ID" --arg color "$(_ln_group_color "$group")" \
-        '{name:$name,team:$team,color:$color}')" 2>/dev/null \
+        '{name:$name,team:$team,color:$color}')" \
       | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
   fi
   printf '%s' "$id"
@@ -208,7 +208,7 @@ _ln_group_id() {
 _ln_label_ids() {
   local names="$1" resp id nm ids="" group child gid
   [[ -n "$names" ]] || { printf '[]'; return 0; }
-  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup parent{ name } } } }' '{}' 2>/dev/null)" || { printf '[]'; return 0; }
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup parent{ name } } } }' '{}')" || { printf '[]'; return 0; }
   for nm in $names; do
     case "$nm" in
       *:*)
@@ -221,7 +221,7 @@ _ln_label_ids() {
           id="$(_linear_gql \
             'mutation($name:String!,$team:String!,$parent:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, parentId:$parent }){ success issueLabel{ id } } }' \
             "$(jq -n --arg name "$child" --arg team "$LINEAR_TEAM_ID" --arg parent "$gid" \
-              '{name:$name,team:$team,parent:$parent}')" 2>/dev/null \
+              '{name:$name,team:$team,parent:$parent}')" \
             | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
         fi
         ;;
@@ -231,7 +231,7 @@ _ln_label_ids() {
         if [[ -z "$id" ]]; then
           id="$(_linear_gql \
             'mutation($name:String!,$team:String!){ issueLabelCreate(input:{ name:$name, teamId:$team }){ success issueLabel{ id } } }' \
-            "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" 2>/dev/null \
+            "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" \
             | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
         fi
         ;;
