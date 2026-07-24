@@ -26,7 +26,7 @@ blocked_reason: (none)
 security_class: (none)
 source_action_item: (none)
 linear_ref: (none)
-tracker_ref: linear:CVG-5
+tracker_ref: linear:CVG-12
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel

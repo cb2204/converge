@@ -15,6 +15,10 @@ creates_paths:
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
 execution_backend: any
+signed_off: true
+signed_off_by: luanmorenomaciel
+signed_off_at: 2026-07-24T14:26:41Z
+signed_off_sig: hmac-sha256-v1:1f197c76:ed995184be1a025801c695f4c8a8718b0233b5cee3297ffcd530aa369865d089
 ---
 
 # Transform — publish gold as DuckLake (Q-SET-1 coverage)

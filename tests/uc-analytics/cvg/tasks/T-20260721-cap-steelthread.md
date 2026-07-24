@@ -22,7 +22,7 @@ signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-23T18:17:08Z
 signed_off_sig: hmac-sha256-v1:1f197c76:48829ec3f603bfb7460685c122022e77a2960bd0e6d745ded559ca85c5948e91
-tracker_ref: linear:CVG-1
+tracker_ref: linear:CVG-11
 ---
 
 # Capture steel thread — one domain (orders) end-to-end off the WAL

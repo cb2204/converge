@@ -24,7 +24,7 @@ blocked_reason: (none)
 security_class: (none)
 source_action_item: (none)
 linear_ref: (none)
-tracker_ref: linear:CVG-6
+tracker_ref: (none)
 execution_backend: any
 register: false  # e2e test fixture — gated for the harness, never for a shared board
 signed_off: true
