@@ -37,3 +37,6 @@ temp/legs-e2e/
 # `cvg setup`. Not secret (cvg never stores credentials), but workspace-specific:
 # each user runs `cvg setup` for their own board rather than inheriting yours.
 .cvg/
+
+# scratch render output (deck PDFs, intermediates)
+tmp/
