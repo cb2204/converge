@@ -241,6 +241,24 @@ gh_list_ready() {
 }
 
 # ---------------------------------------------------------------------------
+# VERB: list-issues — EVERY registered issue as  extid<TAB>number  (parity gate).
+# ---------------------------------------------------------------------------
+# The full registered set across ALL states, keyed on the spec id recovered from
+# the HTML marker in each body. Backs verify-registration's 1:1 gate (count /
+# orphan / missing). Read-only. An issue carrying the label but no marker is
+# skipped, so only genuinely-projected issues are counted.
+gh_list_issues() {
+  _gh_require_tools
+  gh issue list --label "$TSI_GH_LABEL" --state all --json number,body --limit 500 \
+    | jq -r '
+      .[]
+      | . as $i
+      | ( [ ($i.body // "") | scan("<!-- task-spec: ([^ ]+) -->") ][0][0] // "" ) as $ext
+      | select($ext != "")
+      | "\($ext)\t\($i.number)"'
+}
+
+# ---------------------------------------------------------------------------
 # VERB: write-result --issue N --status pass|fail [--pr URL] [--reason TEXT]
 # ---------------------------------------------------------------------------
 # The LOOP writes this (Pass 8), NOT registration. A green eval closes the issue
@@ -328,6 +346,7 @@ _gh_main() {
     upsert)       gh_upsert "$@" ;;
     link)         gh_link "$@" ;;
     list-ready)   gh_list_ready "$@" ;;
+    list-issues)  gh_list_issues "$@" ;;
     write-result) gh_write_result "$@" ;;
     project-ensure)    gh_ensure_noop project "$@" ;;
     milestone-ensure)  gh_ensure_noop milestone "$@" ;;
@@ -338,7 +357,7 @@ _gh_main() {
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_gh_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
+    *) tsi_gh_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|list-issues|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
   esac
 }
 

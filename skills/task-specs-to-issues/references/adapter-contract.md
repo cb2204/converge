@@ -17,10 +17,10 @@ plumbing. The irreducible surface is two methods:
 | **read ready** — `adapter list-ready` | the loop / Manager | emit the issues with **no open `blocked-by`** — the work that is safe to pull now. One id/number per line. |
 | **write result** — `adapter write-result --issue N --status pass\|fail [--pr URL] [--reason TEXT]` | Pass 8 `task-loop` | record the eval outcome: a green eval closes the issue (with the linked PR); a red eval leaves it open with a failure comment. |
 
-## The five verbs (registration adds three)
+## The six verbs (registration adds three, the gate adds one)
 
-Registration (`register.sh`) needs three more verbs on top of the spine. Every
-adapter implements the **same five**:
+Registration (`register.sh`) needs three more verbs on top of the spine, and the
+verify gate needs one read-only listing. Every adapter implements the **same six**:
 
 | Verb | Signature | Contract |
 |------|-----------|----------|
@@ -28,6 +28,7 @@ adapter implements the **same five**:
 | `upsert` | `adapter upsert --id ID --title T --body-file F [--label L ...]` | Find-by-id-key **else** create. Idempotent. Echoes the resulting issue number/id on stdout; human notes (`created …` / `updated …`) go to stderr. |
 | `link` | `adapter link --from ID --to ID` | Set a `blocked-by` from FROM's issue to TO's issue (resolving each spec id → issue). Idempotent — re-linking is a no-op. |
 | `list-ready` | `adapter list-ready` | (spine) issues with no open blocker. |
+| `list-issues` | `adapter list-issues` | (gate) EVERY registered issue as `extid<TAB>ref`, keyed on the spec id its marker carries. Read-only; backs `verify-registration.sh`'s 1:1 parity check (count · orphan · missing · double-registration). An issue carrying the marker-label but no marker is skipped. |
 | `write-result` | `adapter write-result --issue N --status pass\|fail …` | (spine) the loop's write side; **not used during registration**. |
 
 ### stdout / stderr discipline
@@ -55,22 +56,22 @@ Every verb that mutates keys on the spec `id`. See
 
 ## Backend status
 
-| Adapter | preflight | upsert | link | list-ready | write-result | Notes |
-|---------|-----------|--------|------|------------|--------------|-------|
-| `github.sh` | live | live | live | live | live | pure `gh` + `jq`; blocked-by is a task-list line in a `### Blocked by` body section. |
-| `linear.sh` | live | live | live | live | live | GraphQL over `curl`; blocked-by is a native `issueRelation type: blocks`. `upsert` returns the human identifier (`ENG-42`). All network calls isolated in `_linear_gql*`. |
-| `jira.sh` | live | code-complete¹ | code-complete¹ | code-complete¹ | code-complete¹ | REST v3 shapes complete incl. **runtime Done-transition resolution** (`.to.statusCategory.key=="done"`); write verbs gated behind `TSI_JIRA_ENABLE=1` until validated against a live project. |
-| `fake.sh` | live | live | live | live | live | **test-only, no network** — on-disk store under `$TSI_FAKE_STORE`, deterministic `FAKE-N` ids. The reference adapter and the backend for `tests/test-register.sh`; never a real board. |
+| Adapter | preflight | upsert | link | list-ready | list-issues | write-result | Notes |
+|---------|-----------|--------|------|------------|-------------|--------------|-------|
+| `github.sh` | live | live | live | live | live | live | pure `gh` + `jq`; blocked-by is a task-list line in a `### Blocked by` body section. |
+| `linear.sh` | live | live | live | live | live | live | GraphQL over `curl`; blocked-by is a native `issueRelation type: blocks`. `upsert` returns the human identifier (`ENG-42`). All network calls isolated in `_linear_gql*`. |
+| `jira.sh` | live | code-complete¹ | code-complete¹ | code-complete¹ | code-complete¹ | code-complete¹ | REST v3 shapes complete incl. **runtime Done-transition resolution** (`.to.statusCategory.key=="done"`); write verbs gated behind `TSI_JIRA_ENABLE=1` until validated against a live project. |
+| `fake.sh` | live | live | live | live | live | live | **test-only, no network** — on-disk store under `$TSI_FAKE_STORE`, deterministic `FAKE-N` ids. The reference adapter and the backend for `tests/test-register.sh`; never a real board. |
 
 ¹ *code-complete* = the request shapes are fully written and self-consistent, but
 the write verbs are held behind `TSI_JIRA_ENABLE=1` until they have been run once
 against a live Jira project. Promote by validating, then dropping the guard.
 
-**Adapter-specific helper verbs** (beyond the universal five): `linear.sh` adds
+**Adapter-specific helper verbs** (beyond the universal six): `linear.sh` adds
 `teams` (list `key<TAB>name<TAB>uuid`) and `resolve-team` (a team KEY like `CVG`
 → its UUID). These power the one-secret setup — `LINEAR_TEAM_ID` accepts a team
 **key or UUID**, and `cvg setup tracker linear` discovers/records the team so the
-user only ever exports the API key. They don't change the five-verb contract.
+user only ever exports the API key. They don't change the six-verb contract.
 
 ## Why an adapter and not a library
 
@@ -79,19 +80,19 @@ the floor under `raw.*`). If the board and `tasks/*` ever disagree on what the
 work is, the spec wins and the board is re-registered — the projection is
 one-way. Because the board is disposable and re-derivable, the backend that
 holds it is a detail behind this contract, and the day the team moves trackers
-is the day someone writes one more `adapters/<new>.sh` with these five verbs.
+is the day someone writes one more `adapters/<new>.sh` with these six verbs.
 
 ## Adding a tracker (the recipe)
 
 The core (`register.sh` / `verify-registration.sh`) is **tracker-agnostic** — it
-speaks only the five verbs. Supporting a new backend is one new file, no core
+speaks only the six verbs. Supporting a new backend is one new file, no core
 change. This is deliberately the opposite of shipping a dozen half-built
 backends: **thin adapters behind one agnostic core** beats broad-but-shallow
 (the same lesson production multi-tracker tools like *spectryn* encode — 13
 trackers, one ports-and-adapters core). Recipe:
 
 1. **Copy `adapters/fake.sh`** — it is the smallest COMPLETE adapter (~130 lines,
-   no network) and the clearest template for the five verbs, the stdout/stderr
+   no network) and the clearest template for the six verbs, the stdout/stderr
    discipline, and the dispatch block.
 2. **Pick the idempotency carrier** (see `idempotency-keys.md`): a native
    external-id field (best), else a label + a body/description marker. `upsert`

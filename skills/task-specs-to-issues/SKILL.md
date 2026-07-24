@@ -123,7 +123,7 @@ The board this skill registers is the exact surface the execution loop reads. A 
 
 ## References
 
-- `references/adapter-contract.md` — the five-verb adapter contract (`preflight · upsert · link · list-ready · write-result`), the stdout/stderr discipline, the backend status table, and the ~40-line recipe for adding a new tracker.
+- `references/adapter-contract.md` — the six-verb adapter contract (`preflight · upsert · link · list-ready · list-issues · write-result`), the stdout/stderr discipline, the backend status table, and the ~40-line recipe for adding a new tracker.
 - `references/dependency-graph.md` — how `depends_on` (YAML inline list) maps to `blocked-by`, cycle detection, and the repo's canonical build-order graph.
 - `references/idempotency-keys.md` — how each tracker carries the spec `id` (github HTML marker + label, linear external id, jira label) so re-runs upsert instead of duplicate.
 - `references/projection-block.md` — the optional per-spec `projection:` frontmatter block (assignee/state/subscribers + cycle/parent/sla/project/milestone): its HMAC-safety, the derived-vs-seed-once ownership split, and how structural fields gate behind `cvg setup projection`.

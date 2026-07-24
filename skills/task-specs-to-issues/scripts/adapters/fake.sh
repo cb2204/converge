@@ -292,6 +292,19 @@ fake_users() {
 }
 
 # ---------------------------------------------------------------------------
+# VERB: list-issues — EVERY registered issue as  extid<TAB>ref  (the parity gate).
+# ---------------------------------------------------------------------------
+# Unlike list-ready (roots only), this is the FULL registered set, keyed on the
+# spec id (extid, column 2 of the store). verify-registration.sh diffs it against
+# the signed-off specs to prove 1:1 — count parity, no orphan, no missing, no
+# double-registration. The store's extid column IS the marker every real adapter
+# recovers from its issue body/attachment/label.
+fake_list_issues() {
+  _fake_init
+  awk -F'\t' 'NF>=2 && $2!="" {print $2"\t"$1}' "$ISSUES"
+}
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 _fake_main() {
@@ -302,6 +315,7 @@ _fake_main() {
     upsert)       fake_upsert "$@" ;;
     link)         fake_link "$@" ;;
     list-ready)   fake_list_ready "$@" ;;
+    list-issues)  fake_list_issues "$@" ;;
     write-result) fake_write_result "$@" ;;
     project-ensure)    fake_ensure project "$@" ;;
     initiative-ensure) fake_ensure initiative "$@" ;;
@@ -312,7 +326,7 @@ _fake_main() {
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_fake_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
+    *) tsi_fake_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|list-issues|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
   esac
 }
 

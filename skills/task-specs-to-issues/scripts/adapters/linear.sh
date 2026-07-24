@@ -317,6 +317,32 @@ _ln_find_by_external_id() {
 }
 
 # ---------------------------------------------------------------------------
+# VERB: list-issues — EVERY cvg-registered issue as  extid<TAB>identifier.
+# ---------------------------------------------------------------------------
+# The bulk reverse of _ln_find_by_external_id: the `cvg` label (added on every
+# upsert) is the registered-set filter, and the spec id is recovered from the marker
+# ATTACHMENT url (the prefix is stripped). Team-scoped, paged to 250. Read-only.
+# Backs verify-registration's 1:1 parity gate (count / orphan / missing). An issue
+# that carries the label but no marker attachment (e.g. a human tagged it) is
+# skipped — only genuinely-projected issues are counted.
+ln_list_issues() {
+  _ln_require_tools
+  [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
+  local base resp
+  base="$(_ln_marker_url "")"     # marker url PREFIX (empty id) — ltrimstr it off to recover the spec id
+  resp="$(_linear_gql \
+    'query($team:String!){ issues(filter:{ team:{ id:{ eq:$team } }, labels:{ some:{ name:{ eq:"cvg" } } } }, first:250){ nodes{ identifier attachments{ nodes{ url } } } } }' \
+    "$(jq -n --arg team "$LINEAR_TEAM_ID" '{team:$team}')")"
+  printf '%s' "$resp" | jq -r --arg base "$base" '
+    .data.issues.nodes[]?
+    | . as $i
+    | ( [ $i.attachments.nodes[]?.url | select(startswith($base)) | ltrimstr($base) ][0] // empty ) as $ext
+    | select($ext != "")
+    | "\($ext)\t\($i.identifier)"
+  '
+}
+
+# ---------------------------------------------------------------------------
 # Isolated, fail-soft setters for OPTIONAL projection fields — each in its OWN
 # mutation so a scalar/plan/depth surprise on an optional field can never take a
 # whole registration down (mirrors _ln_set_due). Applied AFTER the core
@@ -670,7 +696,7 @@ _ln_main() {
   # Resolve a team KEY (e.g. CVG) to its UUID for the verbs that need a team, so a
   # human can pass the key straight from the Linear URL. A UUID passes through.
   case "$verb" in
-    preflight|upsert|link|list-ready|write-result|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)
+    preflight|upsert|link|list-ready|list-issues|write-result|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)
       if [[ -n "${LINEAR_TEAM_ID:-}" ]] && ! _ln_is_uuid "$LINEAR_TEAM_ID"; then
         local _r; _r="$(_ln_resolve_team_id 2>/dev/null || true)"
         [[ -n "$_r" ]] && LINEAR_TEAM_ID="$_r"
@@ -682,6 +708,7 @@ _ln_main() {
     upsert)       ln_upsert "$@" ;;
     link)         ln_link "$@" ;;
     list-ready)   ln_list_ready "$@" ;;
+    list-issues)  ln_list_issues "$@" ;;
     write-result) ln_write_result "$@" ;;
     teams)        ln_teams "$@" ;;
     resolve-team) _ln_resolve_team_id ;;
@@ -694,7 +721,7 @@ _ln_main() {
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|teams|resolve-team|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)" ;;
+    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|list-issues|write-result|teams|resolve-team|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)" ;;
   esac
 }
 

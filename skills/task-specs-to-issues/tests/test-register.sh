@@ -484,6 +484,42 @@ rc_is "second structure-enabled register exits 0" "$RC" "0"
 NPROJ="$(awk -F'\t' '$1=="project"{n++} END{print n+0}' "$S/structure.tsv")"
 rc_is "project ensured exactly once (idempotent by name)" "$NPROJ" "1"
 
+echo; echo "[U] hardened [D] parity gate — count / orphan / missing (via list-issues)"
+# A clean 1:1 registration passes the gate.
+D="$WORK/u/tasks"; S="$WORK/u/store"; mkdir -p "$D"
+make_spec "$D" "T-$DATE-par-root"  true "[]"
+make_spec "$D" "T-$DATE-par-child" true "[T-$DATE-par-root]"
+TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs >/dev/null 2>&1
+OUT="$(TSI_FAKE_STORE="$S" bash "$VERIFY" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "clean board: verify exits 0"       "$RC" "0"
+has   "clean board: 1:1 parity asserted"  "$OUT" "no orphan, no missing, no dup"
+has   "clean board: board count is real (not the spec count echoed twice)" "$OUT" "2 spec(s) -> 2 issue(s)"
+has   "clean board: CHECK_REGISTER=OK"    "$OUT" "CHECK_REGISTER=OK"
+
+# ORPHAN — a board issue with no signed-off spec. The OLD [D] passed this (false OK);
+# the hardened gate must FAIL. Inject straight into the fake store.
+printf 'FAKE-99\tT-%s-orphan\torphan issue\topen\n' "$DATE" >> "$S/issues.tsv"
+OUT="$(TSI_FAKE_STORE="$S" bash "$VERIFY" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_nonzero "orphan board: verify exits non-zero"     "$RC"
+has        "orphan detected by the gate"             "$OUT" "no signed-off spec (orphan)"
+has        "orphan board: CHECK_REGISTER=FAIL"        "$OUT" "CHECK_REGISTER=FAIL"
+
+# MISSING — a signed-off spec with no board issue (under-registration). Fresh store:
+# register one spec, then add a second signed spec and re-verify WITHOUT registering it.
+D2="$WORK/u2/tasks"; S2="$WORK/u2/store"; mkdir -p "$D2"
+make_spec "$D2" "T-$DATE-miss-a" true "[]"
+TSI_FAKE_STORE="$S2" bash "$REGISTER" --tracker fake --tasks-dir "$D2" --no-stamp-refs >/dev/null 2>&1
+make_spec "$D2" "T-$DATE-miss-b" true "[]"
+OUT="$(TSI_FAKE_STORE="$S2" bash "$VERIFY" --tracker fake --tasks-dir "$D2" 2>&1)"; RC=$?
+rc_nonzero "missing board: verify exits non-zero"    "$RC"
+has        "missing spec detected by the gate"       "$OUT" "no board issue"
+has        "missing board: CHECK_REGISTER=FAIL"       "$OUT" "CHECK_REGISTER=FAIL"
+
+# --dry-run stays spec-side only (no board comparison, no list-issues call).
+OUT="$(TSI_FAKE_STORE="$S" bash "$VERIFY" --tracker fake --tasks-dir "$D" --dry-run 2>&1)"; RC=$?
+rc_is "dry-run gate exits 0 (spec-side only)"        "$RC" "0"
+has   "dry-run skips the board comparison"           "$OUT" "board comparison SKIPPED"
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="

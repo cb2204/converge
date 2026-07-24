@@ -323,6 +323,26 @@ jira_users_noop() {
 }
 
 # ---------------------------------------------------------------------------
+# VERB: list-issues — EVERY registered issue as  extid<TAB>key  (parity gate).
+# ---------------------------------------------------------------------------
+# The full registered set (all statuses), keyed on the spec id recovered from the
+# per-id `task-spec:<id>` label. Backs verify-registration's 1:1 gate. Read-only;
+# same JQL label filter as list-ready.
+jira_list_issues() {
+  _jira_require_tools; _jira_require_enabled
+  curl -sS -G "${JIRA_BASE_URL%/}/rest/api/3/search" \
+    -H "$(_jira_auth_header)" -H "Accept: application/json" \
+    --data-urlencode "jql=project=${JIRA_PROJECT_KEY} AND labels IN (${JIRA_LABEL_PREFIX})" \
+    --data-urlencode "fields=key,labels" \
+    | jq -r --arg pfx "${JIRA_LABEL_PREFIX}:" '
+      .issues[]?
+      | . as $i
+      | ( [ $i.fields.labels[]? | select(startswith($pfx)) | ltrimstr($pfx) ][0] // "" ) as $ext
+      | select($ext != "")
+      | "\($ext)\t\($i.key)"'
+}
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 _jira_main() {
@@ -333,6 +353,7 @@ _jira_main() {
     upsert)       jira_upsert "$@" ;;
     link)         jira_link "$@" ;;
     list-ready)   jira_list_ready "$@" ;;
+    list-issues)  jira_list_issues "$@" ;;
     write-result) jira_write_result "$@" ;;
     project-ensure)    jira_ensure_noop project "$@" ;;
     milestone-ensure)  jira_ensure_noop milestone "$@" ;;
@@ -343,7 +364,7 @@ _jira_main() {
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_jira_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
+    *) tsi_jira_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|list-issues|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
   esac
 }
 

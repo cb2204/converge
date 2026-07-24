@@ -36,6 +36,7 @@ TRACKER="linear"
 TASKS_DIR="${TSI_TASKS_DIR:-tasks}"
 DRY_RUN=0
 PRUNE=0
+BOARD_RAW=""   # count of registered issues the live board reported (set in check [D])
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -142,38 +143,65 @@ done < "$UNGATED"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[D] board comparison SKIPPED (--dry-run: spec-side gate only)"
 else
-  echo "[D] board mirrors the specs (1:1 count + ready set)"
+  echo "[D] board mirrors the specs (1:1 count · no orphan · no missing · no dup)"
   if ! bash "$ADAPTER" preflight >/dev/null 2>&1; then
     fail "adapter preflight failed — cannot verify the live board"
   else
-    # Count issues on the board that carry a task-spec id. list-ready gives the
-    # roots; a full count needs the adapter's own listing. We compare the READY
-    # set the adapter reports against the spec-side roots as the live signal.
+    # The FULL registered set, keyed on the spec id its marker carries (list-issues,
+    # not just list-ready roots), so the board can be diffed against the signed specs.
+    BOARD="$WORK/board.tsv"          # extid \t issue_ref  (one line per registered issue)
+    bash "$ADAPTER" list-issues > "$BOARD" 2>/dev/null || : > "$BOARD"
+    BOARD_IDS="$WORK/board_ids.txt"; awk -F'\t' '$1!=""{print $1}' "$BOARD" | sort > "$BOARD_IDS"  # sorted, dups KEPT
+    BOARD_UNIQ="$WORK/board_uniq.txt"; sort -u "$BOARD_IDS" > "$BOARD_UNIQ"
+    BOARD_RAW="$(awk 'END{print NR+0}' "$BOARD_IDS")"
+    BOARD_COUNT="$(awk 'END{print NR+0}' "$BOARD_UNIQ")"
+    echo "  spec: $SPEC_COUNT signed-off   board: $BOARD_RAW registered ($BOARD_COUNT distinct)"
+
+    if [[ "$BOARD_RAW" -eq 0 && "$SPEC_COUNT" -gt 0 ]]; then
+      fail "board carries no registered issue but $SPEC_COUNT spec(s) are signed off — not registered yet? (or adapter lacks list-issues)"
+    else
+      # (1) double-registration — the same spec id on two board issues.
+      if [[ "$BOARD_RAW" -ne "$BOARD_COUNT" ]]; then
+        DUPS="$(uniq -d "$BOARD_IDS" | tr '\n' ' ' | sed 's/ *$//')"
+        fail "spec id(s) registered to more than one issue (double-registration): $DUPS"
+      fi
+      # (2) missing — a signed-off spec with no board issue (under-registered).
+      MISSING="$(comm -23 "$SIGNED" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
+      [[ -n "$MISSING" ]] && fail "signed-off spec(s) with no board issue: $MISSING"
+      # (3) orphan — a board issue whose spec id is not in the signed-off set.
+      ORPHAN="$(comm -13 "$SIGNED" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
+      if [[ -n "$ORPHAN" ]]; then
+        fail "board issue(s) with no signed-off spec (orphan): $ORPHAN"
+        if [[ "$PRUNE" -eq 1 ]]; then
+          echo "  --prune: close/delete these orphan issue(s), or re-gate their spec:" >&2
+          for o in $ORPHAN; do
+            awk -F'\t' -v e="$o" '$1==e{printf "    orphan: %s (%s)\n", $1, $2}' "$BOARD" >&2
+          done
+        fi
+      fi
+      [[ -z "$MISSING" && -z "$ORPHAN" && "$BOARD_RAW" -eq "$SPEC_COUNT" ]] \
+        && pass "1:1 — $SPEC_COUNT spec(s) ⇄ $BOARD_RAW issue(s); no orphan, no missing, no dup"
+    fi
+
+    # Secondary signal: the board's ready frontier (roots) is live.
     SPEC_ROOTS="$WORK/spec_roots.txt"; : > "$SPEC_ROOTS"
     while read -r id; do
       awk -F'\t' -v x="$id" '$1==x{f=1} END{exit f?0:1}' "$EDGES" || echo "$id" >> "$SPEC_ROOTS"
     done < "$SIGNED"
     sort -u -o "$SPEC_ROOTS" "$SPEC_ROOTS"
-
     BOARD_READY="$WORK/board_ready.txt"
     bash "$ADAPTER" list-ready > "$BOARD_READY" 2>/dev/null || : > "$BOARD_READY"
-    BR_COUNT="$(awk 'END{print NR+0}' "$BOARD_READY")"
-    SR_COUNT="$(awk 'END{print NR+0}' "$SPEC_ROOTS")"
-    echo "  spec roots: $SR_COUNT   board ready: $BR_COUNT"
-    if [[ "$BR_COUNT" -eq 0 && "$SR_COUNT" -gt 0 ]]; then
-      fail "adapter list-ready returned nothing but the spec side has $SR_COUNT root(s) — board not registered?"
-    else
-      pass "adapter list-ready is live (root set present)"
-    fi
-    if [[ "$PRUNE" -eq 1 ]]; then
-      echo "  --prune: inspect the board for issues with no signed-off spec (orphans) and remove or re-register."
-    fi
+    echo "  ready frontier: spec roots $(awk 'END{print NR+0}' "$SPEC_ROOTS") · board ready $(awk 'END{print NR+0}' "$BOARD_READY")"
   fi
 fi
 
 echo "----------------------------------------------------------------"
 if [[ "$FAIL" -eq 0 ]]; then
-  echo "1:1 mapping: $SPEC_COUNT spec(s) -> $SPEC_COUNT issue(s); $EDGE_COUNT edge(s) as blocked-by links."
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    echo "spec-side gate only: $SPEC_COUNT signed-off spec(s), $EDGE_COUNT edge(s) — board comparison skipped (--dry-run)."
+  else
+    echo "1:1 mapping: $SPEC_COUNT spec(s) -> ${BOARD_RAW:-?} issue(s); $EDGE_COUNT edge(s) as blocked-by links."
+  fi
   echo "VERDICT: REGISTERED"
   echo "CHECK_REGISTER=OK"
   exit 0
