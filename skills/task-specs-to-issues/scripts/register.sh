@@ -358,8 +358,10 @@ while read -r id; do
   # UNION-merge — the adapter enforces that split; the driver just supplies signal.
   #   assignee: the most-specific people-map KEY (agent role beats engine beats the
   #             `default` catch-all); the adapter resolves KEY -> person + fails soft.
+  # "any" carries no routing signal (same as the label rule above), so it is NOT a
+  # key — it falls through to the `default` catch-all. agent role beats engine.
   UP_ASSIGN="default"
-  [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ASSIGN="backend:$UP_BACKEND"
+  [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && [ "$UP_BACKEND" != "any" ] && UP_ASSIGN="backend:$UP_BACKEND"
   [ -n "$UP_AGENT" ] && [ "$UP_AGENT" != "(none)" ] && [ "$UP_AGENT" != "any" ] && UP_ASSIGN="agent:$UP_AGENT"
   UP_ARGS+=(--assignee "$UP_ASSIGN")
   #   state: DAG position — a root (no depends_on) opens ready in Todo; a blocked
