@@ -90,6 +90,8 @@ gh_upsert() {
       --body-file) body_file="$2"; shift 2 ;;
       --label)     labels="${labels},$2"; shift 2 ;;
       --priority)  shift 2 ;;  # GitHub has no native priority field; carried as a label instead
+      --effort)    shift 2 ;;  # no native estimate; the effort:<tier> label carries it
+      --due)       shift 2 ;;  # no native due date on an issue
       *) tsi_gh_die "upsert: unknown arg '$1'" ;;
     esac
   done

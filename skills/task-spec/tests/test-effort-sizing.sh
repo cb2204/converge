@@ -101,8 +101,13 @@ run "XS leaf ok"        0 ''                          XS  "README.md"          "
 run "S leaf ok"         0 ''                          S   "a1,a2"              "" "" any
 run "M leaf ok"         0 ''                          M   "a1,a2,a3"           "" "" any
 run "L leaf glm ok"     0 ''                          L   "a1,a2,a3,a4,a5"     "" "" glm
+# The L gate is about LONG-HORIZON capability, not one vendor: execution_backend
+# is an open string, so the eligible set is configurable (TS_LONG_HORIZON_BACKENDS).
+run "L leaf claude ok"  0 ''                          L   "a1,a2,a3,a4,a5"     "" "" claude
+run "L leaf codex ok"   0 ''                          L   "a1,a2,a3,a4,a5"     "" "" codex
+run "L leaf kimi ok"    0 ''                          L   "a1,a2,a3,a4,a5"     "" "" kimi
 # L guardrail
-run "L needs glm"       1 'only with execution_backend: glm'  L "a1"           "" "" any
+run "L needs long-horizon" 1 'requires a LONG-HORIZON builder' L "a1"          "" "" any
 # mis-sized leaf → valid but WARNS (budget breach = coarse decomposition)
 run "S mis-sized warns" 0 'Mis-sized'                 S   "a1,a2,a3,a4,a5"     "" "" any
 # NODES must decompose — no SDD escape

@@ -105,6 +105,35 @@ _ln_resolve_team_id() {
 # before labels existed could never acquire them — CVG-1 hit exactly that.)
 # All of it is FAIL-SOFT: a cosmetic problem must never break a registration.
 # ---------------------------------------------------------------------------
+# Six-tier effort -> Linear's NATIVE estimate points. Linear's own T-shirt scale
+# is XS=1 S=2 M=3 L=5 XL=8 XXL=13, which maps 1:1 onto the cvg sizing engine.
+# Setting the native field (not just a label) is what makes Linear's velocity,
+# burn-up and cycle-capacity views actually understand the work.
+# Echoes empty for an unknown tier, so the field is simply omitted.
+_ln_estimate_points() {
+  case "$1" in
+    XS|xs)   printf '1' ;;
+    S|s)     printf '2' ;;
+    M|m)     printf '3' ;;
+    L|l)     printf '5' ;;
+    XL|xl)   printf '8' ;;
+    XXL|xxl) printf '13' ;;
+    *)       printf '' ;;
+  esac
+}
+
+# Set a due date, fail-soft and ISOLATED in its own call. `dueDate` is a
+# TimelessDate scalar; keeping it out of the main create/update mutation means a
+# scalar-type surprise can never take a whole registration down with it.
+_ln_set_due() {   # _ln_set_due ISSUE_UUID YYYY-MM-DD
+  local issue="$1" due="$2"
+  [[ -n "$due" && "$due" != "(none)" ]] || return 0
+  _linear_gql \
+    'mutation($id:String!,$due:TimelessDate){ issueUpdate(id:$id, input:{ dueDate:$due }){ success } }' \
+    "$(jq -n --arg id "$issue" --arg due "$due" '{id:$id,due:$due}')" >/dev/null 2>&1 || true
+  return 0
+}
+
 # Linear priority is an Int: 0 none, 1 Urgent, 2 High, 3 Medium, 4 Low.
 _ln_priority_int() {
   case "$1" in
@@ -218,7 +247,7 @@ _ln_find_by_external_id() {
 ln_upsert() {
   _ln_require_tools
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
-  local id="" title="" body_file="" labels="" prio=""
+  local id="" title="" body_file="" labels="" prio="" effort="" due=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --id)        id="$2"; shift 2 ;;
@@ -226,9 +255,16 @@ ln_upsert() {
       --body-file) body_file="$2"; shift 2 ;;
       --label)     labels="${labels}${labels:+ }$2"; shift 2 ;;
       --priority)  prio="$2"; shift 2 ;;
+      --effort)    effort="$2"; shift 2 ;;
+      --due)       due="$2"; shift 2 ;;
       *) tsi_ln_die "upsert: unknown arg '$1'" ;;
     esac
   done
+  # estimate is DERIVED from the spec, so (like labels) it re-syncs on every
+  # register. `null` leaves the field unset rather than forcing a zero.
+  local est estj
+  est="$(_ln_estimate_points "$effort")"
+  estj="${est:-null}"
   [[ -n "$id" ]]        || tsi_ln_die "upsert: --id required"
   [[ -n "$title" ]]     || tsi_ln_die "upsert: --title required"
   [[ -f "$body_file" ]] || tsi_ln_die "upsert: --body-file '$body_file' not readable"
@@ -248,11 +284,12 @@ ln_upsert() {
     # that is the board's triage to own.
     ulabels="$(_ln_merge_label_ids "$existing" "$labels")"
     uresp="$(_linear_gql \
-      'mutation($id:String!,$title:String!,$desc:String!,$labels:[String!]){ issueUpdate(id:$id, input:{ title:$title, description:$desc, labelIds:$labels }){ success issue{ id identifier } } }' \
-      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" --argjson labels "$ulabels" \
-        '{id:$id,title:$title,desc:$desc,labels:$labels}')")"
+      'mutation($id:String!,$title:String!,$desc:String!,$labels:[String!],$est:Int){ issueUpdate(id:$id, input:{ title:$title, description:$desc, labelIds:$labels, estimate:$est }){ success issue{ id identifier } } }' \
+      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" --argjson labels "$ulabels" --argjson est "$estj" \
+        '{id:$id,title:$title,desc:$desc,labels:$labels,est:$est}')")"
     ident="$(printf '%s' "$uresp" | jq -r '.data.issueUpdate.issue.identifier // empty')"
     ident="${ident:-$existing}"
+    _ln_set_due "$existing" "$due"
     echo "updated $ident ($id)" >&2
     echo "$ident"
   else
@@ -262,15 +299,16 @@ ln_upsert() {
     pint="$(_ln_priority_int "${prio:-}")"
     lids="$(_ln_label_ids "$labels")"
     resp="$(_linear_gql \
-      'mutation($team:String!,$title:String!,$desc:String!,$prio:Int,$labels:[String!]){ issueCreate(input:{ teamId:$team, title:$title, description:$desc, priority:$prio, labelIds:$labels }){ success issue{ id identifier } } }' \
+      'mutation($team:String!,$title:String!,$desc:String!,$prio:Int,$labels:[String!],$est:Int){ issueCreate(input:{ teamId:$team, title:$title, description:$desc, priority:$prio, labelIds:$labels, estimate:$est }){ success issue{ id identifier } } }' \
       "$(jq -n --arg team "$LINEAR_TEAM_ID" --arg title "$title" --arg desc "$body" \
-             --argjson prio "$pint" --argjson labels "$lids" \
-        '{team:$team,title:$title,desc:$desc,prio:$prio,labels:$labels}')")"
+             --argjson prio "$pint" --argjson labels "$lids" --argjson est "$estj" \
+        '{team:$team,title:$title,desc:$desc,prio:$prio,labels:$labels,est:$est}')")"
     new_uuid="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.id // empty')"
     new_ident="$(printf '%s' "$resp" | jq -r '.data.issueCreate.issue.identifier // empty')"
     [[ -n "$new_uuid" ]] || tsi_ln_die "issueCreate returned no issue id for $id"
     # Stamp the idempotency marker so the NEXT run RESOLVES this issue instead of
     # creating a second one. Without this attachment the projection is not idempotent.
+    _ln_set_due "$new_uuid" "$due"
     murl="$(_ln_marker_url "$id")"
     _linear_gql \
       'mutation($issue:String!,$url:String!,$title:String!){ attachmentCreate(input:{ issueId:$issue, url:$url, title:$title }){ success attachment{ id } } }' \

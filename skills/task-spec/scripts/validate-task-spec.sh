@@ -249,7 +249,8 @@ fi
 
 # Check 3: effort gate (v3.4 — six-tier, tasks-all-the-way-down)
 #   XS/S/M/L → runnable LEAF atoms; the write-surface must fit the tier budget.
-#              L is the ceiling: accepted only with execution_backend: glm + ONE goal.
+#              L is the ceiling: accepted only on a LONG-HORIZON builder
+#              (TS_LONG_HORIZON_BACKENDS) + ONE coherent done-condition.
 #   XL/XXL   → decomposition NODES: NOT runnable leaves. MUST declare children:
 #              (>=2 for XL, >=3 for XXL). No SDD escape — tasks decompose into tasks.
 # Legacy v0 keeps the old lenient behavior (warns, never hard-fails).
@@ -275,11 +276,11 @@ elif ts_size_is_leaf "$EFFORT"; then
   fi
   if [[ "$EFFORT" == "L" ]]; then
     if [[ "$FORMAT_VERSION" == "0" ]]; then
-      WARNINGS+=("effort is 'L' (legacy v0 tolerated); an L leaf is accepted only with execution_backend: glm and ONE coherent done-condition.")
-    elif [[ "$EXEC_BACKEND" == "glm" ]]; then
-      WARNINGS+=("effort 'L' — accepted for the glm backend (long-horizon builder). An L leaf MUST carry ONE coherent done-condition; multiple independent evals => decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
+      WARNINGS+=("effort is 'L' (legacy v0 tolerated); an L leaf is accepted only on a long-horizon builder ($TS_LONG_HORIZON_BACKENDS) and with ONE coherent done-condition.")
+    elif ts_backend_is_long_horizon "$EXEC_BACKEND"; then
+      WARNINGS+=("effort 'L' — accepted for the '$EXEC_BACKEND' backend (a long-horizon builder). An L leaf MUST carry ONE coherent done-condition; multiple independent evals => decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
     else
-      ERRORS+=("effort 'L' is accepted only with execution_backend: glm (got backend: '${EXEC_BACKEND:-<none>}'). Set execution_backend: glm, or decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
+      ERRORS+=("effort 'L' requires a LONG-HORIZON builder (one of: $TS_LONG_HORIZON_BACKENDS; got '${EXEC_BACKEND:-<none>}'). Name one, extend the set with TASKSPEC_LONG_HORIZON_BACKENDS, or decompose into XS/S/M atoms. See references/concepts/effort-gate.md")
     fi
   fi
 else

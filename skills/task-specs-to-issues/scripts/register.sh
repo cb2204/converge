@@ -265,6 +265,12 @@ while read -r id; do
   [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ARGS+=(--label "backend:$UP_BACKEND")
   UP_SEV="$(tsi_severity "$file")"
   [ -n "$UP_SEV" ] && [ "$UP_SEV" != "(none)" ] && UP_ARGS+=(--label "severity:$UP_SEV")
+  # Native-field signal: the tier drives the tracker's own estimate (Linear's
+  # T-shirt scale is XS1 S2 M3 L5 XL8 XXL13 — a 1:1 match), and a declared
+  # due_date drives its date field. Adapters without an equivalent ignore these.
+  [ -n "$UP_EFF" ] && UP_ARGS+=(--effort "$UP_EFF")
+  UP_DUE="$(tsi_field "$file" due_date)"
+  [ -n "$UP_DUE" ] && [ "$UP_DUE" != "(none)" ] && UP_ARGS+=(--due "$UP_DUE")
   UP_PRI="$(tsi_priority "$file")"
   [ -n "$UP_PRI" ] && [ "$UP_PRI" != "(none)" ] && UP_ARGS+=(--priority "$UP_PRI")
 

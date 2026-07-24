@@ -88,6 +88,8 @@ jira_upsert() {
       --body-file) body_file="$2"; shift 2 ;;
       --label) shift 2 ;;
       --priority) shift 2 ;;  # Jira priority ids are project-specific; not seeded here
+      --effort)   shift 2 ;;  # story points live on a project-specific custom field
+      --due)      shift 2 ;;  # duedate is settable; not seeded until validated live
       *) tsi_jira_die "upsert: unknown arg '$1'" ;;
     esac
   done

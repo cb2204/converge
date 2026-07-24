@@ -16,6 +16,25 @@ falls back to a legacy top-level `version:` for older specs.
 
 ---
 
+## [3.6.0] — 2026-07-24
+
+### Changed
+- **The L tier is no longer locked to one vendor.** `effort: L` previously
+  hard-failed unless `execution_backend: glm`, which directly contradicted this
+  format's own rule that `execution_backend` is an **OPEN STRING** — "the backend
+  names itself; the values above are non-normative examples, not an allow-list."
+  The gate's real intent is *an L leaf needs a **long-horizon builder***, not *an L
+  leaf needs GLM*. It now checks membership in `TS_LONG_HORIZON_BACKENDS`
+  (default `glm claude codex kimi`), overridable per fleet:
+  ```sh
+  export TASKSPEC_LONG_HORIZON_BACKENDS="claude codex kimi glm my-harness"
+  ```
+  Surfaced by a real user whose fleet is Claude Code / Codex / Kimi: an L-sized
+  spec could not name the engine that was actually going to run it.
+- `ts_backend_is_long_horizon()` added to `_lib.sh` as the single source of truth;
+  validator, effort-gate doc and SKILL.md all updated to the neutral wording.
+- `tests/test-effort-sizing.sh` gained claude/codex/kimi rows (14 rows, all green).
+
 ## [3.5.0] — 2026-07-23
 
 ### Added

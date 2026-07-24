@@ -13,7 +13,7 @@ description: |
   expand into child specs. Tasks all the way down — no route out to a separate
   spec-driven paradigm.
 metadata:
-  version: "3.5.0"
+  version: "3.6.0"
 ---
 
 # task-spec — Cornerstone CAW for Task-Spec v3
@@ -43,8 +43,8 @@ Skip if:
 - User just wants a one-off prompt, not a reusable spec
 
 (XL/XXL are NOT skipped anymore — they decompose into child specs, in-skill. There
-is no route out; see references/concepts/effort-gate.md. L still needs
-execution_backend: glm and one coherent goal, else decompose.)
+is no route out; see references/concepts/effort-gate.md. L still needs a long-horizon builder
+(TASKSPEC_LONG_HORIZON_BACKENDS) and one coherent goal, else decompose.)
 
 ---
 
@@ -83,7 +83,7 @@ execution_backend: glm and one coherent goal, else decompose.)
 Parse the user's intent. Critical questions answered before scaffolding:
 
 1. **What's the verbal description?** (1 paragraph from user)
-2. **Effort class?** LEAVES: XS/S/M → Kimi; L → GLM (requires `execution_backend: glm`, one coherent goal; gate-checked write-surface budget). NODES: XL/XXL → NOT runnable — require a `children:` block (>=2 for XL, >=3 for XXL); decompose into leaf slices, no route out. See `references/concepts/effort-gate.md`.
+2. **Effort class?** LEAVES: XS/S/M → Kimi; L → a long-horizon builder (glm/claude/codex/kimi, one coherent goal; gate-checked write-surface budget). NODES: XL/XXL → NOT runnable — require a `children:` block (>=2 for XL, >=3 for XXL); decompose into leaf slices, no route out. See `references/concepts/effort-gate.md`.
 3. **Agent hint?** `any` (vendor-portable) OR specific (`python-developer`, etc.)
 4. **Source provenance?** Meeting note, audit, ticket — must have one
 5. **Touches what paths?** Best guess; refined in Phase 3

@@ -23,7 +23,7 @@
 #   3) add a CHANGELOG.md entry
 #   4) bump version field in plugin.json + marketplace.json (if present)
 # The doc-consistency lint asserts (1) == (2) == (4).
-TASKSPEC_VERSION="3.5.0"
+TASKSPEC_VERSION="3.6.0"
 
 # ----- Resolve skill root from this file's location -----
 # Works whether sourced from scripts/ or via an indirect symlink.
@@ -94,6 +94,21 @@ export TS_PROFILES
 # was too coarse: split or reclassify UP. This replaces the old "XL -> route to SDD"
 # fork with recursion — the single tasking path.
 TS_SIZES="XS S M L XL XXL"
+
+# Backends eligible to run an L-tier leaf. The RULE is "an L leaf needs a
+# LONG-HORIZON BUILDER" — not "an L leaf needs one vendor". execution_backend is
+# an OPEN STRING (C9), so hard-coding a single name contradicted the format's own
+# vendor-neutrality and locked the tier to whichever engine happened to be in
+# fashion. Override for your own fleet:
+#   export TASKSPEC_LONG_HORIZON_BACKENDS="claude codex kimi glm my-harness"
+TS_LONG_HORIZON_BACKENDS="${TASKSPEC_LONG_HORIZON_BACKENDS:-glm claude codex kimi}"
+export TS_LONG_HORIZON_BACKENDS
+ts_backend_is_long_horizon() {
+  case " $TS_LONG_HORIZON_BACKENDS " in
+    *" ${1:-} "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 export TS_SIZES
 # 0 if $1 is a recognized size, else non-zero.
 ts_size_is_valid() { case " $TS_SIZES " in *" ${1:-} "*) return 0 ;; *) return 1 ;; esac; }

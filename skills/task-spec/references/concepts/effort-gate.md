@@ -24,7 +24,7 @@ LEAVES  (runnable atoms — fit ONE fresh context window, verify as ONE PR/test-
   S  → Task-Spec ✅  → recommend Kimi
   M  → Task-Spec ✅  → recommend Kimi
   L  → Task-Spec ✅* → recommend GLM    (marathoner: long-horizon builder)
-       *ACCEPTED ONLY with execution_backend: glm AND ONE coherent done-condition.
+       *ACCEPTED ONLY on a LONG-HORIZON builder AND ONE coherent done-condition.
         If it needs multiple independent evals → decompose.
 
 NODES   (decomposition directives — NOT runnable; they expand into leaves)
@@ -48,7 +48,7 @@ Budgets are not arbitrary; a breach is decomposition feedback (Vest, 2026).
 | **XS** | leaf | ≤ 1 path | ≤ 2 files | 1 | Kimi | bump a dep; fix a constant; add one config key |
 | **S**  | leaf | ≤ 2 paths | ≤ 4 files | 1–2 | Kimi | add a `/health` endpoint; one small model |
 | **M**  | leaf | ≤ 3 paths | ≤ 6 files | 2–3 | Kimi | a new endpoint family; a dbt model + its test |
-| **L**  | leaf (ceiling) | ≤ 5 paths | ≤ 10 files | ≤ 4, ONE goal | **glm** (required) | migrate one service end-to-end as one coherent goal |
+| **L**  | leaf (ceiling) | ≤ 5 paths | ≤ 10 files | ≤ 4, ONE goal | **long-horizon** (glm/claude/codex/kimi) | migrate one service end-to-end as one coherent goal |
 | **XL** | **node** | 0 (decomposes) | — | children's | *expands* | a whole swimlane; a feature spanning ≥2 layers |
 | **XXL**| **node** | 0 (decomposes) | — | children's | *expands* | a backbone; a platform slice → epic → slices → atoms |
 
@@ -75,14 +75,14 @@ SIGNAL                                      → IMPLIES
 Trivial one-liner / config tweak            → XS
 1 file changes                              → S
 2-3 closely-related files                   → S or M
-Multiple modules, one coherent goal         → M (or L on glm)
+Multiple modules, one coherent goal         → M (or L on a long-horizon builder)
 New top-level dir / cross-language, one goal → L (→ GLM)
 Crosses >= 2 architectural layers            → XL (decompose along layer seams)
 A whole swimlane / feature / backbone        → XL or XXL (decompose)
 "big" / "platform" / multi-team in intent    → XXL (decompose into an epic tree)
 ```
 
-**XS/S/M** → accept, recommend Kimi. **L** → accept ONLY with `execution_backend: glm`
+**XS/S/M** → accept, recommend Kimi. **L** → accept ONLY on a long-horizon builder (`TS_LONG_HORIZON_BACKENDS`, default: glm claude codex kimi)
 and ONE coherent done-condition (else decompose). **XL/XXL** → accept ONLY with a
 `children:` block; otherwise the gate refuses — not to route out, but to force the
 decomposition. When the classifier returns XL/XXL, the agent outputs:
