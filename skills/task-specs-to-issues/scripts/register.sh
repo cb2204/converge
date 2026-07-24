@@ -203,6 +203,8 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[preflight] $ADAPTER preflight"
   echo
   echo "[upsert] one issue per signed-off spec, in build order:"
+  echo "  (live run also seeds assignee/state/subscribers + honors any projection: block;"
+  echo "   structure projection is ${CVG_PROJECTION_ENABLED:+ON}${CVG_PROJECTION_ENABLED:-off by default})"
   while read -r id; do
     title="$(awk -F'\t' -v x="$id" '$1==x{print $3}' "$SIGNED")"
     file="$(awk -F'\t' -v x="$id" '$1==x{print $2}' "$SIGNED")"
@@ -249,6 +251,49 @@ if ! bash "$ADAPTER" preflight; then
   exit 1
 fi
 echo
+
+# ----- Step 0: structure pre-pass (T3; opt-in, DEFAULT OFF) -----
+# When `cvg setup projection --enable` recorded a gate (bridged as CVG_PROJECTION_*),
+# ensure the run's structure up front — Initiative -> Project -> phase Milestones —
+# idempotently BY NAME, so a re-run reuses the same objects (never duplicates). OFF by
+# default: unset gate => this whole block is skipped and register is byte-identical to
+# before. Tracker-neutral: github/jira degrade the ensure verbs to no-ops, so enabling
+# projection never breaks a non-Linear board. A structure miss is fail-soft (a WARN +
+# skipped placement), never a half-registration.
+PROJECTION_ON=0
+RUN_PROJECT_ID=""
+if [ "${CVG_PROJECTION_ENABLED:-}" = "1" ]; then
+  PROJ_NAME="${TSI_PROJECTION_PROJECT:-}"
+  INIT_NAME="${TSI_PROJECTION_INITIATIVE:-}"
+  MILES="${TSI_PROJECTION_MILESTONES:-}"
+  if [ -z "$PROJ_NAME" ]; then
+    echo "WARN: projection enabled but projection_project is unset — skipping structure" >&2
+    echo "      (set it with: cvg setup projection --project <name>)" >&2
+  else
+    echo "[structure] projection enabled — ensuring Initiative -> Project -> Milestones (idempotent by name)"
+    RUN_PROJECT_ID="$(bash "$ADAPTER" project-ensure "$PROJ_NAME" 2>>"$WORK/adapter.log" || true)"
+    echo "  project:    $PROJ_NAME -> ${RUN_PROJECT_ID:-(FAILED)}"
+    if [ -z "$RUN_PROJECT_ID" ]; then
+      echo "WARN: could not ensure project '$PROJ_NAME' — structural placement skipped this run" >&2
+    else
+      PROJECTION_ON=1
+      # Nest the project under an initiative (ensure + link), when configured.
+      if [ -n "$INIT_NAME" ]; then
+        INIT_ID="$(bash "$ADAPTER" initiative-ensure "$INIT_NAME" "$RUN_PROJECT_ID" 2>>"$WORK/adapter.log" || true)"
+        echo "  initiative: $INIT_NAME -> ${INIT_ID:-(skipped)}"
+      fi
+      # Pre-create the phase milestones so they exist even before a spec references one.
+      if [ -n "$MILES" ]; then
+        for ms in $(printf '%s' "$MILES" | tr ',' ' '); do
+          [ -n "$ms" ] || continue
+          MS_ID="$(bash "$ADAPTER" milestone-ensure "$RUN_PROJECT_ID" "$ms" 2>>"$WORK/adapter.log" || true)"
+          echo "  milestone:  $ms -> ${MS_ID:-(skipped)}"
+        done
+      fi
+    fi
+  fi
+  echo
+fi
 
 CREATED=0; UPDATED=0; LINKS=0; STAMPED=0
 
@@ -306,6 +351,69 @@ while read -r id; do
   UP_PRI="$(tsi_priority "$file")"
   [ -n "$UP_PRI" ] && [ "$UP_PRI" != "(none)" ] && UP_ARGS+=(--priority "$UP_PRI")
 
+  # --- Native-field seed (T1): tracker-neutral flags the Linear adapter consumes
+  # and github/jira/fake accept-and-ignore. All three are OPTIONAL and fail-soft on
+  # the adapter side, so a plain register with no people-map / no state names is
+  # unaffected. Ownership: assignee + state are SEED-ONCE (create only), subscribers
+  # UNION-merge — the adapter enforces that split; the driver just supplies signal.
+  #   assignee: the most-specific people-map KEY (agent role beats engine beats the
+  #             `default` catch-all); the adapter resolves KEY -> person + fails soft.
+  UP_ASSIGN="default"
+  [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ASSIGN="backend:$UP_BACKEND"
+  [ -n "$UP_AGENT" ] && [ "$UP_AGENT" != "(none)" ] && [ "$UP_AGENT" != "any" ] && UP_ASSIGN="agent:$UP_AGENT"
+  UP_ARGS+=(--assignee "$UP_ASSIGN")
+  #   state: DAG position — a root (no depends_on) opens ready in Todo; a blocked
+  #          spec waits in Backlog. Uses the SAME edge table the topo-sort is built on.
+  if awk -F'\t' -v x="$id" '$1==x{f=1} END{exit f?0:1}' "$EDGES"; then
+    UP_ARGS+=(--state "Backlog")
+  else
+    UP_ARGS+=(--state "Todo")
+  fi
+  #   subscribers: the human(s) who signed off (reuse $UP_SBY read above for the
+  #                panel). Comma/space separated; each token its own --subscriber, and
+  #                a name that doesn't resolve to a user is fail-soft skipped.
+  if [ -n "$UP_SBY" ] && [ "$UP_SBY" != "(none)" ]; then
+    for sub in $(printf '%s' "$UP_SBY" | tr ',' ' '); do
+      [ -n "$sub" ] && UP_ARGS+=(--subscriber "$sub")
+    done
+  fi
+
+  # --- Projection block (T2): per-spec `projection:` frontmatter. cycle/parent/sla
+  # are NON-structural (they reference existing objects or set a scalar), so they are
+  # honored on EVERY register. Structural placement (project/milestone) is gated on
+  # the opt-in below, so a plain register never creates a Project. parent names a
+  # SPEC id — the adapter resolves it to the parent issue via the shared marker.
+  PJ_CYCLE="$(tsi_projection "$file" cycle)"
+  [ -n "$PJ_CYCLE" ] && UP_ARGS+=(--cycle "$PJ_CYCLE")
+  PJ_PARENT="$(tsi_projection "$file" parent)"
+  [ -n "$PJ_PARENT" ] && UP_ARGS+=(--parent "$PJ_PARENT")
+  PJ_SUBSORT="$(tsi_projection "$file" sub_sort)"
+  [ -n "$PJ_SUBSORT" ] && UP_ARGS+=(--sub-sort "$PJ_SUBSORT")
+  PJ_SLA="$(tsi_projection "$file" sla)"
+  [ -n "$PJ_SLA" ] && UP_ARGS+=(--sla "$PJ_SLA")
+  PJ_TEMPLATE="$(tsi_projection "$file" template)"
+  [ -n "$PJ_TEMPLATE" ] && UP_ARGS+=(--template "$PJ_TEMPLATE")
+  [ "$(tsi_projection "$file" use_default_template)" = "true" ] && UP_ARGS+=(--use-default-template)
+
+  # --- Structural placement (T2/T3): ONLY when structure projection is enabled
+  # (`cvg setup projection --enable`). Off by default => no --project/--milestone is
+  # ever passed and a plain register stays byte-identical. The run-wide project
+  # (ensured in Step 0) is the default; a per-spec `projection.project` overrides it,
+  # and `projection.milestone` selects the phase within whichever project applies.
+  if [ "$PROJECTION_ON" -eq 1 ]; then
+    SPEC_PROJ_ID="$RUN_PROJECT_ID"
+    PJ_PROJECT="$(tsi_projection "$file" project)"
+    if [ -n "$PJ_PROJECT" ]; then
+      SPEC_PROJ_ID="$(bash "$ADAPTER" project-ensure "$PJ_PROJECT" 2>>"$WORK/adapter.log" || true)"
+    fi
+    [ -n "$SPEC_PROJ_ID" ] && UP_ARGS+=(--project "$SPEC_PROJ_ID")
+    PJ_MILE="$(tsi_projection "$file" milestone)"
+    if [ -n "$PJ_MILE" ] && [ -n "$SPEC_PROJ_ID" ]; then
+      MILE_ID="$(bash "$ADAPTER" milestone-ensure "$SPEC_PROJ_ID" "$PJ_MILE" 2>>"$WORK/adapter.log" || true)"
+      [ -n "$MILE_ID" ] && UP_ARGS+=(--milestone "$MILE_ID")
+    fi
+  fi
+
   out="$(bash "$ADAPTER" upsert "${UP_ARGS[@]}" 2>>"$WORK/adapter.log")" \
     || { echo "ERROR: upsert failed for $id (see adapter.log)"; cat "$WORK/adapter.log" >&2; echo "REGISTER=FAIL"; exit 1; }
   echo "  upsert $id -> issue $out"
@@ -337,6 +445,18 @@ while IFS=$'\t' read -r from dep; do
   LINKS=$((LINKS + 1))
   echo "  $from blocked-by $dep"
 done < "$EDGES"
+
+# ----- Step 5: append-only health note (T3; opt-in) -----
+# When structure projection is on, post ONE health update to the run's project — an
+# append-only breadcrumb that this batch was projected. The specs are signed-off (the
+# offline gate is green), so the rate is 100% of the registered count. Fail-soft: a
+# health post never affects the registration outcome (same rule as the marker panel).
+if [ "$PROJECTION_ON" -eq 1 ] && [ -n "$RUN_PROJECT_ID" ]; then
+  echo
+  echo "[health] posting an append-only project-update"
+  bash "$ADAPTER" project-update --project "$RUN_PROJECT_ID" --pass-rate 100 --total "$SIGNED_COUNT" \
+    2>>"$WORK/adapter.log" || echo "  WARN: health post failed (board unaffected; see adapter.log)" >&2
+fi
 
 echo
 echo "----------------------------------------------------------------"

@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.14.0"
+CVG_VERSION="0.15.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -69,6 +69,21 @@ cvg_config_get() {  # cvg_config_get KEY -> value on stdout (empty if unset)
 }
 cvg_config_set() {  # cvg_config_set KEY VALUE  (idempotent replace-or-append)
   local f tmp; f="$(cvg_config_file)"
+  mkdir -p "$(dirname "$f")"
+  tmp="$(mktemp)"
+  if [ -f "$f" ]; then grep -v "^$1=" "$f" > "$tmp" 2>/dev/null || true; fi
+  printf '%s=%s\n' "$1" "$2" >> "$tmp"
+  mv "$tmp" "$f"
+}
+
+# .cvg/people-map — maps an execution_backend/agent CHOICE to a tracker person
+# (email or user id) so register can seed assigneeId/subscriberIds. Same shape and
+# guarantees as .cvg/config: plain KEY=value lines, greppable, bash-3.2-safe, and
+# CHOICES not CREDENTIALS (an email/uuid is a routing choice, never a secret). Keys:
+# backend:<engine>, agent:<role>, default. Bridged as the TSI_PEOPLE_MAP path only.
+cvg_people_map_file() { printf '%s/.cvg/people-map\n' "$CVG_HOME_DIR"; }
+cvg_people_map_set() {  # cvg_people_map_set KEY VALUE  (idempotent replace-or-append)
+  local f tmp; f="$(cvg_people_map_file)"
   mkdir -p "$(dirname "$f")"
   tmp="$(mktemp)"
   if [ -f "$f" ]; then grep -v "^$1=" "$f" > "$tmp" 2>/dev/null || true; fi
@@ -153,6 +168,41 @@ cvg_export_linear_team() {
   return 0
 }
 
+# Bridge the .cvg/people-map PATH (not its contents) into the env the adapter reads,
+# so assignee/subscriber resolution finds it. The file holds CHOICES (email/uuid),
+# never a secret — and only its path crosses into the adapter env.
+cvg_export_people_map() {
+  if [ -z "${TSI_PEOPLE_MAP:-}" ]; then
+    local f; f="$(cvg_people_map_file)"
+    if [ -f "$f" ]; then export TSI_PEOPLE_MAP="$f"; fi
+  fi
+  return 0   # bare-statement safe under set -e (see cvg_export_linear_team)
+}
+
+# Bridge the projection CHOICES (gate + logical names) from .cvg/config into the env
+# register/the adapter consume for T3 structure. All non-secret: the master gate
+# defaults OFF, so a plain `cvg register` is byte-identical to today when unset.
+# The API key is NEVER stored or bridged — only these path/name choices cross over.
+cvg_export_projection() {
+  if [ -z "${CVG_PROJECTION_ENABLED:-}" ]; then
+    local e; e="$(cvg_config_get projection_enabled)"
+    if [ -n "$e" ]; then export CVG_PROJECTION_ENABLED="$e"; fi
+  fi
+  if [ -z "${TSI_PROJECTION_PROJECT:-}" ]; then
+    local p; p="$(cvg_config_get projection_project)"
+    if [ -n "$p" ]; then export TSI_PROJECTION_PROJECT="$p"; fi
+  fi
+  if [ -z "${TSI_PROJECTION_INITIATIVE:-}" ]; then
+    local i; i="$(cvg_config_get projection_initiative)"
+    if [ -n "$i" ]; then export TSI_PROJECTION_INITIATIVE="$i"; fi
+  fi
+  if [ -z "${TSI_PROJECTION_MILESTONES:-}" ]; then
+    local m; m="$(cvg_config_get projection_milestones)"
+    if [ -n "$m" ]; then export TSI_PROJECTION_MILESTONES="$m"; fi
+  fi
+  return 0   # bare-statement safe under set -e (see cvg_export_linear_team)
+}
+
 # ---------------------------------------------------------------------------
 # setup — the guided connectivity surface (a generalized doctor + config).
 # ---------------------------------------------------------------------------
@@ -199,6 +249,42 @@ cvg_setup_status() {
     printf '  %s[ok]%s  repo      %s\n' "$UI_GREEN" "$UI_RESET" "$repo"
   else
     printf '  %s[--]%s  repo      not linked — run: cvg setup repo\n' "$UI_DIM" "$UI_RESET"
+  fi
+
+  # people-map — assignee/subscriber resolution (Linear projection; OPTIONAL).
+  # Purely informational: unmapped assignees fail-soft, so this never gates READY.
+  local pm; pm="$(cvg_people_map_file)"
+  if [ -f "$pm" ]; then
+    local nb na nd dtxt
+    nb="$(grep -c '^backend:' "$pm" 2>/dev/null || true)"; nb="${nb//[^0-9]/}"; nb="${nb:-0}"
+    na="$(grep -c '^agent:'   "$pm" 2>/dev/null || true)"; na="${na//[^0-9]/}"; na="${na:-0}"
+    nd="$(grep -c '^default=' "$pm" 2>/dev/null || true)"; nd="${nd//[^0-9]/}"; nd="${nd:-0}"
+    dtxt="no default"; if [ "$nd" -gt 0 ]; then dtxt="default set"; fi
+    printf '  %s[ok]%s  people    assignees: %s backend, %s agent mapped · %s\n' "$UI_GREEN" "$UI_RESET" "$nb" "$na" "$dtxt"
+  else
+    printf '  %s[--]%s  people    no people-map — cvg setup people (optional; unmapped fail-soft)\n' "$UI_DIM" "$UI_RESET"
+  fi
+
+  # projection — T3 structure creation gate. Default OFF (opt-in); never gates READY.
+  local pen; pen="$(cvg_config_get projection_enabled)"
+  if [ "$pen" = "1" ]; then
+    local pp pi ptxt
+    pp="$(cvg_config_get projection_project)"
+    pi="$(cvg_config_get projection_initiative)"
+    ptxt="project \"${pp:-<unset>}\""
+    if [ -n "$pi" ]; then ptxt="$ptxt, initiative \"$pi\""; fi
+    printf '  %s[ok]%s  projection  enabled — %s\n' "$UI_GREEN" "$UI_RESET" "$ptxt"
+  else
+    printf '  %s[--]%s  projection  disabled (default) — cvg setup projection --enable\n' "$UI_DIM" "$UI_RESET"
+  fi
+
+  # projection.lock — the structure resolution cache (adapter-written; self-heals).
+  local lock; lock="$CVG_HOME_DIR/.cvg/projection.lock"
+  if [ -f "$lock" ]; then
+    local nl; nl="$(grep -c . "$lock" 2>/dev/null || true)"; nl="${nl//[^0-9]/}"; nl="${nl:-0}"
+    printf '  %s[..]%s  lock      projection.lock: %s objects cached\n' "$UI_DIM" "$UI_RESET" "$nl"
+  else
+    printf '  %s[..]%s  lock      projection.lock: none yet (built on first enabled register)\n' "$UI_DIM" "$UI_RESET"
   fi
 
   # planned areas (brownfield) — visible vision, honest status.
@@ -321,6 +407,178 @@ cvg_setup_tracker_linear() {
   fi
 }
 
+# setup people — map an execution_backend/agent CHOICE to a tracker person so
+# register can seed assigneeId (create-only) and subscriberIds (union-merged).
+#   cvg setup people                     discover members (a ready-to-paste block)
+#   cvg setup people --list              same, explicit
+#   cvg setup people --map KEY=VALUE ... write idempotently to .cvg/people-map
+# CHOICES only — the value is an email/uuid (a routing choice), never a secret.
+cvg_setup_people() {
+  local do_list=0
+  local maps=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --list)   do_list=1; shift ;;
+      --map)    maps+=("${2:-}"); shift 2 ;;
+      --map=*)  maps+=("${1#--map=}"); shift ;;
+      -*) ui_err "unknown flag '$1' (expected: --list | --map KEY=VALUE)"
+          printf 'SETUP_PEOPLE=USAGE_ERROR\n'; exit 2 ;;
+      *)  shift ;;
+    esac
+  done
+
+  # --map writes first: idempotent replace-or-append (mirrors cvg_config_set).
+  if [ "${#maps[@]}" -gt 0 ]; then
+    local kv key val
+    for kv in "${maps[@]}"; do
+      case "$kv" in
+        *=*) : ;;
+        *)   ui_err "--map needs KEY=VALUE (got '$kv') — e.g. backend:claude=you@org.com · agent:coder=you@org.com · default=you@org.com"
+             printf 'SETUP_PEOPLE=USAGE_ERROR\n'; exit 2 ;;
+      esac
+      key="${kv%%=*}"; val="${kv#*=}"
+      if [ -z "$key" ]; then
+        ui_err "--map needs a non-empty KEY (got '$kv')"
+        printf 'SETUP_PEOPLE=USAGE_ERROR\n'; exit 2
+      fi
+      cvg_people_map_set "$key" "$val"
+      printf '%s[ok]%s mapped %s → %s  %s(%s)%s\n' "$UI_GREEN" "$UI_RESET" "$key" "$val" "$UI_DIM" "$(cvg_people_map_file)" "$UI_RESET"
+    done
+    if [ "$do_list" -eq 0 ]; then
+      printf 'SETUP_PEOPLE=OK\n'
+      return 0
+    fi
+  fi
+
+  # Discovery: list the tracker's members (adapter `users` verb: id<TAB>name<TAB>email)
+  # so a human can pick who each backend/agent maps to. Reuses the teams-discovery
+  # idiom: capture stderr so the adapter's own message IS the diagnosis on failure.
+  local tracker ad
+  tracker="$(cvg_config_get tracker)"
+  [ -n "$tracker" ] || tracker="linear"
+  ad="$(_cvg_tracker_adapter "$tracker")"
+  if [ ! -f "$ad" ]; then
+    ui_err "adapter not found: $ad"
+    printf 'SETUP_PEOPLE=UNREACHABLE\n'; exit 1
+  fi
+  cvg_export_linear_team   # so a configured Linear team scopes the user query
+  local users errf n
+  errf="$(mktemp)"
+  users="$(bash "$ad" users 2>"$errf" || true)"
+  n="$(printf '%s' "$users" | grep -c . || true)"; n="${n//[^0-9]/}"; n="${n:-0}"
+  if [ "$n" -eq 0 ]; then
+    ui_err "could not list any $tracker members. The adapter reported:"
+    if [ -s "$errf" ]; then sed 's/^/    /' "$errf" >&2; else printf '    (no error output — the API returned an empty list)\n' >&2; fi
+    rm -f "$errf"
+    printf 'SETUP_PEOPLE=UNREACHABLE\n'; exit 1
+  fi
+  rm -f "$errf"
+
+  printf '%s%s members%s %s(map an execution_backend / agent → a person)%s\n' "$UI_BOLD" "$tracker" "$UI_RESET" "$UI_DIM" "$UI_RESET"
+  printf '%s' "$users" | awk -F'\t' '{printf "    %-28s %s\n", $2, $3}'
+  ui_rule
+  printf '%smap with (idempotent; choices only, never a secret):%s\n' "$UI_DIM" "$UI_RESET"
+  printf '    cvg setup people --map backend:claude=<email>\n'
+  printf '    cvg setup people --map agent:coder=<email>\n'
+  printf '    cvg setup people --map default=<email>\n'
+
+  # Coverage verdict: OK once anything is mapped, else NEEDS_MAP.
+  local pm
+  pm="$(cvg_people_map_file)"
+  if [ -s "$pm" ] && grep -q '=' "$pm" 2>/dev/null; then
+    printf 'SETUP_PEOPLE=OK\n'
+  else
+    printf 'SETUP_PEOPLE=NEEDS_MAP\n'
+  fi
+  return 0
+}
+
+# setup projection — opt in to T3 structure projection (the workspace-mutating path).
+#   cvg setup projection --enable [--project N] [--initiative N] [--milestones L]
+#   cvg setup projection --disable
+# Records projection_enabled/project/initiative/milestones in .cvg/config; register's
+# Step-0 pre-pass then ensures Initiative→Project→Milestones (idempotent, by-name).
+# Default stays DISABLED so a plain `cvg register` is byte-identical to today.
+cvg_setup_projection() {
+  local do_enable=0 do_disable=0
+  local project="" initiative="" milestones=""
+  local got_project=0 got_initiative=0 got_milestones=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --enable)       do_enable=1; shift ;;
+      --disable)      do_disable=1; shift ;;
+      --project)      project="${2:-}"; got_project=1; shift 2 ;;
+      --project=*)    project="${1#--project=}"; got_project=1; shift ;;
+      --initiative)   initiative="${2:-}"; got_initiative=1; shift 2 ;;
+      --initiative=*) initiative="${1#--initiative=}"; got_initiative=1; shift ;;
+      --milestones)   milestones="${2:-}"; got_milestones=1; shift 2 ;;
+      --milestones=*) milestones="${1#--milestones=}"; got_milestones=1; shift ;;
+      -*) ui_err "unknown flag '$1' (expected: --enable | --disable | --project <name> | --initiative <name> | --milestones <list>)"
+          printf 'SETUP_PROJECTION=USAGE_ERROR\n'; exit 2 ;;
+      *)  shift ;;
+    esac
+  done
+
+  if [ "$do_enable" -eq 1 ] && [ "$do_disable" -eq 1 ]; then
+    ui_err "--enable and --disable conflict — projection is turned on or off, never both"
+    printf 'SETUP_PROJECTION=USAGE_ERROR\n'; exit 2
+  fi
+  if [ "$do_enable" -eq 0 ] && [ "$do_disable" -eq 0 ] \
+     && [ "$got_project" -eq 0 ] && [ "$got_initiative" -eq 0 ] && [ "$got_milestones" -eq 0 ]; then
+    ui_err "usage: cvg setup projection [--enable|--disable] [--project <name>] [--initiative <name>] [--milestones <list>]"
+    printf 'SETUP_PROJECTION=USAGE_ERROR\n'; exit 2
+  fi
+
+  # Record the naming choices (harmless strings; recorded on any invocation).
+  if [ "$got_project" -eq 1 ]; then cvg_config_set projection_project "$project"; fi
+  if [ "$got_initiative" -eq 1 ]; then cvg_config_set projection_initiative "$initiative"; fi
+  if [ "$got_milestones" -eq 1 ]; then cvg_config_set projection_milestones "$milestones"; fi
+
+  if [ "$do_disable" -eq 1 ]; then
+    cvg_config_set projection_enabled 0
+    printf '%s[ok]%s projection disabled — plain cvg register is unchanged (no structure, no health)\n' "$UI_GREEN" "$UI_RESET"
+    printf 'SETUP_PROJECTION=DISABLED\n'
+    return 0
+  fi
+
+  if [ "$do_enable" -eq 1 ]; then
+    # Default the phase milestones once, so config fully specifies the projection.
+    if [ -z "$(cvg_config_get projection_milestones)" ]; then
+      cvg_config_set projection_milestones "Capture,Transform,Serve"
+    fi
+    # Preflight the configured tracker: projects need a live team. Opt-in is
+    # deliberate, so an unreachable tracker blocks the enable with a clear token
+    # rather than recording a gate we can't honor. Skipped when no tracker is set.
+    local tracker ad
+    tracker="$(cvg_config_get tracker)"
+    if [ -n "$tracker" ]; then
+      ad="$(_cvg_tracker_adapter "$tracker")"
+      if [ -f "$ad" ]; then
+        cvg_export_linear_team
+        if ! bash "$ad" preflight >/dev/null 2>&1; then
+          ui_err "$tracker not reachable — export its credentials (cvg setup tracker $tracker), then re-run cvg setup projection --enable"
+          printf 'SETUP_PROJECTION=UNREACHABLE\n'; exit 1
+        fi
+      fi
+    fi
+    cvg_config_set projection_enabled 1
+    local pp pi ms
+    pp="$(cvg_config_get projection_project)"
+    pi="$(cvg_config_get projection_initiative)"
+    ms="$(cvg_config_get projection_milestones)"
+    printf '%s[ok]%s projection enabled — register now builds structure on %s\n' "$UI_GREEN" "$UI_RESET" "${tracker:-your tracker}"
+    printf '%s     project: %s · initiative: %s · milestones: %s%s\n' "$UI_DIM" "${pp:-<unset — pass --project>}" "${pi:-<none>}" "$ms" "$UI_RESET"
+    printf '%s     workspace-mutating + append-only health; choices recorded in %s (no keys)%s\n' "$UI_DIM" "$(cvg_config_file)" "$UI_RESET"
+    printf 'SETUP_PROJECTION=OK\n'
+    return 0
+  fi
+
+  # Names recorded, gate left as-is (no --enable/--disable given).
+  printf '%s[ok]%s recorded projection names in %s %s(gate unchanged — cvg setup projection --enable to turn on)%s\n' "$UI_GREEN" "$UI_RESET" "$(cvg_config_file)" "$UI_DIM" "$UI_RESET"
+  printf 'SETUP_PROJECTION=OK\n'
+  return 0
+}
+
 cmd_version() {
   local ts_ver
   ts_ver="$(grep -m1 '^TASKSPEC_VERSION=' "$SCRIPTS/_lib.sh" | cut -d'"' -f2)"
@@ -363,7 +621,9 @@ cmd_help() {
   printf '  register [--tracker github|linear|jira] [--no-stamp-refs]\n'
   printf '                           bridge signed-off tasks onto a tracker board\n'
   printf '                           (1 spec = 1 issue, depends_on → blocked-by); stamps a\n'
-  printf '                           tracker_ref receipt back into each spec\n'
+  printf '                           tracker_ref receipt back into each spec. On Linear also\n'
+  printf '                           seeds assignee/state/subscribers from frontmatter and\n'
+  printf '                           honors an optional projection: block\n'
   printf '  register --check         gate the mapping (1:1, DAG, no orphans); read-only\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
@@ -382,6 +642,12 @@ cmd_help() {
   printf '                           linear auto-discovers your team (export just the key)\n'
   printf '  setup repo [--branch b]  link the repo (detected from your git remote) so every\n'
   printf '                           registered issue links back to its spec\n'
+  printf '  setup people [--list] [--map KEY=VAL]\n'
+  printf '                           discover tracker members + map execution_backend/agent\n'
+  printf '                           to a person (assignee/subscribers); choices, never keys\n'
+  printf '  setup projection [--enable|--disable] [--project N] [--initiative N]\n'
+  printf '                           opt in to structure projection (Initiative→Project→\n'
+  printf '                           Milestones); default off — plain register is unchanged\n'
   printf '\n'
   printf '%smeta%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  help                     this screen\n'
@@ -409,7 +675,7 @@ is_mutating() {
     tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
     review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
-    setup)      case "${1:-}" in tracker|repo) return 0 ;; *) return 1 ;; esac ;;
+    setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
   esac
 }
@@ -445,7 +711,7 @@ elif cmd == "register":
 elif cmd == "setup":
     sub = parts[0] if parts else "status"
     disp = ("setup " + sub).strip() if sub != "status" else "setup"
-    mutating = (sub in ("tracker", "repo"))
+    mutating = (sub in ("tracker", "repo", "people", "projection"))
 PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4}
 env = {
     "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
@@ -813,6 +1079,8 @@ case "$CMD" in
     fi
     cvg_export_linear_team   # bridge the non-secret Linear team UUID from config (key stays in env)
     cvg_export_spec_base     # bridge the repo base URL so issues link back to their spec
+    cvg_export_people_map    # bridge the .cvg/people-map PATH for assignee/subscriber resolution (choices, never a secret)
+    cvg_export_projection    # bridge the projection gate + logical names for T3 structure (default off)
     if [ "$REG_CHECK" -eq 1 ]; then
       # Read-only gate. cvg strips --dry-run into CVG_DRY_RUN; re-add it as the
       # verifier's spec-side-only flag so `cvg register --check --dry-run` is offline.
@@ -831,12 +1099,14 @@ case "$CMD" in
     SUB="${1:-status}"
     [ $# -gt 0 ] && shift
     case "$SUB" in
-      status)  cvg_setup_status "$@" ;;
-      tracker) cvg_setup_tracker "$@" ;;
-      repo)    cvg_setup_repo "$@" ;;
-      engines) exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
-      *)       ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | repo | engines"
-               printf 'SETUP=USAGE_ERROR\n'; exit 2 ;;
+      status)     cvg_setup_status "$@" ;;
+      tracker)    cvg_setup_tracker "$@" ;;
+      repo)       cvg_setup_repo "$@" ;;
+      people)     cvg_setup_people "$@" ;;
+      projection) cvg_setup_projection "$@" ;;
+      engines)    exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
+      *)          ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | repo | people | projection | engines"
+                  printf 'SETUP=USAGE_ERROR\n'; exit 2 ;;
     esac
     ;;
   eval)       route run-task-spec.sh "$@" ;;
@@ -894,11 +1164,13 @@ m = {
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),
     c("tasks dod <spec>", "5B", "task-spec/definition-of-done.sh", ["DOD=COMPLETE|GAPS|USAGE_ERROR"], False, "cvg tasks dod T-...md", "Definition-of-Done + traceability matrix (every behavior B-N → its verifying eval); gates DOD=GAPS if a behavior is untraced. The 2026 agent-spec SOTA review artifact."),
-    c("register [--tracker T] [--no-stamp-refs]", "①", "task-specs-to-issues/register.sh", ["REGISTER=OK|FAIL|DRY_RUN|EMPTY"], True, "cvg register --tracker linear", "REGISTER ① — bridge signed-off Task-Specs onto a tracker board (1 spec = 1 issue, depends_on → blocked-by), then stamp a tracker_ref receipt back into each spec. Pluggable adapter github|linear|jira (default linear); the referee holds NO tracker credentials. Idempotent: re-runs upsert, never duplicate. --no-stamp-refs skips the write-back (CI-safe; the issue-side marker stays the key)."),
+    c("register [--tracker T] [--no-stamp-refs]", "①", "task-specs-to-issues/register.sh", ["REGISTER=OK|FAIL|DRY_RUN|EMPTY"], True, "cvg register --tracker linear", "REGISTER ① — bridge signed-off Task-Specs onto a tracker board (1 spec = 1 issue, depends_on → blocked-by), then stamp a tracker_ref receipt back into each spec. Pluggable adapter github|linear|jira (default linear); the referee holds NO tracker credentials. Idempotent: re-runs upsert, never duplicate. --no-stamp-refs skips the write-back (CI-safe; the issue-side marker stays the key). On Linear, register also seeds native fields from existing frontmatter (assignee from execution_backend/agent via .cvg/people-map, state from DAG position, subscribers from signed_off_by — assignee/state seed-once, subscribers union-merged) and honors an optional in-frontmatter projection: block (project/milestone/cycle/parent/template/sla; tracker-neutral, HMAC-safe). Structure projection (Initiative→Project→Milestones + append-only health) is opt-in via `cvg setup projection --enable` and OFF by default, so the base behavior is unchanged."),
     c("register --check", "①", "task-specs-to-issues/verify-registration.sh", ["CHECK_REGISTER=OK|FAIL"], False, "cvg register --check --tracker linear", "Gate the mapping is faithful: 1:1 count, every depends_on edge is one blocked-by link, no cycle, no un-gated leak. Read-only; the offline spec-side half runs with --dry-run."),
     c("setup", None, "native (doctor + adapter preflight)", ["SETUP=READY|INCOMPLETE"], False, "cvg setup", "Connectivity status board — per-part readiness (engines · trackers; index/memory planned) + the exact next step. Records CHOICES in .cvg/config, NEVER credentials (secrets stay in the environment / a secrets manager — if cvg can't see them it can't leak them)."),
     c("setup tracker <t> [--team K]", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|NEEDS_TEAM|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker via preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. For linear: export only LINEAR_API_KEY — the team is auto-discovered (a single team auto-selects; otherwise pass --team <KEY>, the key straight from the Linear URL), resolved to a UUID, and recorded. The API key is never stored."),
     c("setup repo [--branch b] [--url u]", None, "native (git remote)", ["SETUP_REPO=OK|UNDETECTED|USAGE_ERROR"], True, "cvg setup repo", "Link the repo to the tracker: derives a browsable blob base URL from the git remote (github/gitlab/bitbucket shapes) and records it as spec_base_url in .cvg/config, so every registered issue links back to the spec it was projected from. Branch-pinned; --branch/--url override."),
+    c("setup people [--list] [--map KEY=VAL]", None, "native (+ adapter users verb)", ["SETUP_PEOPLE=OK|NEEDS_MAP|UNREACHABLE|USAGE_ERROR"], True, "cvg setup people --map backend:claude=you@org.com", "Map an execution_backend/agent CHOICE to a tracker person so register can seed assigneeId (create-only) and subscriberIds (union-merged). No flags / --list discovers members (Linear users: name + email) as a ready-to-paste block; --map KEY=VALUE writes idempotently to .cvg/people-map (repeatable; keys backend:<engine>, agent:<role>, default). CHOICES only (an email/uuid is a routing choice) — never a credential. Optional: unmapped assignees fail-soft, so T1 works with zero setup."),
+    c("setup projection [--enable|--disable] [--project N] [--initiative N] [--milestones L]", None, "native (+ adapter preflight)", ["SETUP_PROJECTION=OK|DISABLED|UNREACHABLE|USAGE_ERROR"], True, "cvg setup projection --enable --project 'Converge Backbone' --initiative 'Q3 Delivery'", "Opt in to T3 structure projection: records projection_enabled/project/initiative/milestones in .cvg/config so register's Step-0 pre-pass ensures Initiative→Project→Milestones (idempotent, by-name) and posts append-only health. Default DISABLED — a plain cvg register is byte-identical to today. Enabling preflights the configured tracker (projects need a live team). CHOICES only, never credentials."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),

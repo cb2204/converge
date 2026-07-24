@@ -179,6 +179,78 @@ tsi_registerable() {
   fi
 }
 
+# ----- Projection accessors (native-field + structure enrichment) ------------
+# The projection is an OPTIONAL, tracker-agnostic enrichment layer. Its per-spec
+# inputs live in an INDENTED `projection:` block inside the frontmatter:
+#
+#   projection:
+#     project: "Auth Revamp"
+#     milestone: Transform
+#     cycle: "Cycle 7"
+#     parent: T-proj-root
+#     use_default_template: true
+#     sla: standard
+#
+# Why indented, and why frontmatter-only: the Tier-1 sign-off HMAC seals
+# `id + body_digest + signed_off*`, where body_digest is the sha256 of everything
+# AFTER the closing `---` (task-spec _lib.sh ts_signoff_payload). A projection
+# block therefore stays OUTSIDE the digest (it is frontmatter), and its keys are
+# INDENTED so none of them can shadow the column-0 envelope anchors the seal reads
+# (`^id:` / `^signed_off:` / `^signed_off_by:` / `^signed_off_at:`, all `grep -m1`).
+# The block is parsed the SAME way the board reads it, so the two never disagree.
+
+# tsi_projection FILE KEY — dequoted value of the INDENTED `KEY:` under the
+# `projection:` block; empty if the block or the key is absent, never failing the
+# caller. The dequote/decomment mirrors tsi_field exactly (quotes are DELIMITERS;
+# a bare value ends at the first " #"), because a projected name ships straight
+# onto the board and must not arrive wrapped in quote marks or trailing a comment.
+tsi_projection() {
+  local file="$1" key="$2" raw
+  # awk stays strictly INSIDE the block: it arms on a column-0 `projection:` line,
+  # reads only indented children, and disarms on the next column-0 line — so a body
+  # key or a sibling top-level field can never be mistaken for a projection value.
+  # KEY is script-controlled (never user input), so interpolating it into the awk
+  # regex is safe, exactly as tsi_field interpolates NAME into its grep anchor.
+  raw="$(tsi_frontmatter "$file" | awk -v k="$key" '
+    /^projection:[[:space:]]*$/ { inb=1; next }
+    inb && /^[^[:space:]]/      { exit }
+    inb && $0 ~ ("^[[:space:]]+" k ":") {
+      line = $0
+      sub("^[[:space:]]+" k ":[[:space:]]*", "", line)
+      print line
+      exit
+    }
+  ' | tr -d '\r' || true)"
+  [ -n "$raw" ] || { printf ''; return 0; }
+  case "$raw" in
+    '"'*) printf '%s' "$raw" | sed -E 's/^"([^"]*)".*$/\1/' ;;
+    "'"*) printf '%s' "$raw" | sed -E "s/^'([^']*)'.*\$/\1/" ;;
+    *)    printf '%s' "$raw" | sed -E -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]*$//' ;;
+  esac
+}
+
+# tsi_projection_keys FILE — the indented child keys under `projection:`, one per
+# line (comment and blank lines skipped). Feeds the register --dry-run plan and
+# verify-registration's projection surface; echoes nothing when there is no block.
+tsi_projection_keys() {
+  tsi_frontmatter "$1" | awk '
+    /^projection:[[:space:]]*$/ { inb=1; next }
+    inb && /^[^[:space:]]/      { exit }
+    inb && /^[[:space:]]+[^[:space:]#][^:]*:/ {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/:.*$/, "", line)
+      sub(/[[:space:]]+$/, "", line)
+      print line
+    }
+  '
+}
+
+# tsi_signed_off_by FILE — the human(s) who signed the spec off. A thin, named
+# wrapper over tsi_field so the subscriber projection and the register report read
+# the value through ONE code path (quote/comment handling inherited unchanged).
+tsi_signed_off_by() { tsi_field "$1" signed_off_by; }
+
 # ----- Section + behavior accessors (for the rich issue body) -----------------
 # tsi_section FILE HEADING — the lines under `## HEADING` up to the next `## `.
 tsi_section() {
