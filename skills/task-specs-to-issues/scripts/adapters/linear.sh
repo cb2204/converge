@@ -169,77 +169,56 @@ _ln_priority_int() {
   esac
 }
 
-# A stable colour per cvg label group, so the board reads at a glance.
-_ln_group_color() {
+# A stable colour per cvg namespace, so the board reads at a glance.
+_ln_label_color() {
   case "$1" in
-    effort)   printf '#5e6ad2' ;;  # Linear indigo — size
-    backend)  printf '#0f7488' ;;  # teal — which engine
-    agent)    printf '#4cb782' ;;  # green — which role
-    severity) printf '#f2994a' ;;  # amber — blast radius
-    *)        printf '#95a2b3' ;;
+    cvg)        printf '#5e6ad2' ;;  # indigo — machine-registered marker
+    effort:*)   printf '#0f7488' ;;  # teal   — size
+    backend:*)  printf '#4cb782' ;;  # green  — which engine
+    agent:*)    printf '#f2994a' ;;  # amber  — which role
+    severity:*) printf '#eb5757' ;;  # red    — blast radius
+    *)          printf '#95a2b3' ;;
   esac
-}
-
-# Find-or-create a LABEL GROUP (isGroup:true), echoing its id.
-_ln_group_id() {
-  local group="$1" resp id
-  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup } } }' '{}')" || { printf ''; return 0; }
-  id="$(printf '%s' "$resp" | jq -r --arg n "$group" \
-      '.data.issueLabels.nodes[]? | select(.name==$n and .isGroup==true) | .id' 2>/dev/null | head -1)"
-  if [[ -z "$id" ]]; then
-    id="$(_linear_gql \
-      'mutation($name:String!,$team:String!,$color:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, color:$color, isGroup:true }){ success issueLabel{ id } } }' \
-      "$(jq -n --arg name "$group" --arg team "$LINEAR_TEAM_ID" --arg color "$(_ln_group_color "$group")" \
-        '{name:$name,team:$team,color:$color}')" \
-      | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
-  fi
-  printf '%s' "$id"
 }
 
 # Resolve label NAMES (space-separated) to a JSON array of label ids, creating
 # any that don't exist. Echoes `[]` on any failure (fail-soft).
 #
-# A `group:child` name becomes a REAL Linear label group + child, not a flat
-# string: Linear groups are MUTUALLY EXCLUSIVE ("only one label from each group
-# may be applied"), which is exactly right — an issue cannot be two sizes at once.
-# It also unlocks group filtering and label-group columns in views. The driver
-# stays tracker-agnostic and keeps emitting flat `effort:S`; this adapter maps it
-# onto Linear's native shape, the same way effort maps onto estimate.
+# Names are FLAT and colon-namespaced (`effort:S`) — deliberately NOT Linear
+# label groups. Groups look like the right fit (they are mutually exclusive, so
+# an issue cannot be two sizes), but Linear requires label names to be unique per
+# team "no matter if they are nested inside a label group" (linear/linear#428).
+# That makes grouping unusable here: a child `feature` under `severity` collides
+# with an existing `Feature`, and `claude` under `agent` collides with `claude`
+# under `backend` — and because labelIds REPLACES the set, the collision doesn't
+# just fail, it DELETES the label off the issue. The colon-prefixed flat form is
+# unique by construction and is the workaround Linear's own community settled on.
 _ln_label_ids() {
-  local names="$1" resp id nm ids="" group child gid
+  local names="$1" resp id nm ids=""
   [[ -n "$names" ]] || { printf '[]'; return 0; }
-  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup parent{ name } } } }' '{}')" || { printf '[]'; return 0; }
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name } } }' '{}')" || { printf '[]'; return 0; }
   for nm in $names; do
-    case "$nm" in
-      *:*)
-        group="${nm%%:*}"; child="${nm#*:}"
-        id="$(printf '%s' "$resp" | jq -r --arg g "$group" --arg c "$child" \
-            '.data.issueLabels.nodes[]? | select(.name==$c and .parent.name==$g) | .id' 2>/dev/null | head -1)"
-        if [[ -z "$id" ]]; then
-          gid="$(_ln_group_id "$group")"
-          [[ -n "$gid" ]] || continue
-          id="$(_linear_gql \
-            'mutation($name:String!,$team:String!,$parent:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, parentId:$parent }){ success issueLabel{ id } } }' \
-            "$(jq -n --arg name "$child" --arg team "$LINEAR_TEAM_ID" --arg parent "$gid" \
-              '{name:$name,team:$team,parent:$parent}')" \
-            | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
-        fi
-        ;;
-      *)
-        id="$(printf '%s' "$resp" | jq -r --arg n "$nm" \
-            '.data.issueLabels.nodes[]? | select(.name==$n and (.isGroup|not)) | .id' 2>/dev/null | head -1)"
-        if [[ -z "$id" ]]; then
-          id="$(_linear_gql \
-            'mutation($name:String!,$team:String!){ issueLabelCreate(input:{ name:$name, teamId:$team }){ success issueLabel{ id } } }' \
-            "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" \
-            | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
-        fi
-        ;;
-    esac
-    [[ -n "$id" ]] && ids="${ids}${ids:+ }${id}"
+    # `[...][0] // empty` rather than `| head -1`: head closes the pipe early and
+    # the SIGPIPE would fail the pipeline under `set -o pipefail`.
+    id="$(printf '%s' "$resp" | jq -r --arg n "$nm" \
+        '[.data.issueLabels.nodes[]? | select(.name==$n) | .id][0] // empty')"
+    if [[ -z "$id" ]]; then
+      id="$(_linear_gql \
+        'mutation($name:String!,$team:String!,$color:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, color:$color }){ success issueLabel{ id } } }' \
+        "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" --arg color "$(_ln_label_color "$nm")" \
+          '{name:$name,team:$team,color:$color}')" \
+        | jq -r '.data.issueLabelCreate.issueLabel.id // empty')" || id=""
+    fi
+    if [[ -z "$id" ]]; then
+      # NEVER silently drop: labelIds REPLACES the set, so an unresolved label
+      # would delete itself off the issue. Say so loudly instead.
+      echo "WARN (linear adapter): could not resolve label '$nm' — left off the issue" >&2
+    else
+      ids="${ids}${ids:+ }${id}"
+    fi
   done
   [[ -n "$ids" ]] || { printf '[]'; return 0; }
-  printf '%s\n' $ids | jq -R . 2>/dev/null | jq -s -c . 2>/dev/null || printf '[]'
+  printf '%s\n' $ids | jq -R . | jq -s -c .
 }
 
 # Merge cvg's derived labels into an issue's EXISTING set: keep every label cvg
