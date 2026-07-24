@@ -21,6 +21,7 @@ signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-24T14:26:34Z
 signed_off_sig: hmac-sha256-v1:1f197c76:68e4b2fa60875d0e4bf11415894245bb4b59f9d79ce61a830f6daa4e62a435d5
+tracker_ref: linear:CVG-13
 ---
 
 # Capture — land all four domains into raw.*

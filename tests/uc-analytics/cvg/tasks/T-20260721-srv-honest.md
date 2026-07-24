@@ -20,6 +20,7 @@ signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-24T14:26:38Z
 signed_off_sig: hmac-sha256-v1:1f197c76:c92d8eaff6a95d62bf5303d22530e9589a7a297fa49d18260cdc84336cbd4b0f
+tracker_ref: linear:CVG-19
 ---
 
 # Serve — honest answers (as-of, staleness alert, audit)
