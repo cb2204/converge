@@ -60,6 +60,8 @@ Upsert semantics: look up by the `id` key first; update if found, create if not.
 
 After each upsert the driver stamps the returned issue ref back into the spec as `tracker_ref: <tracker>:<issue>` (the **receipt**), unless `--no-stamp-refs`. The receipt is a backlink for humans and agents, never the key — the next run still resolves by the issue-side marker, so a spec with `tracker_ref: (none)` registers exactly the same way.
 
+**Native-field enrichment (Linear).** Beyond the shadow, register seeds a Linear issue's *own* fields from signal the spec already carries — assignee (from `execution_backend`/`agent` via [`.cvg/people-map`](references/people-map.md), seed-once), workflow state (root → `Todo`, blocked → `Backlog`, seed-once), subscribers (from `signed_off_by`, union-merged) — and honors an optional in-frontmatter [`projection:` block](references/projection-block.md) (cycle/parent/sla, plus project/milestone when structure projection is opted in via `cvg setup projection --enable`). It is **tracker-neutral and fail-soft**: github/jira/fake accept-and-discard every field, an unresolved value is omitted, and a plain `cvg register` with no people-map and no block is byte-identical to the base projection.
+
 ### Step 4 — LINK: `depends_on` → `blocked-by`
 
 For each spec, read its `depends_on` and set a `blocked-by` link from its issue to each dependency's issue (resolve dependency `id` → issue number via the same `id` key). The graph that lived in the repo now lives on the board, so the future Manager can compute "ready" (no open blockers) without reading `tasks/`. Mirror the build-order edges exactly — in this repo: `bronze-views` → `silver-conform` → {`gold-marts`, `gold-freshness`} → `gold-atomic-publish` → `api-fastapi` → `mcp-tools`. No extra links, no missing links.
@@ -124,4 +126,7 @@ The board this skill registers is the exact surface the execution loop reads. A 
 - `references/adapter-contract.md` — the five-verb adapter contract (`preflight · upsert · link · list-ready · write-result`), the stdout/stderr discipline, the backend status table, and the ~40-line recipe for adding a new tracker.
 - `references/dependency-graph.md` — how `depends_on` (YAML inline list) maps to `blocked-by`, cycle detection, and the repo's canonical build-order graph.
 - `references/idempotency-keys.md` — how each tracker carries the spec `id` (github HTML marker + label, linear external id, jira label) so re-runs upsert instead of duplicate.
+- `references/projection-block.md` — the optional per-spec `projection:` frontmatter block (assignee/state/subscribers + cycle/parent/sla/project/milestone): its HMAC-safety, the derived-vs-seed-once ownership split, and how structural fields gate behind `cvg setup projection`.
+- `references/people-map.md` — `.cvg/people-map`, the choices-not-credentials lookup that routes `execution_backend`/`agent` → a tracker person for assignee/subscriber seeding (keys, `agent → backend → default` precedence, fail-soft).
+- `references/agents-api-scaffold.md` — the Linear Agents API (T4) scaffold + promotion runbook: the OAuth `actor=app` prerequisite, the four seams into code that already exists, and why it ships as a deliberately-inert scaffold.
 ```

@@ -371,6 +371,119 @@ has "part (a) is a quoted paragraph" "$GB" "> **(a) First part.** This sentence 
 has "part (b) is its OWN paragraph"  "$GB" "> **(b) Second part.** This one too, and it must NOT fuse into the first."
 if printf '%s' "$GB" | grep -q '^>$'; then ok "paragraphs separated by a blockquote break"; else bad "no paragraph separator between (a) and (b)"; fi
 
+echo; echo "[R] native-field seeding (T1): assignee / state / subscribers reach the adapter"
+D="$WORK/r/tasks"; S="$WORK/r/store"; mkdir -p "$D"
+cat > "$D/T-$DATE-reg-nf-root.md" <<'RSPEC'
+---
+id: T-20260723-reg-nf-root
+title: nf root
+status: ready
+signed_off: true
+depends_on: []
+effort: M
+execution_backend: claude
+agent: python-developer
+signed_off_by: luan@owshq.com
+projection:
+  cycle: "Cycle 7"
+  sla: standard
+  milestone: Transform
+---
+
+## Goal
+Root.
+
+## Exit Check
+```bash
+eval_1
+```
+RSPEC
+cat > "$D/T-$DATE-reg-nf-child.md" <<'RSPEC'
+---
+id: T-20260723-reg-nf-child
+title: nf child
+status: ready
+signed_off: true
+depends_on: [T-20260723-reg-nf-root]
+effort: S
+execution_backend: codex
+agent: any
+signed_off_by: luan@owshq.com, ana@owshq.com
+projection:
+  parent: T-20260723-reg-nf-root
+  cycle: "3"
+---
+
+## Goal
+Child.
+
+## Exit Check
+```bash
+eval_1
+```
+RSPEC
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs 2>&1)"; RC=$?
+rc_is "native-field register exits 0" "$RC" "0"
+RM="$(cat "$S/meta/T-$DATE-reg-nf-root.txt" 2>/dev/null)"
+CM="$(cat "$S/meta/T-$DATE-reg-nf-child.txt" 2>/dev/null)"
+has "assignee: agent role wins over backend"     "$RM" "assignee=agent:python-developer"
+has "assignee: agent=any falls back to backend"  "$CM" "assignee=backend:codex"
+has "state: a root opens in Todo"                "$RM" "state=Todo"
+has "state: a blocked spec waits in Backlog"     "$CM" "state=Backlog"
+has "subscribers: the single signer"             "$RM" "subscribers=luan@owshq.com"
+has "subscribers: a comma-list is split"         "$CM" "subscribers=luan@owshq.com ana@owshq.com"
+
+echo; echo "[S] projection: block (T2) — cycle/parent/sla honored; structural fields gated OFF"
+has "cycle reaches the adapter"                  "$RM" "cycle=Cycle 7"
+has "sla reaches the adapter"                    "$RM" "sla=standard"
+has "parent (a spec id) reaches the adapter"     "$CM" "parent=T-$DATE-reg-nf-root"
+if printf '%s' "$RM" | grep -q '^project=$'; then ok "project empty when projection disabled"; else bad "project not empty while disabled"; fi
+if printf '%s' "$RM" | grep -q '^milestone=$'; then ok "milestone empty when projection disabled"; else bad "milestone not empty while disabled"; fi
+if [[ -f "$S/structure.tsv" ]]; then bad "structure created while projection disabled"; else ok "no structure created (base path byte-identical)"; fi
+
+echo; echo "[T] structure projection (T3) — Step-0 ensures Initiative->Project->Milestones + health"
+D="$WORK/t/tasks"; S="$WORK/t/store"; mkdir -p "$D"
+cat > "$D/T-$DATE-reg-str-a.md" <<'TSPEC'
+---
+id: T-20260723-reg-str-a
+title: str a
+status: ready
+signed_off: true
+depends_on: []
+projection:
+  milestone: Transform
+---
+
+## Goal
+A.
+
+## Exit Check
+```bash
+eval_1
+```
+TSPEC
+make_spec "$D" "T-$DATE-reg-str-b" true "[T-$DATE-reg-str-a]"
+PENV=(CVG_PROJECTION_ENABLED=1 TSI_PROJECTION_PROJECT='Test Backbone' TSI_PROJECTION_INITIATIVE='Q Init' TSI_PROJECTION_MILESTONES='Capture,Transform,Serve')
+OUT="$(env "${PENV[@]}" TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs 2>&1)"; RC=$?
+rc_is "structure-enabled register exits 0" "$RC" "0"
+has "Step-0 announced structure" "$OUT" "[structure] projection enabled"
+has "health note posted"         "$OUT" "[health]"
+ST="$(cat "$S/structure.tsv" 2>/dev/null)"
+has "project ensured"             "$ST" "Test Backbone"
+has "initiative ensured"          "$ST" "Q Init"
+has "phase milestone Capture"     "$ST" "Capture"
+has "phase milestone Transform"   "$ST" "Transform"
+has "phase milestone Serve"       "$ST" "Serve"
+AM="$(cat "$S/meta/T-$DATE-reg-str-a.txt" 2>/dev/null)"
+if printf '%s' "$AM" | grep -q '^project=FAKE-PROJECT-Test-Backbone$'; then ok "run-wide project threaded into the issue"; else bad "run-wide project not threaded"; fi
+if printf '%s' "$AM" | grep -q '^milestone=FAKE-MILE-.*Transform$'; then ok "per-spec milestone threaded into the issue"; else bad "per-spec milestone not threaded"; fi
+has "health carries the registered total" "$(cat "$S/health.tsv" 2>/dev/null)" "total=2"
+# Idempotency: a second enabled run reuses the SAME structure (ensure-by-name).
+env "${PENV[@]}" TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs >/dev/null 2>&1; RC=$?
+rc_is "second structure-enabled register exits 0" "$RC" "0"
+NPROJ="$(awk -F'\t' '$1=="project"{n++} END{print n+0}' "$S/structure.tsv")"
+rc_is "project ensured exactly once (idempotent by name)" "$NPROJ" "1"
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="
