@@ -20,7 +20,9 @@ signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-24T14:26:35Z
 signed_off_sig: hmac-sha256-v1:1f197c76:988cad1d07a648d2ab3e8caeb41e03ec159f7bbd4eebb05b893a59ff6b82532d
-tracker_ref: linear:CVG-14
+tracker_ref: linear:CVG-23
+projection:
+  milestone: Capture
 ---
 
 # Capture — freshness + by-principal instrumentation (Dagster)

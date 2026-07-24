@@ -20,7 +20,9 @@ signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-24T14:26:42Z
 signed_off_sig: hmac-sha256-v1:1f197c76:9b953a3bbd3e65738dd061331c0ae123397ea346c4d3a1e5c55d48449b9ed64b
-tracker_ref: linear:CVG-15
+tracker_ref: linear:CVG-24
+projection:
+  milestone: Transform
 ---
 
 # Transform — silver conform (dedup max-_lsn, UTC)
