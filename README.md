@@ -218,6 +218,8 @@ it keeps going past *Implement* to a fleet running green.
 | Self-verifying atomic units (eval = done) | ❌ | partial | ✅ **Task-Spec** |
 | HMAC-sealed spec as the only instruction source | ❌ | ❌ | ✅ **injection defense** |
 | Task-specific runtime contract + multi-engine harness | manual | ❌ | ✅ **Pass 7 · Bind** |
+| Authority that **closes** (no lingering session permissions) | ❌ session-scoped | ❌ | ✅ **capability envelope** |
+| Honest *prevent vs detect* per runtime, failing closed | ❌ | ❌ | ✅ **resolver manifest** |
 | Closed loop → green-eval PR | ❌ | ❌ (stops at Implement) | ✅ **Pass 8 · The Loop** |
 | Vendor-portable (Claude / Codex / Kimi / cloud) | ❌ | vendor-specific | ✅ **engines are flags** |
 

@@ -302,6 +302,191 @@ def validate_topology(
     return errors
 
 
+# ===========================================================================
+# The capability envelope — task-scoped authority with explicit CLOSURE.
+# ===========================================================================
+# Runtime CLIs grant permissions for a SESSION. A session outlives the task, so
+# authority granted for one unit of work lingers over the next — the "lingering
+# authority" failure. Bind answers it by making authority an EPOCH: capabilities
+# are granted against one signed spec revision, scoped to that spec's own paths,
+# and revoked the moment the task settles. Re-binding mints a new epoch; a stale
+# epoch is not a warning, it is a closed door.
+CAPABILITY_IDS = (
+    "fs.read",       # read the evidence slice + repo
+    "fs.write",      # write inside the Task-Spec's declared scope
+    "proc.exec",     # run commands (evals, builds)
+    "net.egress",    # reach the network
+    "vcs.commit",    # write git history
+    "vcs.push",      # publish outside the machine
+    "tracker.write", # mutate the board
+)
+
+# How strongly a control is held. The distinction is load-bearing: a kernel or
+# pre-tool hook PREVENTS the action; a portable postflight only DETECTS it after
+# the fact. Application-layer filtering is exactly what prompt injection targets,
+# so `detect` is evidence, never a boundary — and `unenforced` fails closed.
+ENFORCEMENT_KINDS = ("prevent", "detect", "unenforced")
+
+CLOSURE_EVENTS = ("settle", "block", "budget_exhausted", "epoch_change")
+
+
+def authority_epoch(task_id: str, spec_sha256: str) -> str:
+    """One authority epoch = one task at one signed revision."""
+    return f"{task_id}@{spec_sha256[:12]}"
+
+
+def build_authority(
+    task_id: str,
+    spec_sha256: str,
+    allowed: list[str],
+    forbidden: list[str],
+    network: str,
+    external_writes: str = "deny",
+) -> dict[str, Any]:
+    """Compile the Task-Spec's declared scope into a closed capability envelope."""
+    net_granted = str(network).lower() not in {"", "deny", "none", "false", "no"}
+    ext_granted = str(external_writes).lower() not in {"", "deny", "none", "false", "no"}
+    grants = [
+        {"capability": "fs.read", "granted": True, "scope": ["<repo>"], "phase": "all"},
+        {"capability": "fs.write", "granted": True, "scope": allowed, "deny_scope": forbidden, "phase": "implement"},
+        {"capability": "proc.exec", "granted": True, "scope": ["task_spec.evaluations"], "phase": "verify"},
+        {"capability": "net.egress", "granted": net_granted, "scope": [], "phase": "all" if net_granted else "none"},
+        {"capability": "vcs.commit", "granted": True, "scope": allowed, "phase": "settle"},
+        {"capability": "vcs.push", "granted": ext_granted, "scope": [], "phase": "settle" if ext_granted else "none"},
+        {"capability": "tracker.write", "granted": ext_granted, "scope": [], "phase": "settle" if ext_granted else "none"},
+    ]
+    return {
+        "model": "task-scoped-capability-envelope",
+        "epoch": authority_epoch(task_id, spec_sha256),
+        "grants": grants,
+        "closure": {
+            "revoke_on": list(CLOSURE_EVENTS),
+            "revocation_is_mandatory": True,
+            "lingering_authority": "denied",
+            "note": (
+                "Authority is bound to this epoch. When the task settles, blocks, "
+                "exhausts its budget, or the spec hash changes, every grant above is "
+                "revoked. A new epoch requires a fresh bind."
+            ),
+        },
+    }
+
+
+def required_controls(extra: Iterable[str] | None = None) -> list[str]:
+    """Controls that MUST be held for the envelope to mean anything.
+
+    `fs.write` is always required: the write scope is the core promise of the
+    contract, and the portable postflight guard means every runtime can at least
+    DETECT a violation. Denied capabilities (network, push, tracker) are always
+    *reported* per adapter, but they only become gate-failing when the operator
+    demands them with `--require`, because not every task needs the network
+    provably severed — and a gate that always fails teaches people to bypass it.
+    """
+    required = {"fs.write"}
+    for item in extra or ():
+        value = str(item).strip()
+        if value:
+            if value not in CAPABILITY_IDS:
+                raise ContractError(
+                    f"unknown capability in --require: {value} "
+                    f"(known: {', '.join(CAPABILITY_IDS)})"
+                )
+            required.add(value)
+    return sorted(required)
+
+
+# ===========================================================================
+# The resolver manifest — what each runtime ACTUALLY enforces.
+# ===========================================================================
+# An adapter that merely *describes* a control proves nothing. Every adapter must
+# declare, per capability, whether it PREVENTS, only DETECTS, or cannot honor the
+# control at all — and the gate fails closed when a required control is
+# unenforced. No adapter may weaken a portable guarantee silently.
+RUNTIME_CONTROLS: dict[str, dict[str, dict[str, str]]] = {
+    "generic": {
+        "fs.write": {"kind": "detect", "mechanism": "portable postflight diff guard (check-path-policy.py)"},
+        "proc.exec": {"kind": "unenforced", "mechanism": "none"},
+        "net.egress": {"kind": "unenforced", "mechanism": "none"},
+        "vcs.push": {"kind": "detect", "mechanism": "settlement policy check before push"},
+        "tracker.write": {"kind": "detect", "mechanism": "settlement policy check"},
+    },
+    "claude": {
+        "fs.write": {"kind": "prevent", "mechanism": "PreToolUse hook permissionDecision=deny + permissions.deny Edit(...)"},
+        "proc.exec": {"kind": "prevent", "mechanism": "permissions.deny Bash(...) + sandbox (Seatbelt/bubblewrap)"},
+        "net.egress": {"kind": "prevent", "mechanism": "sandbox deniedDomains + WebFetch deny rules"},
+        "vcs.push": {"kind": "detect", "mechanism": "Bash(git push:*) deny rule; still verified at settlement"},
+        "tracker.write": {"kind": "detect", "mechanism": "settlement policy check"},
+    },
+    "codex": {
+        "fs.write": {"kind": "prevent", "mechanism": "Landlock writable-roots (workspace-write), on by default"},
+        "proc.exec": {"kind": "prevent", "mechanism": "seccomp-bpf syscall filter"},
+        "net.egress": {"kind": "prevent", "mechanism": "seccomp blocks network syscalls unless allowlisted"},
+        "vcs.push": {"kind": "prevent", "mechanism": "network denied by sandbox unless explicitly allowed"},
+        "tracker.write": {"kind": "prevent", "mechanism": "network denied by sandbox unless explicitly allowed"},
+    },
+    "kimi": {
+        "fs.write": {"kind": "detect", "mechanism": "portable postflight diff guard"},
+        "proc.exec": {"kind": "unenforced", "mechanism": "none"},
+        "net.egress": {"kind": "unenforced", "mechanism": "none"},
+        "vcs.push": {"kind": "detect", "mechanism": "settlement policy check"},
+        "tracker.write": {"kind": "detect", "mechanism": "settlement policy check"},
+    },
+}
+
+
+def resolve_adapter(
+    runtime: str, required: list[str], report: Iterable[str] | None = None
+) -> dict[str, Any]:
+    """Build the resolver manifest: handled / mapped-weaker / ignored, per control.
+
+    Mirrors the AgentManifest resolver contract — a runtime must state which
+    directives it handled, which it mapped to weaker behavior, and which it
+    ignored, so the gate can refuse to pretend. `report` adds capabilities that
+    are disclosed but do not fail the gate.
+    """
+    table = RUNTIME_CONTROLS.get(runtime, {})
+    controls: dict[str, Any] = {}
+    unenforced: list[str] = []
+    detect_only: list[str] = []
+    gate_relevant = set(required)
+    for capability in sorted(gate_relevant | set(report or ())):
+        entry = table.get(capability)
+        kind = entry["kind"] if entry else "unenforced"
+        mechanism = entry["mechanism"] if entry else "none"
+        if kind == "prevent":
+            status = "handled"
+        elif kind == "detect":
+            status = "mapped"
+            if capability in gate_relevant:
+                detect_only.append(capability)
+        else:
+            status = "ignored"
+            if capability in gate_relevant:
+                unenforced.append(capability)
+        controls[capability] = {
+            "status": status,
+            "enforcement_kind": kind,
+            "mechanism": mechanism,
+            "gate_relevant": capability in gate_relevant,
+        }
+    return {
+        "runtime": runtime,
+        "controls": controls,
+        "detect_only": sorted(detect_only),
+        "unenforced_required": sorted(unenforced),
+        "fails_closed": bool(unenforced),
+    }
+
+
+def weakest_link(resolutions: list[dict[str, Any]]) -> str:
+    """The honest headline: the strongest claim the WEAKEST required control allows."""
+    if any(res.get("unenforced_required") for res in resolutions):
+        return "unenforced"
+    if any(res.get("detect_only") for res in resolutions):
+        return "detect"
+    return "prevent"
+
+
 def unresolved_placeholder(text: str) -> bool:
     patterns = (
         r"\{\{[^}]+\}\}",

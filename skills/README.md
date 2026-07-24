@@ -155,8 +155,17 @@ contract) plus **CLAUDE.md / codex / cloud** adapters — so the *same* sealed t
 runs on `claude -p`, `codex exec`, a Kimi swarm, or a cloud workflow. *The harness
 orchestrates; the documentation teaches* — external docs are cached and hashed,
 approved knowledge referenced, never copied.
-**Ships:** deterministic binder, readiness gate, candidate/diff path guard, tool-hook bridge, adapter manifests, structured execution receipts.
-**Gate:** `CHECK_RUNTIME_CONTRACT=PASS` — sign-off, freshness, evidence, topology substance, ownership, and enforcement all verify.
+**The capability envelope.** Authority is granted against **one signed revision**
+(`epoch = <task-id>@<spec-sha12>`), scoped to the Task-Spec's own paths, and
+**revoked on settle, block, budget exhaustion, or epoch change** — closing the
+*lingering authority* hole where session-scoped permissions outlive the task that
+justified them. Each adapter then declares, per capability, whether the runtime
+**prevents** the violation (Landlock/seccomp, Seatbelt, pre-tool hooks), only
+**detects** it (portable postflight), or **cannot honor it** — and a required
+control the runtime cannot enforce **fails the gate closed** unless waived in the
+open. `cvg doctor runtime-contract` attests what the host can genuinely do.
+**Ships:** deterministic binder, readiness gate, candidate/diff path guard, tool-hook bridge, adapter manifests + resolver manifests, host attestation, structured execution receipts.
+**Gate:** `CHECK_RUNTIME_CONTRACT=PASS` — sign-off, freshness, evidence, topology substance, ownership, capability closure, and honest assurance all verify.
 
 ### 8 · `task-loop` — one issue → green-eval PR
 

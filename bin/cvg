@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.16.0"
+CVG_VERSION="0.17.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -608,7 +608,10 @@ cmd_help() {
   printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
   printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
-  printf '  bind --task <spec>       Pass 6 · Bind — write a task-scoped execution\n'
+  printf '  doctor runtime-contract  attest what THIS host can enforce for Pass 7 —\n'
+  printf '                           isolation primitive, runtime binary, worktree\n'
+  printf '                           (DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL)\n'
+  printf '  bind --task <spec>       Pass 7 · Bind — write a task-scoped execution\n'
   printf '                           profile + portable guards; CHECK_RUNTIME_CONTRACT\n'
   printf '  bind --check --task <spec>\n'
   printf '                           re-check hashes, topology, evidence, and adapters\n'
@@ -720,7 +723,7 @@ elif cmd == "setup":
     sub = parts[0] if parts else "status"
     disp = ("setup " + sub).strip() if sub != "status" else "setup"
     mutating = (sub in ("tracker", "repo", "people", "projection"))
-PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4, "bind": 6}
+PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4, "bind": 7}
 env = {
     "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
     "token": token, "verdict": verdict, "exit_code": rc,
@@ -808,7 +811,7 @@ case "$CMD" in
     esac
     ;;
   bind)
-    # Pass 6 · Bind. The Task-Spec stays canonical; this command writes or
+    # Pass 7 · Bind. The Task-Spec stays canonical; this command writes or
     # verifies the thin, hash-bound execution profile and concrete guards.
     BINDER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/bind-runtime-contract.py"
     CHECKER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/check-runtime-contract.py"
@@ -1115,7 +1118,28 @@ case "$CMD" in
     fi
     ;;
   doctor)
-    exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh"
+    # Engine readiness. Bare `cvg doctor` reports the Pass-4 adversary engines;
+    # `cvg doctor runtime-contract` attests what the HOST can actually enforce for
+    # Pass 7 (isolation primitive, runtime binary, worktree) so a contract can fail
+    # closed instead of assuming a control it never had.
+    case "${1:-}" in
+      runtime-contract)
+        shift
+        ATTEST="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/attest-runtime.py"
+        [ -f "$ATTEST" ] || {
+          ui_err "task-to-runtime-contract skill is incomplete under $CVG_HOME_DIR/skills"
+          printf 'DOCTOR_RUNTIME_CONTRACT=FAIL\n'
+          exit 2
+        }
+        exec python3 "$ATTEST" "$@"
+        ;;
+      "") exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
+      *)
+        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract"
+        printf 'DOCTOR=USAGE_ERROR\n'
+        exit 2
+        ;;
+    esac
     ;;
   register)
     # REGISTER ① — bridge signed-off Task-Specs onto a tracker board (Fork B → the Loop).
@@ -1235,8 +1259,8 @@ m = {
     c("review --adversary <e[,e]>", 4, "sketch-plans-adversarial-review/dispatch-review[-multi].sh", ["REVIEW=OK|ERROR|SKIP|TIMEOUT|USAGE_ERROR"], True, "cvg review --adversary codex,kimi", "Pass 4 dispatch — a different-family adversary (or several, merged) attacks the plans; writes a provenance-stamped objection log."),
     c("review --check", 4, "sketch-plans-adversarial-review/check-consensus-gate.sh", ["CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR"], False, "cvg review --check", "Pass 4 gate — validates the stamped objection log (cross-family, resolutions, fork B, provenance)."),
     c("doctor", 4, "sketch-plans-adversarial-review/doctor.sh", ["DOCTOR=OK|FAIL"], False, "cvg doctor", "Engine readiness for Pass 4 dispatch (>=2 engines, >=1 cross-family)."),
-    c("bind --task <spec>", 6, "task-to-runtime-contract/bind-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], True, "cvg bind --task tasks/T-...md", "Pass 6 · Bind — verify one signed Task-Spec, select the initial intra-task topology, hash-bind the evidence slice, and emit portable path guards plus vendor adapter manifests."),
-    c("bind --check --task <spec>", 6, "task-to-runtime-contract/check-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], False, "cvg bind --check --task tasks/T-...md", "Re-check Task-Spec freshness, sign-off, context hashes, topology substance, ownership, and enforcement artifacts."),
+    c("bind --task <spec>", 7, "task-to-runtime-contract/bind-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], True, "cvg bind --task tasks/T-...md", "Pass 7 · Bind — verify one signed Task-Spec, select the initial intra-task topology, hash-bind the evidence slice, and emit portable path guards plus vendor adapter manifests."),
+    c("bind --check --task <spec>", 7, "task-to-runtime-contract/check-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], False, "cvg bind --check --task tasks/T-...md", "Re-check Task-Spec freshness, sign-off, context hashes, topology substance, ownership, and enforcement artifacts."),
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),
@@ -1246,6 +1270,7 @@ m = {
     c("setup", None, "native (doctor + adapter preflight)", ["SETUP=READY|INCOMPLETE"], False, "cvg setup", "Connectivity status board — per-part readiness (engines · trackers; index/memory planned) + the exact next step. Records CHOICES in .cvg/config, NEVER credentials (secrets stay in the environment / a secrets manager — if cvg can't see them it can't leak them)."),
     c("setup tracker <t> [--team K]", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|NEEDS_TEAM|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker via preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. For linear: export only LINEAR_API_KEY — the team is auto-discovered (a single team auto-selects; otherwise pass --team <KEY>, the key straight from the Linear URL), resolved to a UUID, and recorded. The API key is never stored."),
     c("setup repo [--branch b] [--url u]", None, "native (git remote)", ["SETUP_REPO=OK|UNDETECTED|USAGE_ERROR"], True, "cvg setup repo", "Link the repo to the tracker: derives a browsable blob base URL from the git remote (github/gitlab/bitbucket shapes) and records it as spec_base_url in .cvg/config, so every registered issue links back to the spec it was projected from. Branch-pinned; --branch/--url override."),
+    c("doctor runtime-contract [--runtime R]", 7, "task-to-runtime-contract/attest-runtime.py", ["DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL"], False, "cvg doctor runtime-contract --runtime codex", "Attest what THIS host can actually enforce for Pass 7 — the isolation primitive (Seatbelt/Landlock/bubblewrap), whether the runtime binary is installed, and whether git worktrees work. Probes are conservative: an unprovable capability is reported absent, so a contract fails closed instead of assuming a control it never had. DEGRADED means the runtime claims prevent but only detect is provable."),
     c("setup people [--list] [--map KEY=VAL]", None, "native (+ adapter users verb)", ["SETUP_PEOPLE=OK|NEEDS_MAP|UNREACHABLE|USAGE_ERROR"], True, "cvg setup people --map backend:claude=you@org.com", "Map an execution_backend/agent CHOICE to a tracker person so register can seed assigneeId (create-only) and subscriberIds (union-merged). No flags / --list discovers members (Linear users: name + email) as a ready-to-paste block; --map KEY=VALUE writes idempotently to .cvg/people-map (repeatable; keys backend:<engine>, agent:<role>, default). CHOICES only (an email/uuid is a routing choice) — never a credential. Optional: unmapped assignees fail-soft, so T1 works with zero setup."),
     c("setup projection [--enable|--disable] [--project N] [--initiative N] [--milestones L]", None, "native (+ adapter preflight)", ["SETUP_PROJECTION=OK|DISABLED|UNREACHABLE|USAGE_ERROR"], True, "cvg setup projection --enable --project 'Converge Backbone' --initiative 'Q3 Delivery'", "Opt in to T3 structure projection: records projection_enabled/project/initiative/milestones in .cvg/config so register's Step-0 pre-pass ensures Initiative→Project→Milestones (idempotent, by-name) and posts append-only health. Default DISABLED — a plain cvg register is byte-identical to today. Enabling preflights the configured tracker (projects need a live team). CHOICES only, never credentials."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),

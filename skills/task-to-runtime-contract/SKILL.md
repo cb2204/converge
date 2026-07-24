@@ -1,11 +1,11 @@
 ---
 name: task-to-runtime-contract
-description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract. Use for Pass 6 · Bind, before a Manager dispatches a task or task-loop executes it, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests, pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy standing-agent-fleet harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
+description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract, and emit the multi-engine harness. Use for Pass 7 · Bind, after Pass 6 Register (opt-in) and before task-loop executes the issue, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests (AGENTS.md + adapters), pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy standing-agent-fleet harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
-# task-to-runtime-contract — Pass 6 · Bind
+# task-to-runtime-contract — Pass 7 · Bind
 
 Turn one signed Task-Spec into the smallest enforceable runtime contract needed
 to execute it. The Task-Spec remains canonical; the execution profile records
@@ -14,13 +14,17 @@ artifacts.
 
 ## Boundary
 
-- **Pass 5B owns** behavior, evaluations, write scope, budgets, backend hints,
-  and sign-off.
-- **Pass 6 owns** evidence binding, initial intra-task topology, pinned context,
-  enforcement adapters, and readiness.
-- **Pass 7 owns** task selection and concurrency across tasks.
-- **Pass 8 owns** one assigned task, its bounded RED/GREEN loop, and one PR or
-  blocked report.
+- **Pass 5 (`task-spec`) owns** behavior, evaluations, write scope, budgets,
+  backend hints, and sign-off.
+- **Pass 6 (`task-specs-to-issues`, opt-in) owns** the 1:1 projection of signed
+  specs onto tracker issues and the dependency links between them.
+- **Pass 7 (this skill) owns** evidence binding, initial intra-task topology,
+  pinned context, enforcement adapters, the emitted harness, and readiness.
+- **The Manager owns** task selection and concurrency across tasks. It is a
+  future CI/CD concern (e.g. GitHub Actions), **not a numbered pass and not an
+  in-session skill** — see `PLAN.md` item B-1.
+- **Pass 8 (`task-loop`) owns** one assigned task, its bounded RED/GREEN loop,
+  and one PR or blocked report.
 
 Never copy Task-Spec fields into a second competing contract. Point back to
 their canonical field names and bind the source file by SHA-256.
@@ -101,6 +105,41 @@ or:
 CHECK_RUNTIME_CONTRACT=FAIL
 ```
 
+### 4b. Choose the runtime that must actually hold the contract
+
+The profile carries a **capability envelope**: authority granted against one
+signed revision (`epoch = <task-id>@<spec-sha12>`), scoped to the Task-Spec's own
+paths, and **revoked on settle, block, budget exhaustion, or epoch change**. That
+closure is what prevents *lingering authority* — session-scoped permissions that
+outlive the task that justified them.
+
+Each adapter then declares, per capability, whether the runtime **prevents** the
+violation (kernel or pre-tool hook), only **detects** it (portable postflight), or
+**cannot honor it** at all. `fs.write` is always required; add more with
+`--require`:
+
+```bash
+cvg bind --task tasks/T-x.md --runtime codex  --require net.egress   # PASS — seccomp blocks egress
+cvg bind --task tasks/T-x.md --runtime generic --require net.egress  # FAIL — nothing enforces it
+```
+
+A required control the runtime cannot enforce **fails the gate closed**. Proceed
+anyway only in the open:
+
+```bash
+cvg bind ... --require net.egress --accept-unenforced net.egress
+# WAIVED: 'net.egress' is required but unenforced on 'generic'
+```
+
+The waiver is written into the profile and `assurance` drops to `unenforced`.
+Attest what this host can genuinely do before trusting a claim:
+
+```bash
+cvg doctor runtime-contract --runtime codex   # → DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL
+```
+
+Full model: [`references/capability-envelope.md`](references/capability-envelope.md).
+
 ### 5. Enforce during execution
 
 Before writes, vendor hooks may pass a candidate path to:
@@ -150,10 +189,17 @@ human teaching projection, not the machine-knowledge writer.
 - Parallel write ownership is explicit, in scope, and disjoint.
 - Portable guards and all declared adapter manifests exist.
 - Generated artifacts contain no unresolved placeholders.
+- The capability envelope is epoch-bound to the current spec hash, its `fs.write`
+  grant equals the Task-Spec's declared scope, and closure is mandatory.
+- Every required control is enforced by the primary runtime, or explicitly
+  waived — and the declared `assurance` matches what the resolver proves.
 - The final machine token is `CHECK_RUNTIME_CONTRACT=PASS`.
 
 ## References
 
+- [`references/capability-envelope.md`](references/capability-envelope.md) —
+  epoch-bound authority, closure, prevent-vs-detect, and the fail-closed
+  resolver manifest.
 - [`references/runtime-contract.md`](references/runtime-contract.md) — profile
   schema, freshness, and evidence rules.
 - [`references/topology-and-permissions.md`](references/topology-and-permissions.md)

@@ -128,10 +128,10 @@ JSON_OUT="$(
 if python3 -c 'import json,sys
 d=json.load(sys.stdin)
 assert d["ok"] is True
-assert d["converge_pass"] == 6
+assert d["converge_pass"] == 7
 assert d["token"] == "CHECK_RUNTIME_CONTRACT=PASS"
 assert d["changed"] is False' <<<"$JSON_OUT"; then
-  ok "agent-native JSON envelope exposes Pass 6 verdict"
+  ok "agent-native JSON envelope exposes Pass 7 verdict"
 else
   bad "bind JSON envelope is incomplete"
 fi
@@ -384,6 +384,118 @@ if (
   ok "execution receipt creates only a proposed knowledge candidate"
 else
   bad "knowledge-accretion seam failed"
+fi
+
+# ---------------------------------------------------------------------------
+# The capability envelope + resolver manifest (the closure / fail-closed core).
+# ---------------------------------------------------------------------------
+# Authority is epoch-bound: the grant names the exact signed revision, scopes
+# fs.write to the Task-Spec's own paths, and declares mandatory closure.
+if python3 - "$PROFILE" "$TMP_REPO/tasks/T-20260602-golden.md" <<'PY'
+import hashlib, json, sys
+profile = json.load(open(sys.argv[1]))
+spec = hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest()
+auth = profile["authority"]
+assert auth["epoch"] == f"T-20260602-golden@{spec[:12]}", auth["epoch"]
+assert auth["closure"]["revocation_is_mandatory"] is True
+assert auth["closure"]["lingering_authority"] == "denied"
+assert set(auth["closure"]["revoke_on"]) >= {"settle", "block", "budget_exhausted", "epoch_change"}
+write = next(g for g in auth["grants"] if g["capability"] == "fs.write")
+assert write["granted"] is True and write["scope"], write
+net = next(g for g in auth["grants"] if g["capability"] == "net.egress")
+assert net["granted"] is False and net["phase"] == "none", net
+PY
+then
+  ok "authority is epoch-bound and closes (no lingering authority)"
+else
+  bad "capability envelope is missing or unclosed"
+fi
+
+# The resolver manifest must be HONEST about prevent vs detect per runtime.
+if python3 - "$PROFILE" <<'PY'
+import json, sys
+enforcement = json.load(open(sys.argv[1]))["enforcement"]
+by = {a["runtime"]: a["resolution"] for a in enforcement["adapters"]}
+assert by["codex"]["controls"]["fs.write"]["enforcement_kind"] == "prevent"
+assert by["generic"]["controls"]["fs.write"]["enforcement_kind"] == "detect"
+assert enforcement["required_controls"] == ["fs.write"]
+assert enforcement["assurance"] == "detect"  # primary runtime is generic
+PY
+then
+  ok "resolver manifest reports prevent vs detect per runtime"
+else
+  bad "resolver manifest is missing or dishonest"
+fi
+
+# FAIL CLOSED: a required control the runtime cannot enforce must stop the gate.
+# NB: capture-then-assert — under `set -o pipefail` a failing producer would sink
+# the whole pipeline even when grep matched, hiding the very behaviour under test.
+set +e
+FC_OUT="$(
+  cd "$TMP_REPO" &&
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
+    --task tasks/T-20260602-golden.md --out .fc/p.yaml \
+    --runtime generic --require net.egress 2>&1
+)"
+FC_RC=$?
+set -e
+if [ "$FC_RC" -ne 0 ] && grep -q 'cannot enforce required control' <<<"$FC_OUT"; then
+  ok "unenforced required control fails the gate closed"
+else
+  bad "gate did not fail closed on an unenforced required control: $FC_OUT"
+fi
+
+# …and a runtime that CAN enforce it passes, proving the check discriminates.
+set +e
+FC_OK="$(
+  cd "$TMP_REPO" &&
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
+    --task tasks/T-20260602-golden.md --out .fc/ok.yaml \
+    --runtime codex --require net.egress 2>&1
+)"
+FC_OK_RC=$?
+set -e
+if [ "$FC_OK_RC" -eq 0 ] && grep -q '^CHECK_RUNTIME_CONTRACT=PASS$' <<<"$FC_OK"; then
+  ok "a runtime that enforces the control passes (check discriminates)"
+else
+  bad "codex should enforce net.egress but the gate refused: $FC_OK"
+fi
+
+# An explicit waiver is the only other way through, and it is recorded.
+set +e
+FC_W="$(
+  cd "$TMP_REPO" &&
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
+    --task tasks/T-20260602-golden.md --out .fc/w.yaml \
+    --runtime generic --require net.egress --accept-unenforced net.egress 2>&1
+)"
+FC_W_RC=$?
+set -e
+if [ "$FC_W_RC" -eq 0 ] \
+  && grep -q '^CHECK_RUNTIME_CONTRACT=PASS$' <<<"$FC_W" \
+  && python3 - "$TMP_REPO/.fc/w.yaml" <<'PY2'
+import json, sys
+e = json.load(open(sys.argv[1]))["enforcement"]
+assert e["unenforced_waivers"] == ["net.egress"], e
+assert e["assurance"] == "unenforced", e
+PY2
+then
+  ok "an unenforced control passes only with an audited waiver"
+else
+  bad "waiver path did not record the accepted risk: $FC_W"
+fi
+
+# The host attestation must return a machine verdict, never a guess.
+if python3 "$SKILL_DIR/scripts/attest-runtime.py" --runtime generic --json \
+  | grep -v '^DOCTOR_RUNTIME_CONTRACT=' \
+  | python3 -c "
+import json,sys
+a=json.load(sys.stdin)
+assert a['verdict'] in {'OK','DEGRADED','FAIL'}, a
+assert 'primitive' in a['isolation'] and 'available' in a['isolation']"; then
+  ok "runtime attestation probes the host and emits a machine verdict"
+else
+  bad "runtime attestation failed"
 fi
 
 printf '\n'

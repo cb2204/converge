@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from _runtime_contract import (
+    CLOSURE_EVENTS,
     ContractError,
     SCHEMA,
+    authority_epoch,
     do_not_touch,
     load_profile,
     parse_frontmatter,
@@ -22,6 +25,7 @@ from _runtime_contract import (
     task_paths,
     unresolved_placeholder,
     validate_topology,
+    weakest_link,
 )
 
 
@@ -138,6 +142,83 @@ def main() -> int:
                     findings.append(f"adapter contains unresolved placeholder: {entry.get('path')}")
             except (ContractError, KeyError, OSError, json.JSONDecodeError) as exc:
                 findings.append(f"invalid adapter entry: {exc}")
+
+        # --- The capability envelope: authority must be epoch-bound and closed.
+        authority = profile.get("authority", {})
+        if not authority:
+            findings.append("profile declares no capability envelope (authority block)")
+        else:
+            expected_epoch = authority_epoch(str(profile.get("task", {}).get("id", "")), actual)
+            if authority.get("epoch") != expected_epoch:
+                findings.append(
+                    "authority epoch does not match the signed spec revision "
+                    f"({authority.get('epoch')} != {expected_epoch}) — re-bind to mint a new epoch"
+                )
+            closure = authority.get("closure", {})
+            if closure.get("revocation_is_mandatory") is not True:
+                findings.append("capability closure is not mandatory — authority would linger")
+            missing_events = sorted(set(CLOSURE_EVENTS) - set(closure.get("revoke_on", [])))
+            if missing_events:
+                findings.append(
+                    f"closure does not revoke on: {', '.join(missing_events)}"
+                )
+            granted_write = next(
+                (g for g in authority.get("grants", []) if g.get("capability") == "fs.write"),
+                None,
+            )
+            if not granted_write:
+                findings.append("capability envelope grants no fs.write scope")
+            elif sorted(granted_write.get("scope", [])) != sorted(allowed):
+                findings.append(
+                    "fs.write grant drifted from the Task-Spec's declared scope — re-bind"
+                )
+
+        # --- The resolver manifest: no adapter may weaken a required control silently.
+        needed = enforcement.get("required_controls") or []
+        primary = enforcement.get("primary_runtime")
+        waived = set(enforcement.get("unenforced_waivers") or [])
+        if not needed:
+            findings.append("enforcement declares no required controls")
+        if not primary:
+            findings.append("enforcement declares no primary runtime")
+        else:
+            resolution = next(
+                (
+                    e.get("resolution")
+                    for e in adapter_entries
+                    if e.get("runtime") == primary
+                ),
+                None,
+            )
+            if not resolution:
+                findings.append(
+                    f"primary runtime '{primary}' has no resolver manifest"
+                )
+            else:
+                unenforced = [
+                    cap
+                    for cap in resolution.get("unenforced_required", [])
+                    if cap not in waived
+                ]
+                if unenforced:
+                    findings.append(
+                        f"runtime '{primary}' cannot enforce required control(s): "
+                        f"{', '.join(unenforced)} — select a runtime that can, drop the "
+                        f"requirement, or waive it explicitly with --accept-unenforced"
+                    )
+                declared = enforcement.get("assurance")
+                computed = weakest_link([resolution])
+                if declared != computed:
+                    findings.append(
+                        f"assurance claim is dishonest: profile says '{declared}', "
+                        f"resolver proves '{computed}'"
+                    )
+                for cap in waived:
+                    print(
+                        f"WAIVED: '{cap}' is required but unenforced on '{primary}' "
+                        "— accepted by explicit operator approval",
+                        file=sys.stderr,
+                    )
 
         generated = profile.get("generated", {})
         if generated.get("by") != "task-to-runtime-contract":

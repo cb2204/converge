@@ -12,17 +12,22 @@ from _runtime_contract import (
     ContractError,
     SCHEMA,
     VERSION,
+    build_authority,
     cited_adrs,
+    do_not_touch,
     evidence_entry,
     parse_frontmatter,
     parse_worker,
     relpath,
+    required_controls,
+    resolve_adapter,
     resolve_inside_repo,
     resolve_repo,
     run_signoff_gate,
     sha256_file,
     task_paths,
     validate_topology,
+    weakest_link,
 )
 
 
@@ -61,6 +66,25 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--adapter", action="append", default=[])
     value.add_argument("--supervised", action="store_true")
     value.add_argument("--dry-run", action="store_true")
+    value.add_argument(
+        "--runtime",
+        default="generic",
+        help="the runtime that must actually honor the contract (default: generic)",
+    )
+    value.add_argument(
+        "--require",
+        action="append",
+        default=[],
+        metavar="CAPABILITY",
+        help="a capability whose enforcement is mandatory; unenforced => gate FAILS closed",
+    )
+    value.add_argument(
+        "--accept-unenforced",
+        action="append",
+        default=[],
+        metavar="CAPABILITY",
+        help="explicitly waive a required capability the runtime cannot enforce (audited)",
+    )
     return value
 
 
@@ -192,11 +216,39 @@ def main() -> int:
         if isinstance(requires, dict) and requires.get("network"):
             network = str(requires["network"])
 
+        # The capability envelope: the Task-Spec's declared scope compiled into
+        # epoch-bound authority that CLOSES when the task settles.
+        spec_sha = sha256_file(task)
+        forbidden = do_not_touch(body)
+        authority = build_authority(
+            task_id=task_id,
+            spec_sha256=spec_sha,
+            allowed=allowed,
+            forbidden=forbidden,
+            network=network,
+            external_writes="deny",
+        )
+        needed = required_controls(args.require)
+        denied_caps = [
+            str(g["capability"]) for g in authority["grants"] if not g.get("granted")
+        ]
+        # Resolver manifests — per runtime, what is PREVENTED vs only DETECTED vs
+        # ignored. An ignored required control makes the adapter fail closed.
+        for entry in adapter_entries:
+            entry["resolution"] = resolve_adapter(entry["runtime"], needed, denied_caps)
+        resolutions = [entry["resolution"] for entry in adapter_entries]
+        if args.runtime not in {e["runtime"] for e in adapter_entries}:
+            raise ContractError(
+                f"--runtime {args.runtime} has no emitted adapter "
+                f"(emitted: {', '.join(sorted(e['runtime'] for e in adapter_entries))})"
+            )
+        waivers = sorted({str(w).strip() for w in args.accept_unenforced if str(w).strip()})
+
         profile = {
             "schema": SCHEMA,
             "task": {
                 "id": task_id,
-                "spec_ref": {"path": relpath(task, repo), "sha256": sha256_file(task)},
+                "spec_ref": {"path": relpath(task, repo), "sha256": spec_sha},
                 "authorization": {
                     "signed_off": True,
                     "trust_tier": tier,
@@ -246,12 +298,21 @@ def main() -> int:
                     "action": "pause_and_rebind_or_request_approval",
                 },
             },
+            "authority": authority,
             "enforcement": {
                 "path_policy_source": "task_spec",
                 "candidate_guard": "skills/task-to-runtime-contract/scripts/check-path-policy.py",
                 "tool_input_guard": "skills/task-to-runtime-contract/scripts/guard-tool-input.py",
                 "receipt_writer": "skills/task-to-runtime-contract/scripts/write-execution-receipt.py",
                 "portable_postflight_required": True,
+                "required_controls": needed,
+                "primary_runtime": args.runtime,
+                # The honest headline: the strongest claim the WEAKEST required
+                # control supports on the PRIMARY runtime.
+                "assurance": weakest_link(
+                    [e["resolution"] for e in adapter_entries if e["runtime"] == args.runtime]
+                ),
+                "unenforced_waivers": waivers,
                 "adapters": adapter_entries,
             },
             "knowledge": {

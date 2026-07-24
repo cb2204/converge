@@ -1,6 +1,6 @@
 ---
 name: idea-to-brd
-description: Converge Pass 0 (Capture) — optional, like Register ①. Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a client BRD already exists (enter at Pass 1, brd-docs-to-tech-req) or to write a tech-spec (that IS Pass 1).
+description: Converge Pass 0 (Capture) — optional, like Register (Pass 6). Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a BRD exists (enter at Pass 1) or to write a tech-spec (that IS Pass 1).
 metadata:
   version: "0.6.0"
   compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
@@ -10,7 +10,7 @@ metadata:
 
 > **Identity:** The capture pass — makes a raw idea articulate as a brief, in the owner's voice.
 > **Domain:** Idea capture, stakeholder interrogation, problem articulation — one rung above Pass 1.
-> **Converge Pass:** 0 of 8 — Capture. **Optional**, like Register ①: client work with a real brief enters at Pass 1 directly; take this pass only when no BRD exists.
+> **Converge Pass:** 0 of 8 — Capture. **Optional**, like Register (Pass 6): client work with a real brief enters at Pass 1 directly; take this pass only when no BRD exists.
 > **Engine/flags:** conversational capture (default: the current session). Output format via `--out-format`. No tracker.
 
 Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has landed (`docs/brd-*.pdf|md`) — but internal projects, founder ideas, and "I have this thing in my head" moments have no client BRD. Without this pass, the temptation is to write the tech-spec directly and skip the brief, which blurs the exact boundary Pass 1 protects (*brief-in, spec-out — never blur them*). Pass 0 produces the missing brief: the pain, the goals, the owner's own numbers — and stops there.
@@ -175,7 +175,7 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 ## Notes
 
 - **Why a separate pass, not a Pass 1 mode.** Pass 0 and Pass 1 both interrogate, but they ask different questions: Pass 0 asks the *stakeholder's* (what hurts, what does it cost), Pass 1 asks the *engineer's* (definition of done, soft numbers made measurable, failure expectations). Collapsing them produces a document that is neither a clean brief nor a falsifiable spec — the exact blur Pass 1's first rule forbids.
-- **Optional by design.** Like Register ①, this pass is taken only when its precondition holds (no BRD exists). The spine's numbering and story are unchanged; client engagements never see this pass.
+- **Optional by design.** Like Register (Pass 6), this pass is taken only when its precondition holds (no BRD exists). The spine's numbering and story are unchanged; client engagements never see this pass.
 - **Provenance of the rounds protocol.** The frontier-rounds grill adapts Matt Pocock's `batch-grill-me` skill (github.com/mattpocock/skills): the design tree, the per-round frontier, and facts-never-block-the-round are his; Pass 0 adds the fixed branch map, the no-go exit, provenance tags, and the gate.
 
 ## Handoff

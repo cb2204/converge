@@ -10,7 +10,7 @@
 | `parallel` | Two or more write partitions are provably disjoint | multiple scoped writers + read-only verifier |
 
 Runtime evidence such as repeated eval failures, unexpected dependencies, or
-context pressure cannot justify the initial Pass 6 decision because it has not
+context pressure cannot justify the initial Pass 7 decision because it has not
 happened yet. The profile records those as permitted Pass 8 escalation signals.
 
 ## Capability classes
