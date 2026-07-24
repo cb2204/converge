@@ -20,6 +20,15 @@
 #
 # Dependency edges use Jira issue links of type "Blocks": the dependency issue
 # "blocks" the dependent, which Jira surfaces as "is blocked by" on the dependent.
+#
+# PROJECTION (Linear-only) verbs degrade to NO-OPS here — project-ensure /
+# milestone-ensure / initiative-ensure / document echo a synthetic id and create
+# nothing; project-update and users do nothing. upsert also accepts-and-discards
+# the Linear projection flags (--assignee, --state, --subscriber, --project,
+# --milestone, --cycle, --parent, --sub-sort, --template, --use-default-template,
+# --sla). So a spec that projects into Linear still registers on a Jira board
+# unchanged. These no-ops need NO creds and are NOT behind the TSI_JIRA_ENABLE
+# write-gate, since they write nothing.
 
 set -euo pipefail
 
@@ -92,6 +101,21 @@ jira_upsert() {
       --due)      shift 2 ;;  # duedate is settable; not seeded until validated live
       --attr)     shift 2 ;;  # no rich attachment panel
       --spec-url) shift 2 ;;
+      # --- Linear projection args (T1/T2): accepted-and-discarded on Jira.
+      #     Portability guarantee — the enrichment degrades to nothing. Shift
+      #     widths MUST match linear.sh (every arg takes a value except the
+      #     bare --use-default-template flag), or the arg parse desyncs.
+      --assignee)             shift 2 ;;  # people-map -> Linear assignee; not seeded on Jira
+      --state)                shift 2 ;;  # register uses the runtime transition path instead
+      --subscriber)           shift 2 ;;  # repeatable; Jira watchers not seeded here
+      --project)              shift 2 ;;  # Linear project; distinct from JIRA_PROJECT_KEY
+      --milestone)            shift 2 ;;  # Linear project-milestone; no seeded equivalent
+      --cycle)                shift 2 ;;  # Linear cycle; no equivalent
+      --parent)               shift 2 ;;  # Linear sub-issue; Jira sub-tasks not seeded here
+      --sub-sort)             shift 2 ;;  # Linear subIssueSortOrder; no equivalent
+      --template)             shift 2 ;;  # Linear issue template; no equivalent
+      --use-default-template) shift   ;;  # bare flag (no value) — shift ONE
+      --sla)                  shift 2 ;;  # Linear SLA; no equivalent
       *) tsi_jira_die "upsert: unknown arg '$1'" ;;
     esac
   done
@@ -260,6 +284,45 @@ jira_write_result() {
 }
 
 # ---------------------------------------------------------------------------
+# PROJECTION verbs (T2/T3) — PORTABILITY NO-OPS
+# ---------------------------------------------------------------------------
+# The Linear adapter grows a projection surface (projects, milestones,
+# initiatives, documents, an append-only project-update health timeline, and a
+# people directory). None of it maps onto a Jira board, so here every verb
+# DEGRADES SILENTLY — accepts (and ignores) its args, echoes a clearly-fake id
+# when a caller captures one, and exits 0. Unlike the write verbs, these need
+# NO creds and are NOT behind TSI_JIRA_ENABLE: a no-op cannot half-register a
+# board, and the degrade must hold even when Jira is unconfigured.
+
+# Echo an obviously-fake id so a caller capturing stdout keeps working.
+_jira_noop_id() { printf 'jira-noop-%s\n' "$1"; }
+
+# project-ensure NAME | milestone-ensure PROJECT NAME | initiative-ensure NAME
+jira_ensure_noop() {
+  local kind="${1:-structure}"
+  echo "note: '${kind}-ensure' is a no-op on the jira backend (Linear structure projection degrades)" >&2
+  _jira_noop_id "$kind"
+}
+
+# document --title T --content-file F --project P
+jira_document_noop() {
+  echo "note: 'document' is a no-op on the jira backend (Linear document projection degrades)" >&2
+  _jira_noop_id document
+}
+
+# project-update --project P --pass-rate N --total T
+jira_project_update_noop() {
+  echo "note: 'project-update' is a no-op on the jira backend (Linear health projection degrades)" >&2
+  return 0
+}
+
+# users  (people directory for `cvg setup people`) — no Linear directory here.
+jira_users_noop() {
+  echo "note: 'users' is a no-op on the jira backend (no Linear directory to enumerate)" >&2
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 _jira_main() {
@@ -271,10 +334,16 @@ _jira_main() {
     link)         jira_link "$@" ;;
     list-ready)   jira_list_ready "$@" ;;
     write-result) jira_write_result "$@" ;;
+    project-ensure)    jira_ensure_noop project "$@" ;;
+    milestone-ensure)  jira_ensure_noop milestone "$@" ;;
+    initiative-ensure) jira_ensure_noop initiative "$@" ;;
+    project-update)    jira_project_update_noop "$@" ;;
+    document)          jira_document_noop "$@" ;;
+    users)             jira_users_noop "$@" ;;
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_jira_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result)" ;;
+    *) tsi_jira_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
   esac
 }
 

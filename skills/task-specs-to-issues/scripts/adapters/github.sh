@@ -17,6 +17,16 @@
 #                                   — the LOOP's write side (Pass 8), not used at
 #                                     registration; comments + labels the issue
 #
+# PROJECTION (Linear-only) verbs degrade to NO-OPS here so a spec that projects
+# into Linear still registers on GitHub unchanged:
+#   project-ensure / milestone-ensure / initiative-ensure / document
+#                                   — echo a synthetic id; create nothing
+#   project-update                  — Linear health timeline post; nothing to do
+#   users                           — people directory; empty (GitHub has none)
+# upsert also accepts-and-discards the Linear projection flags (--assignee,
+# --state, --subscriber, --project, --milestone, --cycle, --parent, --sub-sort,
+# --template, --use-default-template, --sla).
+#
 # Idempotency key: an HTML marker `<!-- task-spec: ID -->` embedded in the issue
 # body, plus a `task-spec` label. Lookup greps the marker so a re-run updates in
 # place instead of creating a duplicate. See references/idempotency-keys.md.
@@ -94,6 +104,22 @@ gh_upsert() {
       --due)       shift 2 ;;  # no native due date on an issue
       --attr)      shift 2 ;;  # no rich attachment panel
       --spec-url)  shift 2 ;;
+      # --- Linear projection args (T1/T2): accepted-and-discarded on GitHub.
+      #     Portability guarantee — a spec that projects into Linear still
+      #     registers here; the enrichment just degrades to nothing. Shift
+      #     widths MUST match linear.sh (every arg takes a value except the
+      #     bare --use-default-template flag), or the arg parse desyncs.
+      --assignee)             shift 2 ;;  # people-map -> Linear assignee; no seeded gh assignee
+      --state)                shift 2 ;;  # no pre-open workflow state on a fresh issue
+      --subscriber)           shift 2 ;;  # repeatable; GitHub has no subscriber seeding
+      --project)              shift 2 ;;  # Linear project; GitHub Projects v2 not wired
+      --milestone)            shift 2 ;;  # Linear project-milestone; not seeded
+      --cycle)                shift 2 ;;  # Linear cycle; no GitHub equivalent
+      --parent)               shift 2 ;;  # Linear sub-issue; GitHub uses task-list links (see link)
+      --sub-sort)             shift 2 ;;  # Linear subIssueSortOrder; no equivalent
+      --template)             shift 2 ;;  # Linear issue template; no equivalent
+      --use-default-template) shift   ;;  # bare flag (no value) — shift ONE
+      --sla)                  shift 2 ;;  # Linear SLA (paid plan); no equivalent
       *) tsi_gh_die "upsert: unknown arg '$1'" ;;
     esac
   done
@@ -249,6 +275,49 @@ gh_write_result() {
 }
 
 # ---------------------------------------------------------------------------
+# PROJECTION verbs (T2/T3) — PORTABILITY NO-OPS
+# ---------------------------------------------------------------------------
+# The Linear adapter grows a projection surface: structure (projects,
+# milestones, initiatives), documents, an append-only project-update health
+# timeline, and a people directory for `cvg setup people`. None of these map
+# onto GitHub Issues, so here they DEGRADE SILENTLY — each verb accepts (and
+# ignores) its arguments, echoes a clearly-synthetic id when a caller captures
+# one, and exits 0. This is the portability guarantee: a spec that projects
+# into Linear registers unchanged on GitHub, minus the Linear-only enrichment.
+# These verbs deliberately require NO tools and NO auth, so the degrade holds
+# even on a host without `gh`.
+
+# Echo an obviously-fake id so a caller that captures stdout keeps working; the
+# kind keeps the token self-describing in logs.
+_gh_noop_id() { printf 'gh-noop-%s\n' "$1"; }
+
+# project-ensure NAME | milestone-ensure PROJECT NAME | initiative-ensure NAME
+gh_ensure_noop() {
+  local kind="${1:-structure}"
+  echo "note: '${kind}-ensure' is a no-op on the github backend (Linear structure projection degrades)" >&2
+  _gh_noop_id "$kind"
+}
+
+# document --title T --content-file F --project P  (ensure-by-title on Linear)
+gh_document_noop() {
+  echo "note: 'document' is a no-op on the github backend (Linear document projection degrades)" >&2
+  _gh_noop_id document
+}
+
+# project-update --project P --pass-rate N --total T  (health post on Linear)
+gh_project_update_noop() {
+  echo "note: 'project-update' is a no-op on the github backend (Linear health projection degrades)" >&2
+  return 0
+}
+
+# users  (people directory for `cvg setup people`) — GitHub has no Linear
+# directory to enumerate, so emit an EMPTY list; setup then reports NEEDS_MAP.
+gh_users_noop() {
+  echo "note: 'users' is a no-op on the github backend (no Linear directory to enumerate)" >&2
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 _gh_main() {
@@ -260,10 +329,16 @@ _gh_main() {
     link)         gh_link "$@" ;;
     list-ready)   gh_list_ready "$@" ;;
     write-result) gh_write_result "$@" ;;
+    project-ensure)    gh_ensure_noop project "$@" ;;
+    milestone-ensure)  gh_ensure_noop milestone "$@" ;;
+    initiative-ensure) gh_ensure_noop initiative "$@" ;;
+    project-update)    gh_project_update_noop "$@" ;;
+    document)          gh_document_noop "$@" ;;
+    users)             gh_users_noop "$@" ;;
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_gh_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result)" ;;
+    *) tsi_gh_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|project-ensure|milestone-ensure|initiative-ensure|project-update|document|users)" ;;
   esac
 }
 

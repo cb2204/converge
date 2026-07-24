@@ -34,6 +34,10 @@ set -euo pipefail
 
 LINEAR_API_URL="${LINEAR_API_URL:-https://api.linear.app/graphql}"
 
+# Directory of this adapter, for sourcing its function-only tier companions (below,
+# just before dispatch — after the core helpers they lean on are defined).
+_LN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 tsi_ln_die() { echo "ERROR (linear adapter): $*" >&2; exit 1; }
 
 _ln_require_tools() {
@@ -257,6 +261,19 @@ ln_teams() {
 }
 
 # ---------------------------------------------------------------------------
+# VERB: users — list workspace users as  id<TAB>name<TAB>email  (setup people).
+# ---------------------------------------------------------------------------
+# Backs `cvg setup people --list`: the human maps an execution_backend/agent CHOICE
+# to one of these emails. Read-only; never writes. Empty email prints blank.
+ln_users() {
+  _ln_require_tools
+  [[ -n "${LINEAR_API_KEY:-}" ]] || tsi_ln_die "LINEAR_API_KEY unset"
+  local resp
+  resp="$(_linear_gql 'query{ users(filter:{ active:{ eq:true } }){ nodes{ id name email } } }' '{}')"
+  printf '%s' "$resp" | jq -r '.data.users.nodes[]? | "\(.id)\t\(.name)\t\(.email // "")"'
+}
+
+# ---------------------------------------------------------------------------
 # VERB: preflight — key present AND the team resolves (a live auth check).
 # ---------------------------------------------------------------------------
 ln_preflight() {
@@ -300,6 +317,80 @@ _ln_find_by_external_id() {
 }
 
 # ---------------------------------------------------------------------------
+# Isolated, fail-soft setters for OPTIONAL projection fields — each in its OWN
+# mutation so a scalar/plan/depth surprise on an optional field can never take a
+# whole registration down (mirrors _ln_set_due). Applied AFTER the core
+# create/update so the proven title/labels/estimate path is never at risk.
+# ---------------------------------------------------------------------------
+# _ln_set_parent ISSUE_UUID PARENT_UUID [SORT] — nest ISSUE under PARENT. The
+# one-level-deep guard (_ln_parent_depth_ok) is enforced by the CALLER before
+# this runs; here it is a fail-soft apply.
+_ln_set_parent() {
+  local issue="$1" parent="$2" sort="${3:-}" input
+  [ -n "$issue" ] && [ -n "$parent" ] || return 0
+  input="$(jq -n --arg p "$parent" --arg s "$sort" \
+    '{parentId:$p} + (if $s=="" then {} else {subIssueSortOrder:($s|tonumber? // 0)} end)' 2>/dev/null)" || return 0
+  _linear_gql \
+    'mutation($id:String!,$in:IssueUpdateInput!){ issueUpdate(id:$id, input:$in){ success } }' \
+    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')" >/dev/null 2>&1 || true
+  return 0
+}
+
+# _ln_set_sla ISSUE_UUID SLA — set slaType in an isolated fail-soft call (a
+# paid-plan feature; a rejection must not abort the registration).
+_ln_set_sla() {
+  local issue="$1" sla="$2"
+  [ -n "$issue" ] && [ -n "$sla" ] && [ "$sla" != "(none)" ] || return 0
+  _linear_gql \
+    'mutation($id:String!,$s:SLADayCountType){ issueUpdate(id:$id, input:{ slaType:$s }){ success } }' \
+    "$(jq -n --arg id "$issue" --arg s "$sla" '{id:$id,s:$s}')" >/dev/null 2>&1 || true
+  return 0
+}
+
+# _ln_resolve_subscribers "v1 v2 ..." — resolve each value to a user uuid (via the
+# native _ln_resolve_user), echo a JSON array (empty []). For the CREATE branch,
+# where there is no issue yet to union against.
+_ln_resolve_subscribers() {
+  local vals="$1" v uid out=""
+  for v in $vals; do
+    uid="$(_ln_resolve_user "$v" || true)"
+    if [ -n "$uid" ]; then out="${out}${out:+ }${uid}"; fi
+  done
+  [ -n "$out" ] || { printf '[]'; return 0; }
+  printf '%s\n' $out | jq -R . | jq -s -c .
+}
+
+# _ln_apply_input ISSUE_UUID INPUT_JSON — apply an arbitrary IssueUpdateInput in
+# ONE isolated, fail-soft issueUpdate, AFTER the core write. A bad optional field
+# (unknown enum, stale id, paid-plan-only) degrades to nothing instead of taking
+# the registration down — same contract as _ln_set_due/_ln_set_parent/_ln_set_sla.
+# A '{}' / empty input is a no-op. Never returns nonzero.
+_ln_apply_input() {
+  local issue="$1" input="${2:-}"
+  [ -n "$issue" ] || return 0
+  [ -n "$input" ] && [ "$input" != "{}" ] || return 0
+  _linear_gql \
+    'mutation($id:String!,$in:IssueUpdateInput!){ issueUpdate(id:$id, input:$in){ success } }' \
+    "$(jq -n --arg id "$issue" --argjson in "$input" '{id:$id,in:$in}')" >/dev/null 2>&1 || true
+  return 0
+}
+
+# _ln_apply_parent_guarded ISSUE PARENT_SPEC [SORT] — resolve the parent SPEC id to
+# its issue, enforce Linear's one-level-deep rule, then fail-soft apply. The depth
+# violation is the ONE deliberate HARD stop (a >1 nest is a spec bug, not a cosmetic
+# miss, so it must not half-write); a not-yet-registered parent is a fail-soft skip.
+_ln_apply_parent_guarded() {
+  local issue="$1" pspec="${2:-}" sort="${3:-}" puuid
+  [ -n "$issue" ] && [ -n "$pspec" ] || return 0
+  puuid="$(_ln_parent_ref "$pspec" 2>/dev/null || true)"
+  [ -n "$puuid" ] || return 0   # parent not on the board yet — skip (fail-soft)
+  if ! _ln_parent_depth_ok "$puuid"; then
+    tsi_ln_die "projection.parent '$pspec' is itself a sub-issue — Linear nests one level only (re-point it at a top-level issue)"
+  fi
+  _ln_set_parent "$issue" "$puuid" "$sort"
+}
+
+# ---------------------------------------------------------------------------
 # VERB: upsert --id ID --title T --body-file F [--label L ...]
 # ---------------------------------------------------------------------------
 # Find-by-externalId then update, else create. Echoes the issue node id.
@@ -307,6 +398,7 @@ ln_upsert() {
   _ln_require_tools
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
   local id="" title="" body_file="" labels="" prio="" effort="" due="" attrs="" specurl=""
+  local assignee="" state="" subscribers="" project="" milestone="" cycle="" parent="" subsort="" template="" usedefault=0 sla=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --id)        id="$2"; shift 2 ;;
@@ -318,9 +410,30 @@ ln_upsert() {
       --due)       due="$2"; shift 2 ;;
       --attr)      attrs="${attrs}${attrs:+$'\n'}$2"; shift 2 ;;   # "Name=Value"
       --spec-url)  specurl="$2"; shift 2 ;;
+      # T1 native fields — assignee/state seed-once, subscribers union-merged:
+      --assignee)   assignee="$2"; shift 2 ;;
+      --state)      state="$2"; shift 2 ;;
+      --subscriber) subscribers="${subscribers}${subscribers:+ }$2"; shift 2 ;;
+      # T2 projection: block — placement re-synced; parent is one level deep:
+      --project)    project="$2"; shift 2 ;;
+      --milestone)  milestone="$2"; shift 2 ;;
+      --cycle)      cycle="$2"; shift 2 ;;
+      --parent)     parent="$2"; shift 2 ;;
+      --sub-sort)   subsort="$2"; shift 2 ;;
+      --template)   template="$2"; shift 2 ;;
+      --use-default-template) usedefault=1; shift ;;
+      --sla)        sla="$2"; shift 2 ;;
       *) tsi_ln_die "upsert: unknown arg '$1'" ;;
     esac
   done
+  # template / use_default_template are ACCEPTED for projection portability but NOT
+  # yet applied on Linear: a templateId must be set at issueCreate time and needs a
+  # name→id resolver this tier does not ship. Note it once (never silently drop) so a
+  # spec author knows the field was a no-op here — same honesty as the github/jira
+  # degrade. Referencing them here also keeps them from reading as dead locals.
+  if [ -n "$template" ] || [ "$usedefault" -eq 1 ]; then
+    echo "note: projection 'template' is accepted but not yet applied on the linear backend (deferred — no template resolver)" >&2
+  fi
   # Build the rich-marker attribute list once: [{name,value}, …] for Linear's modal.
   local attrs_json
   attrs_json="$(printf '%s' "$attrs" | jq -R -s -c \
@@ -358,6 +471,23 @@ ln_upsert() {
     _ln_set_due "$existing" "$due"
     # Refresh the marker so its panel tracks the spec (same url ⇒ update, not a dupe).
     _ln_stamp_marker "$existing" "$id" "$attrs_json" "$specurl"
+    # Re-synced projection on UPDATE: placement (project/milestone/cycle) tracks the
+    # spec, and subscribers UNION-merge so a human's own subscriber is never dropped.
+    # assignee/state/priority are NOT re-sent — they are seed-once, the board owns
+    # them after create. Applied via the isolated fail-soft applier, never the core.
+    local u_subs="[]" u_cyc u_input
+    [ -n "$subscribers" ] && u_subs="$(_ln_merge_subscribers "$existing" "$subscribers" 2>/dev/null || printf '[]')"
+    u_cyc="$(_ln_cycle_id "$cycle" 2>/dev/null || true)"
+    u_input="$(jq -n --argjson subs "${u_subs:-[]}" --arg proj "$project" --arg mile "$milestone" --arg cyc "$u_cyc" '
+      {}
+      + (if ($subs|length) > 0 then {subscriberIds:$subs} else {} end)
+      + (if $proj != "" then {projectId:$proj}          else {} end)
+      + (if $mile != "" then {projectMilestoneId:$mile} else {} end)
+      + (if $cyc  != "" then {cycleId:$cyc}             else {} end)
+    ' 2>/dev/null)" || u_input="{}"
+    _ln_apply_input "$existing" "$u_input"
+    _ln_apply_parent_guarded "$existing" "$parent" "$subsort"
+    _ln_set_sla "$existing" "$sla"
     echo "updated $ident ($id)" >&2
     echo "$ident"
   else
@@ -378,6 +508,29 @@ ln_upsert() {
     # creating a second one. Without this attachment the projection is not idempotent.
     _ln_set_due "$new_uuid" "$due"
     _ln_stamp_marker "$new_uuid" "$id" "$attrs_json" "$specurl"
+    # Optional projection enrichment — applied AFTER the proven create, each in an
+    # isolated fail-soft mutation so a surprise on an optional field never aborts a
+    # registration. assignee + state are SEED-ONCE (create only); subscribers seed
+    # fresh here (nothing to union yet). project/milestone arrive as resolved UUIDs
+    # from the driver's structure pre-pass; cycle resolves here from a human ref.
+    local c_ass c_state c_subs="[]" c_cyc c_input
+    c_ass="$(_ln_resolve_user "$(_ln_people_map_lookup "$assignee")" 2>/dev/null || true)"
+    c_state="$(_ln_state_id "$state" 2>/dev/null || true)"
+    [ -n "$subscribers" ] && c_subs="$(_ln_resolve_subscribers "$subscribers" 2>/dev/null || printf '[]')"
+    c_cyc="$(_ln_cycle_id "$cycle" 2>/dev/null || true)"
+    c_input="$(jq -n --arg ass "$c_ass" --arg st "$c_state" --argjson subs "${c_subs:-[]}" \
+                     --arg proj "$project" --arg mile "$milestone" --arg cyc "$c_cyc" '
+      {}
+      + (if $ass  != "" then {assigneeId:$ass}          else {} end)
+      + (if $st   != "" then {stateId:$st}              else {} end)
+      + (if ($subs|length) > 0 then {subscriberIds:$subs} else {} end)
+      + (if $proj != "" then {projectId:$proj}          else {} end)
+      + (if $mile != "" then {projectMilestoneId:$mile} else {} end)
+      + (if $cyc  != "" then {cycleId:$cyc}             else {} end)
+    ' 2>/dev/null)" || c_input="{}"
+    _ln_apply_input "$new_uuid" "$c_input"
+    _ln_apply_parent_guarded "$new_uuid" "$parent" "$subsort"
+    _ln_set_sla "$new_uuid" "$sla"
     new="${new_ident:-$new_uuid}"
     echo "created $new ($id)" >&2
     echo "$new"
@@ -499,13 +652,25 @@ ln_write_result() {
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Tier companions — function-only files sourced behind an existence guard, AFTER
+# the core transport + verbs above (so each may lean on _linear_gql / tsi_ln_die /
+# _ln_is_uuid / _ln_find_by_external_id) and BEFORE dispatch below. They add ONLY
+# functions — no dispatch, no network at source time. The T4 agents file that ships
+# as `.scaffold` is deliberately NOT here: it stays dark until promoted (see
+# references/agents-api-scaffold.md).
+# ---------------------------------------------------------------------------
+[ -f "$_LN_DIR/linear-native.sh" ]     && . "$_LN_DIR/linear-native.sh"
+[ -f "$_LN_DIR/linear-projection.sh" ] && . "$_LN_DIR/linear-projection.sh"
+[ -f "$_LN_DIR/linear-structure.sh" ]  && . "$_LN_DIR/linear-structure.sh"
+
 _ln_main() {
   local verb="${1:-}"
   [[ $# -gt 0 ]] && shift || true
   # Resolve a team KEY (e.g. CVG) to its UUID for the verbs that need a team, so a
   # human can pass the key straight from the Linear URL. A UUID passes through.
   case "$verb" in
-    preflight|upsert|link|list-ready|write-result)
+    preflight|upsert|link|list-ready|write-result|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)
       if [[ -n "${LINEAR_TEAM_ID:-}" ]] && ! _ln_is_uuid "$LINEAR_TEAM_ID"; then
         local _r; _r="$(_ln_resolve_team_id 2>/dev/null || true)"
         [[ -n "$_r" ]] && LINEAR_TEAM_ID="$_r"
@@ -520,10 +685,16 @@ _ln_main() {
     write-result) ln_write_result "$@" ;;
     teams)        ln_teams "$@" ;;
     resolve-team) _ln_resolve_team_id ;;
+    users)             ln_users "$@" ;;
+    project-ensure)    ln_project_ensure "$@" ;;
+    milestone-ensure)  ln_milestone_ensure "$@" ;;
+    initiative-ensure) ln_initiative_ensure "$@" ;;
+    project-update)    ln_project_update "$@" ;;
+    document)          ln_document "$@" ;;
     ""|-h|--help)
       grep -E '^#( |$)' "$0" | sed -E 's/^# ?//'
       ;;
-    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|teams|resolve-team)" ;;
+    *) tsi_ln_die "unknown verb '$verb' (want: preflight|upsert|link|list-ready|write-result|teams|resolve-team|users|project-ensure|milestone-ensure|initiative-ensure|project-update|document)" ;;
   esac
 }
 
