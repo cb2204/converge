@@ -5,12 +5,11 @@
 > tracks, the backlog, parked items, and the log. Assume no prior conversation —
 > read §1 → §2 → the rules, then work.
 >
-> ⚠️ **Snapshot at 2026-07-24 15:18 — a parallel restructure was in flight when
-> this was written** (the cvg home was growing brain→docs→sketch→tasks→execution
-> →knowledge→receipts; skill wording, `bin/cvg`, and several SKILLs were mid-edit).
-> The three source files are **not yet deleted** because that session was editing
-> all three live; retire them to stubs pointing here once it settles. Verify
-> folder/skill/count details against the live tree before relying on them.
+> ✅ **2026-07-24 — the migration landed.** `MAP.md` / `todo.md` / `cvg-todo.md`
+> are now **redirect stubs** pointing here. `readme.md` + `skills/README.md` are
+> rewritten to the fork-less 0–8 model. **Skills = 12** (`plans-to-coherent-spec`
+> + `stack-to-harness` deleted). `docs/` pruned to v5 + task-spec. Root `tasks/` +
+> `temp/` + `tmp/` cleared.
 >
 > Older task-specs carry `source_note: cvg-todo.md`. That is **historical
 > provenance and stays valid** — this file is its continuation.
@@ -67,9 +66,9 @@ PHASE 2 · BUILD — machine-led · the dark factory
 | 7 | Bind *(+harness emit)* | `task-to-runtime-contract` | per-task contract + multi-engine harness · `CHECK_RUNTIME_CONTRACT` |
 | 8 | Loop ↺ | `task-loop` | green-eval PR closes the issue → frontier advances |
 
-**Skills = 13:** 9 spine (above) · 2 utils (`pass-to-lesson`, `skill-creator`) ·
-2 legacy (`stack-to-harness`; `agents-kbs-tech-stack` — the harness donor,
-partly reabsorbed into Bind). **`plans-to-coherent-spec` (old Fork A) is DELETED.**
+**Skills = 12:** 9 spine (above) · 2 utils (`pass-to-lesson`, `skill-creator`) ·
+1 legacy (`agents-kbs-tech-stack` — the harness donor for 7b). **DELETED:**
+`plans-to-coherent-spec` (old Fork A) + `stack-to-harness` (superseded by Bind).
 
 ### Phase 2 — machine-side, step by step
 
@@ -134,7 +133,7 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 | Looking for… | Go to |
 |---|---|
-| **The method** (14 skills, the chain, the fork) | [`skills/README.md`](skills/README.md) |
+| **The method** (12 skills, the chain, no fork) | [`skills/README.md`](skills/README.md) |
 | **The plan** (state, rules, tracks, backlog, log) | this file |
 | **The proving ground** (greenfield run, Pass 0 →) | [`tests/uc-analytics/`](tests/uc-analytics/) — its `CLAUDE.md` maps the inside |
 | **The machine fixture** (Track M test floor) | [`tests/e2e-test-engine/`](tests/e2e-test-engine/) |
@@ -142,13 +141,12 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 | **Design decks & demos** | [`presentation/`](presentation/) · [`docs/`](docs/) |
 | **The CLI** (`cvg` — router, UI layer, surface ledger) | [`bin/`](bin/) — its `README.md` records what exists and what proved it |
 | **The task-spec engine** (scripts the CLI wraps) | [`skills/task-spec/scripts/`](skills/task-spec/scripts/) |
-| **Scratch** (never load-bearing) | `temp/` |
 
 ---
 
 ## §1 · Where we are — 2026-07-24
 
-**`cvg` v0.16.0 · 14 skills installed · Track R is at the Loop's doorstep.**
+**`cvg` v0.16.0 · 12 skills · Track R is at the Loop's doorstep.**
 
 The descent is validated end-to-end from a raw idea to a live tracker board:
 

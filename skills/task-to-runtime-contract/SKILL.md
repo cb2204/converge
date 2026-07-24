@@ -1,6 +1,6 @@
 ---
 name: task-to-runtime-contract
-description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract. Use for Pass 6 · Bind, before a Manager dispatches a task or task-loop executes it, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests, pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy stack-to-harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
+description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract. Use for Pass 6 · Bind, before a Manager dispatches a task or task-loop executes it, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests, pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy standing-agent-fleet harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
 metadata:
   version: "1.0.0"
 ---

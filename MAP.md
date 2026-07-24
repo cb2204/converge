@@ -1,18 +1,7 @@
-# MAP — where do I look for X?
+# MAP — moved into PLAN.md
 
-One page, ten lines. If a thing exists in this repo, one of these lines
-points at it. (P-2's first deliverable; the full knowledge-home convention
-comes later.)
+Consolidated 2026-07-24. The "where do I look for X?" table now lives in
+**[PLAN.md](PLAN.md) §0**, alongside current state, the rules, both tracks, the
+backlog, and the progress log.
 
-| Looking for… | Go to |
-|---|---|
-| **The method** (active chain + legacy migration skills, the fork) | [`skills/README.md`](skills/README.md) |
-| **The build contract** (Track R/M, rules, parked items, progress log) | [`cvg-todo.md`](cvg-todo.md) |
-| **The method backlog** (B-1…B-14) | [`todo.md`](todo.md) |
-| **The proving ground** (greenfield run, Pass 0 →) | [`tests/uc-analytics/`](tests/uc-analytics/) — its `CLAUDE.md` maps the inside |
-| **The machine fixture** (Track M test floor) | [`tests/e2e-test-engine/`](tests/e2e-test-engine/) |
-| **A project's Converge home** | `<project>/cvg/` — the workspace root; its `INDEX.md` maps brain → docs → sketch → tasks → execution → knowledge → receipts and the current pass state |
-| **Design decks & demos** | [`presentation/`](presentation/) · [`docs/`](docs/) (method PDFs) |
-| **The CLI** (`cvg` — router, UI layer, surface ledger) | [`bin/`](bin/) — its `README.md` records what exists and what proved it |
-| **The task-spec engine** (scripts the CLI wraps) | [`skills/task-spec/scripts/`](skills/task-spec/scripts/) |
-| **Scratch** (never load-bearing) | `temp/` |
+→ **[PLAN.md](PLAN.md)** — the one working document.

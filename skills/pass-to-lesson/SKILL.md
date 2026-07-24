@@ -78,8 +78,7 @@ Identify the pass being taught — from the conversation, or from the freshest a
 | 2 `tech-req-to-adrs` | `docs/adrs/NNNN-*.md` + `docs/CONTEXT.md` |
 | 3 `reqs-to-swimlane-plans` | `sketch/*.plan`, one per lane |
 | 4 `sketch-plans-adversarial-review` | the same plans sharpened in place (the diff IS the artifact) + objection log + the fork declaration |
-| 5A `plans-to-coherent-spec` | the one coherent spec + `specs/e2e-eval.sh` |
-| 5B `task-spec` | `tasks/T-*.md` — atomic, self-verifying units |
+| 5 `task-spec` | `tasks/T-*.md` — atomic, self-verifying units |
 | ① `task-specs-to-issues` | the tracker board — one issue per spec, `blocked-by` edges |
 | 6 `task-to-runtime-contract` | `cvg/execution/<task-id>/execution-profile.yaml` + adapter manifests, bound evidence, and gate receipts |
 | 8 `task-loop` | the PR (branch, diff, green eval) or the blocked-task report |
