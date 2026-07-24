@@ -284,6 +284,14 @@ OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1
 rc_is "re-register (update path) exits 0" "$RC" "0"
 has "update path still passes derived labels" "$(cat "$S/meta/T-$DATE-reg-root.txt" 2>/dev/null)" "effort:S"
 
+# The repo link (cvg setup repo -> spec_base_url -> TSI_SPEC_BASE_URL) must turn
+# the footer spec path into a real markdown link; without it, plain code text.
+BODY_PLAIN="$(bash -c "source '$PARSE'; tsi_issue_body '$D/T-$DATE-reg-root.md' ''")"
+BODY_LINKED="$(TSI_SPEC_BASE_URL=https://github.com/o/r/blob/main \
+  bash -c "source '$PARSE'; tsi_issue_body '$D/T-$DATE-reg-root.md' ''")"
+hasnt "no repo link configured -> plain path" "$BODY_PLAIN" "](https://github.com/o/r/blob/main"
+has   "repo link configured -> footer is a real link" "$BODY_LINKED" "](https://github.com/o/r/blob/main/"
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="

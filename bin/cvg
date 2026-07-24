@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.13.0"
+CVG_VERSION="0.14.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -80,6 +80,69 @@ cvg_config_set() {  # cvg_config_set KEY VALUE  (idempotent replace-or-append)
 # reads, unless the user already set it. The API KEY is NEVER stored or bridged —
 # it lives in the environment only. This is what lets `cvg register` work after
 # setup with just the one secret exported.
+# Bridge the recorded repo base URL into the env the renderer reads, so every
+# registered issue links back to its spec. Non-secret, like the team id.
+cvg_export_spec_base() {
+  if [ -z "${TSI_SPEC_BASE_URL:-}" ]; then
+    local u; u="$(cvg_config_get spec_base_url)"
+    if [ -n "$u" ]; then export TSI_SPEC_BASE_URL="$u"; fi
+  fi
+  return 0   # bare-statement safe under set -e (see cvg_export_linear_team)
+}
+
+# Derive a browsable blob base (host/org/repo/blob/<branch>) from the git remote.
+# Echoes empty when there is no remote to read.
+cvg_detect_repo_base() {   # cvg_detect_repo_base [branch]
+  local remote branch path host
+  remote="$(git -C "$CVG_HOME_DIR" remote get-url origin 2>/dev/null || true)"
+  [ -n "$remote" ] || return 0
+  branch="${1:-}"
+  if [ -z "$branch" ]; then
+    branch="$(git -C "$CVG_HOME_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    [ -n "$branch" ] || branch="main"
+  fi
+  case "$remote" in
+    git@*)        path="${remote#git@}"; path="${path/://}" ;;
+    ssh://git@*)  path="${remote#ssh://git@}" ;;
+    https://*)    path="${remote#https://}" ;;
+    http://*)     path="${remote#http://}" ;;
+    *)            path="$remote" ;;
+  esac
+  path="${path%.git}"
+  host="${path%%/*}"
+  # Blob paths differ per host; GitHub's shape is the default.
+  case "$host" in
+    *gitlab*)    printf 'https://%s/-/blob/%s' "$path" "$branch" ;;
+    *bitbucket*) printf 'https://%s/src/%s' "$path" "$branch" ;;
+    *)           printf 'https://%s/blob/%s' "$path" "$branch" ;;
+  esac
+}
+
+cvg_setup_repo() {
+  local url="" branch=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --url)      url="${2:-}"; shift 2 ;;
+      --url=*)    url="${1#--url=}"; shift ;;
+      --branch)   branch="${2:-}"; shift 2 ;;
+      --branch=*) branch="${1#--branch=}"; shift ;;
+      -*) ui_err "unknown flag '$1' (expected: --url <base> | --branch <name>)"
+          printf 'SETUP_REPO=USAGE_ERROR\n'; exit 2 ;;
+      *)  shift ;;
+    esac
+  done
+  [ -n "$url" ] || url="$(cvg_detect_repo_base "$branch")"
+  if [ -z "$url" ]; then
+    ui_err "no git remote to detect — pass it: cvg setup repo --url https://github.com/<org>/<repo>/blob/main"
+    printf 'SETUP_REPO=UNDETECTED\n'; exit 1
+  fi
+  cvg_config_set spec_base_url "$url"
+  printf '%s[ok]%s repo linked: %s\n' "$UI_GREEN" "$UI_RESET" "$url"
+  printf '%s     registered issues now link back to their spec (branch-pinned —\n' "$UI_DIM"
+  printf '     re-run with --branch main once specs land there)%s\n' "$UI_RESET"
+  printf 'SETUP_REPO=OK\n'
+}
+
 cvg_export_linear_team() {
   if [ -z "${LINEAR_TEAM_ID:-}" ]; then
     local tid; tid="$(cvg_config_get linear_team_id)"
@@ -129,6 +192,14 @@ cvg_setup_status() {
       printf '    %s[--]%s  %-7s not connected — cvg setup tracker %s\n' "$UI_DIM" "$UI_RESET" "$t" "$t"
     fi
   done
+
+  # repo link — the spec <-> tracker glue.
+  local repo; repo="$(cvg_config_get spec_base_url)"
+  if [ -n "$repo" ]; then
+    printf '  %s[ok]%s  repo      %s\n' "$UI_GREEN" "$UI_RESET" "$repo"
+  else
+    printf '  %s[--]%s  repo      not linked — run: cvg setup repo\n' "$UI_DIM" "$UI_RESET"
+  fi
 
   # planned areas (brownfield) — visible vision, honest status.
   printf '  %s[..]%s  index     codebase indexing (planned)\n' "$UI_DIM" "$UI_RESET"
@@ -309,6 +380,8 @@ cmd_help() {
   printf '  setup tracker <t> [--team K]\n'
   printf '                           connect + record a tracker (linear|github|jira);\n'
   printf '                           linear auto-discovers your team (export just the key)\n'
+  printf '  setup repo [--branch b]  link the repo (detected from your git remote) so every\n'
+  printf '                           registered issue links back to its spec\n'
   printf '\n'
   printf '%smeta%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  help                     this screen\n'
@@ -336,7 +409,7 @@ is_mutating() {
     tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
     review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
-    setup)      [ "${1:-}" = "tracker" ] && return 0 || return 1 ;;
+    setup)      case "${1:-}" in tracker|repo) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
   esac
 }
@@ -372,7 +445,7 @@ elif cmd == "register":
 elif cmd == "setup":
     sub = parts[0] if parts else "status"
     disp = ("setup " + sub).strip() if sub != "status" else "setup"
-    mutating = (sub == "tracker")
+    mutating = (sub in ("tracker", "repo"))
 PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4}
 env = {
     "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
@@ -739,6 +812,7 @@ case "$CMD" in
       fi
     fi
     cvg_export_linear_team   # bridge the non-secret Linear team UUID from config (key stays in env)
+    cvg_export_spec_base     # bridge the repo base URL so issues link back to their spec
     if [ "$REG_CHECK" -eq 1 ]; then
       # Read-only gate. cvg strips --dry-run into CVG_DRY_RUN; re-add it as the
       # verifier's spec-side-only flag so `cvg register --check --dry-run` is offline.
@@ -759,8 +833,9 @@ case "$CMD" in
     case "$SUB" in
       status)  cvg_setup_status "$@" ;;
       tracker) cvg_setup_tracker "$@" ;;
+      repo)    cvg_setup_repo "$@" ;;
       engines) exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
-      *)       ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | engines"
+      *)       ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | repo | engines"
                printf 'SETUP=USAGE_ERROR\n'; exit 2 ;;
     esac
     ;;
@@ -823,6 +898,7 @@ m = {
     c("register --check", "①", "task-specs-to-issues/verify-registration.sh", ["CHECK_REGISTER=OK|FAIL"], False, "cvg register --check --tracker linear", "Gate the mapping is faithful: 1:1 count, every depends_on edge is one blocked-by link, no cycle, no un-gated leak. Read-only; the offline spec-side half runs with --dry-run."),
     c("setup", None, "native (doctor + adapter preflight)", ["SETUP=READY|INCOMPLETE"], False, "cvg setup", "Connectivity status board — per-part readiness (engines · trackers; index/memory planned) + the exact next step. Records CHOICES in .cvg/config, NEVER credentials (secrets stay in the environment / a secrets manager — if cvg can't see them it can't leak them)."),
     c("setup tracker <t> [--team K]", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|NEEDS_TEAM|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker via preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. For linear: export only LINEAR_API_KEY — the team is auto-discovered (a single team auto-selects; otherwise pass --team <KEY>, the key straight from the Linear URL), resolved to a UUID, and recorded. The API key is never stored."),
+    c("setup repo [--branch b] [--url u]", None, "native (git remote)", ["SETUP_REPO=OK|UNDETECTED|USAGE_ERROR"], True, "cvg setup repo", "Link the repo to the tracker: derives a browsable blob base URL from the git remote (github/gitlab/bitbucket shapes) and records it as spec_base_url in .cvg/config, so every registered issue links back to the spec it was projected from. Branch-pinned; --branch/--url override."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
