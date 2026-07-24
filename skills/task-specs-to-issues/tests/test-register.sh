@@ -276,7 +276,13 @@ fi
 META="$(cat "$S/meta/T-$DATE-reg-root.txt" 2>/dev/null)"
 has "triage: cvg marker label passed to the adapter" "$META" "cvg"
 has "triage: effort label passed" "$META" "effort:S"
+has "triage: severity label is namespaced" "$META" "severity:feature"
 has "triage: priority passed" "$META" "priority=P2"
+# Derived labels must re-sync on UPDATE too — an issue created before a label
+# existed could otherwise never acquire it (CVG-1 hit exactly that).
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "re-register (update path) exits 0" "$RC" "0"
+has "update path still passes derived labels" "$(cat "$S/meta/T-$DATE-reg-root.txt" 2>/dev/null)" "effort:S"
 
 # -----------------------------------------------------------------------------
 echo

@@ -285,8 +285,16 @@ tsi_issue_body() {
   fi
 
   # --- Provenance footer ---
+  # TSI_SPEC_BASE_URL (e.g. https://github.com/<org>/<repo>/blob/main) turns the
+  # spec path into a REAL clickable link. The idempotency marker attachment is a
+  # synthetic key by design and deliberately does NOT navigate anywhere — this is
+  # the link a human actually wants.
   printf -- '---\n\n'
-  printf 'Projected from `%s` by `cvg register` (REGISTER ①).\n' "$f"
+  if [ -n "${TSI_SPEC_BASE_URL:-}" ]; then
+    printf 'Projected from [`%s`](%s/%s) by `cvg register` (REGISTER ①).\n' "$f" "${TSI_SPEC_BASE_URL%/}" "$f"
+  else
+    printf 'Projected from `%s` by `cvg register` (REGISTER ①).\n' "$f"
+  fi
   printf '**The spec is the source of truth** — edits here are overwritten on the next\n'
   printf 'register; only a green eval closes this issue.\n'
 }

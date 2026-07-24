@@ -92,10 +92,18 @@ _ln_resolve_team_id() {
 }
 
 # ---------------------------------------------------------------------------
-# Triage metadata: priority + labels. Seeded at CREATE only — never on update,
-# because triage belongs to the tracker (SKILL.md: sync never overwrites the
-# board's own organization). Both are FAIL-SOFT: a cosmetic problem here must
-# never break a registration, so errors degrade to "no priority / no labels".
+# Triage metadata. The split is by OWNERSHIP, not by create-vs-update:
+#
+#   * DERIVED labels — `cvg`, `effort:*`, `backend:*`, `severity:*` — are facts
+#     read off the spec, so they are part of the PROJECTION and are kept in sync
+#     on every register, exactly like the title and body. cvg owns that namespace
+#     and nothing outside it.
+#   * ANY OTHER label is the human's triage and is never added or removed.
+#   * `priority` is human triage: seeded once at create, never touched again.
+#
+# (An earlier version seeded labels at create ONLY, which meant an issue created
+# before labels existed could never acquire them — CVG-1 hit exactly that.)
+# All of it is FAIL-SOFT: a cosmetic problem must never break a registration.
 # ---------------------------------------------------------------------------
 # Linear priority is an Int: 0 none, 1 Urgent, 2 High, 3 Medium, 4 Low.
 _ln_priority_int() {
@@ -127,6 +135,26 @@ _ln_label_ids() {
   done
   [[ -n "$ids" ]] || { printf '[]'; return 0; }
   printf '%s\n' $ids | jq -R . 2>/dev/null | jq -s -c . 2>/dev/null || printf '[]'
+}
+
+# Merge cvg's derived labels into an issue's EXISTING set: keep every label cvg
+# does not own (the human's triage), drop stale cvg-owned ones (e.g. a former
+# effort:M after the spec was resized), and add the current derived set.
+# Echoes a JSON array of label ids; `[]` on any failure (fail-soft).
+_ln_merge_label_ids() {   # _ln_merge_label_ids ISSUE_UUID "name name ..."
+  local issue="$1" names="$2" resp keep add
+  resp="$(_linear_gql 'query($id:String!){ issue(id:$id){ labels{ nodes{ id name } } } }' \
+    "$(jq -n --arg id "$issue" '{id:$id}')" 2>/dev/null)" || { printf '[]'; return 0; }
+  keep="$(printf '%s' "$resp" | jq -c '
+      [ .data.issue.labels.nodes[]?
+        | select((.name == "cvg"
+                  or (.name | startswith("effort:"))
+                  or (.name | startswith("backend:"))
+                  or (.name | startswith("severity:"))) | not)
+        | .id ]' 2>/dev/null)"
+  [[ -n "$keep" ]] || keep='[]'
+  add="$(_ln_label_ids "$names")"
+  jq -c -n --argjson a "$keep" --argjson b "$add" '($a + $b) | unique' 2>/dev/null || printf '[]'
 }
 
 # ---------------------------------------------------------------------------
@@ -214,10 +242,15 @@ ln_upsert() {
   # falling back to the node id. Link resolution never depends on this value — it
   # re-resolves by externalId — so returning the identifier is safe.
   if [[ -n "$existing" ]]; then
-    local uresp ident
+    local uresp ident ulabels
+    # Derived labels are part of the projection, so they re-sync on every update —
+    # merged so the human's own labels survive untouched. Priority is NOT sent:
+    # that is the board's triage to own.
+    ulabels="$(_ln_merge_label_ids "$existing" "$labels")"
     uresp="$(_linear_gql \
-      'mutation($id:String!,$title:String!,$desc:String!){ issueUpdate(id:$id, input:{ title:$title, description:$desc }){ success issue{ id identifier } } }' \
-      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" '{id:$id,title:$title,desc:$desc}')")"
+      'mutation($id:String!,$title:String!,$desc:String!,$labels:[String!]){ issueUpdate(id:$id, input:{ title:$title, description:$desc, labelIds:$labels }){ success issue{ id identifier } } }' \
+      "$(jq -n --arg id "$existing" --arg title "$title" --arg desc "$body" --argjson labels "$ulabels" \
+        '{id:$id,title:$title,desc:$desc,labels:$labels}')")"
     ident="$(printf '%s' "$uresp" | jq -r '.data.issueUpdate.issue.identifier // empty')"
     ident="${ident:-$existing}"
     echo "updated $ident ($id)" >&2

@@ -261,8 +261,10 @@ while read -r id; do
   UP_ARGS=(--id "$id" --title "$title" --body-file "$body" --label "cvg")
   UP_EFF="$(tsi_field "$file" effort)"
   [ -n "$UP_EFF" ] && UP_ARGS+=(--label "effort:$UP_EFF")
+  UP_BACKEND="$(tsi_field "$file" execution_backend)"
+  [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ARGS+=(--label "backend:$UP_BACKEND")
   UP_SEV="$(tsi_severity "$file")"
-  [ -n "$UP_SEV" ] && [ "$UP_SEV" != "(none)" ] && UP_ARGS+=(--label "$UP_SEV")
+  [ -n "$UP_SEV" ] && [ "$UP_SEV" != "(none)" ] && UP_ARGS+=(--label "severity:$UP_SEV")
   UP_PRI="$(tsi_priority "$file")"
   [ -n "$UP_PRI" ] && [ "$UP_PRI" != "(none)" ] && UP_ARGS+=(--priority "$UP_PRI")
 
