@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="A visual anatomy of the Task-Spec v3.2.0 lifecycle, gates, file structure, conformance levels, and evidence model.">
+<meta name="description" content="A visual anatomy of the Task-Spec v3.4.0 lifecycle, six-tier sizing model, gates, file structure, conformance levels, and evidence model.">
 <title>task-spec — Anatomy of the Cornerstone CAW</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d1520'/%3E%3Cpath d='M18 14h28v36H18z' fill='%23131f2c' stroke='%23d4a73a' stroke-width='3'/%3E%3Cpath d='M25 25h14M25 33h14M25 41h9' stroke='%235b9bd5' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -642,7 +642,7 @@
   <a href="#s6">6. CAW Triad</a>
   <a href="#s7">7. Folder map</a>
   <a href="#s8">8. Scripts</a>
-  <a href="#s9">9. Effort routing</a>
+  <a href="#s9">9. Six-tier sizing</a>
   <a href="#s10">10. Conformance</a>
   <a href="#s11">11. Backlog layers</a>
 </nav>
@@ -650,7 +650,7 @@
 <main class="main" id="main-content">
 
   <h1 class="animate" style="--i:0">task-spec</h1>
-  <p class="subtitle animate" style="--i:1">skills/task-spec &middot; Task-Spec v3 &middot; skill v3.2.0 &middot; the atomic, vendor-neutral, self-verifying unit of work</p>
+  <p class="subtitle animate" style="--i:1">skills/task-spec &middot; Task-Spec v3 &middot; skill v3.4.0 &middot; six-tier, vendor-neutral, self-verifying work contracts</p>
   <div class="page-tools animate" style="--i:2" aria-label="Document actions">
     <button class="page-tool" id="print-report" type="button">Print or save as PDF</button>
     <a class="page-tool" href="#s2">Jump to the closed loop</a>
@@ -662,7 +662,8 @@
     stuck in the middle of every agent loop. A <strong>Task-Spec carries its own runnable bash
     success criteria</strong>: the agent reads the spec, does the work, runs the evals, and loops
     on failure without supervision. Humans sit only at the edges — intent-setting (Phase 1) and
-    acceptance review (Phase 9). This is <strong>Eval-Driven Development (EDD)</strong>.
+    acceptance review (Phase 9). Version 3.4 adds one recursive sizing model: runnable leaves at
+    XS/S/M/L and decomposition nodes at XL/XXL. This is <strong>Eval-Driven Development (EDD)</strong>.
   </p>
 
   <!-- ============ 1. WHAT IT IS ============ -->
@@ -673,7 +674,7 @@
 
   <div class="kpi-row">
     <div class="kpi-card" style="--i:0">
-      <div class="kpi-card__value">v3<small>.2.0</small></div>
+      <div class="kpi-card__value">v3<small>.4.0</small></div>
       <div class="kpi-card__label">Format / Skill</div>
     </div>
     <div class="kpi-card" style="--i:1">
@@ -689,8 +690,8 @@
       <div class="kpi-card__label">Bundled scripts</div>
     </div>
     <div class="kpi-card" style="--i:4">
-      <div class="kpi-card__value">7</div>
-      <div class="kpi-card__label">Dispatch recipes</div>
+      <div class="kpi-card__value">6</div>
+      <div class="kpi-card__label">Effort tiers</div>
     </div>
     <div class="kpi-card" style="--i:5">
       <div class="kpi-card__value">L0&ndash;L2</div>
@@ -701,7 +702,7 @@
   <div class="callout animate" style="--i:2">
     <strong>The product is a file:</strong> <code>tasks/T-YYYYMMDD-&lt;slug&gt;.md</code> — YAML frontmatter
     + six zones + &ge;3 runnable bash evals + an Exit Check. Any conformant engine (Claude, Codex,
-    Kimi, Cursor, taskship, anthive, a plain bash loop, or a human with a terminal) can pick it up,
+    Kimi, GLM, a plain bash loop, or a human with a terminal) can pick it up,
     execute it, prove it, and report it. One format, many executors.
   </div>
 
@@ -736,8 +737,9 @@
     <script type="text/plain" class="diagram-source">
 flowchart TD
   P1["Phase 1 &middot; UNDERSTAND<br/>parse intent &middot; classify effort &middot; provenance"]:::phase --> EG{"Effort gate"}:::gatenode
-  EG -->|"XL / subjective"| SDD["REFUSE &mdash; route to SDD<br/>AgentSpec &middot; OpenSpec &middot; SpecKit"]:::refuse
-  EG -->|"XS / S / M &mdash; L only on glm"| P2["Phase 2 &middot; RESEARCH<br/>Context7 + Exa + Ref MCPs"]:::phase
+  EG -->|"XL / XXL node"| NODE["DECOMPOSE<br/>declare children &middot; never delegate node"]:::refuse
+  NODE -->|"child leaves"| P1
+  EG -->|"XS / S / M leaf &mdash; L only on glm"| P2["Phase 2 &middot; RESEARCH<br/>Context7 + Exa + Ref MCPs"]:::phase
   P2 --> P3["Phase 3 &middot; SCAN<br/>read host repo &mdash; refine touches_paths"]:::phase
   P3 --> P4["Phase 4 &middot; ARCHITECT<br/>spawn task-architect agent"]:::phase
   P4 --> CONF{"confidence above<br/>severity threshold?"}:::gatenode
@@ -760,7 +762,7 @@ flowchart TD
     <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div> gate / decision</div>
     <div class="legend-item"><div class="legend-swatch" style="background:var(--teal)"></div> autonomous execution</div>
     <div class="legend-item"><div class="legend-swatch" style="background:var(--green)"></div> accepted</div>
-    <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div> refused &rarr; SDD</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div> node &rarr; decompose</div>
   </div>
 
   <!-- ============ 3. THE 9 PHASES ============ -->
@@ -991,13 +993,13 @@ flowchart TD
 │   ├── examples/            <span class="ann">— Python + TypeScript reference consumers</span>
 │   ├── index.md             <span class="ann">— KB navigation map</span>
 │   └── quick-reference.md   <span class="ann">— one-page cheatsheet</span>
-├── <span class="hl">runbooks/</span>                <span class="ann">— 14 operational playbooks (workflows, recovery)</span>
+├── <span class="hl">runbooks/</span>                <span class="ann">— 12 core playbooks + 7 dispatch recipes</span>
 │   └── dispatch-recipes/    <span class="ann">— 7 per-engine adapters (non-normative layer)</span>
 ├── <span class="hl">scripts/</span>                 <span class="ann">— 20 bash CLIs; core gate path is bash-3.2-safe</span>
 ├── <span class="hl">templates/</span>               <span class="ann">— task-spec.md.tpl, the T-*.md scaffold</span>
 └── <span class="hl">tests/</span>                   <span class="ann">— self-contained test suite (tempdir, no real backlog)</span>
     ├── conformance/         <span class="ann">— 6 T-conformance-*.md + run_conformance.sh driver</span>
-    └── fixtures/            <span class="ann">— 17 regression specs + oracle.json verdicts</span></pre>
+    └── fixtures/            <span class="ann">— 18 regression fixtures + oracle verdicts</span></pre>
 
   <div class="card-grid">
     <div class="ve-card animate" style="--i:1">
@@ -1141,50 +1143,56 @@ flowchart TD
   <!-- ============ 9. EFFORT ROUTING ============ -->
   <div class="sec-head" id="s9">
     <span class="sec-head__num">09</span>
-    <span class="sec-head__title">Effort gate — size-tiered, engine-aware routing</span>
+    <span class="sec-head__title">Effort gate — six tiers, two kinds, one tasking path</span>
   </div>
   <p class="sec-intro">
-    The size-based safety primitive (v3.2). Small work is atomic and portable; L is the boundary case one
-    long-horizon engine can hold as a single coherent spec; XL routes out to spec-driven development.
-    When in doubt, classify <strong>up</strong>.
+    Version 3.4 separates <strong>runnable leaves</strong> from <strong>decomposition nodes</strong>.
+    XS/S/M/L leaves must fit one fresh executor context and a gate-checked write-surface budget.
+    XL/XXL nodes are composition units: they declare children and are never delegated directly.
   </p>
 
   <div class="table-wrap animate" style="--i:0">
     <div class="table-scroll" tabindex="0" role="region" aria-label="Effort routing matrix">
       <table class="data-table">
         <thead>
-          <tr><th>Class</th><th>Time scope</th><th class="wide">Signal</th><th>Verdict</th><th>Engine</th></tr>
+          <tr><th>Class</th><th>Kind</th><th>Write-surface budget</th><th class="wide">Gate behavior</th><th>Execution</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td><strong>XS</strong></td><td>&le; 2 hours</td>
-            <td>Trivial one-liner, config tweak</td>
-            <td><span class="status status--ok">Task-Spec</span></td>
-            <td>Kimi <small>sprinter</small></td>
+            <td><strong>XS</strong></td><td>leaf</td>
+            <td>&le; 1 path</td>
+            <td>Smallest runnable atom; no <code>children:</code>.</td>
+            <td>Kimi-class sprinter</td>
           </tr>
           <tr>
-            <td><strong>S</strong></td><td>&le; 1 day</td>
-            <td>One file or 2&ndash;3 closely-related files</td>
-            <td><span class="status status--ok">Task-Spec</span></td>
-            <td>Kimi</td>
+            <td><strong>S</strong></td><td>leaf</td>
+            <td>&le; 2 paths</td>
+            <td>Runnable atom; a larger surface warns to split or reclassify.</td>
+            <td>Kimi-class sprinter</td>
           </tr>
           <tr>
-            <td><strong>M</strong></td><td>1&ndash;3 days</td>
-            <td>Module-level change, coordinated files</td>
-            <td><span class="status status--ok">Task-Spec</span></td>
-            <td>Kimi</td>
+            <td><strong>M</strong></td><td>leaf</td>
+            <td>&le; 3 paths</td>
+            <td>Runnable vertical slice that still fits one fresh context.</td>
+            <td>Kimi-class sprinter</td>
           </tr>
           <tr>
-            <td><strong>L</strong></td><td>3&ndash;7 days</td>
-            <td>Major migration held as ONE coherent goal <small>requires execution_backend: glm — any other backend at L is refused</small></td>
-            <td><span class="status status--gate">Conditional</span></td>
-            <td>GLM <small>marathoner</small></td>
+            <td><strong>L</strong></td><td>leaf ceiling</td>
+            <td>&le; 5 paths</td>
+            <td>One coherent goal only; requires <code>execution_backend: glm</code>.</td>
+            <td>GLM long-horizon builder</td>
           </tr>
           <tr>
-            <td><strong>XL</strong></td><td>&gt; 1 week</td>
-            <td>Multi-team, platform rewrite; also anything subjective (UX, copy, design)</td>
-            <td><span class="status status--no">Refused</span></td>
-            <td>SDD <small>AgentSpec / OpenSpec / SpecKit</small></td>
+            <td><strong>XL</strong></td><td>node</td>
+            <td>no runnable surface</td>
+            <td>Requires at least two child Task-Spec ids.</td>
+            <td><span class="status status--no">never delegated</span></td>
+          </tr>
+          <tr>
+            <td><strong>XXL</strong></td><td>node</td>
+            <td>no runnable surface</td>
+            <td>Requires at least three child Task-Spec ids.</td>
+            <td><span class="status status--no">never delegated</span></td>
           </tr>
         </tbody>
       </table>
@@ -1192,10 +1200,9 @@ flowchart TD
   </div>
 
   <div class="callout callout--red animate" style="--i:1">
-    <strong>The refusals are CRITICAL-class:</strong> XL is never overridden — decompose into S/M atoms or
-    route to SDD. Subjective output (bash can't check beauty) always routes to SDD. A task that feels L
-    because it's two M tasks bundled should be <strong>decomposed</strong> — decomposition restores eligibility,
-    and the flat parent-index + detail-atoms shape (with <code>depends_on</code> edges) is the converged pattern.
+    <strong>Gate 0 is leaf-only:</strong> <code>safe-to-delegate.sh</code> refuses an XL/XXL node even
+    when its structure validates. A worker dispatches the children, never the parent node. This removes
+    the old SDD escape: tasks decompose into tasks until every executable unit is a bounded leaf.
   </div>
 
   <!-- ============ 10. CONFORMANCE ============ -->
@@ -1317,7 +1324,7 @@ flowchart TD
   </div>
 
   <footer>
-    Source: /Users/luanmorenomaciel/GitHub/converge/skills/task-spec &middot; SKILL.md v3.2.0 &middot; rendered 2026-07-06 &middot; refreshed with visual-explainer v0.8.1 on 2026-07-21
+    Source: /Users/luanmorenomaciel/GitHub/converge/skills/task-spec &middot; SKILL.md v3.4.0 &middot; feat/e2e @ f8e9804 &middot; content verified 2026-07-21 &middot; visual-explainer v0.8.1 &middot; legacy filename retained for link stability
   </footer>
 
 </main><!-- /main -->

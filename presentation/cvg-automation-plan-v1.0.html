@@ -810,14 +810,14 @@
   <aside class="sidebar" aria-label="Report navigation">
     <a class="brand" href="#top">
       <span class="brand__mark">cvg</span>
-      <span class="brand__version">0.3.0 · live</span>
+      <span class="brand__version">0.9.0 · live</span>
     </a>
     <p class="toc-label">Report map</p>
     <nav class="toc" id="toc" aria-label="Page sections">
       <a href="#s1" data-index="01">Current truth</a>
       <a href="#s2" data-index="02">Method map</a>
       <a href="#s3" data-index="03">CLI today</a>
-      <a href="#s4" data-index="04">Pass 0 and 1</a>
+      <a href="#s4" data-index="04">Passes 0–4</a>
       <a href="#s5" data-index="05">Information vs constraint</a>
       <a href="#s6" data-index="06">Task-Spec anatomy</a>
       <a href="#s7" data-index="07">HMAC explained</a>
@@ -828,7 +828,7 @@
       <a href="#s12" data-index="12">Glossary</a>
       <a href="#s13" data-index="13">Source map</a>
     </nav>
-    <p class="sidebar__meta">Verified snapshot<br>feat/e2e @ 34f7a88<br>2026-07-19</p>
+    <p class="sidebar__meta">Verified snapshot<br>feat/e2e @ f8e9804<br>2026-07-21<br>local: +29 commits</p>
   </aside>
 
   <main id="main-content">
@@ -842,15 +842,16 @@
       </p>
       <div class="truth-banner">
         <span class="truth-banner__tag">CURRENT TRUTH</span>
-        <p><strong>Pass 0 Capture and Pass 1 Intent are closed end to end.</strong> The CLI exists at v0.3.0. The Manager, fleet, board, routing, continuous-integration gate, external-engine workers, conductor, and metrics remain planned.</p>
+        <p><strong>Passes 0–4 are closed end to end.</strong> The CLI is at v0.9.0, including real cross-family review dispatch, a machine-readable command manifest, uniform <code>--json</code>, and safe <code>--dry-run</code> handling. R5.R tasking has begun in the working tree with one ready-but-unsigned steel-thread draft; the Manager, fleet, board, continuous-integration gate, worker scheduler, conductor, and metrics remain planned.</p>
       </div>
       <ul class="hero__meta">
         <li class="meta-chip">branch · feat/e2e</li>
-        <li class="meta-chip">commit · 34f7a88</li>
-        <li class="meta-chip">remote · matched</li>
-        <li class="meta-chip">task-spec · 3.3.0</li>
-        <li class="meta-chip">updated · 2026-07-19</li>
+        <li class="meta-chip">commit · f8e9804</li>
+        <li class="meta-chip">remote · local is 29 ahead</li>
+        <li class="meta-chip">task-spec · 3.4.0</li>
+        <li class="meta-chip">updated · 2026-07-21</li>
         <li class="meta-chip">visual-explainer · 0.8.1</li>
+        <li class="meta-chip">working tree · R5 draft present</li>
       </ul>
       <div class="hero__actions">
         <a class="button button--primary" href="#s1">Start with the current truth</a>
@@ -879,32 +880,32 @@
         <article class="card card--live">
           <span class="micro-label">Working now</span>
           <h3>A real referee CLI</h3>
-          <p><code>cvg</code> v0.3.0 routes existing deterministic scripts. It has no model credentials and makes no large-language-model calls itself.</p>
+          <p><code>cvg</code> v0.9.0 routes deterministic gates and can dispatch installed engine CLIs without holding model credentials. The external CLI authenticates itself; <code>cvg</code> remains the referee.</p>
           <ul class="plain-list">
-            <li><code>capture</code> gates the Pass 0 brief.</li>
-            <li><code>intent</code> gates the Pass 1 technical specification.</li>
-            <li>Task validation, gating, evaluation, acceptance, queue linting, and state transitions are routed today.</li>
+            <li><code>capture</code>, <code>intent</code>, <code>structure</code>, and <code>decompose</code> preserve the proven gate outputs.</li>
+            <li><code>review --adversary</code>, <code>review --check</code>, and <code>doctor</code> implement the Pass 4 attack-and-consensus surface.</li>
+            <li><code>agent-context</code>, global <code>--json</code>, and mutation-only <code>--dry-run</code> give agents a stable contract.</li>
           </ul>
         </article>
         <article class="card card--next">
-          <span class="micro-label">Next in Track R</span>
-          <h3>Pass 2 Structure</h3>
-          <p>The next five-beat slice is <strong>R2.U</strong>: understand and harden <code>tech-req-to-adrs</code>, then run it on the accepted technical specification.</p>
-          <p class="space-top-10">Its output is a set of <abbr title="Architecture Decision Record">ADR</abbr>s that record system facts, constraints, and decisions without drifting into an implementation plan.</p>
+          <span class="micro-label">Active in Track R</span>
+          <h3>R5.R · Pass 5B Tasking has started</h3>
+          <p><code>T-20260721-cap-steelthread.md</code> now drafts the capture steel thread at <code>swimlane-capture-leg-01</code>. It is <code>status: ready</code> but <code>signed_off: false</code>, so it is work in progress—not a closed or delegated task.</p>
+          <p class="space-top-10">Task-Spec v3.4 uses one six-tier path: XS/S/M/L are runnable leaves; XL/XXL are decomposition nodes whose children carry the executable work.</p>
         </article>
         <article class="card card--planned">
           <span class="micro-label">Target state</span>
           <h3>The automation machine</h3>
-          <p><code>status</code>, <code>next</code>, <code>work</code>, <code>run</code>, <code>route</code>, <code>board</code>, <code>verify</code>, <code>deliver</code>, and <code>metrics</code> are roadmap commands.</p>
+          <p><code>status</code>, <code>next</code>, <code>work</code>, <code>run</code>, <code>route</code>, <code>board</code>, <code>verify</code>, <code>deliver</code>, <code>metrics</code>, and <code>ci</code> are roadmap commands.</p>
           <p class="space-top-10">The old report presented much of this target as if it already existed. This revision labels it correctly.</p>
         </article>
       </div>
 
       <ul class="kpi-grid">
-        <li class="kpi"><span class="kpi__value">2</span><span class="kpi__label">passes closed end to end</span></li>
-        <li class="kpi"><span class="kpi__value">70</span><span class="kpi__label">focused checks green in this refresh</span></li>
-        <li class="kpi"><span class="kpi__value">0.3.0</span><span class="kpi__label">current cvg version</span></li>
-        <li class="kpi"><span class="kpi__value">R2.U</span><span class="kpi__label">next agreed action</span></li>
+        <li class="kpi"><span class="kpi__value">5</span><span class="kpi__label">passes closed end to end</span></li>
+        <li class="kpi"><span class="kpi__value">12/13</span><span class="kpi__label">skill packages validate now</span></li>
+        <li class="kpi"><span class="kpi__value">0.9.0</span><span class="kpi__label">current cvg version</span></li>
+        <li class="kpi"><span class="kpi__value">R5.R</span><span class="kpi__label">active beat · unsigned draft</span></li>
       </ul>
 
       <div class="callout callout--green">
@@ -933,30 +934,30 @@
           <div><span class="stage__title">Intent</span><span class="stage__detail">Canonical BRD → falsifiable technical specification. Gate H1 has been taken on the proving ground.</span></div>
           <span class="status status--live">Closed</span>
         </article>
-        <article class="stage stage--next">
+        <article class="stage stage--live">
           <span class="stage__number">2</span>
-          <div><span class="stage__title">Structure</span><span class="stage__detail">Technical specification + real repository terrain → architecture decision records: facts and constraints, not build tasks.</span></div>
-          <span class="status status--next">Next</span>
+          <div><span class="stage__title">Structure</span><span class="stage__detail">Technical specification + live terrain → seven accepted ADRs and a ten-term context glossary.</span></div>
+          <span class="status status--live">Closed</span>
         </article>
-        <article class="stage">
+        <article class="stage stage--live">
           <span class="stage__number">3</span>
-          <div><span class="stage__title">Decompose</span><span class="stage__detail">Architecture decisions → one plan per natural system seam, with dependencies and proof strategy.</span></div>
-          <span class="status status--planned">Planned</span>
+          <div><span class="stage__title">Decompose</span><span class="stage__detail">Architecture decisions → three swimlane directories, nine leg files, and stable seam contracts.</span></div>
+          <span class="status status--live">Closed</span>
         </article>
-        <article class="stage">
+        <article class="stage stage--live">
           <span class="stage__number">4</span>
-          <div><span class="stage__title">Consensus</span><span class="stage__detail">A different engine attacks the plans. Open objections are fixed or explicitly accepted; Gate H2 chooses the trust-boundary fork.</span></div>
-          <span class="status status--planned">Planned</span>
+          <div><span class="stage__title">Consensus</span><span class="stage__detail">A Moonshot-family adversary raised eight objections; every one was resolved, provenance was re-hashed, and the gate closed green.</span></div>
+          <span class="status status--live">Closed</span>
         </article>
         <article class="stage">
           <span class="stage__number">5A</span>
-          <div><span class="stage__title">Specify</span><span class="stage__detail">Fork A: keep the whole coupled system as the unit of trust, with one coherent specification and end-to-end evaluation.</span></div>
-          <span class="status status--planned">Planned</span>
+          <div><span class="stage__title">Plan-driven branch</span><span class="stage__detail">Retired from the active method. The v3.4 sizing engine absorbs large work by decomposing XL/XXL nodes into child Task-Specs.</span></div>
+          <span class="status status--planned">Retired</span>
         </article>
-        <article class="stage">
+        <article class="stage stage--next">
           <span class="stage__number">5B</span>
-          <div><span class="stage__title">Tasking</span><span class="stage__detail">Fork B: split work into atomic Task-Specs, each carrying executable definitions of done.</span></div>
-          <span class="status status--planned">Planned</span>
+          <div><span class="stage__title">Tasking</span><span class="stage__detail">The single active path: decompose each leg into runnable Task-Spec leaves with executable definitions of done.</span></div>
+          <span class="status status--next">In progress</span>
         </article>
         <article class="stage">
           <span class="stage__number">①</span>
@@ -987,7 +988,7 @@
         <article class="card card--hero">
           <span class="micro-label">Track R · current</span>
           <h3>Validate the method pass by pass</h3>
-          <p>Track R performs a narrow, complete vertical slice for each pass using the real proving ground. It keeps human judgment close while the method is still being proven.</p>
+          <p>Track R has closed Passes 0–4 and entered Pass 5B tasking. The first capture steel-thread spec exists in the working tree, but remains unsigned and unaccepted.</p>
         </article>
         <article class="card">
           <span class="micro-label">Track M · later</span>
@@ -1010,18 +1011,24 @@
       <div class="table-wrap">
         <section class="table-scroll" tabindex="0" aria-label="Current cvg command surface table">
           <table>
-            <caption>Current command surface at <code>cvg</code> v0.3.0.</caption>
+            <caption>Current command surface at <code>cvg</code> v0.9.0.</caption>
             <thead><tr><th scope="col">Command</th><th scope="col">Plain-English job</th><th scope="col">Current contract</th></tr></thead>
             <tbody>
               <tr><td><code>cvg capture</code></td><td>Find or receive a BRD and run the Pass 0 gate.</td><td>Exact pass-through on the proven single-target path; stable <code>CHECK_BRD=…</code> token.</td></tr>
               <tr><td><code>cvg intent</code></td><td>Find or receive a technical specification and run the Pass 1 gate.</td><td>Exact pass-through on the proven single-target path; stable <code>CHECK_TECH_SPEC=…</code> token.</td></tr>
-              <tr><td><code>cvg tasks validate</code></td><td>Lint one Task-Spec’s structure.</td><td>Checks format and required contract fields; does not authorize delegation.</td></tr>
+              <tr><td><code>cvg structure</code></td><td>Find the ADR set and run the Pass 2 terrain gate.</td><td>Exact pass-through; <code>--final</code> refuses proposed ADRs; stable <code>CHECK_ADR=…</code> token.</td></tr>
+              <tr><td><code>cvg decompose</code></td><td>Find the swimlane tree and run the Pass 3 plan gate.</td><td>Checks lean PRDs, linked leg files, architecture, dependencies, and stable <code>CHECK_PLAN=…</code>.</td></tr>
+              <tr><td><code>cvg review --adversary</code></td><td>Dispatch one or more different-family engines to attack the plans.</td><td>Fail-closed dispatch; referee-stamped provenance; multi-engine merge; supports safe <code>--dry-run</code>.</td></tr>
+              <tr><td><code>cvg review --check</code></td><td>Verify the stamped Pass 4 objection log.</td><td>Re-hashes all live plans and requires cross-family review, resolved objections, and the declared tasking path.</td></tr>
+              <tr><td><code>cvg doctor</code></td><td>Check installed adversary engines and family diversity.</td><td>Read-only readiness report ending in <code>DOCTOR=OK</code> or <code>DOCTOR=FAIL</code>.</td></tr>
+              <tr><td><code>cvg tasks validate</code></td><td>Lint one Task-Spec’s structure and size.</td><td>Six tiers: XS/S/M/L leaves; XL/XXL nodes require children and cannot be delegated directly.</td></tr>
               <tr><td><code>cvg tasks gate</code></td><td>Run the pre-delegation gate.</td><td>May stamp <code>signed_off: true</code> and an HMAC when requested and valid.</td></tr>
               <tr><td><code>cvg eval</code></td><td>Run a Task-Spec’s own executable success checks.</td><td>Exit code reports whether the encoded definition of done is green.</td></tr>
               <tr><td><code>cvg tasks accept</code></td><td>Run post-execution acceptance checks.</td><td>Can verify blast radius and <code>--gold-sanity</code>, then stamp <code>accepted: true</code>.</td></tr>
               <tr><td><code>cvg ready</code></td><td>List tasks that are ready to run.</td><td>Read-only projection from task files.</td></tr>
               <tr><td><code>cvg lint</code></td><td>Inspect the whole task backlog.</td><td>Finds graph issues such as cycles, dangling dependencies, and path overlaps.</td></tr>
               <tr><td><code>cvg transition</code></td><td>Move a task between allowed states.</td><td>Uses the existing transition script; state remains file-resident.</td></tr>
+              <tr><td><code>cvg agent-context</code></td><td>Describe the full CLI contract to an agent in one call.</td><td>Raw JSON manifest: commands, tokens, exit taxonomy, retryability, side effects, and global contracts.</td></tr>
               <tr><td><code>cvg help</code> / <code>version</code></td><td>Show the supported surface and wrapped versions.</td><td>Plain when piped; color is presentation only.</td></tr>
             </tbody>
           </table>
@@ -1029,16 +1036,25 @@
       </div>
 
       <pre class="terminal"><span class="prompt">$</span> ./bin/cvg version
-<span class="ok">cvg 0.3.0</span> (task-spec 3.3.0)
+<span class="ok">cvg 0.9.0</span> (task-spec 3.4.0)
 
 <span class="prompt">$</span> cd tests/uc-analytics &amp;&amp; ../../bin/cvg capture
 <span class="ok">CHECK_BRD=PASS</span>
 
 <span class="prompt">$</span> ../../bin/cvg intent
-<span class="ok">CHECK_TECH_SPEC=PASS</span></pre>
+<span class="ok">CHECK_TECH_SPEC=PASS</span>
+
+<span class="prompt">$</span> ../../bin/cvg structure --final
+<span class="ok">CHECK_ADR=OK</span>
+
+<span class="prompt">$</span> ../../bin/cvg decompose
+<span class="ok">CHECK_PLAN=OK</span>
+
+<span class="prompt">$</span> ../../bin/cvg review --check
+<span class="ok">CHECK_CONSENSUS=OK</span></pre>
 
       <div class="callout callout--blue">
-        <strong>Not commands yet:</strong> <code>status</code>, <code>next</code>, <code>doctor</code>, <code>work</code>, <code>run</code>, <code>route</code>, <code>board</code>, <code>verify</code>, <code>deliver</code>, <code>metrics</code>, and <code>ci install</code>. They are designed in <a href="../cvg-todo.md">cvg-todo.md</a>, but the current binary does not expose them.
+        <strong>Not commands yet:</strong> <code>status</code>, <code>next</code>, <code>work</code>, <code>run</code>, <code>route</code>, <code>board</code>, <code>verify</code>, <code>deliver</code>, <code>metrics</code>, and <code>ci install</code>. They are designed in <a href="../cvg-todo.md">cvg-todo.md</a>, but the current binary does not expose them.
       </div>
     </section>
 
@@ -1047,7 +1063,7 @@
         <span class="section-index">04</span>
         <div>
           <p class="section-kicker">Closed vertical slices</p>
-          <h2 id="s4-title">What “end to end” means for Pass 0 and Pass 1</h2>
+          <h2 id="s4-title">What “end to end” means for Passes 0 through 4</h2>
           <p class="section-intro">A pass is not closed merely because its document exists. The skill, real artifact, owner judgment, CLI wrapper, and parity proof all have to agree.</p>
         </div>
       </div>
@@ -1074,6 +1090,26 @@
             <div class="flow__node"><strong>Parity</strong><span><code>cvg intent</code> output is byte-identical</span></div>
           </div>
           <p>Current package metadata is v0.6.0; the exit-contract script is v0.4.0. Draft mode validates structure but never authorizes descent into Pass 2.</p>
+        </article>
+        <article class="card card--live">
+          <span class="micro-label">Pass 2 · Structure</span>
+          <h3>Specification → terrain-grounded ADR set</h3>
+          <p>Seven accepted ADRs and a ten-term context glossary were reviewed against the live Postgres terrain. <code>cvg structure --final</code> reproduces the direct gate byte-for-byte and ends in <code>CHECK_ADR=OK</code>.</p>
+        </article>
+        <article class="card card--live">
+          <span class="micro-label">Pass 3 · Decompose</span>
+          <h3>ADRs → three swimlanes and nine legs</h3>
+          <p>Capture, transform, and serve each have a lean PRD plus three independently finishable leg files. <code>cvg decompose</code> preserves the manual gate output and ends in <code>CHECK_PLAN=OK</code>.</p>
+        </article>
+        <article class="card card--live">
+          <span class="micro-label">Pass 4 · Consensus</span>
+          <h3>Plans → cross-family adversarial consensus</h3>
+          <p>A Moonshot-family reviewer raised one blocker, three high, one medium, and three later low objections. All eight are resolved; provenance covers all twelve plan files; <code>cvg review --check</code> ends in <code>CHECK_CONSENSUS=OK</code>.</p>
+        </article>
+        <article class="card card--next">
+          <span class="micro-label">Handoff · one path</span>
+          <h3>Consensus → Task-Spec decomposition</h3>
+          <p>The old plan-driven branch is retired. Task-Spec v3.4 gives large work XL/XXL node specs and requires child leaves, so the method now keeps one task-driven path all the way down.</p>
         </article>
       </div>
 
@@ -1281,13 +1317,13 @@
       </div>
 
       <div class="grid-2">
-        <div class="proof"><span class="proof__result">MATCH</span><div class="proof__body"><strong>Local and remote branch heads</strong><span><code>HEAD</code> and <code>origin/feat/e2e</code> both resolve to <code>34f7a887…</code>.</span></div></div>
-        <div class="proof"><span class="proof__result">0.3.0</span><div class="proof__body"><strong>CLI version</strong><span><code>./bin/cvg version</code> reports <code>cvg 0.3.0</code> with Task-Spec 3.3.0.</span></div></div>
-        <div class="proof"><span class="proof__result">27 / 27</span><div class="proof__body"><strong>Pass 0 regression rows</strong><span>Canonical, draft, no-go, invalid sign-off, flag misuse, code-fence evasion, and proving-ground cases all returned their expected exits.</span></div></div>
-        <div class="proof"><span class="proof__result">15 / 15</span><div class="proof__body"><strong>Pass 1 regression rows</strong><span>Canonical and draft modes, missing or invalid sign-off, unresolved blockers, usage errors, and the proving-ground specification all matched the contract.</span></div></div>
-        <div class="proof"><span class="proof__result">28 / 28</span><div class="proof__body"><strong>HMAC envelope checks</strong><span>Valid seal, body tamper, metadata tamper, wrong key, malformed signature, no-key downgrade, portability, injection safety, and Tier-1 enforcement passed.</span></div></div>
-        <div class="proof"><span class="proof__result">PASS ×2</span><div class="proof__body"><strong>Live proving-ground gates</strong><span><code>cvg capture</code> ended in <code>CHECK_BRD=PASS</code>; <code>cvg intent</code> ended in <code>CHECK_TECH_SPEC=PASS</code>.</span></div></div>
-        <div class="proof"><span class="proof__result">13 / 13</span><div class="proof__body"><strong>Skill package validation</strong><span>Every current skill package passed the vendored quick validator in the branch audit.</span></div></div>
+        <div class="proof"><span class="proof__result">+29</span><div class="proof__body"><strong>Branch position</strong><span>Local <code>feat/e2e</code> is at <code>f8e9804…</code>, with no remote-only commits and 29 local commits beyond <code>origin/feat/e2e</code>. One untracked R5 Task-Spec is explicitly treated as working-tree WIP.</span></div></div>
+        <div class="proof"><span class="proof__result">0.9.0</span><div class="proof__body"><strong>CLI version</strong><span><code>./bin/cvg version</code> reports <code>cvg 0.9.0</code> with Task-Spec 3.4.0.</span></div></div>
+        <div class="proof"><span class="proof__result">PASS ×5</span><div class="proof__body"><strong>Live proving-ground gates</strong><span>Capture, intent, structure, decompose, and consensus ended in their stable green tokens on the current worktree.</span></div></div>
+        <div class="proof"><span class="proof__result">DOCTOR=OK</span><div class="proof__body"><strong>Adversary readiness</strong><span>Codex, Kimi, and Claude CLIs were detected; two installed engines are cross-family relative to the Anthropic author family.</span></div></div>
+        <div class="proof"><span class="proof__result">12 / 12</span><div class="proof__body"><strong>Agent-native envelope suite</strong><span>Uniform JSON shape, exit preservation, token mapping, byte-parity, raw manifest behavior, and mutation dry-runs all passed.</span></div></div>
+        <div class="proof"><span class="proof__result">11 / 11</span><div class="proof__body"><strong>Six-tier effort suite</strong><span>All leaf, node, backend, child-count, mis-sizing, and invalid-size cases returned the expected verdict.</span></div></div>
+        <div class="proof"><span class="proof__result">12 / 13</span><div class="proof__body"><strong>Skill package validation</strong><span>Twelve packages pass. <code>sketch-plans-adversarial-review</code> currently fails YAML parsing because its frontmatter description contains an unquoted colon.</span></div></div>
       </div>
 
       <div class="table-wrap space-top-14">
@@ -1299,7 +1335,7 @@
               <tr><td>Regression suite green</td><td>Known positive and negative cases behave as encoded.</td><td>Every possible real-world failure has a fixture.</td></tr>
               <tr><td>Golden diff empty</td><td>The CLI wrapper preserved the accepted manual gate output and exit code.</td><td>The accepted manual judgment was universally correct.</td></tr>
               <tr><td>HMAC suite green</td><td>The implemented seal detects covered mutations under the tested key conditions.</td><td>Per-author identity or protection after the shared key is compromised.</td></tr>
-              <tr><td>Canonical artifact passes</td><td>The current artifact satisfies the current gate.</td><td>The downstream implementation exists; Pass 2 has not started.</td></tr>
+              <tr><td>Canonical artifact passes</td><td>The current artifact satisfies the current gate.</td><td>The next pass’s implementation exists; Pass 5 task construction has not started.</td></tr>
             </tbody>
           </table>
         </section>
@@ -1321,10 +1357,10 @@
           <span class="micro-label">Track R · method validation</span>
           <h3>Finish the real descent</h3>
           <div class="roadmap space-top-13">
-            <div class="roadmap__item"><span class="roadmap__id">R2</span><div><strong>Structure</strong><p>Ground the specification in the real repository and record ADRs.</p></div><span class="status status--next">Next</span></div>
-            <div class="roadmap__item"><span class="roadmap__id">R3</span><div><strong>Decompose</strong><p>Cut one plan per natural seam and wire dependencies.</p></div><span class="status status--planned">Queued</span></div>
-            <div class="roadmap__item"><span class="roadmap__id">R4</span><div><strong>Consensus + H2</strong><p>Adversarially attack the plans, close objections, and choose the fork.</p></div><span class="status status--planned">Queued</span></div>
-            <div class="roadmap__item"><span class="roadmap__id">R5B</span><div><strong>Tasking</strong><p>Create real atomic Task-Specs if the owner chooses per-task trust.</p></div><span class="status status--planned">Queued</span></div>
+            <div class="roadmap__item"><span class="roadmap__id">R2</span><div><strong>Structure</strong><p>Seven ADRs and a context glossary grounded on live terrain.</p></div><span class="status status--live">Closed</span></div>
+            <div class="roadmap__item"><span class="roadmap__id">R3</span><div><strong>Decompose</strong><p>Three swimlanes and nine linked leg files.</p></div><span class="status status--live">Closed</span></div>
+            <div class="roadmap__item"><span class="roadmap__id">R4</span><div><strong>Consensus + H2</strong><p>Eight objections resolved; cross-family provenance gate green.</p></div><span class="status status--live">Closed</span></div>
+            <div class="roadmap__item"><span class="roadmap__id">R5B</span><div><strong>Tasking</strong><p>First capture steel-thread draft exists; gate, sign, and complete the remaining task tree.</p></div><span class="status status--next">Active</span></div>
             <div class="roadmap__item"><span class="roadmap__id">R①–R8</span><div><strong>Register, Harness, Loop</strong><p>Project state, build the control layer, and execute one issue by hand.</p></div><span class="status status--planned">Queued</span></div>
           </div>
         </article>
@@ -1358,16 +1394,16 @@
       </div>
 
       <div class="boundary-grid">
-        <article class="card card--risk"><h3>The CLI is a referee, not an agent</h3><p>It wraps deterministic scripts. External engine adapters and autonomous workers are not implemented yet.</p></article>
-        <article class="card card--risk"><h3>Only Pass 0 and Pass 1 are automated</h3><p>The rest of the method exists as skills and design, but not as equivalent <code>cvg</code> subcommands with end-to-end parity proof.</p></article>
+        <article class="card card--risk"><h3>The CLI is a referee, not an agent</h3><p>It wraps deterministic gates and may launch installed engine CLIs, but it has no model credentials and never judges its own dispatched output.</p></article>
+        <article class="card card--risk"><h3>Passes 0–4 are automated; execution is not</h3><p>The method is proven through adversarial consensus. Pass 5 task creation has begun with one unsigned draft; tracker projection, harness generation, worker scheduling, and the Loop are still ahead.</p></article>
         <article class="card card--risk"><h3>BRD and tech-spec sign-off is not HMAC</h3><p>Their canonical sections and dates are gate-checked. The cryptographic envelope belongs to Task-Spec <code>signed_off</code>, not to every artifact in the chain.</p></article>
         <article class="card card--risk"><h3>HMAC does not identify a person</h3><p>The key is symmetric and shared. It proves possession of a repository key, not non-repudiable personal authorship.</p></article>
         <article class="card card--risk"><h3>Green evaluations prove the encoded contract</h3><p>If the requirements or evaluations are wrong, the implementation can be green and still miss the business outcome. Human judgment remains load-bearing at intent and trust boundaries.</p></article>
         <article class="card card--risk"><h3>Discipline-agnostic is an architectural direction</h3><p>The core method is general, but some current structural gates still reflect Bash and source/transform/output patterns. Discipline-specific proof must be added without forking the universal spine.</p></article>
         <article class="card card--risk"><h3>The board is a validated spike, not a shipped command</h3><p>An earlier prototype passed 9 of 9 spike evaluations and was then removed. The planned rebuild keeps snapshot mode network-free, uses a local process for live mode, derives state from files, and never becomes a second writable source of truth.</p></article>
-        <article class="card card--risk"><h3>Machine-readable does not yet mean JSON everywhere</h3><p>Current pass gates expose stable text tokens and exit codes. JSON and JSON Lines deepen later with derived state and continuous-integration modes.</p></article>
+        <article class="card card--risk"><h3>JSON is an envelope, not a replacement truth</h3><p><code>--json</code> re-invokes the proven command and wraps its result while preserving the underlying exit code. Default pass-through output stays byte-identical.</p></article>
         <article class="card card--risk"><h3>Parity is proven on the canonical single-target path</h3><p>The current <code>capture</code> and <code>intent</code> argument parsers retain the last positional path if several are supplied. The golden proof does not excuse that input-validation gap.</p></article>
-        <article class="card card--risk"><h3>Some repository documentation still drifts</h3><p>Known examples include skill-count wording, older Task-Spec format references, and one stale “not built” list. For current status, prefer <code>cvg help</code>, executable versions, accepted tasks, and <code>cvg-todo.md</code>.</p></article>
+        <article class="card card--risk"><h3>One skill package currently fails validation</h3><p><code>sketch-plans-adversarial-review</code> has an unquoted colon in its YAML description. Its runtime gate is green, but its package metadata is not release-clean.</p></article>
       </div>
     </section>
 
@@ -1411,7 +1447,7 @@
         <article class="term-card" data-term="exit code zero one two status"><h3><dfn>Exit code</dfn></h3><p>A number returned by a command: conventionally 0 means success, 1 means the checked contract failed, and 2 means usage or invocation error in current Converge pass gates.</p></article>
         <article class="term-card" data-term="fail closed safety missing malformed"><h3><dfn>Fail closed</dfn></h3><p>Treat missing, malformed, or ambiguous evidence as failure rather than permission. The system stops when it cannot prove the safe path.</p></article>
         <article class="term-card" data-term="fleet parallel workers tasks"><h3><dfn>Fleet</dfn></h3><p>The planned collection of concurrent task workers coordinated until all executable work is green or explicitly parked. No fleet runtime ships today.</p></article>
-        <article class="term-card" data-term="fork trust boundary 5a 5b"><h3><dfn>Fork A / Fork B</dfn></h3><p>The Pass 4 decision about the unit of trust. Fork A keeps one coupled system specification; Fork B creates many independently verifiable Task-Specs.</p></article>
+        <article class="term-card" data-term="fork trust boundary 5a 5b collapsed"><h3><dfn>Fork A / Fork B</dfn></h3><p>Historical Pass 4 alternatives. The current v3.4 method has collapsed the fork: large work becomes XL/XXL decomposition nodes and execution always continues through child Task-Specs.</p></article>
         <article class="term-card" data-term="frontmatter yaml metadata header"><h3><dfn>Frontmatter</dfn></h3><p>A YAML metadata block between <code>---</code> markers at the top of a Markdown file. Scripts parse it without interpreting the document’s prose.</p></article>
         <article class="term-card" data-term="gap missing information blocker open question"><h3><dfn>Gap</dfn></h3><p>Missing information recorded with a type and resolution path. A blocker gap prevents canonical handoff; a non-blocker remains visible without silently stopping all progress.</p></article>
         <article class="term-card" data-term="gate verdict stop pass fail"><h3><dfn>Gate</dfn></h3><p>A decision boundary that consumes evidence and either permits the next state or stops the process. A gate is stronger than a checklist because its outcome controls flow.</p></article>
@@ -1466,23 +1502,26 @@
 
       <div class="card">
         <ul class="source-list">
-          <li><a href="../cvg-todo.md"><code>cvg-todo.md</code></a><span>Current Track R state, five-beat operating model, closed Pass 0/1 proof, and the ordered Track M roadmap.</span></li>
+          <li><a href="../cvg-todo.md"><code>cvg-todo.md</code></a><span>Current Track R state, five-beat operating model, closed Pass 0–4 proof, R5.R handoff, and the ordered Track M roadmap.</span></li>
           <li><a href="../bin/README.md"><code>bin/README.md</code></a><span>Current CLI version, implemented command surface, design boundaries, and proof references.</span></li>
           <li><a href="../bin/cvg"><code>bin/cvg</code></a><span>The actual current router and its supported commands.</span></li>
           <li><a href="../skills/task-spec/references/concepts/signed-off.md"><code>signed-off.md</code></a><span>HMAC payload, threat model, Trust Tiers, downgrade policy, and the difference between sign-off and completion.</span></li>
           <li><a href="../skills/task-spec/references/concepts/six-zones.md"><code>six-zones.md</code></a><span>Task-Spec anatomy, traceability, guardrails, operations, rollback, and observability.</span></li>
-          <li><a href="../tasks/done/T-20260719-cvg-intent.md"><code>T-20260719-cvg-intent.md</code></a><span>The accepted Task-Spec for the Pass 1 exit contract and <code>cvg intent</code>.</span></li>
+          <li><a href="../tasks/done/T-20260721-cvg-structure.md"><code>T-20260721-cvg-structure.md</code></a><span>The accepted Task-Spec and golden parity receipt for the Pass 2 wrapper.</span></li>
+          <li><a href="../tasks/done/T-20260721-cvg-decompose.md"><code>T-20260721-cvg-decompose.md</code></a><span>The accepted Task-Spec and golden parity receipt for the Pass 3 wrapper.</span></li>
+          <li><a href="../tests/uc-analytics/cvg/sketch/.consensus/objection-log.json"><code>objection-log.json</code></a><span>The Pass 4 cross-family verdict, resolutions, selected tasking path, and live-plan provenance hashes.</span></li>
+          <li><a href="../tests/uc-analytics/cvg/tasks/T-20260721-cap-steelthread.md"><code>T-20260721-cap-steelthread.md</code></a><span>The current untracked R5.R working draft: ready status, L leaf, GLM backend, and not yet signed off.</span></li>
           <li><a href="../tests/uc-analytics/cvg/INDEX.md"><code>tests/uc-analytics/cvg/INDEX.md</code></a><span>The proving-ground artifact map and current pass evidence.</span></li>
         </ul>
       </div>
 
       <div class="callout callout--green">
-        <strong>Refresh rule:</strong> this page is a verified snapshot of <code>feat/e2e</code> at <code>34f7a88</code>. When a later pass closes or a planned command ships, update the branch snapshot, rerun its proof, and move the capability’s label only after the evidence is green.
+        <strong>Refresh rule:</strong> this page is a verified local snapshot of <code>feat/e2e</code> at <code>f8e9804</code>, 29 commits ahead of the fetched remote, plus the explicitly labeled untracked R5 draft. When a later pass closes or a command ships, update the snapshot, rerun its proof, and move the capability’s label only after the evidence is green.
       </div>
     </section>
 
     <footer>
-      cvg current state &amp; automation roadmap · report revision 1.1 in the existing v1.0 file · verified 2026-07-19 · visual-explainer v0.8.1 refresh 2026-07-21 · “you are converged when the eval passes, not when you feel done”
+      cvg current state &amp; automation roadmap · report revision 2.0 in the existing v1.0 file · feat/e2e @ f8e9804 verified 2026-07-21 · visual-explainer v0.8.1 · “you are converged when the eval passes, not when you feel done”
     </footer>
   </main>
 </div>

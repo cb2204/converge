@@ -639,8 +639,8 @@
   <a href="#s4">4. P2 · tech-req-to-adrs</a>
   <a href="#s5">5. P3 · reqs-to-swimlane-plans</a>
   <a href="#s6">6. P4 · adversarial-review</a>
-  <a href="#s7">7. P5A · plans-to-coherent-spec</a>
-  <a href="#s8">8. P5B · task-spec</a>
+  <a href="#s7">7. Retired · coherent-spec fork</a>
+  <a href="#s8">8. P5 · task-spec</a>
   <a href="#s9">9. ① · task-specs-to-issues</a>
   <a href="#s10">10. P6 · stack-to-harness</a>
   <a href="#s11">11. P8 · task-loop</a>
@@ -650,7 +650,7 @@
 <main class="main" id="main-content">
 
   <h1 class="animate" style="--i:0">The Converge Skill Chain</h1>
-  <p class="subtitle animate" style="--i:1">skills/ &middot; v1.0 &middot; 11 Claude Code skills &middot; nine spine + one engine + one tooling &middot; every engine bound by a flag, never a name</p>
+  <p class="subtitle animate" style="--i:1">skills/ &middot; report v2.0 &middot; 13 skill packages &middot; one task-driven spine &middot; feat/e2e @ f8e9804</p>
   <div class="page-tools animate" style="--i:2" aria-label="Document actions">
     <button class="page-tool" id="print-report" type="button">Print or save as PDF</button>
     <a class="page-tool" href="#s2">Jump to the spine map</a>
@@ -658,10 +658,13 @@
   </div>
 
   <p class="lead animate" style="--i:2">
-    Converge ships as <strong>eleven self-contained skills</strong> — nine that implement the spine
-    (eight passes + the fork's two branches + Register), a harness engine, and an authoring tool.
+    Converge currently carries <strong>thirteen self-contained skill packages</strong>: the Pass 0–8
+    spine, the cross-cutting lesson skill, a harness engine, and an authoring tool. The former
+    plan-driven Pass 5A package remains in the repository for history, but Task-Spec v3.4 collapses
+    execution onto one task-driven path.
     Each is <code>SKILL.md</code> + <code>references/</code> + <code>scripts/</code>; everything
-    <em>enforceable</em> is a bash CLI, not prose. All eleven pass Anthropic's official validator.
+    <em>enforceable</em> is a CLI or script, not prose. Twelve packages pass the vendored validator;
+    the Pass 4 package currently has one YAML-frontmatter parsing defect documented below.
     <strong>You are converged when the eval passes — not when you feel done.</strong>
   </p>
 
@@ -673,19 +676,19 @@
 
   <div class="kpi-row">
     <div class="kpi-card" style="--i:0">
-      <div class="kpi-card__value">11</div>
+      <div class="kpi-card__value">13</div>
       <div class="kpi-card__label">Skills</div>
     </div>
     <div class="kpi-card" style="--i:1">
-      <div class="kpi-card__value">8<small>+fork</small></div>
-      <div class="kpi-card__label">Passes covered</div>
+      <div class="kpi-card__value">8<small>· one path</small></div>
+      <div class="kpi-card__label">Pass model</div>
     </div>
     <div class="kpi-card" style="--i:2">
-      <div class="kpi-card__value">53</div>
+      <div class="kpi-card__value">67</div>
       <div class="kpi-card__label">Shell scripts</div>
     </div>
     <div class="kpi-card" style="--i:3">
-      <div class="kpi-card__value">41</div>
+      <div class="kpi-card__value">58</div>
       <div class="kpi-card__label">Reference docs</div>
     </div>
     <div class="kpi-card" style="--i:4">
@@ -693,7 +696,7 @@
       <div class="kpi-card__label">Runbooks</div>
     </div>
     <div class="kpi-card" style="--i:5">
-      <div class="kpi-card__value">11/11</div>
+      <div class="kpi-card__value">12/13</div>
       <div class="kpi-card__label">Validator passing</div>
     </div>
   </div>
@@ -711,35 +714,39 @@
     <span class="sec-head__title">The spine map — which skill owns which pass</span>
   </div>
   <p class="sec-intro">
-    Four passes descend in a straight line, the path forks at Consensus, and both branches reconverge
-    through Harness and the Loop. Fork B adds Register — the tracker as state.
+    Capture through Consensus lower ambiguity in a straight line. After Consensus, the current method
+    always decomposes into Task-Specs; XL/XXL nodes expand into runnable child leaves. Register projects
+    those specs into a tracker before Harness and the Loop.
   </p>
 
-  <pre class="dir-tree animate" style="--i:0">BRD ──▶ <span class="hl">1 · INTENT</span> ──▶ <span class="hl">2 · STRUCTURE</span> ──▶ <span class="hl">3 · DECOMPOSE</span> ──▶ <span class="hl">4 · CONSENSUS</span> ──▶ ◆ THE FORK
-                                                                          │
-                              ┌───────────────────────────────────────────┴─────────┐
-                              ▼ <span class="ann">Fork A · plan-driven</span>                              ▼ <span class="ann">Fork B · task-driven</span>
-                        <span class="hl">5A · SPECIFY</span>                                      <span class="hl">5B · TASKING</span> ──▶ <span class="hl">① REGISTER</span>
-                              └────────────────────────┬────────────────────────────┘
-                                                       ▼
-                                    <span class="hl">6 · HARNESS</span> ──▶ <span class="hl">8 · THE LOOP</span> ──▶ <span class="dim">fleet green ↺</span></pre>
+  <pre class="dir-tree animate" style="--i:0"><span class="hl">0 · CAPTURE</span> ──▶ <span class="hl">1 · INTENT</span> ──▶ <span class="hl">2 · STRUCTURE</span> ──▶ <span class="hl">3 · DECOMPOSE</span> ──▶ <span class="hl">4 · CONSENSUS</span>
+                                                                                              │
+                                                                                              ▼
+                    <span class="ann">single path · tasks all the way down</span> ──▶ <span class="hl">5 · TASKING</span> ──▶ <span class="hl">① REGISTER</span>
+                                                                                              │
+                                                                                              ▼
+                                                              <span class="hl">6 · HARNESS</span> ──▶ <span class="hl">8 · THE LOOP</span> ──▶ <span class="dim">fleet green ↺</span>
+
+                    <span class="ann">every closed pass</span> ──▶ <span class="hl">pass-to-lesson</span> ──▶ durable teaching artifact</pre>
 
   <div class="table-wrap animate" style="--i:1">
     <div class="table-scroll" tabindex="0" role="region" aria-label="Pass to skill mapping">
       <table class="data-table">
         <thead><tr><th>Pass</th><th>Skill</th><th class="wide">Out → Gate</th></tr></thead>
         <tbody>
+          <tr><td><span class="status status--info">0 · Capture</span></td><td><code>idea-to-brd</code></td><td>canonical BRD or honest no-go · <code>CHECK_BRD</code></td></tr>
           <tr><td><span class="status status--info">1 · Intent</span></td><td><code>brd-docs-to-tech-req</code></td><td>tech-spec · answers the brief</td></tr>
           <tr><td><span class="status status--info">2 · Structure</span></td><td><code>tech-req-to-adrs</code></td><td>docs/adrs/* · terrain named, no "build X"</td></tr>
           <tr><td><span class="status status--info">3 · Decompose</span></td><td><code>reqs-to-swimlane-plans</code></td><td>sketch/*.plan · plan-altitude only</td></tr>
-          <tr><td><span class="status status--gate">4 · Consensus</span></td><td><code>sketch-plans-adversarial-review</code></td><td>plans sharpened · <strong>the fork is decided</strong></td></tr>
-          <tr><td><span class="status status--info">5A · Specify</span></td><td><code>plans-to-coherent-spec</code></td><td>one coherent spec · one e2e eval</td></tr>
-          <tr><td><span class="status status--gate">5B · Tasking</span></td><td><code>task-spec</code></td><td>tasks/T-*.md · every task carries a runnable eval</td></tr>
+          <tr><td><span class="status status--gate">4 · Consensus</span></td><td><code>sketch-plans-adversarial-review</code></td><td>provenance-stamped objections resolved · tasking path confirmed</td></tr>
+          <tr><td><span class="status status--no">5A · Retired</span></td><td><code>plans-to-coherent-spec</code></td><td>historical package; no longer an active route</td></tr>
+          <tr><td><span class="status status--gate">5 · Tasking</span></td><td><code>task-spec</code></td><td>XS–L leaves; XL/XXL nodes; every leaf carries runnable evals</td></tr>
           <tr><td><span class="status status--info">① · Register</span></td><td><code>task-specs-to-issues</code></td><td>1 spec = 1 issue · the board is state</td></tr>
           <tr><td><span class="status status--info">6 · Harness</span></td><td><code>stack-to-harness</code></td><td>.claude/ + AGENTS.md · the quality moat</td></tr>
           <tr><td><span class="status status--ok">8 · The Loop</span></td><td><code>task-loop</code></td><td>issue → green eval → PR</td></tr>
           <tr><td><span class="status status--info">engine</span></td><td><code>agents-kbs-tech-stack</code></td><td>the scaffolder Pass 6 drives</td></tr>
           <tr><td><span class="status status--info">tooling</span></td><td><code>skill-creator</code></td><td>author · evaluate · validate skills</td></tr>
+          <tr><td><span class="status status--info">cross-cutting</span></td><td><code>pass-to-lesson</code></td><td>canonized pass → checked teaching artifact</td></tr>
         </tbody>
       </table>
     </div>
@@ -811,22 +818,22 @@
     <span class="sec-head__title">Pass 3 &middot; reqs-to-swimlane-plans — split the work along its natural seams</span>
   </div>
   <p class="sec-intro">
-    Same session as Pass 2, ADRs in hand: cuts where the system is already jointed — feature or
-    component edges — and gives each seam exactly one focus-oriented sketch plan under
-    <code>sketch/*.plan</code>. The right number of lanes is the number of <strong>genuine
-    seams</strong>. No more, no fewer. Plan-altitude only: no tasks, no SQL, no handler code.
+    ADRs in hand, this pass cuts where the system is already jointed and gives each seam one
+    <code>sketch/swimlane-&lt;seam&gt;/</code> directory: a lean PRD plus one file per leg. The leg key is
+    stable and technology-less; the filename may carry the current tool label. Plan altitude stays
+    above tasks and implementation code.
   </p>
   <div class="card-grid">
     <div class="ve-card phase-card animate" style="--i:0">
       <div class="phase-num">Flow</div>
-      <div class="phase-name">Seams → One plan each → Grounded</div>
-      <p>Cut on real joints → one swimlane, one plan, one focus → each lane inherits the relevant ADRs.</p>
+      <div class="phase-name">Seam → Swimlane → Leg → Task-Spec</div>
+      <p>Cut on real joints → one lane directory per seam → independently finishable legs → Task-Spec leaves at Pass 5.</p>
     </div>
     <div class="ve-card phase-card animate" style="--i:1">
       <div class="phase-num">Ships</div>
       <div class="phase-name">new-plan.sh</div>
-      <span class="phase-tool">single transform &middot; same session as Pass 2</span>
-      <p>Plan scaffolds listing features, dependencies, build order, proving-tests.</p>
+      <span class="phase-tool">v0.7.0 &middot; dir-per-swimlane &middot; CHECK_PLAN</span>
+      <p>Cross-file scaffolds and checks for PRDs, leg metadata, links, contiguous ids, architecture, and seam contracts.</p>
     </div>
     <div class="ve-card phase-card phase-card--accept animate" style="--i:2">
       <div class="phase-num">Gate</div>
@@ -841,10 +848,10 @@
     <span class="sec-head__title">Pass 4 &middot; sketch-plans-adversarial-review — a different model refutes the plans</span>
   </div>
   <p class="sec-intro">
-    A model won't refute itself hard enough — so this pass binds a <strong>different</strong> engine
-    (<code>--adversary codex|gemini|gpt</code>) as a skeptic who defaults to "refuted." Every objection
-    is FIXED in a plan or ACCEPTED with a named owner; nothing is silently dropped. The pass ends by
-    deciding <strong>THE FORK</strong>: does the trust boundary wrap the whole system, or each unit?
+    A model will not refute itself hard enough, so this pass dispatches a <strong>different-family</strong>
+    engine (<code>cvg review --adversary codex|kimi|claude</code>) as a skeptic. Every objection is FIXED
+    in a plan or ACCEPTED with a named owner. The referee—not the engine—stamps live-plan SHA-256
+    provenance into one objection log, and <code>cvg review --check</code> re-hashes it before handoff.
   </p>
   <div class="card-grid">
     <div class="ve-card phase-card phase-card--gate animate" style="--i:0">
@@ -855,32 +862,30 @@
     <div class="ve-card phase-card phase-card--gate animate" style="--i:1">
       <div class="phase-num">Ships</div>
       <div class="phase-name">check-consensus-gate.sh</div>
-      <span class="phase-tool">attack-playbook.md &middot; the-fork.md</span>
-      <p>The refutation playbook and the fork-decision reference.</p>
+      <span class="phase-tool">attack-playbook.md &middot; engine-adapter.md &middot; schema</span>
+      <p>Single- and multi-engine dispatch, fail-closed timeout/error states, provenance stamping, and the consensus gate.</p>
     </div>
     <div class="ve-card phase-card phase-card--gate animate" style="--i:2">
       <div class="phase-num">Gate</div>
-      <div class="phase-name">No objection survives · fork declared</div>
-      <p>The fork is an <strong>output</strong> of this pass — never assumed earlier — with a written reason.</p>
+      <div class="phase-name">No objection survives · provenance intact</div>
+      <p>The proving ground closed with eight resolved objections over all twelve plan files and <code>CHECK_CONSENSUS=OK</code>.</p>
     </div>
   </div>
   <div class="callout animate" style="--i:3">
-    <strong>The fork in one question:</strong> <em>if one unit passed its eval and the rest failed,
-    would that be meaningful progress?</em> Yes → Fork B (task-driven). If a lone green unit would
-    mislead because the value only exists in the whole → Fork A (plan-driven). Both reconverge on the
-    identical shared gate: <strong>eval passes = merged</strong>.
+    <strong>The current decision:</strong> the fork is collapsed. Task-Spec v3.4 treats oversized work
+    as XL/XXL decomposition nodes with required children; workers receive only runnable leaves. The
+    plan-driven branch is retained as repository history, not an active handoff.
   </div>
 
   <!-- ============ 7. PASS 5A ============ -->
   <div class="sec-head" id="s7">
     <span class="sec-head__num">07</span>
-    <span class="sec-head__title">Pass 5A &middot; plans-to-coherent-spec — Fork A · one coherent spec</span>
+    <span class="sec-head__title">Historical Pass 5A &middot; plans-to-coherent-spec — retained, not active</span>
   </div>
   <p class="sec-intro">
-    For tightly-coupled systems where the pieces only make sense together: fuses the hardened swimlane
-    plans into ONE coupled specification — the named SDD frameworks (SpecKit, Kiro, OpenSpec, BMAD)
-    live here via <code>--framework</code> — and binds a <strong>single end-to-end eval</strong> that
-    defines done for the whole. A human holds one big gate, held longer.
+    This package records the former plan-driven route: fuse all plans into one coupled specification
+    and hold one end-to-end gate. It still validates as a historical skill package, but v3.4 removed
+    this escape from the active method. Large work now decomposes recursively into child Task-Specs.
   </p>
   <div class="card-grid">
     <div class="ve-card phase-card animate" style="--i:0">
@@ -895,16 +900,16 @@
       <p>The e2e eval scaffold and the coherence gate.</p>
     </div>
     <div class="ve-card phase-card phase-card--accept animate" style="--i:2">
-      <div class="phase-num">Gate</div>
-      <div class="phase-name">One spec, one unit of trust, one eval</div>
-      <p>The whole system is the unit of trust; a single e2e eval runs against the real flow.</p>
+      <div class="phase-num">Status</div>
+      <div class="phase-name">Retired from active routing</div>
+      <p>Useful history, but no current <code>cvg</code> command hands work into this branch.</p>
     </div>
   </div>
 
   <!-- ============ 8. PASS 5B ============ -->
   <div class="sec-head" id="s8">
     <span class="sec-head__num">08</span>
-    <span class="sec-head__title">Pass 5B &middot; task-spec — Fork B · the cornerstone unit &middot; v3.2.0</span>
+    <span class="sec-head__title">Pass 5 &middot; task-spec — the single tasking path &middot; v3.4.0</span>
   </div>
   <p class="sec-intro">
     The deepest skill in the chain: atomic, vendor-neutral, <strong>self-verifying</strong> Task-Spec
@@ -923,15 +928,15 @@
     <div class="ve-card animate" style="--i:1">
       <div class="ve-card__label">The runtime</div>
       <p>Locked atomic status transitions, rebuildable <code>_state.yaml</code> index, append-only
-      <code>_metrics.jsonl</code> ledger, effort gate (XS–XL routing, XL refused → SDD), L0–L2 executor
-      conformance, 7 dispatch recipes (Claude, Codex, Kimi, Gemini, taskship, anthive, custom).</p>
+      <code>_metrics.jsonl</code> ledger, six-tier sizing (XS/S/M/L leaves; XL/XXL nodes), leaf-only
+      delegation, L0–L2 executor conformance, and an open execution-backend contract.</p>
     </div>
     <div class="ve-card animate" style="--i:2">
       <div class="ve-card__label" style="color: var(--green)">Ships</div>
-      <p><strong>20 scripts</strong> · 19 reference docs · 19 runbooks · JSON Schemas (Draft 2020-12) ·
+      <p><strong>20 scripts</strong> · 31 reference files · 19 runbooks · JSON Schemas (Draft 2020-12) ·
       test + conformance suites. Deep dive:
       <a href="task-spec-skill-anatomy-v3.2.0.html">the full anatomy page</a> ·
-      <code>docs/task-spec-v3.2.0.pdf</code>.</p>
+      content updated to v3.4 inside the legacy-stable filename.</p>
     </div>
   </div>
   <div class="callout callout--green animate" style="--i:3">
@@ -1056,12 +1061,12 @@
   <!-- ============ 12. TOOLING & COMPLIANCE ============ -->
   <div class="sec-head" id="s12">
     <span class="sec-head__num">12</span>
-    <span class="sec-head__title">Tooling &amp; compliance — skill-creator, and the 11/11 bar</span>
+    <span class="sec-head__title">Tooling &amp; release health — skill-creator, and the current 12/13 bar</span>
   </div>
   <p class="sec-intro">
     <code>skill-creator</code> is Anthropic's skill-authoring toolkit, vendored so the chain can
     maintain itself: create and improve skills, run eval benchmarks, package for distribution, and
-    validate structure. The validator it ships is the compliance bar every skill in this folder passes.
+    validate structure. The validator is the packaging bar; runtime gates are tested separately.
   </p>
 
   <div class="table-wrap animate" style="--i:0">
@@ -1069,17 +1074,19 @@
       <table class="data-table">
         <thead><tr><th>Skill</th><th>Validator</th><th class="wide">Notes</th></tr></thead>
         <tbody>
+          <tr><td><code>idea-to-brd</code></td><td><span class="status status--ok">valid</span></td><td>Pass 0 · v0.6.0 · canonical/draft/no-go BRD gate</td></tr>
           <tr><td><code>brd-docs-to-tech-req</code></td><td><span class="status status--ok">valid</span></td><td>Pass 1 · 124-line SKILL.md · 1 script</td></tr>
           <tr><td><code>tech-req-to-adrs</code></td><td><span class="status status--ok">valid</span></td><td>Pass 2 · declares compatibility: bash 3.2+ (macOS safe)</td></tr>
           <tr><td><code>reqs-to-swimlane-plans</code></td><td><span class="status status--ok">valid</span></td><td>Pass 3 · plan-altitude references (seams, altitude)</td></tr>
-          <tr><td><code>sketch-plans-adversarial-review</code></td><td><span class="status status--ok">valid</span></td><td>Pass 4 · attack playbook + fork reference</td></tr>
-          <tr><td><code>plans-to-coherent-spec</code></td><td><span class="status status--ok">valid</span></td><td>Pass 5A · e2e-eval + coherent-spec format references</td></tr>
-          <tr><td><code>task-spec</code></td><td><span class="status status--ok">valid</span></td><td>Pass 5B · v3.2.0 · the deepest skill: 20 scripts, 19 runbooks, test + conformance suites</td></tr>
+          <tr><td><code>sketch-plans-adversarial-review</code></td><td><span class="status status--no">YAML fail</span></td><td>Pass 4 runtime gate is green, but the package description has an unquoted colon and fails frontmatter parsing</td></tr>
+          <tr><td><code>plans-to-coherent-spec</code></td><td><span class="status status--ok">valid</span></td><td>Historical Pass 5A package · retained but retired from active routing</td></tr>
+          <tr><td><code>task-spec</code></td><td><span class="status status--ok">valid</span></td><td>Pass 5 · v3.4.0 · six-tier sizing, 20 scripts, 19 runbooks, test + conformance suites</td></tr>
           <tr><td><code>task-specs-to-issues</code></td><td><span class="status status--ok">valid</span></td><td>① · Apache-2.0 · 6 scripts (register + verify)</td></tr>
-          <tr><td><code>stack-to-harness</code></td><td><span class="status status--ok">valid</span></td><td>Pass 6 · v0.2.0 · thin orchestration over the engine</td></tr>
+          <tr><td><code>stack-to-harness</code></td><td><span class="status status--ok">valid</span></td><td>Pass 6 · v0.3.0 · thin orchestration over the engine</td></tr>
           <tr><td><code>task-loop</code></td><td><span class="status status--ok">valid</span></td><td>Pass 8 · MIT · 2 scripts (eval runner + PR opener)</td></tr>
           <tr><td><code>agents-kbs-tech-stack</code></td><td><span class="status status--ok">valid</span></td><td>engine · v0.3.0 · 10 scripts, 20+ templates, quality gate</td></tr>
           <tr><td><code>skill-creator</code></td><td><span class="status status--ok">valid</span></td><td>tooling · 10 Python scripts + eval-viewer + grader agents</td></tr>
+          <tr><td><code>pass-to-lesson</code></td><td><span class="status status--ok">valid</span></td><td>cross-cutting · v0.2.0 · every canonized pass closes with a checked lesson</td></tr>
         </tbody>
       </table>
     </div>
@@ -1095,12 +1102,12 @@
 
   <div class="callout callout--green" style="margin-top:26px">
     <strong>"You are converged when the eval passes — not when you feel done."</strong>
-    Eleven skills, one invariant: every pass lowers altitude, binds an engine, ends at a gate —
+    Thirteen packages, one invariant: every active pass lowers altitude, binds an engine, ends at a gate —
     and Pass 8 doesn't lower, it closes.
   </div>
 
   <footer>
-    Source: /Users/luanmorenomaciel/GitHub/converge/skills &middot; cvg-skills v1.0 &middot; validator 11/11 &middot; rendered 2026-07-07 &middot; refreshed with visual-explainer v0.8.1 on 2026-07-21
+    Source: /Users/luanmorenomaciel/GitHub/converge/skills &middot; report v2.0 &middot; validator 12/13 &middot; feat/e2e @ f8e9804 &middot; verified 2026-07-21 &middot; visual-explainer v0.8.1
   </footer>
 
 </main><!-- /main -->

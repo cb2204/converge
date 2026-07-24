@@ -178,7 +178,7 @@
 
 <header class="animate" style="--i:0">
   <h1>Autonomous System Development</h1>
-  <div class="subtitle">the Agentic Loop · the five layers · how the machine gets built &nbsp;·&nbsp; v1.0 &nbsp;·&nbsp; 2026-07-17 &nbsp;·&nbsp; every demo output on this page is a real run receipt</div>
+  <div class="subtitle">the Agentic Loop · the five layers · how the machine gets built &nbsp;·&nbsp; v1.1 &nbsp;·&nbsp; feat/e2e @ f8e9804 &nbsp;·&nbsp; 2026-07-21</div>
   <div class="page-tools" aria-label="Document actions">
     <button class="page-tool" id="print-report" type="button">Print or save as PDF</button>
     <a class="page-tool" href="#s12">Jump to current position</a>
@@ -261,7 +261,7 @@ AGENT (final) : The paid revenue in the fixture is 240.00.</div>
   <div class="ve-card animate" style="--i:1"><div class="ve-card__label" style="color:var(--blue)">Seat A · INSIDE — cvg as a tool</div>
     <p>During hops 2–3 the model emits <code>{"command":"cvg tasks gate T-1.md"}</code> and the harness runs it — cvg is just another program in the environment, like sqlite3 in the demo. <strong>This is Track R's mode today.</strong></p></div>
   <div class="ve-card animate" style="--i:2"><div class="ve-card__label" style="color:var(--gold)">Seat B · OUTSIDE — cvg as launcher + referee</div>
-    <p><code>cvg work T-1 --engine claude</code>: pre-gate the seal → frame the prompt → <strong>spawn an entire agentic loop as one subprocess</strong> → ignore its self-report → run the referee itself → done / retry / park. <strong>This is the autonomous mode.</strong></p></div>
+    <p><code>cvg work T-1 --engine claude</code>: pre-gate the seal → frame the prompt → <strong>spawn an entire agentic loop as one subprocess</strong> → ignore its self-report → run the referee itself → done / retry / park. <strong>Pass 4 review dispatch is the first shipped slice of this seat; the general task worker is still planned.</strong></p></div>
 </div>
 <div class="term animate" style="--i:3"><span class="c">the complete nesting, top to bottom:</span>
 cron / you                                   <span class="c">← the trigger</span>
@@ -349,9 +349,12 @@ cron / you                                   <span class="c">← the trigger</sp
 <div class="sec-head animate" id="s12" style="--i:0"><span class="sec-head__num">12</span><span class="sec-head__title">Where we are on this map</span></div>
 <div class="kpi-row">
   <div class="kpi-card" style="--i:0"><div class="kpi-card__value">✓</div><div class="kpi-card__label">Phase 0 · foundations</div></div>
-  <div class="kpi-card" style="--i:1"><div class="kpi-card__value">R1.U</div><div class="kpi-card__label">Phase 1 · pass 1 beat ① done</div></div>
-  <div class="kpi-card" style="--i:2"><div class="kpi-card__value">R1.R</div><div class="kpi-card__label">next · the real run</div></div>
-  <div class="kpi-card" style="--i:3"><div class="kpi-card__value">M0</div><div class="kpi-card__label">Track M floor built, parked</div></div>
+  <div class="kpi-card" style="--i:1"><div class="kpi-card__value">R0–R4</div><div class="kpi-card__label">Phase 1 · five passes closed</div></div>
+  <div class="kpi-card" style="--i:2"><div class="kpi-card__value">R5.R</div><div class="kpi-card__label">active · first draft unsigned</div></div>
+  <div class="kpi-card" style="--i:3"><div class="kpi-card__value">0.9</div><div class="kpi-card__label">cvg · agent-readable referee</div></div>
+</div>
+<div class="callout callout--blue">
+  <strong>What changed since the original map:</strong> <code>cvg</code> can now dispatch and verify a real cross-family adversarial review, describe its full contract through <code>agent-context</code>, emit a uniform <code>--json</code> envelope, and dry-run mutations. The Manager, general worker loop, board, and automated fleet remain Track M work.
 </div>
 <div class="callout callout--green">
   <strong>Try it yourself, five minutes:</strong> from the repo root —
@@ -361,8 +364,8 @@ cron / you                                   <span class="c">← the trigger</sp
 </div>
 
 <div class="footer">
-  ASD &amp; the Agentic Loop v1.0 · the model thinks, the harness acts, the referee judges ·
-  built 2026-07-17 · refreshed with visual-explainer v0.8.1 on 2026-07-21 · style: blueprint · companion deck: cvg-automation-plan-v1.0.html
+  ASD &amp; the Agentic Loop v1.1 · the model thinks, the harness acts, the referee judges ·
+  feat/e2e @ f8e9804 verified 2026-07-21 · visual-explainer v0.8.1 · companion deck: cvg-automation-plan-v1.0.html
 </div>
 
 </main><!-- /main -->

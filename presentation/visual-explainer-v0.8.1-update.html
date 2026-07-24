@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A readable record of the visual-explainer v0.8.1 installation and the feat/e2e presentation refresh.">
+  <title>Visual Explainer 0.8.1 · Converge Presentation Refresh</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23172235'/%3E%3Cpath d='M17 17h30v9H26v12h21v9H17Z' fill='%23155eef'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --ink: #172235;
+      --muted: #667085;
+      --paper: #f5f2ea;
+      --surface: #fffdf8;
+      --line: #d9d3c6;
+      --blue: #155eef;
+      --blue-soft: #e8f0ff;
+      --green: #087443;
+      --green-soft: #e8f7ef;
+      --gold: #a15c00;
+      --gold-soft: #fff1d6;
+      --red: #b42318;
+      --red-soft: #ffebe8;
+      --shadow: 0 18px 60px rgba(44, 36, 24, .09);
+      --serif: Iowan Old Style, Baskerville, Georgia, serif;
+      --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--sans); line-height: 1.62; }
+    a { color: var(--blue); }
+    code { padding: .12rem .35rem; border-radius: .35rem; background: #ece8de; font-family: var(--mono); font-size: .9em; overflow-wrap: anywhere; }
+    .skip { position: fixed; top: -60px; left: 16px; z-index: 20; padding: 10px 14px; background: var(--ink); color: white; border-radius: 8px; }
+    .skip:focus { top: 12px; }
+    .progress { position: fixed; inset: 0 auto auto 0; width: 0; height: 3px; z-index: 30; background: var(--blue); }
+    .layout { display: grid; grid-template-columns: 250px minmax(0, 920px); gap: 42px; max-width: 1240px; margin: 0 auto; padding: 38px 28px 80px; }
+    nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 253, 248, .88); backdrop-filter: blur(14px); }
+    .brand { display: block; color: var(--ink); text-decoration: none; font-weight: 800; letter-spacing: -.02em; }
+    .brand small { display: block; margin-top: 2px; color: var(--muted); font: 700 11px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    nav ul { list-style: none; padding: 0; margin: 20px 0 0; }
+    nav a.section-link { display: block; margin: 4px 0; padding: 8px 10px; border-radius: 9px; color: var(--muted); text-decoration: none; font-size: 14px; }
+    nav a.section-link:hover, nav a.section-link[aria-current] { color: var(--blue); background: var(--blue-soft); }
+    main { min-width: 0; }
+    .hero { padding: 54px; border: 1px solid var(--line); border-radius: 28px; background: radial-gradient(circle at 90% 0, #dce9ff 0, transparent 34%), var(--surface); box-shadow: var(--shadow); }
+    .eyebrow, .kicker { color: var(--blue); font: 800 11px/1.4 var(--mono); letter-spacing: .13em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 12px 0 16px; font: 700 clamp(42px, 7vw, 72px)/.98 var(--serif); letter-spacing: -.045em; }
+    .lead { max-width: 720px; margin: 0; color: #3e4b5d; font-size: 18px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 0; padding: 0; list-style: none; }
+    .chip { padding: 7px 10px; border: 1px solid #c8d8f5; border-radius: 999px; background: #f4f8ff; color: #28476f; font: 700 12px/1.2 var(--mono); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+    .button { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); text-decoration: none; font: 700 13px/1 var(--sans); cursor: pointer; }
+    .button.primary { border-color: var(--blue); background: var(--blue); color: white; }
+    section { scroll-margin-top: 28px; margin-top: 34px; padding: 34px; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); }
+    h2 { margin: 7px 0 10px; font: 700 clamp(28px, 4vw, 40px)/1.1 var(--serif); letter-spacing: -.025em; }
+    h3 { margin: 0 0 8px; font-size: 17px; letter-spacing: -.01em; }
+    .intro { max-width: 760px; margin: 0 0 22px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .card { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 15px; background: #fff; }
+    .card p { margin: 0; color: #4d5868; font-size: 14px; }
+    .status { display: inline-flex; margin-bottom: 10px; padding: 5px 8px; border-radius: 999px; font: 800 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+    .ok { color: var(--green); background: var(--green-soft); }
+    .note { color: var(--gold); background: var(--gold-soft); }
+    .gap { color: var(--red); background: var(--red-soft); }
+    .callout { margin-top: 16px; padding: 17px 19px; border-left: 4px solid var(--blue); border-radius: 10px; background: var(--blue-soft); }
+    .table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    caption { padding: 13px 16px; color: var(--muted); text-align: left; font-size: 12px; }
+    th, td { padding: 13px 15px; border-top: 1px solid #e6e1d7; text-align: left; vertical-align: top; overflow-wrap: break-word; }
+    th { background: #f7f4ed; color: #49566a; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .timeline { display: grid; gap: 0; }
+    .step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; position: relative; padding-bottom: 20px; }
+    .step:not(:last-child)::before { content: ""; position: absolute; top: 31px; bottom: 0; left: 15px; width: 1px; background: var(--line); }
+    .num { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: var(--blue); color: white; font: 800 12px/1 var(--mono); }
+    .step p { margin: 3px 0 0; color: var(--muted); }
+    footer { padding: 28px 8px 0; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width: 880px) {
+      .layout { display: block; padding: 0 16px 60px; }
+      nav { position: sticky; top: 0; z-index: 15; max-height: none; margin: 0 -16px 18px; padding: 10px 16px; border-width: 0 0 1px; border-radius: 0; overflow: hidden; }
+      .brand { display: none; }
+      nav ul { display: flex; gap: 5px; margin: 0; overflow-x: auto; scrollbar-width: none; }
+      nav li { flex: 0 0 auto; }
+      nav a.section-link { white-space: nowrap; }
+      .hero { padding: 34px 24px; border-radius: 20px; }
+      section { padding: 26px 20px; }
+    }
+    @media (max-width: 620px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 42px; } }
+    @media print { nav, .actions, .progress, .skip { display: none !important; } body { background: white; } .layout { display: block; max-width: none; padding: 0; } .hero, section { box-shadow: none; break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to document</a>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+  <div class="layout">
+    <nav aria-label="Document sections">
+      <a class="brand" href="#top">visual-explainer <small>0.8.1 · update record</small></a>
+      <ul>
+        <li><a class="section-link" href="#installed">Installed</a></li>
+        <li><a class="section-link" href="#new">What changed</a></li>
+        <li><a class="section-link" href="#pages">Pages refreshed</a></li>
+        <li><a class="section-link" href="#truth">feat/e2e truth</a></li>
+        <li><a class="section-link" href="#verify">Verification</a></li>
+      </ul>
+    </nav>
+
+    <main id="main">
+      <header class="hero" id="top">
+        <p class="eyebrow">Installation + documentation record</p>
+        <h1>Visual Explainer 0.8.1 is the presentation baseline.</h1>
+        <p class="lead">This companion document records where the skill is installed, which v0.8.1 ideas now shape the Converge presentation folder, and how the four existing pages were re-grounded in the current local <code>feat/e2e</code> branch.</p>
+        <ul class="chips">
+          <li class="chip">Claude Code · 0.8.1</li>
+          <li class="chip">Codex · 0.8.1</li>
+          <li class="chip">feat/e2e · f8e9804</li>
+          <li class="chip">presentation · 5 HTML files</li>
+          <li class="chip">updated · 2026-07-21</li>
+        </ul>
+        <div class="actions">
+          <a class="button primary" href="#installed">Read the update</a>
+          <button class="button" id="print" type="button">Print or save as PDF</button>
+          <a class="button" href="cvg-automation-plan-v1.0.html">Open current-state report</a>
+        </div>
+      </header>
+
+      <section id="installed">
+        <p class="kicker">01 · installation state</p>
+        <h2>One upstream version, adapted cleanly for both hosts</h2>
+        <p class="intro">The upstream package is v0.8.1 in Claude Code and Codex. Codex keeps the same commands, references, templates, extension, and plugin metadata; only the unsupported top-level <code>compatibility</code> field is omitted from its local <code>SKILL.md</code>.</p>
+        <div class="grid">
+          <article class="card"><span class="status ok">Current</span><h3>Claude Code</h3><p>The marketplace cache contains <code>visual-explainer/0.8.1</code> with the upstream skill, command set, reference library, templates, and extension.</p></article>
+          <article class="card"><span class="status ok">Current</span><h3>Codex</h3><p><code>~/.codex/skills/visual-explainer</code> carries metadata version 0.8.1 and the complete upstream package surface.</p></article>
+          <article class="card"><span class="status note">Intentional</span><h3>Host-specific frontmatter</h3><p>Claude retains the browser compatibility sentence. Codex omits that one frontmatter key so its installed skill parses under the local schema.</p></article>
+          <article class="card"><span class="status ok">Canonical</span><h3>Source</h3><p>The package metadata continues to point to <code>github.com/nicobailon/visual-explainer</code>; this document adds no forked design rules.</p></article>
+        </div>
+      </section>
+
+      <section id="new">
+        <p class="kicker">02 · v0.8.1 behavior</p>
+        <h2>What the new baseline asks every visual explanation to do</h2>
+        <p class="intro">Version 0.8.1 is less about decoration and more about choosing the right representation, preserving source detail, and proving the page works in a real browser.</p>
+        <div class="timeline">
+          <div class="step"><span class="num">1</span><div><h3>Route by information shape</h3><p>Use Mermaid for topology, semantic tables for matrices, CSS cards for text-heavy architecture, and a hybrid overview-plus-detail pattern when a system has more than about fifteen elements.</p></div></div>
+          <div class="step"><span class="num">2</span><div><h3>Preserve the evidence</h3><p>Tables keep their rows and columns; technical recaps verify paths, commands, behavior, and history against the source instead of polishing stale narrative.</p></div></div>
+          <div class="step"><span class="num">3</span><div><h3>Make long pages navigable</h3><p>Pages with four or more major sections use responsive navigation: a sticky sidebar on desktop and a horizontally scrolling section bar on mobile.</p></div></div>
+          <div class="step"><span class="num">4</span><div><h3>Engineer overflow away</h3><p>Grid and flex children use <code>min-width: 0</code>; long identifiers wrap; wide tables scroll inside labeled regions; diagrams receive bounded containers.</p></div></div>
+          <div class="step"><span class="num">5</span><div><h3>Verify before handoff</h3><p>Open the result in a browser, check desktop and mobile layouts, inspect console errors and horizontal overflow, and confirm interactive controls work.</p></div></div>
+        </div>
+      </section>
+
+      <section id="pages">
+        <p class="kicker">03 · presentation folder</p>
+        <h2>Every page now carries the same reading contract</h2>
+        <div class="table-wrap" role="region" aria-label="Presentation document update matrix" tabindex="0">
+          <table>
+            <caption>The filename remains stable where links already depend on it; the internal revision identifies the current content.</caption>
+            <thead><tr><th>Document</th><th>Current content</th><th>Material change</th></tr></thead>
+            <tbody>
+              <tr><td><a href="cvg-automation-plan-v1.0.html">cvg automation plan</a></td><td>report revision 2.0</td><td>Passes 0–4 closed, <code>cvg 0.9</code>, agent JSON contract, R5.R WIP boundary, 12/13 skill release health.</td></tr>
+              <tr><td><a href="cvg-skills-v1.0.html">Converge skill chain</a></td><td>report revision 2.0</td><td>13 packages, straight tasking spine, Pass 5A marked historical, Pass 3/4 mechanics and versions corrected.</td></tr>
+              <tr><td><a href="task-spec-skill-anatomy-v3.2.0.html">Task-Spec anatomy</a></td><td>v3.4 content</td><td>Six tiers, leaf write budgets, XL/XXL children, leaf-only delegation, no SDD escape.</td></tr>
+              <tr><td><a href="asd-agentic-loop-v1.0.html">ASD agentic loop</a></td><td>report revision 1.1</td><td>Current position moved from R1 to active R5.R; Pass 4 dispatch identified as the first shipped outside-the-loop slice.</td></tr>
+              <tr><td><strong>This companion guide</strong></td><td>v0.8.1 record</td><td>Documents installation, design rules, current branch truth, file-by-file changes, and verification scope.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="truth">
+        <p class="kicker">04 · feat/e2e source of truth</p>
+        <h2>The content refresh follows executable evidence</h2>
+        <p class="intro">The local branch is intentionally newer than the fetched remote. The pages name that boundary instead of presenting local work as remotely published.</p>
+        <div class="grid">
+          <article class="card"><span class="status ok">Closed</span><h3>Passes 0–4</h3><p>Live gates return <code>CHECK_BRD=PASS</code>, <code>CHECK_TECH_SPEC=PASS</code>, <code>CHECK_ADR=OK</code>, <code>CHECK_PLAN=OK</code>, and <code>CHECK_CONSENSUS=OK</code>.</p></article>
+          <article class="card"><span class="status ok">Shipped locally</span><h3><code>cvg 0.9.0</code></h3><p>Includes Pass 0–4 commands, cross-family adversary dispatch, <code>doctor</code>, <code>agent-context</code>, global <code>--json</code>, and mutation <code>--dry-run</code>.</p></article>
+          <article class="card"><span class="status note">In progress</span><h3>R5.R tasking</h3><p>The first steel-thread L-leaf draft now exists at <code>T-20260721-cap-steelthread.md</code>. It is ready but unsigned, so tasking has started without crossing the delegation gate.</p></article>
+          <article class="card"><span class="status gap">Known gap</span><h3>12 of 13 skill packages validate</h3><p>The Pass 4 package runtime is proven, but its current <code>SKILL.md</code> description has an unquoted colon that breaks YAML frontmatter parsing.</p></article>
+        </div>
+        <div class="callout"><strong>Branch boundary:</strong> local <code>feat/e2e</code> is at <code>f8e9804</code>, 29 commits ahead of <code>origin/feat/e2e</code>, with no remote-only commits at refresh time. The untracked R5 Task-Spec is labeled as working-tree WIP, not committed branch history.</div>
+      </section>
+
+      <section id="verify">
+        <p class="kicker">05 · verification contract</p>
+        <h2>What must be green before these documents are handed off</h2>
+        <div class="grid">
+          <article class="card"><span class="status ok">Passed</span><h3>Live Converge gates</h3><p>All five current pass gates were rerun on the proving ground; <code>cvg doctor</code> detected three engines and two cross-family choices.</p></article>
+          <article class="card"><span class="status ok">Passed</span><h3>Agent-native CLI suite</h3><p><code>tests/test-cvg-json-envelope.sh</code> passed 12 of 12 envelope, parity, exit-code, manifest, and dry-run cases.</p></article>
+          <article class="card"><span class="status ok">Passed</span><h3>Six-tier Task-Spec suite</h3><p><code>test-effort-sizing.sh</code> passed 11 of 11 leaf, node, child-count, backend, warning, and invalid-size cases.</p></article>
+          <article class="card"><span class="status ok">Passed</span><h3>Browser QA</h3><p>All five pages rendered at 1440 × 1000 and 390 × 844 with zero horizontal overflow; local links returned 200, Mermaid rendered, and the final console pass was clean.</p></article>
+        </div>
+      </section>
+
+      <footer>visual-explainer v0.8.1 · Converge presentation refresh · feat/e2e @ f8e9804 · 2026-07-21</footer>
+    </main>
+  </div>
+  <script>
+    const links = [...document.querySelectorAll('.section-link')];
+    const sections = links.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+    const update = () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      document.getElementById('progress').style.width = `${max > 0 ? (scrollY / max) * 100 : 0}%`;
+      let active = 0;
+      sections.forEach((section, index) => { if (section.getBoundingClientRect().top < 130) active = index; });
+      links.forEach((link, index) => index === active ? link.setAttribute('aria-current', 'location') : link.removeAttribute('aria-current'));
+    };
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+    document.getElementById('print').addEventListener('click', () => print());
+    update();
+  </script>
+</body>
+</html>
