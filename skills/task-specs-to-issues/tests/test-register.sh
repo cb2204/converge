@@ -332,6 +332,19 @@ printf 'reg=<%s> sev=<%s> ref=<%s>' \\
 has "inline comment stripped from register" "$RES" "reg=<false>"
 has "severity has no trailing comment" "$RES" "sev=<feature>"
 
+echo; echo "[P] spec attributes reach the adapter for the rich marker panel"
+D="$WORK/p/tasks"; S="$WORK/p/store"; build_diamond "$D"
+OUT="$(TSI_SPEC_BASE_URL=https://github.com/o/r/blob/main TSI_FAKE_STORE="$S" \
+  bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "attr-carrying register exits 0" "$RC" "0"
+META="$(cat "$S/meta/T-$DATE-reg-root.txt" 2>/dev/null)"
+has "attr: Spec id"        "$META" "Spec=T-$DATE-reg-root"
+has "attr: Size"           "$META" "Size=S"
+has "attr: sign-off tier"  "$META" "Sign-off="
+has "spec-url reaches the adapter" "$META" "specurl=https://github.com/o/r/blob/main/"
+# `group:child` names stay flat in the DRIVER; only the Linear adapter nests them.
+has "driver still emits flat group:child labels" "$META" "effort:S"
+
 # -----------------------------------------------------------------------------
 echo
 echo "=================================================================="

@@ -92,6 +92,8 @@ gh_upsert() {
       --priority)  shift 2 ;;  # GitHub has no native priority field; carried as a label instead
       --effort)    shift 2 ;;  # no native estimate; the effort:<tier> label carries it
       --due)       shift 2 ;;  # no native due date on an issue
+      --attr)      shift 2 ;;  # no rich attachment panel
+      --spec-url)  shift 2 ;;
       *) tsi_gh_die "upsert: unknown arg '$1'" ;;
     esac
   done

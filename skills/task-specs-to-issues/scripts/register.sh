@@ -286,6 +286,23 @@ while read -r id; do
   [ -n "$UP_EFF" ] && UP_ARGS+=(--effort "$UP_EFF")
   UP_DUE="$(tsi_field "$file" due_date)"
   [ -n "$UP_DUE" ] && [ "$UP_DUE" != "(none)" ] && UP_ARGS+=(--due "$UP_DUE")
+
+  # Spec-at-a-glance attributes for the marker's rich panel (Name=Value pairs).
+  # Adapters that cannot render a panel ignore --attr / --spec-url.
+  UP_ARGS+=(--attr "Spec=$id")
+  [ -n "$UP_EFF" ]     && UP_ARGS+=(--attr "Size=$UP_EFF")
+  [ -n "$UP_BACKEND" ] && [ "$UP_BACKEND" != "(none)" ] && UP_ARGS+=(--attr "Executor=$UP_BACKEND")
+  UP_PROF="$(tsi_field "$file" profile)"
+  [ -n "$UP_PROF" ] && UP_ARGS+=(--attr "Profile=$UP_PROF")
+  UP_SIG="$(tsi_field "$file" signed_off_sig)"
+  if [ -n "$UP_SIG" ] && [ "$UP_SIG" != "(none)" ]; then
+    UP_ARGS+=(--attr "Sign-off=Tier 1 (HMAC sealed)")
+  else
+    UP_ARGS+=(--attr "Sign-off=Tier 2 (structural)")
+  fi
+  UP_SBY="$(tsi_field "$file" signed_off_by)"
+  [ -n "$UP_SBY" ] && [ "$UP_SBY" != "(none)" ] && UP_ARGS+=(--attr "Signed off by=$UP_SBY")
+  [ -n "${TSI_SPEC_BASE_URL:-}" ] && UP_ARGS+=(--spec-url "${TSI_SPEC_BASE_URL%/}/$file")
   UP_PRI="$(tsi_priority "$file")"
   [ -n "$UP_PRI" ] && [ "$UP_PRI" != "(none)" ] && UP_ARGS+=(--priority "$UP_PRI")
 

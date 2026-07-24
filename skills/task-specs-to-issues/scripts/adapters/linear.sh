@@ -122,6 +122,29 @@ _ln_estimate_points() {
   esac
 }
 
+# Stamp/refresh the idempotency marker attachment, with a RICH payload.
+#
+# Linear renders an attachment's `metadata` as a modal with a title + an
+# `attributes` list, so the marker stops being a dead link and becomes the
+# spec-at-a-glance panel: size, executor, profile, sign-off trust. The `url` is
+# the idempotency key and is deliberately synthetic and stable — re-creating an
+# attachment with the SAME url updates the existing record rather than adding a
+# second, so this is safe to call on every register.
+# Fail-soft throughout: a cosmetic panel must never break a registration.
+_ln_stamp_marker() {   # _ln_stamp_marker ISSUE_UUID SPEC_ID ATTRS_JSON [spec_url]
+  local issue="$1" spec="$2" attrs="${3:-[]}" specurl="${4:-}" murl meta
+  murl="$(_ln_marker_url "$spec")"
+  meta="$(jq -n --arg spec "$spec" --argjson attrs "$attrs" --arg src "${specurl:-}" \
+    '{ specId:$spec, title:"Task-Spec", attributes:$attrs }
+     + (if $src == "" then {} else {sourceUrl:$src} end)' 2>/dev/null)" || meta='{}'
+  _linear_gql \
+    'mutation($issue:String!,$url:String!,$title:String!,$subtitle:String,$meta:JSONObject){ attachmentCreate(input:{ issueId:$issue, url:$url, title:$title, subtitle:$subtitle, metadata:$meta }){ success attachment{ id } } }' \
+    "$(jq -n --arg issue "$issue" --arg url "$murl" --arg title "$spec" \
+           --arg subtitle "Task-Spec · projected by cvg register" --argjson meta "$meta" \
+      '{issue:$issue,url:$url,title:$title,subtitle:$subtitle,meta:$meta}')" >/dev/null 2>&1 || true
+  return 0
+}
+
 # Set a due date, fail-soft and ISOLATED in its own call. `dueDate` is a
 # TimelessDate scalar; keeping it out of the main create/update mutation means a
 # scalar-type surprise can never take a whole registration down with it.
@@ -146,20 +169,73 @@ _ln_priority_int() {
   esac
 }
 
+# A stable colour per cvg label group, so the board reads at a glance.
+_ln_group_color() {
+  case "$1" in
+    effort)   printf '#5e6ad2' ;;  # Linear indigo — size
+    backend)  printf '#0f7488' ;;  # teal — which engine
+    agent)    printf '#4cb782' ;;  # green — which role
+    severity) printf '#f2994a' ;;  # amber — blast radius
+    *)        printf '#95a2b3' ;;
+  esac
+}
+
+# Find-or-create a LABEL GROUP (isGroup:true), echoing its id.
+_ln_group_id() {
+  local group="$1" resp id
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup } } }' '{}' 2>/dev/null)" || { printf ''; return 0; }
+  id="$(printf '%s' "$resp" | jq -r --arg n "$group" \
+      '.data.issueLabels.nodes[]? | select(.name==$n and .isGroup==true) | .id' 2>/dev/null | head -1)"
+  if [[ -z "$id" ]]; then
+    id="$(_linear_gql \
+      'mutation($name:String!,$team:String!,$color:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, color:$color, isGroup:true }){ success issueLabel{ id } } }' \
+      "$(jq -n --arg name "$group" --arg team "$LINEAR_TEAM_ID" --arg color "$(_ln_group_color "$group")" \
+        '{name:$name,team:$team,color:$color}')" 2>/dev/null \
+      | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
+  fi
+  printf '%s' "$id"
+}
+
 # Resolve label NAMES (space-separated) to a JSON array of label ids, creating
-# any that don't exist yet. Echoes `[]` on any failure.
+# any that don't exist. Echoes `[]` on any failure (fail-soft).
+#
+# A `group:child` name becomes a REAL Linear label group + child, not a flat
+# string: Linear groups are MUTUALLY EXCLUSIVE ("only one label from each group
+# may be applied"), which is exactly right — an issue cannot be two sizes at once.
+# It also unlocks group filtering and label-group columns in views. The driver
+# stays tracker-agnostic and keeps emitting flat `effort:S`; this adapter maps it
+# onto Linear's native shape, the same way effort maps onto estimate.
 _ln_label_ids() {
-  local names="$1" resp id nm ids=""
+  local names="$1" resp id nm ids="" group child gid
   [[ -n "$names" ]] || { printf '[]'; return 0; }
-  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name } } }' '{}' 2>/dev/null)" || { printf '[]'; return 0; }
+  resp="$(_linear_gql 'query{ issueLabels{ nodes{ id name isGroup parent{ name } } } }' '{}' 2>/dev/null)" || { printf '[]'; return 0; }
   for nm in $names; do
-    id="$(printf '%s' "$resp" | jq -r --arg n "$nm" '.data.issueLabels.nodes[]? | select(.name==$n) | .id' 2>/dev/null | head -1)"
-    if [[ -z "$id" ]]; then
-      id="$(_linear_gql \
-        'mutation($name:String!,$team:String!){ issueLabelCreate(input:{ name:$name, teamId:$team }){ success issueLabel{ id } } }' \
-        "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" 2>/dev/null \
-        | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
-    fi
+    case "$nm" in
+      *:*)
+        group="${nm%%:*}"; child="${nm#*:}"
+        id="$(printf '%s' "$resp" | jq -r --arg g "$group" --arg c "$child" \
+            '.data.issueLabels.nodes[]? | select(.name==$c and .parent.name==$g) | .id' 2>/dev/null | head -1)"
+        if [[ -z "$id" ]]; then
+          gid="$(_ln_group_id "$group")"
+          [[ -n "$gid" ]] || continue
+          id="$(_linear_gql \
+            'mutation($name:String!,$team:String!,$parent:String!){ issueLabelCreate(input:{ name:$name, teamId:$team, parentId:$parent }){ success issueLabel{ id } } }' \
+            "$(jq -n --arg name "$child" --arg team "$LINEAR_TEAM_ID" --arg parent "$gid" \
+              '{name:$name,team:$team,parent:$parent}')" 2>/dev/null \
+            | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
+        fi
+        ;;
+      *)
+        id="$(printf '%s' "$resp" | jq -r --arg n "$nm" \
+            '.data.issueLabels.nodes[]? | select(.name==$n and (.isGroup|not)) | .id' 2>/dev/null | head -1)"
+        if [[ -z "$id" ]]; then
+          id="$(_linear_gql \
+            'mutation($name:String!,$team:String!){ issueLabelCreate(input:{ name:$name, teamId:$team }){ success issueLabel{ id } } }' \
+            "$(jq -n --arg name "$nm" --arg team "$LINEAR_TEAM_ID" '{name:$name,team:$team}')" 2>/dev/null \
+            | jq -r '.data.issueLabelCreate.issueLabel.id // empty' 2>/dev/null)" || id=""
+        fi
+        ;;
+    esac
     [[ -n "$id" ]] && ids="${ids}${ids:+ }${id}"
   done
   [[ -n "$ids" ]] || { printf '[]'; return 0; }
@@ -172,16 +248,19 @@ _ln_label_ids() {
 # Echoes a JSON array of label ids; `[]` on any failure (fail-soft).
 _ln_merge_label_ids() {   # _ln_merge_label_ids ISSUE_UUID "name name ..."
   local issue="$1" names="$2" resp keep add
-  resp="$(_linear_gql 'query($id:String!){ issue(id:$id){ labels{ nodes{ id name } } } }' \
+  # Ownership is decided by the PARENT GROUP now that cvg's labels are nested:
+  # a grouped label's own name is just "S", so matching on "effort:" would treat
+  # it as the human's and never replace a stale size. The legacy flat "effort:S"
+  # form is still matched so pre-group boards converge on the next register.
+  resp="$(_linear_gql 'query($id:String!){ issue(id:$id){ labels{ nodes{ id name parent{ name } } } } }' \
     "$(jq -n --arg id "$issue" '{id:$id}')" 2>/dev/null)" || { printf '[]'; return 0; }
   keep="$(printf '%s' "$resp" | jq -c '
-      [ .data.issue.labels.nodes[]?
-        | select((.name == "cvg"
-                  or (.name | startswith("effort:"))
-                  or (.name | startswith("backend:"))
-                  or (.name | startswith("agent:"))
-                  or (.name | startswith("severity:"))) | not)
-        | .id ]' 2>/dev/null)"
+      def owned:
+        .name == "cvg"
+        or ((.parent.name // "") | IN("effort","backend","agent","severity"))
+        or (.name | startswith("effort:") or startswith("backend:")
+                    or startswith("agent:") or startswith("severity:"));
+      [ .data.issue.labels.nodes[]? | select(owned | not) | .id ]' 2>/dev/null)"
   [[ -n "$keep" ]] || keep='[]'
   add="$(_ln_label_ids "$names")"
   jq -c -n --argjson a "$keep" --argjson b "$add" '($a + $b) | unique' 2>/dev/null || printf '[]'
@@ -248,7 +327,7 @@ _ln_find_by_external_id() {
 ln_upsert() {
   _ln_require_tools
   [[ -n "${LINEAR_TEAM_ID:-}" ]] || tsi_ln_die "LINEAR_TEAM_ID unset"
-  local id="" title="" body_file="" labels="" prio="" effort="" due=""
+  local id="" title="" body_file="" labels="" prio="" effort="" due="" attrs="" specurl=""
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --id)        id="$2"; shift 2 ;;
@@ -258,9 +337,16 @@ ln_upsert() {
       --priority)  prio="$2"; shift 2 ;;
       --effort)    effort="$2"; shift 2 ;;
       --due)       due="$2"; shift 2 ;;
+      --attr)      attrs="${attrs}${attrs:+$'\n'}$2"; shift 2 ;;   # "Name=Value"
+      --spec-url)  specurl="$2"; shift 2 ;;
       *) tsi_ln_die "upsert: unknown arg '$1'" ;;
     esac
   done
+  # Build the rich-marker attribute list once: [{name,value}, …] for Linear's modal.
+  local attrs_json
+  attrs_json="$(printf '%s' "$attrs" | jq -R -s -c \
+    'split("\n") | map(select(length>0)) | map(split("=") | {name: .[0], value: (.[1:] | join("="))})' 2>/dev/null)" || attrs_json='[]'
+  [[ -n "$attrs_json" ]] || attrs_json='[]'
   # estimate is DERIVED from the spec, so (like labels) it re-syncs on every
   # register. `null` leaves the field unset rather than forcing a zero.
   local est estj
@@ -291,10 +377,12 @@ ln_upsert() {
     ident="$(printf '%s' "$uresp" | jq -r '.data.issueUpdate.issue.identifier // empty')"
     ident="${ident:-$existing}"
     _ln_set_due "$existing" "$due"
+    # Refresh the marker so its panel tracks the spec (same url ⇒ update, not a dupe).
+    _ln_stamp_marker "$existing" "$id" "$attrs_json" "$specurl"
     echo "updated $ident ($id)" >&2
     echo "$ident"
   else
-    local resp new new_uuid new_ident murl pint lids
+    local resp new new_uuid new_ident pint lids
     # Triage is seeded ONCE, at create. A re-register never touches priority or
     # labels again, so a human's triage on the board is never clobbered.
     pint="$(_ln_priority_int "${prio:-}")"
@@ -310,11 +398,7 @@ ln_upsert() {
     # Stamp the idempotency marker so the NEXT run RESOLVES this issue instead of
     # creating a second one. Without this attachment the projection is not idempotent.
     _ln_set_due "$new_uuid" "$due"
-    murl="$(_ln_marker_url "$id")"
-    _linear_gql \
-      'mutation($issue:String!,$url:String!,$title:String!){ attachmentCreate(input:{ issueId:$issue, url:$url, title:$title }){ success attachment{ id } } }' \
-      "$(jq -n --arg issue "$new_uuid" --arg url "$murl" --arg title "task-spec $id" \
-        '{issue:$issue,url:$url,title:$title}')" >/dev/null
+    _ln_stamp_marker "$new_uuid" "$id" "$attrs_json" "$specurl"
     new="${new_ident:-$new_uuid}"
     echo "created $new ($id)" >&2
     echo "$new"

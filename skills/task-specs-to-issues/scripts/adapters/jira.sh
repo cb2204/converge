@@ -90,6 +90,8 @@ jira_upsert() {
       --priority) shift 2 ;;  # Jira priority ids are project-specific; not seeded here
       --effort)   shift 2 ;;  # story points live on a project-specific custom field
       --due)      shift 2 ;;  # duedate is settable; not seeded until validated live
+      --attr)     shift 2 ;;  # no rich attachment panel
+      --spec-url) shift 2 ;;
       *) tsi_jira_die "upsert: unknown arg '$1'" ;;
     esac
   done
