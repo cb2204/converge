@@ -272,14 +272,13 @@ tsi_issue_body() {
   # needs SH_WORD_SPLIT. Preview it with `bash -c`, or every dep collapses into
   # one mermaid node and you'll chase a bug that isn't there.)
   local IFS=$' \t\n'
-  local id eff prof backend sev prio goal paths beh dnt exitck n
+  local id eff prof backend sev prio paths beh dnt exitck n
   id="$(tsi_id "$f")"
   eff="$(tsi_field "$f" effort)"
   prof="$(tsi_field "$f" profile)"
   backend="$(tsi_field "$f" execution_backend)"
   sev="$(tsi_severity "$f")"
   prio="$(tsi_priority "$f")"
-  goal="$(tsi_goal "$f")"
 
   # --- Summary (quoted lead, paragraph structure preserved) ---
   local goalblock
