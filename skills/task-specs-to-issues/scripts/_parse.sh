@@ -59,17 +59,27 @@ tsi_frontmatter() {
 # leading key, surrounding whitespace, and a trailing CR (CRLF-safe). NAME is
 # script-controlled (never user input), so a fixed-string grep anchor is safe.
 tsi_field() {
-  local file="$1" name="$2"
+  local file="$1" name="$2" raw
   # The trailing `|| true` is load-bearing: an ABSENT field is not an error (see
   # the contract above), but `grep -m1` exits 1 when it matches nothing, and under
   # the callers' `set -e -o pipefail` a bare `x="$(tsi_field …)"` assignment would
   # propagate that and kill the run. Optional fields are the common case.
-  tsi_frontmatter "$file" \
+  raw="$(tsi_frontmatter "$file" \
     | grep -m1 "^${name}:" \
     | sed -E "s/^${name}:[[:space:]]*//" \
-    | sed -E 's/[[:space:]]*$//' \
-    | sed -E -e 's/^"(.*)"$/\1/' -e "s/^'(.*)'$/\1/" \
-    | tr -d '\r' || true
+    | tr -d '\r' || true)"
+  [ -n "$raw" ] || { printf ''; return 0; }
+  # A YAML scalar may carry an INLINE COMMENT, and quotes are DELIMITERS. Both
+  # must be removed or they ship as content: `register: false  # fixture` parsed
+  # as the literal "false  # fixture", which is not "false" — so an opted-out
+  # fixture registered anyway. Quoted values take everything between the quotes
+  # (a `#` inside them is content); bare values end at the first " #".
+  # NB: the space before # is required, so `github:#42` survives intact.
+  case "$raw" in
+    '"'*) printf '%s' "$raw" | sed -E 's/^"([^"]*)".*$/\1/' ;;
+    "'"*) printf '%s' "$raw" | sed -E "s/^'([^']*)'.*\$/\1/" ;;
+    *)    printf '%s' "$raw" | sed -E -e 's/[[:space:]]+#.*$//' -e 's/[[:space:]]*$//' ;;
+  esac
 }
 
 tsi_id()       { tsi_field "$1" id; }
@@ -148,6 +158,25 @@ tsi_list_specs() {
     [[ -f "$f" ]] || continue
     echo "$f"
   done
+}
+
+# ----- Registration opt-out --------------------------------------------------
+# tsi_registerable FILE -> true|false
+#
+# `signed_off: true` answers "is this SAFE to delegate", which is NOT the same
+# question as "does this belong on a shared board". Test fixtures are legitimately
+# signed off — the e2e harness needs them gated — but they must never reach a live
+# tracker: one of them is a deliberate budget-buster designed to exhaust an agent
+# and park. A spec opts out with `register: false` in its frontmatter.
+# Default (absent field) is TRUE, so every existing spec keeps registering.
+tsi_registerable() {
+  local v
+  v="$(tsi_field "$1" register | tr '[:upper:]' '[:lower:]')"
+  if [[ "$v" == "false" || "$v" == "no" ]]; then
+    echo "false"
+  else
+    echo "true"
+  fi
 }
 
 # ----- Section + behavior accessors (for the rich issue body) -----------------

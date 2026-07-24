@@ -27,6 +27,7 @@ source_action_item: (none)
 linear_ref: (none)
 tracker_ref: linear:CVG-7
 execution_backend: any
+register: false  # e2e test fixture — gated for the harness, never for a shared board
 signed_off: true
 signed_off_by: luanmorenomaciel
 signed_off_at: 2026-07-16T23:18:06Z

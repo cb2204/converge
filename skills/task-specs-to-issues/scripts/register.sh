@@ -87,6 +87,7 @@ echo "----------------------------------------------------------------"
 # its variable writes are lost. We iterate the glob DIRECTLY (no pipe) so SKIPPED
 # and the scratch files accumulate in THIS shell.
 SKIPPED=""
+OPTED_OUT=""
 for f in "$TASKS_DIR"/T-*.md; do
   [[ -f "$f" ]] || continue
   id="$(tsi_id "$f")"
@@ -97,6 +98,11 @@ for f in "$TASKS_DIR"/T-*.md; do
   title="$(tsi_title "$f")"
   if [[ "$so" != "true" ]]; then
     SKIPPED="${SKIPPED}${SKIPPED:+ }$id"
+    continue
+  fi
+  # Signed off but explicitly NOT for a shared board (fixtures, budget-busters).
+  if [[ "$(tsi_registerable "$f")" != "true" ]]; then
+    OPTED_OUT="${OPTED_OUT}${OPTED_OUT:+ }$id"
     continue
   fi
   printf '%s\t%s\t%s\n' "$id" "$f" "$title" >> "$SIGNED"
@@ -111,6 +117,9 @@ SIGNED_COUNT="$(awk 'END{print NR}' "$SIGNED")"
 echo "signed-off specs: $SIGNED_COUNT"
 if [[ -n "$SKIPPED" ]]; then
   echo "skipped (un-gated, signed_off!=true): $SKIPPED"
+fi
+if [[ -n "$OPTED_OUT" ]]; then
+  echo "skipped (register: false — not for a shared board): $OPTED_OUT"
 fi
 if [[ "$SIGNED_COUNT" -eq 0 ]]; then
   echo "nothing to register (no signed_off specs)."
@@ -317,5 +326,6 @@ echo "----------------------------------------------------------------"
 echo "REGISTERED: $SIGNED_COUNT issue(s) (created $CREATED, updated $UPDATED), $LINKS blocked-by link(s)."
 [[ "$STAMP_REFS" -eq 1 ]] && echo "stamped $STAMPED tracker_ref receipt(s) back into the specs."
 [[ -n "$SKIPPED" ]] && echo "skipped (un-gated): $SKIPPED"
+[[ -n "$OPTED_OUT" ]] && echo "skipped (register: false): $OPTED_OUT"
 echo "next: run verify-registration.sh --tracker $TRACKER to gate the mapping."
 echo "REGISTER=OK"

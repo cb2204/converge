@@ -293,6 +293,46 @@ hasnt "no repo link configured -> plain path" "$BODY_PLAIN" "](https://github.co
 has   "repo link configured -> footer is a real link" "$BODY_LINKED" "](https://github.com/o/r/blob/main/"
 
 # -----------------------------------------------------------------------------
+echo; echo "[N] register: false opts a signed-off spec OUT of a shared board"
+# A test fixture is legitimately signed off (the harness gates it) but must never
+# reach a live tracker — one such fixture is a deliberate budget-buster.
+D="$WORK/n/tasks"; S="$WORK/n/store"; mkdir -p "$D"
+make_spec "$D" "T-$DATE-reg-real" true "[]"
+cat > "$D/T-$DATE-reg-fixture.md" <<QSPEC
+---
+id: T-$DATE-reg-fixture
+title: budget-buster fixture
+status: ready
+signed_off: true
+register: false  # e2e fixture — gated for the harness, never for a shared board
+depends_on: []
+---
+
+## Goal
+Designed to exhaust budget and park.
+QSPEC
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "opt-out register exits 0" "$RC" "0"
+has "opted-out spec is reported" "$OUT" "register: false"
+has "only the real spec registers" "$OUT" "created 1, updated 0"
+if awk -F'\t' -v e="T-$DATE-reg-fixture" '$2==e{f=1} END{exit f?0:1}' "$S/issues.tsv"; then
+  bad "fixture leaked onto the board"
+else
+  ok "fixture absent from the board"
+fi
+
+echo; echo "[O] YAML inline comments and quotes are stripped from scalars"
+# `register: false  # fixture` must parse as "false", not "false  # fixture" —
+# that exact bug let an opted-out fixture register anyway.
+RES="$(bash -c "source '$PARSE'
+printf 'reg=<%s> sev=<%s> ref=<%s>' \\
+  \"\$(tsi_field '$D/T-$DATE-reg-fixture.md' register)\" \\
+  \"\$(tsi_field '$D/T-$DATE-reg-real.md' severity)\" \\
+  \"\$(tsi_field '$D/T-$DATE-reg-real.md' id)\"")"
+has "inline comment stripped from register" "$RES" "reg=<false>"
+has "severity has no trailing comment" "$RES" "sev=<feature>"
+
+# -----------------------------------------------------------------------------
 echo
 echo "=================================================================="
 echo "RESULTS: $PASS passed, $FAIL failed"
