@@ -11,6 +11,7 @@
 #
 # Usage:
 #   bash run-issue-eval.sh --issue <id|slug|path> [--tasks-dir DIR] [--quiet]
+#                          [--contract PROFILE] [--legacy-no-contract]
 #
 # Resolution of --issue accepts, in order:
 #   1. an exact path to a T-*.md file
@@ -45,6 +46,8 @@ err() {
 ISSUE=""
 TASKS_DIR=""
 QUIET=false
+CONTRACT=""
+LEGACY_NO_CONTRACT=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -60,6 +63,13 @@ while [ $# -gt 0 ]; do
       TASKS_DIR="${1#--tasks-dir=}"; shift ;;
     --quiet|-q)
       QUIET=true; shift ;;
+    --contract)
+      [ $# -ge 2 ] || err "--contract requires a value"
+      CONTRACT="$2"; shift 2 ;;
+    --contract=*)
+      CONTRACT="${1#--contract=}"; shift ;;
+    --legacy-no-contract)
+      LEGACY_NO_CONTRACT=true; shift ;;
     --help|-h)
       sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
@@ -74,9 +84,9 @@ if [ -z "$ISSUE" ]; then
 fi
 
 # ----- Locate the repo root + tasks dir -----
-GIT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
 if [ -z "$GIT_ROOT" ]; then
-  GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
+  GIT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
 fi
 [ -n "$GIT_ROOT" ] || err "not inside a git repository"
 
@@ -175,6 +185,45 @@ if [ "$RESOLVE_RC" -ne 0 ] || [ -z "${TASK_FILE:-}" ] || [ ! -f "$TASK_FILE" ]; 
 fi
 
 TASK_ID="$(basename "$TASK_FILE" .md)"
+
+# ----- Pass 6 runtime contract -----
+# New executions fail closed when the task is not bound. The explicit legacy
+# escape hatch exists only for migration and keeps the old behavior visible.
+if [ "$LEGACY_NO_CONTRACT" != true ]; then
+  [ -n "$CONTRACT" ] || CONTRACT="$GIT_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+  case "$CONTRACT" in /*) : ;; *) CONTRACT="$GIT_ROOT/$CONTRACT" ;; esac
+  if [ ! -f "$CONTRACT" ]; then
+    echo "RED"
+    echo "issue: $ISSUE"
+    echo "reason: Pass 6 runtime contract is missing: $CONTRACT"
+    echo "next: cvg bind --task ${TASK_FILE#"$GIT_ROOT"/}"
+    exit 2
+  fi
+  CONTRACT_CHECKER="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-runtime-contract.py"
+  if [ ! -f "$CONTRACT_CHECKER" ]; then
+    err "runtime-contract checker is missing: $CONTRACT_CHECKER"
+  fi
+  CONTRACT_TOOL_HOME="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+  set +e
+  CONTRACT_OUT="$(python3 "$CONTRACT_CHECKER" \
+    --profile "$CONTRACT" \
+    --repo "$GIT_ROOT" \
+    --tool-home "$CONTRACT_TOOL_HOME" 2>&1)"
+  CONTRACT_RC=$?
+  set -e
+  if [ "$CONTRACT_RC" -ne 0 ]; then
+    printf '%s\n' "$CONTRACT_OUT"
+    echo "RED"
+    echo "issue: $ISSUE"
+    echo "reason: Pass 6 runtime contract is stale or invalid"
+    exit 2
+  fi
+  if [ "$QUIET" != true ]; then
+    printf '%s\n' "$CONTRACT_OUT"
+  fi
+else
+  echo "WARN: --legacy-no-contract bypasses Pass 6 · Bind; supervised migration only." >&2
+fi
 
 # ----- Read a couple of frontmatter facts for the report header -----
 fm_value() {

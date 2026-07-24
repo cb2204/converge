@@ -1,21 +1,18 @@
 ---
 name: agents-kbs-tech-stack
 description: |
-  Scaffold a project's tech-stack agent layer from a curated menu. For each picked
-  tech, produces a paired (architect + developer) agent + a full KB tree. Also
-  installs three universal closers (code-reviewer, code-simplifier, code-documenter)
-  that ground in every tech KB via the closer-hook protocol. v0.3.0 adds a
-  quality-gate pass that lints scaffolded output for drift, a cross-tool
-  emission step that publishes AGENTS.md + Cursor rules + Copilot instructions
-  alongside .claude/, and a tunable doctrine.yaml that captures portable
-  defaults (Bash boundary, threshold floors, closer-hook protocol) so other
-  tools (Codex, Cursor, Copilot) inherit the same agent contract. Scaffolds
-  portable tech specialists (as opposed to project-specific domain specialists).
-  Use when bootstrapping a new repo's technology coverage or adding a new tech
-  to an existing fleet.
+  Legacy migration tool for an existing per-technology architect/developer and
+  KB fleet. Do not bootstrap new Converge projects with this skill; use
+  task-to-runtime-contract. Invoke only to audit, repair, or intentionally add
+  coverage to a repository that already owns this legacy scaffold.
 ---
 
 # agents-kbs-tech-stack — Build Tech-Stack Agent Layers
+
+> **Legacy migration surface.** New Pass 6 work uses
+> `task-to-runtime-contract`. This package is retained for existing fleets; its
+> strict gate rejects TODO-seeded KBs and its cross-tool emitter never
+> overwrites a differing user file.
 
 > **Identity:** Meta-skill that scaffolds (architect + developer) agent pairs per tech, plus three universal closers.
 > **Domain:** Tech specialization, role splitting (planning vs implementation), closed engineering loop.
@@ -99,7 +96,7 @@ Ask the user, in order:
 1. **`PROJECT_NAME`** — short repo slug.
 2. **`PROJECT_DESCRIPTION`** — one sentence (used in KB index).
 3. **`TARGET_REPO`** — absolute path (default: current dir).
-4. **Pick techs from the menu** — show the 10 curated techs from `menu/techs.yaml` via a multi-select `AskUserQuestion`. User picks 1–N.
+4. **Pick techs from the menu** — show the 22 curated techs from `menu/techs.yaml` via a multi-select `AskUserQuestion`. User picks 1–N.
 
 No per-tech interview. The menu *is* the customization — each entry already declares thresholds, MCPs, KB seeds, capabilities, and missions.
 
@@ -132,13 +129,16 @@ After all techs, invoke `scripts/install-closers.sh` once. Each closer is copied
 
 ### Phase 3.5 — Quality gate (advisory by default)
 
-After scaffold completes, the skill invokes `scripts/quality-gate.sh` against the target repo. The gate runs local alignment checks (role boundaries, placeholder leaks) and, if available, dispatches `/kimi:review` for a cold-eyes pass. Findings are classified BLOCKER / IMPORTANT / NIT and surfaced in the Phase 4 report. To enforce gating (non-zero exit on BLOCKER), invoke the gate manually with `--strict`. If BLOCKERs surface, you can offer the user a single option: invoke `/codex:rescue` with the gate findings as input for an automated fix pass.
+After scaffold completes, the skill invokes `scripts/quality-gate.sh` against
+the target repo. The gate is deterministic and local: it checks role
+boundaries, render placeholders, and unfinished TODO-seeded KB content.
+Findings are classified BLOCKER / IMPORTANT / NIT. To enforce gating, invoke
+the gate with `--strict`.
 
 - **Default mode** is advisory: the gate always exits 0 and lets the user decide whether to act on the findings.
 - **`--strict` mode** exits 7 when one or more BLOCKER findings are present — wire this into CI when you want the build to fail on role-boundary violations or placeholder leaks.
-- **`/codex:rescue` rescue path**: when BLOCKER findings are reported, pipe the verdict block plus per-file details into `/codex:rescue` so an external rescue agent can patch role boundaries, missing frontmatter, or leaked placeholders without the user round-tripping a hand fix.
-
-See [`references/quality-gate-protocol.md`](references/quality-gate-protocol.md) for the full check inventory, severity definitions, and the kimi/codex integration contract.
+See [`references/quality-gate-protocol.md`](references/quality-gate-protocol.md)
+for the full deterministic check inventory and severity definitions.
 
 ### Phase 4 — Cross-tool emission (always)
 

@@ -81,7 +81,7 @@ Identify the pass being taught — from the conversation, or from the freshest a
 | 5A `plans-to-coherent-spec` | the one coherent spec + `specs/e2e-eval.sh` |
 | 5B `task-spec` | `tasks/T-*.md` — atomic, self-verifying units |
 | ① `task-specs-to-issues` | the tracker board — one issue per spec, `blocked-by` edges |
-| 6 `stack-to-harness` | `.claude/` (agents, `kb/`, `doctrine.yaml`, `rules/`, closers) + emitted mirrors |
+| 6 `task-to-runtime-contract` | `cvg/execution/<task-id>/execution-profile.yaml` + adapter manifests, bound evidence, and gate receipts |
 | 8 `task-loop` | the PR (branch, diff, green eval) or the blocked-task report |
 
 Collect the full inventory: every file the pass created or changed (use git — the pass's commits bound the diff), the gate script's output, and any conversation context (locked decisions, accepted objections, open questions).

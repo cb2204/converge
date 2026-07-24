@@ -19,6 +19,7 @@
 # Usage:
 #   bash open-issue-pr.sh --issue <id|slug|path> [--dry-run] [--base BRANCH]
 #                         [--agent claude|codex|kimi] [--tasks-dir DIR]
+#                         [--contract PROFILE] [--legacy-no-contract]
 #
 # Exit codes:
 #   0 — GREEN and the PR was opened (or, with --dry-run, would be)
@@ -44,6 +45,8 @@ DRY_RUN=false
 BASE=""
 AGENT="claude"
 TASKS_DIR=""
+CONTRACT=""
+LEGACY_NO_CONTRACT=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -56,6 +59,9 @@ while [ $# -gt 0 ]; do
     --agent=*)   AGENT="${1#--agent=}"; shift ;;
     --tasks-dir) [ $# -ge 2 ] || err "--tasks-dir requires a value"; TASKS_DIR="$2"; shift 2 ;;
     --tasks-dir=*) TASKS_DIR="${1#--tasks-dir=}"; shift ;;
+    --contract)   [ $# -ge 2 ] || err "--contract requires a value"; CONTRACT="$2"; shift 2 ;;
+    --contract=*) CONTRACT="${1#--contract=}"; shift ;;
+    --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
     --help|-h)   sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           err "unknown argument: $1" ;;
   esac
@@ -64,17 +70,18 @@ done
 [ -n "$ISSUE" ] || err "--issue N is required. This loop never picks a task."
 
 # ----- Repo root -----
-GIT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || echo "")"
+GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
 [ -n "$GIT_ROOT" ] || err "not inside a git repository"
 cd "$GIT_ROOT"
 
 # ----- Run the gate first (RED/GREEN decides everything below) -----
-EVAL_ARGS="--issue $ISSUE"
-[ -n "$TASKS_DIR" ] && EVAL_ARGS="$EVAL_ARGS --tasks-dir $TASKS_DIR"
+EVAL_ARGS=(--issue "$ISSUE")
+[ -n "$TASKS_DIR" ] && EVAL_ARGS+=(--tasks-dir "$TASKS_DIR")
+[ -n "$CONTRACT" ] && EVAL_ARGS+=(--contract "$CONTRACT")
+[ "$LEGACY_NO_CONTRACT" = true ] && EVAL_ARGS+=(--legacy-no-contract)
 
 set +e
-# shellcheck disable=SC2086
-EVAL_OUT="$(bash "$EVAL_RUNNER" $EVAL_ARGS 2>&1)"
+EVAL_OUT="$(bash "$EVAL_RUNNER" "${EVAL_ARGS[@]}" 2>&1)"
 EVAL_RC=$?
 set -e
 
@@ -115,6 +122,45 @@ set -e
 [ -n "${TASK_FILE:-}" ] && [ -f "$TASK_FILE" ] || err "could not resolve --issue '$ISSUE' to a task-spec"
 
 TASK_ID="$(basename "$TASK_FILE" .md)"
+PATH_POLICY_STATE="not-run"
+[ -n "$CONTRACT" ] || CONTRACT="$GIT_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+case "$CONTRACT" in /*) : ;; *) CONTRACT="$GIT_ROOT/$CONTRACT" ;; esac
+
+# ----- Portable Pass 6 settlement guard -----
+# A green eval cannot settle an out-of-scope diff. Vendor hooks may prevent the
+# write earlier; this postflight is the portable fail-closed baseline.
+if [ "$EVAL_RC" -eq 0 ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
+  PATH_GUARD="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-path-policy.py"
+  PATH_ARGS=(--profile "$CONTRACT" --repo "$GIT_ROOT")
+  POLICY_BASE="$BASE"
+  if [ -z "$POLICY_BASE" ]; then
+    POLICY_BASE="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"
+    if [ -z "$POLICY_BASE" ] && git show-ref --verify --quiet refs/heads/main; then
+      POLICY_BASE="main"
+    fi
+    if [ -z "$POLICY_BASE" ] && git show-ref --verify --quiet refs/heads/master; then
+      POLICY_BASE="master"
+    fi
+  fi
+  [ -n "$POLICY_BASE" ] && PATH_ARGS+=(--base "$POLICY_BASE")
+  set +e
+  PATH_OUT="$(python3 "$PATH_GUARD" "${PATH_ARGS[@]}" 2>&1)"
+  PATH_RC=$?
+  set -e
+  if [ "$PATH_RC" -ne 0 ]; then
+    PATH_POLICY_STATE="fail"
+    EVAL_RC=1
+    EVAL_OUT="${EVAL_OUT}
+
+${PATH_OUT}
+RED — green eval rejected by the Pass 6 path policy."
+  else
+    PATH_POLICY_STATE="pass"
+    EVAL_OUT="${EVAL_OUT}
+
+${PATH_OUT}"
+  fi
+fi
 
 fm_value() {
   # Never fail the pipeline: a missing key is normal (grep -> 1 under pipefail).
@@ -130,6 +176,40 @@ SLUG="$(printf '%s' "$TASK_ID" | sed -E 's/^T-[0-9]+-//')"
 [ -n "$SLUG" ] && [ "$SLUG" != "$TASK_ID" ] || \
   SLUG="$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
 BRANCH="task/$SLUG"
+
+# ----- Structured execution receipt -----
+# The latest receipt remains at the profile's canonical path; an existing
+# predecessor is archived by content hash before replacement.
+if [ "$LEGACY_NO_CONTRACT" != true ] && [ "$DRY_RUN" != true ]; then
+  RECEIPT_WRITER="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/write-execution-receipt.py"
+  RECEIPT_RESULT="blocked"
+  [ "$EVAL_RC" -eq 0 ] && RECEIPT_RESULT="pass"
+  EVAL_TMP="$(mktemp -t cvg-eval-output.XXXXXX)"
+  printf '%s\n' "$EVAL_OUT" > "$EVAL_TMP"
+  set +e
+  RECEIPT_OUT="$(python3 "$RECEIPT_WRITER" \
+    --profile "$CONTRACT" \
+    --repo "$GIT_ROOT" \
+    --result "$RECEIPT_RESULT" \
+    --eval-output "$EVAL_TMP" \
+    --path-policy "$PATH_POLICY_STATE" \
+    --agent "$AGENT" \
+    --branch "$BRANCH" 2>&1)"
+  RECEIPT_RC=$?
+  set -e
+  unlink "$EVAL_TMP"
+  if [ "$RECEIPT_RC" -ne 0 ]; then
+    EVAL_RC=1
+    EVAL_OUT="${EVAL_OUT}
+
+${RECEIPT_OUT}
+RED — execution receipt could not be written."
+  else
+    EVAL_OUT="${EVAL_OUT}
+
+${RECEIPT_OUT}"
+  fi
+fi
 
 # tracker issue number for the "Closes #N" line (linear_ref/tracker_issue).
 TRACKER="$(fm_value tracker_issue)"
@@ -184,7 +264,7 @@ if [ "$EVAL_RC" -ne 0 ]; then
   echo '```'
   echo
   echo "## Suspected upstream gap"
-  echo "- (fill in) Which decision/ADR/plan is missing or wrong upstream, and which Converge pass owns the fix (Pass 2 ADR, Pass 3 plan, Pass 5B task-spec, Pass 6 harness)."
+  echo "- (fill in) Which decision/ADR/plan/runtime binding is missing or wrong upstream, and which Converge pass owns the fix (Pass 2 ADR, Pass 3 plan, Pass 5B task-spec, Pass 6 Bind)."
   echo
   echo "Do not open a PR. Do not hack the eval. Surface this report."
   exit 1

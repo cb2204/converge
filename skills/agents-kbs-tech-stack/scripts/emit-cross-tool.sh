@@ -6,8 +6,9 @@
 #   2. .cursor/rules/agents-kbs-tech-stack.mdc    (Cursor shim)
 #   3. .github/copilot-instructions.md            (Copilot pointer)
 #
-# All three are *generated* — they overwrite on every run. The source of truth
-# is .claude/agents/ + .claude/kb/_index.yaml. Run this after:
+# All three are generated proposals. A missing file is created; an identical
+# file is left alone; a differing existing file is preserved and the new
+# rendering is written to a `.proposed` sibling. Run this after:
 #
 #   - adding/removing a tech (scaffold.sh / install-closers.sh)
 #   - renaming the project (changing kb/_index.yaml `project:`)
@@ -51,6 +52,22 @@ if [[ ! -d "${AGENTS_DIR}" ]]; then
 fi
 
 LAST_UPDATED="$(date -u +%Y-%m-%d)"
+
+emit_safely() {
+  local rendered="$1" destination="$2"
+  mkdir -p "$(dirname "${destination}")"
+  if [[ ! -e "${destination}" ]]; then
+    cp "${rendered}" "${destination}"
+    echo "✓ wrote ${destination}"
+    return 0
+  fi
+  if cmp -s "${rendered}" "${destination}"; then
+    echo "✓ unchanged ${destination}"
+    return 0
+  fi
+  cp "${rendered}" "${destination}.proposed"
+  echo "NOTE: preserved ${destination}; wrote ${destination}.proposed"
+}
 
 # ─── Build the AGENTS.md content via Python (needs yaml + filesystem walk) ──
 RENDER_OUTPUT="$(python3 - "${INDEX_PATH}" "${AGENTS_DIR}" "${TEMPLATES}/AGENTS.md.tpl" "${LAST_UPDATED}" <<'PYEOF'
@@ -153,30 +170,34 @@ PYEOF
 
 # ─── Write AGENTS.md ────────────────────────────────────────────────────────
 AGENTS_MD="${TARGET_REPO}/AGENTS.md"
-printf '%s' "${RENDER_OUTPUT}" > "${AGENTS_MD}"
-echo "✓ wrote ${AGENTS_MD}"
+AGENTS_RENDERED="$(mktemp -t agents-rendered.XXXXXX)"
+CURSOR_RENDERED="$(mktemp -t cursor-rendered.XXXXXX)"
+COPILOT_RENDERED="$(mktemp -t copilot-rendered.XXXXXX)"
+trap 'rm -f "${AGENTS_RENDERED}" "${CURSOR_RENDERED}" "${COPILOT_RENDERED}"' EXIT
+printf '%s' "${RENDER_OUTPUT}" > "${AGENTS_RENDERED}"
+emit_safely "${AGENTS_RENDERED}" "${AGENTS_MD}"
 
 # ─── Write Cursor mdc ───────────────────────────────────────────────────────
 CURSOR_DIR="${TARGET_REPO}/.cursor/rules"
 mkdir -p "${CURSOR_DIR}"
 CURSOR_MDC="${CURSOR_DIR}/agents-kbs-tech-stack.mdc"
-cp "${TEMPLATES}/cursor-rules.mdc.tpl" "${CURSOR_MDC}"
-echo "✓ wrote ${CURSOR_MDC}"
+cp "${TEMPLATES}/cursor-rules.mdc.tpl" "${CURSOR_RENDERED}"
+emit_safely "${CURSOR_RENDERED}" "${CURSOR_MDC}"
 
 # ─── Write Copilot instructions ─────────────────────────────────────────────
 GH_DIR="${TARGET_REPO}/.github"
 mkdir -p "${GH_DIR}"
 COPILOT_MD="${GH_DIR}/copilot-instructions.md"
-cp "${TEMPLATES}/copilot-instructions.md.tpl" "${COPILOT_MD}"
-echo "✓ wrote ${COPILOT_MD}"
+cp "${TEMPLATES}/copilot-instructions.md.tpl" "${COPILOT_RENDERED}"
+emit_safely "${COPILOT_RENDERED}" "${COPILOT_MD}"
 
 echo ""
 echo "────────────────────────────────────────────────────────────────────────"
-echo "Cross-tool index emitted (overwrote any prior versions):"
+echo "Cross-tool index emitted without overwriting differing existing files:"
 echo "  • ${AGENTS_MD}"
 echo "  • ${CURSOR_MDC}"
 echo "  • ${COPILOT_MD}"
 echo ""
 echo "Re-emit after adding/removing a tech, renaming the project, or"
-echo "bumping doctrine. These files are generated — do not hand-edit."
+echo "bumping doctrine. Review any .proposed sibling and merge intentionally."
 echo "────────────────────────────────────────────────────────────────────────"

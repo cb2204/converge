@@ -1,12 +1,21 @@
 ---
 name: stack-to-harness
 description: |
-  Implements Converge Pass 6 (Harness). Reads the tech stack the in-scope Task-Specs put in play and scaffolds the control plane fitted to exactly that stack: paired architect and developer agents per tech, grounded KBs, a doctrine, rules, and cross-tool mirrors (.claude/ plus AGENTS.md, Cursor, Copilot). This is the quality moat that makes any commodity coding agent succeed. Thin orchestration over the bundled agents-kbs-tech-stack skill; stack-derived, engine-agnostic, no tracker. Use when the user says "scaffold the harness", "build the agents and KBs", "harness pass", "Converge Pass 6", or after Tasking (5B) and before the execution loop. Do NOT use to author tasks (that is task-spec), to run a task (that is task-loop), or to add one tech to an already-standing harness (call agents-kbs-tech-stack directly).
+  Legacy migration wrapper for repositories that already depend on the standing
+  per-technology agent-and-KB fleet. Do not use for new Converge Pass 6 work;
+  use task-to-runtime-contract (Pass 6 · Bind) instead. Invoke only when an
+  owner explicitly asks to maintain or migrate an existing stack-to-harness
+  installation.
 metadata:
   version: "0.3.0"
+  status: "legacy"
 ---
 
 # stack-to-harness — Converge Pass 6 · Harness
+
+> **Legacy migration surface.** The canonical Pass 6 is now
+> `task-to-runtime-contract` (Pass 6 · Bind). This wrapper remains available so
+> existing standing fleets can be audited, repaired, and migrated safely.
 
 The control-plane builder. It reads the system's tech stack — surfaced by the Task-Specs in scope — and scaffolds the harness fitted to exactly that stack: paired `architect` + `developer` agents per tech, grounded KBs, a doctrine, rules, and cross-tool mirrors. This is the **quality moat**: the standing control plane that makes any commodity coding agent succeed. It is thin orchestration over the bundled `agents-kbs-tech-stack` skill, which owns the menu, templates, and scripts.
 

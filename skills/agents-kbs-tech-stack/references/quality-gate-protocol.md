@@ -2,7 +2,8 @@
 
 > The quality gate is a fast, advisory cold-eyes pass over the files the scaffold just produced. It catches drift before the user ships a half-rendered or role-misaligned agent into their repo.
 
-This document is the contract between the skill and the gate. It exists so anyone editing `scripts/quality-gate.sh` or `prompts/kimi-review-scaffold.md` understands what each check exists for, when it should fire, and what the rescue path looks like when it does.
+This document is the contract between the legacy skill and its deterministic
+gate. It explains what each check exists for and when it should fire.
 
 ---
 
@@ -22,15 +23,18 @@ The gate is **advisory by default** because most scaffold runs are clean and the
 
 ## What each check does
 
-The gate has five steps. Steps A–D are local; Step E is the optional cold-eyes pass via the `claude` CLI.
+The gate has five deterministic local steps.
 
 ### Step A — Placeholder leak check
 
-`grep -rnE '\{[A-Z_][A-Z0-9_]*\}' .claude/agents/ .claude/kb/`
+The scan rejects unresolved `{ALL_CAPS_TOKEN}` / `{{template}}` placeholders,
+HTML TODO comments, and ordinary `TODO` markers anywhere under
+`.claude/agents/` or `.claude/kb/`.
 
 The scaffold's renderer substitutes `{ALL_CAPS_TOKEN}` placeholders from environment variables. If the template references a token that the menu does not define, the renderer leaves the literal placeholder in the file. That file is then broken in a way that is easy to miss visually — it parses as YAML, it loads as an agent, it just contains a curly-brace string where a name or a threshold should be.
 
-Every hit is recorded as a **BLOCKER**. The grep is rooted at the entire `.claude/agents/` and `.claude/kb/` trees so we catch leaks in both agent frontmatter and KB seed entries.
+Every hit is a **BLOCKER**. A scaffold may be structurally complete while its
+knowledge is operationally empty; strict mode must reject both failure classes.
 
 ### Step B — Architect alignment (no Bash)
 
@@ -48,39 +52,18 @@ For each `*-troubleshooter.md`, the gate requires `Bash` (the troubleshooter run
 
 This check is skipped when no troubleshooters exist. The menu opts into troubleshooter generation per tech via the `roles:` field.
 
-### Step E — Optional `/kimi:review` pass
+### Step E — Deterministic verdict
 
-If `command -v claude` resolves and `SKIP_KIMI` is not set in the env, the gate invokes:
-
-```bash
-claude --print "/kimi:review --base HEAD"
-```
-
-The prompt it sends is the file `prompts/kimi-review-scaffold.md`. The expected response is JSON of shape:
-
-```json
-{
-  "summary": "...",
-  "findings": [
-    {"severity": "BLOCKER", "file": "...", "line": 42, "message": "...", "suggestion": "..."}
-  ]
-}
-```
-
-Findings from kimi are merged into the local findings list with a `[kimi]` prefix on the message. The gate is **defensive about kimi failures**:
-
-- If `claude` is not installed → skipped silently.
-- If `claude --print` exits non-zero → logged as `error`, gate continues.
-- If stdout is not parseable JSON → logged as `non-json`, gate continues.
-- If JSON parses but has no `findings` key → ignored, gate continues.
-
-The gate **never blocks on kimi failure**. The local checks (Steps A–D) are the floor; kimi is an upgrade when available.
+The gate recomputes its counters from the local findings file and emits one
+verdict. It never shells through one vendor CLI to reach another model. Peer
+review belongs outside this deterministic gate and may consume its findings as
+an independent, explicitly requested action.
 
 ---
 
 ## Severity levels
 
-Three levels, applied uniformly to local findings and kimi findings.
+Three levels, applied uniformly to local findings.
 
 ### BLOCKER
 
@@ -154,49 +137,11 @@ Other exit codes from the gate:
 
 ---
 
-## How `/kimi:review` integrates
-
-`kimi:review` is a slash command provided by the kimi plugin. The gate delegates to it via `claude --print "/kimi:review --base HEAD"`, which:
-
-1. Runs in a non-interactive subprocess (no TTY required).
-2. Returns to stdout when the review finishes.
-3. Exits zero on a successful review, non-zero on any internal error.
-
-The contract the gate expects:
-
-- **Input**: the prompt at `prompts/kimi-review-scaffold.md` is the authoritative rubric. The gate passes the prompt by reference (the prompt lives in the skill bundle so the reviewer can inspect it independently).
-- **Output**: JSON object with `summary` (string) and `findings` (array of `{severity, file, line, message, suggestion}`).
-- **Failure modes**: any non-zero exit, any non-JSON stdout, any malformed JSON is treated as "kimi unavailable." The gate prints a one-line note (`kimi:review unavailable — proceeding with local checks only`) and continues with steps A–D only.
-
-This is deliberate. The local checks are deterministic and fast; kimi is a probabilistic LLM call that may or may not be available. The gate treats kimi as a strict upgrade, never a dependency.
-
----
-
-## The `/codex:rescue` handoff for BLOCKERs
-
-When the gate emits BLOCKER findings, the skill's Phase 4 report offers a single option to the user: invoke `/codex:rescue` with the gate findings as input. This is the rescue path.
-
-`codex:rescue` is a Codex plugin slash command that:
-
-1. Reads the gate's verdict block + per-file details from stdin or via an argument.
-2. Patches the offending files — restores the `Bash` boundary, fills missing frontmatter keys, replaces unrendered placeholders with sensible defaults or escalates.
-3. Returns a summary of what was patched.
-
-The handoff is a one-shot offering, not an automatic step. The skill does not silently call `codex:rescue` because:
-
-- Rescue is a code-modifying action; the user should consent.
-- BLOCKERs sometimes indicate a menu authoring bug (e.g., a missing `architect_capabilities` field). The user may want to fix the menu and re-run the scaffold instead of patching the rendered files.
-
-When rescue completes, the user should re-run the gate to confirm the BLOCKERs are gone. The gate is cheap (sub-second for typical fleet sizes), so this is a fine pattern.
-
----
-
 ## Operational notes
 
 - The gate is **bash 3.2 safe** — it runs on stock macOS without modernization. The findings buffer uses a tmpfile (no associative arrays), and all loops use `while read` over `find -print0`.
-- The gate does **not** require Python except for the optional kimi JSON parser. The local checks are pure shell + grep.
+- The gate requires no model CLI and no network access. Its checks are shell + grep.
 - The gate writes nothing to the target repo. It only reads and prints.
-- `SKIP_KIMI=1` is a useful env var for CI runs where the Claude CLI is installed but you want deterministic, network-free behavior.
 
 ---
 

@@ -7,7 +7,10 @@
 > todo here would fork the truth — deliberately not done, matching the
 > 2026-07-16 housekeeping call that folded all contracts into one file.
 
-**cvg v0.13.0** · (0.13.0 R.setup.linear — `setup tracker linear` needs **only
+**cvg v0.16.0** · (0.16.0 adds `bind` / `bind --check` for Pass 6 · Bind:
+one signed Task-Spec becomes a hash-bound execution profile with portable path
+guards and runtime adapter manifests; the deterministic verdict is
+`CHECK_RUNTIME_CONTRACT=PASS|FAIL`. 0.13.0 R.setup.linear — `setup tracker linear` needs **only
 the API key**: it auto-discovers your team (single team auto-selects, else
 `--team <KEY>`), resolves the key→UUID, and records the UUID in `.cvg/config`
 (the API key stays in the env); the adapter also accepts a team KEY or UUID;
@@ -41,7 +44,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.13.0)
+## Command surface (v0.16.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
@@ -53,6 +56,8 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg review --adversary codex,kimi` | `sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh` (Pass 4 multi-adversary) | a **comma-list** dispatches each engine through the proven single-engine path (reused via `--out`) and **merges** the judgments into ONE referee-stamped log: objections unioned + renumbered + tagged `raised_by`, `adversaries[]` recorded, provenance recomputed by the referee. Fail-closed if **no cross-family** engine ran (`REVIEW=ERROR`) or all absent (`REVIEW=SKIP`). Two independent cross-family views beat one — the ATTACK half of the auto-loop. |
 | `cvg review [--check]` | `sketch-plans-adversarial-review/scripts/check-consensus-gate.sh` (Pass 4 gate, v0.4.0) | validates the stamped objection log (structure + semantics + **provenance re-hash** of the live plans); `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR` |
 | `cvg doctor` | `sketch-plans-adversarial-review/scripts/doctor.sh` | engine readiness for Pass 4 dispatch — per-engine PASS/SKIP; requires ≥2 engines + ≥1 cross-family; `DOCTOR=OK\|FAIL` |
+| `cvg bind --task <spec>` | `task-to-runtime-contract/scripts/bind-runtime-contract.py` | Pass 6 · Bind: Tier-1 sign-off by default, Task-Spec hash, evidence hashes, topology substance, portable path guards, and generic/Claude/Codex/Kimi adapter manifests; immediately gates to `CHECK_RUNTIME_CONTRACT=PASS\|FAIL`. |
+| `cvg bind --check --task <spec>` | `task-to-runtime-contract/scripts/check-runtime-contract.py` | Read-only freshness and enforceability recheck before Pass 7 dispatch or Pass 8 execution. |
 | `cvg tasks validate <spec>` | `validate-task-spec.sh` (task-spec v3.4 six-tier engine) | routed pass-through; enforces the six-tier sizing gate — leaf write-surface budgets (XS≤1/S≤2/M≤3/L≤5) and XL/XXL nodes that must declare `children:` (decompose, no route out) |
 | `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call. Gate 0 **refuses an XL/XXL node** — a worker dispatches its children (leaves), never the node itself |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |

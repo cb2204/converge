@@ -3,8 +3,6 @@
 #
 # Inputs (env vars):
 #   TARGET_REPO   absolute path to the repo whose .claude/ tree should be audited
-#   SKIP_KIMI     if set (any non-empty value), skip the optional /kimi:review pass
-#
 # Flags:
 #   --strict      exit 7 when BLOCKER findings are present (default: always exit 0)
 #
@@ -13,8 +11,7 @@
 #   Step B — architect alignment (no Bash in tools list)
 #   Step C — developer alignment (Bash present in tools list)
 #   Step D — troubleshooter alignment (Bash present; Edit, Write absent)
-#   Step E — optional /kimi:review pass via the `claude` CLI (advisory, never blocks)
-#   Step F — print verdict (APPROVE | APPROVE_WITH_WARNINGS | BLOCK)
+#   Step E — print verdict (APPROVE | APPROVE_WITH_WARNINGS | BLOCK)
 #
 # Exit codes:
 #   0  — default mode, or strict mode with no BLOCKER findings
@@ -67,7 +64,8 @@ record() {
 }
 
 # ─── Step A: Placeholder leak check ─────────────────────────────────────────
-# Any unrendered {ALL_CAPS_TOKEN} is a render bug.
+# Any template token or TODO seed is unfinished content. Strict mode must not
+# approve a structurally complete but operationally empty KB.
 if [[ -d "${AGENTS_DIR}" || -d "${KB_DIR}" ]]; then
   LEAK_TARGETS=()
   [[ -d "${AGENTS_DIR}" ]] && LEAK_TARGETS+=("${AGENTS_DIR}")
@@ -79,7 +77,10 @@ if [[ -d "${AGENTS_DIR}" || -d "${KB_DIR}" ]]; then
       file_part="${line%%:*}"
       rest="${line#*:}"
       record "BLOCKER" "${file_part}" "Unrendered placeholder leak: ${rest}"
-    done < <(grep -rnE '\{[A-Z_][A-Z0-9_]*\}' "${LEAK_TARGETS[@]}" 2>/dev/null || true)
+    done < <(
+      grep -rnE '\{[A-Z_][A-Z0-9_]*\}|\{\{[^}]+\}\}|<!--[[:space:]]*TODO|(^|[^[:alnum:]_])TODO([^[:alnum:]_]|$)' \
+        "${LEAK_TARGETS[@]}" 2>/dev/null || true
+    )
   fi
 fi
 
@@ -142,65 +143,12 @@ if [[ -d "${AGENTS_DIR}" ]]; then
   done < <(find "${AGENTS_DIR}" -maxdepth 1 -type f -name '*-troubleshooter.md' -print0 2>/dev/null)
 fi
 
-# ─── Step E: Optional /kimi:review pass ─────────────────────────────────────
-# We invoke `claude --print "/kimi:review --base HEAD"` and try to parse
-# stdout as JSON. Any failure mode (CLI missing, non-zero exit, non-JSON
-# output, malformed findings) is non-fatal — we log a one-line note and
-# continue with the local checks.
-KIMI_STATUS="skipped"
-if [[ -z "${SKIP_KIMI:-}" ]] && command -v claude >/dev/null 2>&1; then
-  KIMI_TMP="$(mktemp -t kimi-review.XXXXXX)"
-  KIMI_PARSER="$(mktemp -t kimi-parser.XXXXXX.py)"
-  cat > "${KIMI_PARSER}" <<'PYEOF'
-import json, re, sys
-src, sink = sys.argv[1], sys.argv[2]
-with open(src) as f:
-    text = f.read()
-data = None
-try:
-    data = json.loads(text)
-except Exception:
-    m = re.search(r"\{.*\}", text, re.DOTALL)
-    if m:
-        try:
-            data = json.loads(m.group(0))
-        except Exception:
-            data = None
-if not isinstance(data, dict) or "findings" not in data:
-    sys.exit(1)
-out = []
-for f in data.get("findings", []) or []:
-    sev = str(f.get("severity", "")).upper()
-    if sev not in ("BLOCKER", "IMPORTANT", "NIT"):
-        continue
-    fp = str(f.get("file", "(kimi)"))
-    msg = str(f.get("message", "")).replace("|", "/").replace("\n", " ")
-    out.append(f"{sev}|{fp}|[kimi] {msg}")
-with open(sink, "a") as g:
-    for line in out:
-        g.write(line + "\n")
-sys.exit(0)
-PYEOF
-  if claude --print "/kimi:review --base HEAD" >"${KIMI_TMP}" 2>/dev/null; then
-    if python3 "${KIMI_PARSER}" "${KIMI_TMP}" "${FINDINGS_FILE}" 2>/dev/null; then
-      KIMI_STATUS="ok"
-    else
-      KIMI_STATUS="non-json"
-      echo "kimi:review unavailable — proceeding with local checks only (non-JSON output)" >&2
-    fi
-  else
-    KIMI_STATUS="error"
-    echo "kimi:review unavailable — proceeding with local checks only (CLI error)" >&2
-  fi
-  rm -f "${KIMI_TMP}" "${KIMI_PARSER}"
-fi
-
-# Recompute counters from FINDINGS_FILE in case kimi appended entries.
+# Recompute counters from the deterministic findings file.
 BLOCKERS=0
 IMPORTANTS=0
 NITS=0
 if [[ -s "${FINDINGS_FILE}" ]]; then
-  while IFS='|' read -r sev rest_file rest_msg; do
+  while IFS='|' read -r sev _rest_file _rest_msg; do
     case "${sev}" in
       BLOCKER)   BLOCKERS=$((BLOCKERS + 1)) ;;
       IMPORTANT) IMPORTANTS=$((IMPORTANTS + 1)) ;;
@@ -215,7 +163,7 @@ echo "Files checked: ${FILES_CHECKED}"
 echo "BLOCKER findings: ${BLOCKERS}"
 echo "IMPORTANT findings: ${IMPORTANTS}"
 echo "NIT findings: ${NITS}"
-echo "kimi:review: ${KIMI_STATUS}"
+echo "external model review: retired from this deterministic gate"
 
 if [[ -s "${FINDINGS_FILE}" ]]; then
   echo ""

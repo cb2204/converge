@@ -456,7 +456,7 @@ complete vertical slice. The five beats, in order, never bundled:
     --gold-sanity`, or continue widening. (Repo-root backlog has a pre-existing
     duplicate-id `T-20260721-cvg-decompose` in tasks/done/ — flagged, out of R5 scope.)
 - [ ] **R① · Register** — `task-specs-to-issues` → real tracker (five beats)
-- [ ] **R6 · Pass 6 Harness** — `stack-to-harness` on the real stack (five beats)
+- [ ] **R6 · Pass 6 Bind** — `task-to-runtime-contract` on a real signed proving-ground task (five beats)
 - [ ] **R8 · Pass 8 The Loop** — `task-loop --issue N` by hand, one issue at a
   time; this is where Track M (worker/Manager/board) wakes up (five beats)
 

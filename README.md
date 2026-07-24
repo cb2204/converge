@@ -69,11 +69,11 @@ machine-checkable condition an engine can satisfy unsupervised.
 
 ## 🧭 The Method — the spine
 
-> **Intent → Structure → Decompose → Consensus → [Fork: Specify | Tasking] → Register → Harness → Loop.**
+> **Intent → Structure → Decompose → Consensus → [Fork: Specify | Tasking] → Register → Bind → Loop.**
 > A fuzzy brief becomes a tech-spec, the tech-spec becomes ADRs, the ADRs become
 > swimlane plans, the plans survive an adversarial review, and there the path
 > forks on **where the trust boundary sits**. Both branches reconverge through the
-> same Harness and Loop. Each output is the next input; the chain descends from a
+> same runtime-binding and execution loop. Each output is the next input; the chain descends from a
 > fuzzy brief to a fleet running green.
 
 ```mermaid
@@ -86,7 +86,7 @@ flowchart TD
     P5A["5A · Specify — Fork A<br/><code>plans-to-coherent-spec</code><br/>one coherent spec · 1 e2e eval · HITL"]
     P5B["5B · Tasking — Fork B<br/><code>task-spec</code><br/>many atomic units · per-unit evals"]
     REG["① Register<br/><code>task-specs-to-issues</code><br/>the board is state"]
-    P6["6 · Harness<br/><code>stack-to-harness</code><br/>.claude/ + AGENTS.md control plane"]
+    P6["6 · Bind<br/><code>task-to-runtime-contract</code><br/>signed task + evidence + enforceable guards"]
     P8["8 · The Loop<br/><code>task-loop --issue N</code><br/>issue → green eval → PR"]
     FLEET([fleet running green]):::io
 
@@ -145,7 +145,7 @@ time by its trigger phrases:
 "adversarial review — attack the plans" → Pass 4  · sketch-plans-adversarial-review
 "create a task-spec"                    → Pass 5B · task-spec
 "register the tasks to Linear"          → ①       · task-specs-to-issues
-"scaffold the harness"                  → Pass 6  · stack-to-harness
+"bind this task for execution"          → Pass 6  · task-to-runtime-contract
 "run issue 41"                          → Pass 8  · task-loop
 ```
 
@@ -213,7 +213,7 @@ frameworks lack — an adversarial **Consensus** pass, an explicit trust-boundar
 | A *different model* attacks the plan | ❌ | ❌ | ✅ **Pass 4 · Consensus** |
 | Explicit trust-boundary fork | ❌ | ❌ | ✅ **The Fork** |
 | Self-verifying atomic units (eval = done) | ❌ | partial | ✅ **Task-Spec** |
-| Control plane / harness built for the stack | manual | ❌ | ✅ **Pass 6 · Harness** |
+| Task-specific runtime contract and enforced scope | manual | ❌ | ✅ **Pass 6 · Bind** |
 | Closed loop → green-eval PR | ❌ | ❌ (stops at Implement) | ✅ **Pass 8 · The Loop** |
 | Vendor-portable (Claude / Codex / Kimi) | ❌ | vendor-specific | ✅ **engines are flags** |
 
@@ -237,7 +237,7 @@ and a machine-checkable **gate**. This is the whole method at a glance:
 | **5A** | Specify *(Fork A)* | `plans-to-coherent-spec` | coupled spec | `--framework speckit` | one spec + 1 e2e eval · *whole system is the unit of trust* |
 | **5B** | Tasking *(Fork B)* | `task-spec` | atomic unit | `task-spec` engine | `tasks/T-*.md` · *every task carries a runnable eval* |
 | **①** | Register | `task-specs-to-issues` | board | `--tracker linear` | 1 spec = 1 issue · *the board is state* |
-| **6** | Harness | `stack-to-harness` | control layer | `agents-kbs-tech-stack` | `.claude/` + `AGENTS.md` · *control plane stands, grounded* |
+| **6** | Bind | `task-to-runtime-contract` | runtime contract | portable core + runtime adapters | execution profile + guards · `CHECK_RUNTIME_CONTRACT=PASS` |
 | **8** | The Loop | `task-loop` | runtime | `--issue N --agent claude` | branch → green eval → PR · *the eval is green, run not read* |
 
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
@@ -298,19 +298,19 @@ graph. The tracker is a pluggable backend behind a two-method adapter (read read
 dependency edge is one link, no orphans, no cycles. *Only the loop writes state,
 only a green eval closes an issue — so the board never lies.*
 
-**6 · Harness** — *build the rails the work rides on — the quality moat.*
-`SCOPE` read which techs the in-scope tasks put in play → `SCAFFOLD` paired
-architect + developer agents per tech, grounded KBs, doctrine, rules → `EMIT`
-cross-tool mirrors (`AGENTS.md`, Cursor rules, Copilot instructions). **Gate:** the
-control plane stands and is grounded, three universal closers are wired, the
-`quality-gate` lint is green, mirrors emitted. *The stack fills the harness — the
-tasks point at it.*
+**6 · Bind** — *bind one signed task to the runtime allowed to execute it.*
+`VERIFY` the signed runnable Task-Spec → `BIND` its hash to the smallest evidence
+slice → `SELECT` a single-agent topology by default, escalating only on static
+evidence → `ENFORCE` paths through portable guards and runtime adapters.
+**Gate:** `CHECK_RUNTIME_CONTRACT=PASS` proves freshness, evidence, topology,
+ownership, and enforcement. The Task-Spec remains canonical.
 
 **8 · The Loop** — *build the execution loop; schedule the Manager later.*
-`READ` one issue (`--issue N`) → its task-spec + cited ADRs + grounded harness →
+`READ` one issue (`--issue N`) → its current execution profile + signed
+Task-Spec + bound evidence →
 `ACT` cut a branch, write code → `RUN EVAL` → **RED:** feed the failure back and
-revise (tight local loop) · **GREEN:** open a PR that closes the issue. **Gate:**
-the task's own eval is green — none by hand, none by attempt-count. *That
+revise (tight local loop) · **GREEN:** run the path guard, then open one PR.
+**Gate:** the task's own eval and the runtime path policy are green. *That
 green-eval-closes-the-issue discipline is the Dark Factory, one issue at a time.*
 
 </details>
@@ -363,16 +363,17 @@ skill is self-contained (`SKILL.md` + `references/` + `scripts/`, with
 | [`plans-to-coherent-spec`](skills/plans-to-coherent-spec) | 5A | fuse plans → one coupled spec + e2e eval | `--framework speckit\|kiro\|openspec\|bmad` | `scaffold-e2e-eval.sh`, `check-coherent-spec.sh` |
 | [`task-spec`](skills/task-spec) | 5B | atomic, self-verifying **Task-Spec v3** units | severity-scaled eval thresholds | **20 scripts** + test suite (see below) |
 | [`task-specs-to-issues`](skills/task-specs-to-issues) | ① | project tasks onto a tracker | `--tracker github\|linear\|jira` (linear) | `register.sh`, `verify-registration.sh` |
-| [`stack-to-harness`](skills/stack-to-harness) | 6 | scaffold the control plane the stack needs | *(stack-derived)* | delegates to `agents-kbs-tech-stack` |
+| [`task-to-runtime-contract`](skills/task-to-runtime-contract) | 6 | bind a signed task to evidence, topology, and guards | `--topology single` | binder, gate, path guard, adapters, receipts |
 | [`task-loop`](skills/task-loop) | 8 | one issue → green-eval PR | `--issue N` (req) · `--agent claude\|codex\|kimi` | `run-issue-eval.sh`, `open-issue-pr.sh` |
-| [`agents-kbs-tech-stack`](skills/agents-kbs-tech-stack) | *engine* | scaffolder that Pass 6 drives (v0.3.0) | `--strict` (quality gate) | `scaffold.sh`, `install-closers.sh`, `quality-gate.sh`, `emit-cross-tool.sh` + 6 more |
+| [`stack-to-harness`](skills/stack-to-harness) + [`agents-kbs-tech-stack`](skills/agents-kbs-tech-stack) | *legacy* | migration support for standing technology fleets | `--strict` | retained safety fixes; not canonical Pass 6 |
 | [`skill-creator`](skills/skill-creator) | *tooling* | author, eval, and validate skills | — | `quick_validate.py`, `run_eval.py`, `run_loop.py` + eval-viewer |
 
-**By the numbers:** 11 skills · **53** shell scripts · **11** Python scripts · **41**
-reference docs · **21** runbooks · full test + conformance suites in `task-spec`.
+**By the numbers:** 14 skill packages (12 active/companion/tooling plus two
+legacy migration packages) with full regression and conformance suites in
+`task-spec` and `task-to-runtime-contract`.
 
 <details>
-<summary><b>The harness engine — <code>agents-kbs-tech-stack</code> (v0.3.0)</b></summary>
+<summary><b>Legacy migration surface — <code>stack-to-harness</code> + <code>agents-kbs-tech-stack</code></b></summary>
 
 For each tech the tasks put in play it scaffolds a **paired** `architect`
 (planning, trade-offs, *no Bash*) + `developer` (code, tests, *has Bash*) agent and
@@ -388,9 +389,9 @@ inherits one contract:
 | `.github/copilot-instructions.md` | GitHub Copilot |
 | `.claude/` (agents, `kb/`, `doctrine.yaml`, `rules/`) | Claude Code |
 
-A `quality-gate.sh` pass lints the scaffold for drift (BLOCKER / IMPORTANT / NIT;
-`--strict` exits non-zero on any BLOCKER), and a tunable `doctrine.yaml` captures
-portable defaults (Bash boundary, threshold floors, closer-hook protocol).
+These files remain for existing repositories, not as the canonical Pass 6.
+Their safety defects are fixed: strict mode rejects TODO-seeded KB content and
+cross-tool emission preserves differing user files via `.proposed` siblings.
 
 </details>
 
@@ -448,17 +449,16 @@ Cursor, Gemini, taskship, and anthive. Full details:
 
 ---
 
-## 🛡 The Two Moats
+## 🛡 The Two Contracts
 
-Converge holds **two** moats, not one, and the discipline is to keep them separate.
+Converge holds two contracts, and the discipline is to keep them separate.
 
-- **Task-Spec = the optionality moat.** Because the *eval* — not the agent —
+- **Task-Spec = authorization and done.** Because the *eval* — not the agent —
   defines done, any coding agent (Claude, Codex, Kimi) is a swappable commodity
   slot. Swap the engine; the gate is unmoved.
-- **Harness = the quality moat.** The control-plane files that make any commodity
-  agent succeed. Not downloadable — built, tested, failed, and rebuilt over
-  thousands of hours. The 2026 finding holds: one harness re-run across five
-  models yielded **+2.3 to +10.1 points with no retraining**.
+- **Runtime contract = authority in motion.** It binds the exact signed task
+  revision to the evidence, topology, permissions, and concrete guards the
+  selected runtime must honor. It is task-scoped, hash-bound, and rechecked.
 
 > **Run on commodity models; produce defensible output.**
 
@@ -507,8 +507,8 @@ served via MCP so a non-engineer can ask for it"* — on the real
 | **4 · Consensus** | `--adversary codex` attacks: *"midnight off-by-one (no TZ)? refunds counted?"* Fix: pin UTC (ADR-0002). Accept: refunds out of v1. **Fork → task-driven.** |
 | **5B · Tasking** | `tasks/build_gold_revenue` (eval: dbt test + control-sum) and `tasks/build_mcp_revenue` (eval: tool result == gold query). Each born with its eval. |
 | **① Register** | `--tracker linear`: `build_gold_revenue → ISSUE-41 [ready]`; `build_mcp_revenue → ISSUE-42 [blocked-by 41]`. |
-| **6 · Harness** | Stack = dbt + duckdb + mcp → scaffold `.claude/` with `dbt-architect`, `mcp-developer`, KBs, `AGENTS.md`. The control plane stands. |
-| **8 · The Loop** | `task-loop --issue 41`: dbt test RED (null categories) → add `COALESCE` → GREEN + control-sum matches → PR; 41 done. Unblocks 42 → PR; 42 done. |
+| **6 · Bind** | `cvg bind --task tasks/build_gold_revenue.md`: bind the signed hash to ADRs, cached dbt docs, single-agent topology, and path guards → `CHECK_RUNTIME_CONTRACT=PASS`. |
+| **8 · The Loop** | `task-loop --issue 41`: contract PASS → dbt test RED (null categories) → add `COALESCE` → GREEN + path policy PASS → PR; 41 done. |
 
 **The Dark Factory, on this repo:** a non-engineer asks the MCP *"revenue by
 category yesterday?"* — and it answers. Built brief → deploy, every step
@@ -520,7 +520,7 @@ eval-verified, the human walked out at the gate.
 
 ```text
 converge/
-├── skills/                              # the 11-skill chain — see skills/README.md
+├── skills/                              # active chain + legacy migration packages
 │   ├── brd-docs-to-tech-req/            # Pass 1  · Intent
 │   ├── tech-req-to-adrs/                # Pass 2  · Structure
 │   ├── reqs-to-swimlane-plans/          # Pass 3  · Decompose
@@ -528,9 +528,10 @@ converge/
 │   ├── plans-to-coherent-spec/          # Pass 5A · Specify (Fork A)
 │   ├── task-spec/                       # Pass 5B · Tasking (Fork B) — cornerstone
 │   ├── task-specs-to-issues/            # ①       · Register (tracker as state)
-│   ├── stack-to-harness/                # Pass 6  · Harness (quality moat)
+│   ├── task-to-runtime-contract/        # Pass 6  · Bind (runtime contract)
 │   ├── task-loop/                       # Pass 8  · The Loop (execution)
-│   ├── agents-kbs-tech-stack/           # engine  · the scaffolder Pass 6 drives
+│   ├── stack-to-harness/                # legacy  · standing-fleet migration
+│   ├── agents-kbs-tech-stack/           # legacy  · technology KB scaffolder
 │   └── skill-creator/                   # tooling · skill authoring + validation
 ├── docs/                                # canonical blueprints + deep dives (PDF)
 ├── presentation/                        # interactive HTML walkthroughs
@@ -565,7 +566,7 @@ end-to-end.
 <summary><b>Is Converge a library I install, or a method?</b></summary>
 
 Both — but primarily a **method**. The eight passes are the intellectual product;
-the 11 skills are the runnable embodiment for Claude Code. You adopt the method by
+the skill chain is the runnable embodiment for agent runtimes. You adopt the method by
 wiring the skills into your repo's `.claude/skills/` (see
 [Quickstart](#-quickstart)) and running the chain pass by pass.
 </details>

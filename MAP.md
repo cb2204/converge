@@ -6,12 +6,12 @@ comes later.)
 
 | Looking for… | Go to |
 |---|---|
-| **The method** (13 skills, the chain, the fork) | [`skills/README.md`](skills/README.md) |
+| **The method** (active chain + legacy migration skills, the fork) | [`skills/README.md`](skills/README.md) |
 | **The build contract** (Track R/M, rules, parked items, progress log) | [`cvg-todo.md`](cvg-todo.md) |
 | **The method backlog** (B-1…B-14) | [`todo.md`](todo.md) |
 | **The proving ground** (greenfield run, Pass 0 →) | [`tests/uc-analytics/`](tests/uc-analytics/) — its `CLAUDE.md` maps the inside |
 | **The machine fixture** (Track M test floor) | [`tests/e2e-test-engine/`](tests/e2e-test-engine/) |
-| **A project's Converge home** | `<project>/cvg/` — the workspace root; its `INDEX.md` maps the five folders (brain → docs → sketch → tasks → receipts) and the current pass state |
+| **A project's Converge home** | `<project>/cvg/` — the workspace root; its `INDEX.md` maps brain → docs → sketch → tasks → execution → knowledge → receipts and the current pass state |
 | **Design decks & demos** | [`presentation/`](presentation/) · [`docs/`](docs/) (method PDFs) |
 | **The CLI** (`cvg` — router, UI layer, surface ledger) | [`bin/`](bin/) — its `README.md` records what exists and what proved it |
 | **The task-spec engine** (scripts the CLI wraps) | [`skills/task-spec/scripts/`](skills/task-spec/scripts/) |

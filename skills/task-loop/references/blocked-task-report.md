@@ -59,8 +59,8 @@ the concrete missing/wrong thing, not just "it fails":
 - [ ] **A dependency (`depends_on`) is not merged** — an upstream task-spec this
       one builds on has not landed (e.g. the output layer depends on a transform
       step that itself depends on ingest, and that upstream step is not merged).
-- [ ] **The harness is missing** — no `.claude/` agent + KB for the tech this
-      task touches, so `--agent` cannot ground.
+- [ ] **The runtime contract is missing or stale** — Pass 6 has not bound the
+      current signed Task-Spec hash to evidence, topology, and enforcement.
 - [ ] **The eval itself is broken** — a syntax error / unbound variable in the
       task-spec's bash, not a real assertion failure. Do **not** hack the eval to
       pass; the fix belongs upstream in the task-spec.
@@ -77,8 +77,8 @@ Route the fix to the Converge pass that owns the gap — do not fix it here:
 | Missing or wrong cited ADR | **Pass 2** (`tech-req-to-adrs`) |
 | Wrong swimlane seam / build order | **Pass 3** (`reqs-to-swimlane-plans`) |
 | Eval broken / task under-specified / not atomic | **Pass 5B** (`task-spec`) |
-| Missing agent + KB for the tech | **Pass 6** (`stack-to-harness`) |
-| Dispatch order / dependency not yet merged | future **CI/CD Manager** (not this loop) |
+| Missing or stale runtime contract / evidence | **Pass 6 · Bind** (`task-to-runtime-contract`) |
+| Dispatch order / dependency not yet merged | **Pass 7 · Manager** (not this loop) |
 
 ## Next action
 

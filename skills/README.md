@@ -1,10 +1,10 @@
 # The Converge Skill Chain
 
-Thirteen self-contained Claude Code skills that implement the Converge method —
+Fourteen self-contained agent skills implement the Converge method —
 **ten spine skills** (the passes + the fork's two branches + the two optional
-bridges, Capture ⓪ and Register ①), one **teaching companion**, one **harness
-engine**, and one **authoring tool**. Every skill passes Anthropic's official
-validator (**13/13**, checked with
+bridges, Capture ⓪ and Register ①), one **teaching companion**, one **authoring
+tool**, and two **legacy Pass 6 migration packages**. Every active skill passes
+the official validator (checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
 and every engine or tracker is bound by a **flag, never a name**.
 
@@ -19,7 +19,7 @@ BRD ──▶ 1 Intent ──▶ 2 Structure ──▶ 3 Decompose ──▶ 4 C
                                   5A Specify                             5B Tasking ──▶ ① Register
                                         └───────────────┬──────────────────────┘
                                                         ▼
-                                       6 Harness ──▶ 8 The Loop ──▶ fleet green ↺
+                                        6 Bind ──▶ 8 The Loop ──▶ fleet green ↺
 ```
 
 | Pass | Skill | One line |
@@ -32,10 +32,11 @@ BRD ──▶ 1 Intent ──▶ 2 Structure ──▶ 3 Decompose ──▶ 4 C
 | 5A | [`plans-to-coherent-spec`](plans-to-coherent-spec/) | Fork A — one coherent spec, one e2e eval |
 | 5B | [`task-spec`](task-spec/) | Fork B — atomic, self-verifying units · **the cornerstone** |
 | ① | [`task-specs-to-issues`](task-specs-to-issues/) | one spec = one tracked issue · the board is state |
-| 6 | [`stack-to-harness`](stack-to-harness/) | scaffold the control plane the stack needs · the quality moat |
+| 6 | [`task-to-runtime-contract`](task-to-runtime-contract/) | signed task → hash-bound, enforceable runtime contract |
 | 8 | [`task-loop`](task-loop/) | one issue → green-eval PR · the execution loop |
 | — | [`pass-to-lesson`](pass-to-lesson/) | *companion* — after any pass, teach the owner what was built and why · *optional* |
-| — | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | *engine* — the scaffolder Pass 6 drives |
+| legacy | [`stack-to-harness`](stack-to-harness/) | migration-only standing-fleet wrapper |
+| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | migration-only technology-agent/KB scaffolder |
 | — | [`skill-creator`](skill-creator/) | *tooling* — author, evaluate, and validate skills |
 
 **Install into a consuming repo** (symlink tracks upstream; copy pins a version):
@@ -144,30 +145,35 @@ issue — so the board never lies.
 **Ships:** `register.sh`, `verify-registration.sh` (1:1, no orphans, **no cycles**).
 **Gate:** `count(issues) == count(signed-off specs)`, every dependency edge is one link.
 
-### 6 · `stack-to-harness` — the quality moat
+### 6 · `task-to-runtime-contract` — bind one task to its runtime
 
-Reads which techs the in-scope tasks put in play and scaffolds the control
-plane fitted to exactly that stack — paired architect + developer agents per
-tech, grounded KBs, doctrine, rules, and cross-tool mirrors. Thin orchestration
-over `agents-kbs-tech-stack`; scaffolds only what the system actually uses,
-never speculatively. The stack fills the harness; the tasks point at it.
-**Ships:** delegates to the engine below.
-**Gate:** the control plane stands and is grounded; the quality-gate lint is green.
+Verifies one signed runnable Task-Spec, binds its exact hash to the evidence
+slice needed for execution, defaults to one agent, records a more complex
+task-local topology only when static evidence justifies it, and emits portable
+path guards plus generic/Claude/Codex/Kimi adapter manifests. External docs are
+cached and hashed; approved project knowledge is referenced, never copied.
+**Ships:** deterministic binder, readiness gate, candidate/diff path guard,
+tool-hook bridge, adapter manifests, structured execution receipts, and
+proposed-only knowledge accretion.
+**Gate:** `CHECK_RUNTIME_CONTRACT=PASS` — sign-off, freshness, evidence,
+topology substance, ownership, and enforcement all verify.
 
 ### 8 · `task-loop` — one issue → green-eval PR
 
 The execution loop you build (the Manager that schedules it is future CI/CD).
-Takes ONE issue (`--issue N`), reads its task-spec + cited ADRs + grounded
-harness, cuts a branch, writes code, runs the task's own eval. RED: feed the
+Takes ONE issue (`--issue N`), verifies its Pass 6 execution profile, reads the
+signed Task-Spec + hash-bound evidence, cuts a branch, writes code, and runs the
+task's own eval. RED: feed the
 failure back and revise — a tight local loop. GREEN: open a PR that closes the
-issue. Bounded by the spec's `budget_iterations`; failure exits as an explicit
+issue only after the portable path guard passes. Bounded by the spec's
+`budget_iterations`; failure exits as an explicit
 blocked-task report, never silence.
 **Ships:** `run-issue-eval.sh`, `open-issue-pr.sh`, `references/blocked-task-report.md`. **Flags:** `--issue N` (required), `--agent claude|codex|kimi`.
 **Gate:** the task's own eval is green — none by hand, none by attempt-count.
 
 ---
 
-## The engine and the tooling
+## Companions, tooling, and legacy migration
 
 ### `pass-to-lesson` — the teaching companion (optional, after any pass)
 
@@ -181,16 +187,12 @@ understanding survives the session. It explains decisions, never reopens them.
 **Ships:** `check-lesson.sh` (the gate linter), `references/lesson-template.md`. **Flags:** `--depth full|brief`, `--quiz on|off`.
 **Gate:** every emitted artifact taught, every decision names a rejected alternative, every term defined, 3–5 check-yourself questions, artifacts untouched.
 
-### `agents-kbs-tech-stack` — the scaffolder Pass 6 drives (v0.3.0)
+### Legacy: `stack-to-harness` + `agents-kbs-tech-stack`
 
-For each tech on the curated menu it produces a **paired** architect (planning,
-no Bash) + developer (code + tests, has Bash) agent and a full KB tree, installs
-three universal closers (code-reviewer, code-simplifier, code-documenter) wired
-via the closer-hook protocol, and **emits cross-tool mirrors** — `AGENTS.md`,
-Cursor rules, Copilot instructions — so every engine inherits one contract. A
-`quality-gate.sh` pass lints the scaffold for drift (`--strict` exits non-zero
-on any BLOCKER); a tunable `doctrine.yaml` captures the portable defaults.
-**Ships:** 10 scripts, 6 references, 2 runbooks, 19 templates.
+These packages preserve migration and audit support for existing standing
+technology fleets. They are no longer the canonical Pass 6. Their safety
+contracts remain maintained: differing cross-tool files produce `.proposed`
+siblings, and strict mode rejects TODO-seeded KB content.
 
 ### `skill-creator` — author, evaluate, validate
 
@@ -204,7 +206,7 @@ structure (`quick_validate.py` — the check every skill in this folder passes).
 
 ## Compliance & conventions
 
-- **Validator:** all 12 skills pass `quick_validate.py` (frontmatter schema —
+- **Validator:** active skills pass `quick_validate.py` (frontmatter schema —
   only `name/description/license/allowed-tools/metadata/compatibility` keys;
   naming; description present and bounded).
 - **Anatomy:** every skill is `SKILL.md` + `references/` + `scripts/`, with
@@ -218,7 +220,8 @@ structure (`quick_validate.py` — the check every skill in this folder passes).
   `python3 skills/skill-creator/scripts/quick_validate.py <skill-dir>`; add
   concepts under `references/concepts/`, playbooks under `runbooks/`.
 
-**By the numbers:** 12 skills · 54 shell scripts · 11 Python scripts ·
-42 reference docs · 21 runbooks · full test + conformance suites in `task-spec`.
+**By the numbers:** 14 skill packages, including two legacy migration packages,
+with full test and conformance suites in `task-spec` and
+`task-to-runtime-contract`.
 
 > *"You are converged when the eval passes — not when you feel done."*

@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.15.0"
+CVG_VERSION="0.16.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -608,6 +608,10 @@ cmd_help() {
   printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
   printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
+  printf '  bind --task <spec>       Pass 6 · Bind — write a task-scoped execution\n'
+  printf '                           profile + portable guards; CHECK_RUNTIME_CONTRACT\n'
+  printf '  bind --check --task <spec>\n'
+  printf '                           re-check hashes, topology, evidence, and adapters\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint + six-tier sizing (XS/S/M/L leaf\n'
@@ -674,6 +678,7 @@ is_mutating() {
     transition) return 0 ;;
     tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
     review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
+    bind)       for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
@@ -708,11 +713,14 @@ elif cmd == "transition":
 elif cmd == "register":
     mutating = ("--check" not in parts)
     disp = "register --check" if ("--check" in parts) else "register"
+elif cmd == "bind":
+    mutating = ("--check" not in parts)
+    disp = "bind --check" if ("--check" in parts) else "bind"
 elif cmd == "setup":
     sub = parts[0] if parts else "status"
     disp = ("setup " + sub).strip() if sub != "status" else "setup"
     mutating = (sub in ("tracker", "repo", "people", "projection"))
-PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4}
+PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4, "bind": 6}
 env = {
     "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
     "token": token, "verdict": verdict, "exit_code": rc,
@@ -798,6 +806,73 @@ case "$CMD" in
         exit 2
         ;;
     esac
+    ;;
+  bind)
+    # Pass 6 · Bind. The Task-Spec stays canonical; this command writes or
+    # verifies the thin, hash-bound execution profile and concrete guards.
+    BINDER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/bind-runtime-contract.py"
+    CHECKER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/check-runtime-contract.py"
+    [ -f "$BINDER" ] && [ -f "$CHECKER" ] || {
+      ui_err "task-to-runtime-contract skill is incomplete under $CVG_HOME_DIR/skills"
+      printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+      exit 2
+    }
+    BIND_CHECK=0
+    BIND_TASK=""
+    BIND_PROFILE=""
+    BIND_SUPERVISED=0
+    BIND_ARGS=()
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --check) BIND_CHECK=1; shift ;;
+        --task)
+          [ $# -ge 2 ] || {
+            ui_err "--task requires a Task-Spec path"
+            printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+            exit 2
+          }
+          BIND_TASK="$2"; BIND_ARGS+=(--task "$2"); shift 2 ;;
+        --task=*)
+          BIND_TASK="${1#--task=}"; BIND_ARGS+=("$1"); shift ;;
+        --profile)
+          [ $# -ge 2 ] || {
+            ui_err "--profile requires an execution-profile path"
+            printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+            exit 2
+          }
+          BIND_PROFILE="$2"; shift 2 ;;
+        --profile=*) BIND_PROFILE="${1#--profile=}"; shift ;;
+        --supervised)
+          BIND_SUPERVISED=1; BIND_ARGS+=("$1"); shift ;;
+        *)
+          if [ "$BIND_CHECK" -eq 1 ]; then
+            ui_err "unknown bind --check argument '$1'"
+            printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+            exit 2
+          fi
+          BIND_ARGS+=("$1"); shift ;;
+      esac
+    done
+    if [ "$BIND_CHECK" -eq 1 ]; then
+      if [ -z "$BIND_PROFILE" ]; then
+        if [ -z "$BIND_TASK" ]; then
+          ui_err "bind --check requires --task <spec> or --profile <profile>"
+          printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+          exit 2
+        fi
+        BIND_ID="$(basename "$BIND_TASK" .md)"
+        BIND_PROFILE="$PWD/cvg/execution/$BIND_ID/execution-profile.yaml"
+      fi
+      BIND_CHECK_ARGS=(--profile "$BIND_PROFILE" --repo "$PWD" --tool-home "$CVG_HOME_DIR")
+      [ "$BIND_SUPERVISED" -eq 1 ] && BIND_CHECK_ARGS+=(--supervised)
+      exec python3 "$CHECKER" "${BIND_CHECK_ARGS[@]}"
+    fi
+    if [ -z "$BIND_TASK" ]; then
+      ui_err "bind requires --task <Task-Spec>"
+      printf 'CHECK_RUNTIME_CONTRACT=FAIL\n'
+      exit 2
+    fi
+    exec python3 "$BINDER" --repo "$PWD" --tool-home "$CVG_HOME_DIR" "${BIND_ARGS[@]}"
     ;;
   capture)
     # Pass 0 gate: locate the brief, route to the idea-to-brd exit contract.
@@ -1142,7 +1217,7 @@ m = {
   },
   "global_flags": [
     {"flag": "--json", "position": "any", "effect": "emit a uniform response envelope {ok, command, token, verdict, exit_code, changed, dry_run, data, error, warnings, meta{schema_version, tool, cvg_version}} as ONE JSON document on stdout, instead of prose. The underlying exit code is preserved. agent-context/help/version are unaffected (already machine/meta)."},
-    {"flag": "--dry-run", "position": "any", "applies_to": "mutating commands only (review --adversary, tasks accept, transition, register)", "effect": "report the intended action and change nothing; envelope carries changed=false, dry_run=true (token DRY_RUN=OK in text mode). For register, the rich offline preview (cycles, DAG, edge integrity) is `register --check`."}
+    {"flag": "--dry-run", "position": "any", "applies_to": "mutating commands only (review --adversary, bind generation, tasks accept, transition, register)", "effect": "report the intended action and change nothing; envelope carries changed=false, dry_run=true (token DRY_RUN=OK in text mode). Read-only verification uses `bind --check` or `register --check`."}
   ],
   "exit_codes": [
     {"code": 0,  "name": "OK",           "meaning": "gate passed / command succeeded",                              "retryable": False, "side_effects": "none"},
@@ -1160,6 +1235,8 @@ m = {
     c("review --adversary <e[,e]>", 4, "sketch-plans-adversarial-review/dispatch-review[-multi].sh", ["REVIEW=OK|ERROR|SKIP|TIMEOUT|USAGE_ERROR"], True, "cvg review --adversary codex,kimi", "Pass 4 dispatch — a different-family adversary (or several, merged) attacks the plans; writes a provenance-stamped objection log."),
     c("review --check", 4, "sketch-plans-adversarial-review/check-consensus-gate.sh", ["CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR"], False, "cvg review --check", "Pass 4 gate — validates the stamped objection log (cross-family, resolutions, fork B, provenance)."),
     c("doctor", 4, "sketch-plans-adversarial-review/doctor.sh", ["DOCTOR=OK|FAIL"], False, "cvg doctor", "Engine readiness for Pass 4 dispatch (>=2 engines, >=1 cross-family)."),
+    c("bind --task <spec>", 6, "task-to-runtime-contract/bind-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], True, "cvg bind --task tasks/T-...md", "Pass 6 · Bind — verify one signed Task-Spec, select the initial intra-task topology, hash-bind the evidence slice, and emit portable path guards plus vendor adapter manifests."),
+    c("bind --check --task <spec>", 6, "task-to-runtime-contract/check-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], False, "cvg bind --check --task tasks/T-...md", "Re-check Task-Spec freshness, sign-off, context hashes, topology substance, ownership, and enforcement artifacts."),
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),

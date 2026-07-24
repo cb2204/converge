@@ -494,18 +494,15 @@ chain runs brief → fleet-green in under 30 minutes with 3–4 task-specs. The
 worked example lives in a private repo today; newcomers need a runnable one.
 Also becomes the integration test for B-1's gate.
 
-## B-14 · Standards alignment — AGENTS.md-first · A2A v1.2 *(added 2026-07-08)*
+## B-14 · Standards alignment — runtime-contract adapters · A2A v1.2 *(reframed 2026-07-24)*
 
-The AAIF consolidation settled the stack; keep the harness on its leading edge:
+Pass 6 no longer treats a vendor directory as canonical. Keep the portable
+runtime-contract surface on the standards edge:
 
-- **Invert the emission order.** The dominant Q1-2026 guidance is *"maintain
-  one `AGENTS.md`; add tool-specific files only for tool-specific features"* —
-  and CLAUDE.md/AGENTS.md overlap in new repos has compressed to near zero.
-  `agents-kbs-tech-stack` currently treats `.claude/` as primary with
-  `AGENTS.md` as a mirror; flip it: **`AGENTS.md` is the universal baseline**
-  (source of truth for doctrine + per-tech do/don'ts), `CLAUDE.md` carries
-  only Claude-specific capabilities (skills, subagents), Cursor/Copilot files
-  stay derived.
+- **Keep the portable core canonical.** The signed Task-Spec, execution
+  profile, path guards, and receipts are runtime-neutral. `AGENTS.md` remains
+  the universal contextual baseline; Claude, Codex, Kimi, Cursor, and Copilot
+  surfaces are derived adapters only.
 - **Track AGENTS.md v1.1.** The proposal formalizes optional YAML frontmatter
   (`description`, `tags`) and nested per-directory files with
   closest-file-wins precedence — a natural fit for per-tech KB scoping. Emit
@@ -517,10 +514,8 @@ The AAIF consolidation settled the stack; keep the harness on its leading edge:
   execution → result**, so remote/cross-vendor workers slot in without a
   contract change.
 
-**Gate:** `emit-cross-tool.sh` produces an AGENTS.md that carries the full
-doctrine baseline (validated by `quality-gate.sh`); CLAUDE.md in a scaffolded
-repo contains no content duplicated from AGENTS.md; the A2A state mapping
-passes a conformance check against the v1.2 spec.
+**Gate:** `CHECK_RUNTIME_CONTRACT=PASS`; no adapter weakens the portable path
+guard silently; the A2A state mapping passes a conformance check against v1.2.
 
 ---
 
@@ -541,9 +536,9 @@ skills.
   postgres→duckdb→dbt→MCP worked example no longer leaks into skill
   instructions; it survives only as labeled illustration, and the README keeps
   one worked example. `plans-to-coherent-spec` scripts redesigned generic.
-- `.claude/` cleanup: empty scaffolding dirs + a leftover AgentSpec README are
-  in the repo working tree — either scaffold it for real (Pass 6 on this repo)
-  or drop it.
+- `.claude/` cleanup: empty legacy scaffolding dirs + a leftover AgentSpec
+  README are not Pass 6 evidence; migrate or remove them intentionally after
+  `task-to-runtime-contract` proves the replacement on the real repo.
 - ~~v2 PDF page 10 placeholder text~~ — **superseded 2026-07-07**: v3 PDF
   shipped (`docs/cvg-aut-systems-spine-steps-v3.pdf`) with the section written;
   v2 kept as a historical record.
