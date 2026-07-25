@@ -14,8 +14,8 @@ ts_version_flag "$@"
 DEFAULT_DIR="${HOME}/Backups"
 DEST_DIR="${1:-$DEFAULT_DIR}"
 
-if [[ ! -d tasks ]]; then
-  echo "(no tasks/ directory in $(pwd); nothing to back up)"
+if [[ ! -d "$TASKSPEC_BACKLOG_DIR" ]]; then
+  echo "(no $TASKSPEC_BACKLOG_DIR/ directory in $(pwd); nothing to back up)"
   exit 0
 fi
 

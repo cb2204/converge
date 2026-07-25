@@ -91,13 +91,43 @@ fi
 [ -n "$GIT_ROOT" ] || err "not inside a git repository"
 
 if [ -z "$TASKS_DIR" ]; then
-  TASKS_DIR="${TASKSPEC_BACKLOG_DIR:-tasks}"
+  # Same discovery order as the rest of the task family: an explicit env wins,
+  # then the cvg/ workspace layout, then the bare one.
+  if [ -n "${TASKSPEC_BACKLOG_DIR:-}" ]; then
+    TASKS_DIR="$TASKSPEC_BACKLOG_DIR"
+  elif [ -d "$PWD/cvg/tasks" ]; then
+    TASKS_DIR="cvg/tasks"
+  else
+    TASKS_DIR="tasks"
+  fi
 fi
-# Make absolute against the repo root when a bare/relative dir was given.
+# Resolve a relative dir against the INVOCATION directory first, and only then
+# against the repo root. A workspace nested inside a larger repo (a proving
+# ground, a monorepo package) keeps its specs at <workspace>/cvg/tasks, and
+# anchoring straight to the git root makes the loop look for them in the parent
+# repo — where they have never been.
 case "$TASKS_DIR" in
   /*) : ;;
-  *)  TASKS_DIR="$GIT_ROOT/$TASKS_DIR" ;;
+  *)
+    if [ -d "$PWD/$TASKS_DIR" ]; then
+      TASKS_DIR="$PWD/$TASKS_DIR"
+    else
+      TASKS_DIR="$GIT_ROOT/$TASKS_DIR"
+    fi
+    ;;
 esac
+
+# The WORKSPACE is the parent of the tasks dir, and it is the only directory an
+# eval's relative paths can sensibly be resolved against — a spec that creates
+# `cvg/capture/orders.py` means relative to its own workspace, not to whatever
+# repo happens to contain it.
+WORKSPACE_ROOT="$(dirname "$TASKS_DIR")"
+# In the cvg/ layout the specs sit at <workspace>/cvg/tasks, so the parent of
+# the tasks dir is `cvg` — one level short of the workspace an eval's relative
+# paths are written against.
+if [ "$(basename "$WORKSPACE_ROOT")" = "cvg" ]; then
+  WORKSPACE_ROOT="$(dirname "$WORKSPACE_ROOT")"
+fi
 
 # ----- Resolve --issue to a task-spec file -----
 # Portable, bash-3.2-safe: no arrays required for the happy paths.
@@ -190,13 +220,15 @@ TASK_ID="$(basename "$TASK_FILE" .md)"
 # New executions fail closed when the task is not bound. The explicit legacy
 # escape hatch exists only for migration and keeps the old behavior visible.
 if [ "$LEGACY_NO_CONTRACT" != true ]; then
-  [ -n "$CONTRACT" ] || CONTRACT="$GIT_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
-  case "$CONTRACT" in /*) : ;; *) CONTRACT="$GIT_ROOT/$CONTRACT" ;; esac
+  # The contract is a workspace artifact — `cvg bind` writes it next to the
+  # specs, not at the git root.
+  [ -n "$CONTRACT" ] || CONTRACT="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+  case "$CONTRACT" in /*) : ;; *) CONTRACT="$WORKSPACE_ROOT/$CONTRACT" ;; esac
   if [ ! -f "$CONTRACT" ]; then
     echo "RED"
     echo "issue: $ISSUE"
     echo "reason: Pass 6 runtime contract is missing: $CONTRACT"
-    echo "next: cvg bind --task ${TASK_FILE#"$GIT_ROOT"/}"
+    echo "next: cvg bind --task ${TASK_FILE#"$WORKSPACE_ROOT"/}"
     exit 2
   fi
   CONTRACT_CHECKER="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-runtime-contract.py"
@@ -207,7 +239,7 @@ if [ "$LEGACY_NO_CONTRACT" != true ]; then
   set +e
   CONTRACT_OUT="$(python3 "$CONTRACT_CHECKER" \
     --profile "$CONTRACT" \
-    --repo "$GIT_ROOT" \
+    --repo "$WORKSPACE_ROOT" \
     --tool-home "$CONTRACT_TOOL_HOME" 2>&1)"
   CONTRACT_RC=$?
   set -e
@@ -310,8 +342,9 @@ run_eval_inline() {
     echo '#!/usr/bin/env bash'
     echo 'set -euo pipefail'
     printf 'GIT_ROOT="%s"\n' "$GIT_ROOT"
-    echo 'export GIT_ROOT'
-    printf 'cd "%s" || exit 1\n' "$GIT_ROOT"
+    printf 'WORKSPACE_ROOT="%s"\n' "$WORKSPACE_ROOT"
+    echo 'export GIT_ROOT WORKSPACE_ROOT'
+    printf 'cd "%s" || exit 1\n' "$WORKSPACE_ROOT"
     echo "$_sc"
     echo "$_ec"
   } > "$_script"

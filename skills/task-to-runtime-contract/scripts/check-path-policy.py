@@ -32,10 +32,16 @@ def arguments() -> argparse.Namespace:
 
 
 def diff_paths(repo: Path, base: str | None) -> list[str]:
+    # --relative does two things that both matter for a workspace nested inside
+    # a larger repo: it SCOPES the diff to that directory, and it returns paths
+    # relative to it. Without it, `git diff` reports the whole repository using
+    # repo-root-relative paths, while the contract's fs.write scope is written
+    # relative to the workspace — so every authorized file looks like a
+    # violation and every file elsewhere in the repo looks like the task's.
     commands = []
     if base:
-        commands.append(["git", "-C", str(repo), "diff", "--name-only", f"{base}...HEAD"])
-    commands.append(["git", "-C", str(repo), "diff", "--name-only", "HEAD"])
+        commands.append(["git", "-C", str(repo), "diff", "--relative", "--name-only", f"{base}...HEAD"])
+    commands.append(["git", "-C", str(repo), "diff", "--relative", "--name-only", "HEAD"])
     changed = ""
     for command in commands:
         proc = subprocess.run(command, text=True, capture_output=True, check=False)

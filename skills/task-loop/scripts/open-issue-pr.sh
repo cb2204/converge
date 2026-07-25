@@ -71,10 +71,41 @@ done
 
 [ -n "$ISSUE" ] || err "--issue N is required. This loop never picks a task."
 
-# ----- Repo root -----
+# ----- Repo root and WORKSPACE -----
+# These are not the same thing. Git operations (branch, commit, push) are
+# repo-level; paths — the spec, the contract, the fs.write scope, the eval's
+# own relative references — are WORKSPACE-level. A workspace nested inside a
+# larger repo makes the difference load-bearing, and cd-ing to the git root
+# silently reinterprets every one of those paths against the wrong directory.
+INVOCATION_DIR="$PWD"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
 [ -n "$GIT_ROOT" ] || err "not inside a git repository"
-cd "$GIT_ROOT"
+
+if [ -z "$TASKS_DIR" ]; then
+  if [ -n "${TASKSPEC_BACKLOG_DIR:-}" ]; then
+    TASKS_DIR="$TASKSPEC_BACKLOG_DIR"
+  elif [ -d "$INVOCATION_DIR/cvg/tasks" ]; then
+    TASKS_DIR="cvg/tasks"
+  else
+    TASKS_DIR="tasks"
+  fi
+fi
+case "$TASKS_DIR" in
+  /*) RESOLVED_TASKS_DIR="$TASKS_DIR" ;;
+  *)  if [ -d "$INVOCATION_DIR/$TASKS_DIR" ]; then
+        RESOLVED_TASKS_DIR="$INVOCATION_DIR/$TASKS_DIR"
+      else
+        RESOLVED_TASKS_DIR="$GIT_ROOT/$TASKS_DIR"
+      fi ;;
+esac
+WORKSPACE_ROOT="$(dirname "$RESOLVED_TASKS_DIR")"
+# In the cvg/ layout specs live at <workspace>/cvg/tasks, so the parent of the
+# tasks dir is `cvg` — one level short of the workspace.
+if [ "$(basename "$WORKSPACE_ROOT")" = "cvg" ]; then
+  WORKSPACE_ROOT="$(dirname "$WORKSPACE_ROOT")"
+fi
+[ -d "$WORKSPACE_ROOT" ] || WORKSPACE_ROOT="$GIT_ROOT"
+cd "$WORKSPACE_ROOT"
 
 # ----- Run the gate first (RED/GREEN decides everything below) -----
 EVAL_ARGS=(--issue "$ISSUE")
@@ -98,8 +129,7 @@ fi
 resolve_task_file() {
   _issue="$1"
   if [ -f "$_issue" ]; then echo "$(cd "$(dirname "$_issue")" && pwd)/$(basename "$_issue")"; return 0; fi
-  _td="${TASKS_DIR:-${TASKSPEC_BACKLOG_DIR:-tasks}}"
-  case "$_td" in /*) : ;; *) _td="$GIT_ROOT/$_td" ;; esac
+  _td="$RESOLVED_TASKS_DIR"
   [ -d "$_td" ] || return 1
   [ -f "$_td/$_issue.md" ] && { echo "$_td/$_issue.md"; return 0; }
   [ -f "$_td/$_issue" ] && { echo "$_td/$_issue"; return 0; }
@@ -125,15 +155,15 @@ set -e
 
 TASK_ID="$(basename "$TASK_FILE" .md)"
 PATH_POLICY_STATE="not-run"
-[ -n "$CONTRACT" ] || CONTRACT="$GIT_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
-case "$CONTRACT" in /*) : ;; *) CONTRACT="$GIT_ROOT/$CONTRACT" ;; esac
+[ -n "$CONTRACT" ] || CONTRACT="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+case "$CONTRACT" in /*) : ;; *) CONTRACT="$WORKSPACE_ROOT/$CONTRACT" ;; esac
 
 # ----- Portable Pass 6 settlement guard -----
 # A green eval cannot settle an out-of-scope diff. Vendor hooks may prevent the
 # write earlier; this postflight is the portable fail-closed baseline.
 if [ "$EVAL_RC" -eq 0 ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
   PATH_GUARD="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-path-policy.py"
-  PATH_ARGS=(--profile "$CONTRACT" --repo "$GIT_ROOT")
+  PATH_ARGS=(--profile "$CONTRACT" --repo "$WORKSPACE_ROOT")
   POLICY_BASE="$BASE"
   if [ -z "$POLICY_BASE" ]; then
     POLICY_BASE="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"
@@ -199,7 +229,7 @@ write_receipt() {  # write_receipt <result>
   set +e
   RECEIPT_OUT="$(python3 "$RECEIPT_WRITER" \
     --profile "$CONTRACT" \
-    --repo "$GIT_ROOT" \
+    --repo "$WORKSPACE_ROOT" \
     --result "$RECEIPT_RESULT" \
     --eval-output "$EVAL_TMP" \
     --path-policy "$PATH_POLICY_STATE" \
@@ -343,7 +373,7 @@ fi
 
 # Prove it: every staged path must be inside the authorized scope.
 if [ "$DRY_RUN" != true ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
-  STAGED="$(git diff --cached --name-only 2>/dev/null || true)"
+  STAGED="$(git diff --cached --relative --name-only 2>/dev/null || true)"
   if [ -n "$STAGED" ]; then
     UNAUTHORIZED="$(printf '%s\n' "$STAGED" | python3 -c '
 import sys, json

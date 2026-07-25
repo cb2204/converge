@@ -204,7 +204,8 @@ if [[ "$CHECK_BLAST" == true ]]; then
       fi
       # The spec's own backlog dir entries (tasks/) are author-side bookkeeping.
       case "$f" in
-        tasks/T-*.md) continue ;;
+        "$TASKSPEC_BACKLOG_DIR"/T-*.md) continue ;;
+        tasks/T-*.md|*/tasks/T-*.md) continue ;;
       esac
       # Forbidden check (prefix match against do-not-touch entries).
       while IFS= read -r df; do

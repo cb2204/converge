@@ -785,6 +785,41 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE PASS-8 SCAN — the loop could not find its own task** —
+  asked whether 0→7 was truly done, a cold scan for the recurring
+  git-root-anchoring disease found **six more instances, five of them inside
+  Pass 8 itself**. `bash run-issue-eval.sh --issue T-20260721-cap-steelthread`
+  from the workspace answered: *could not resolve … under
+  /…/converge/tasks*. The loop was looking for its specs in the parent repo.
+  Fixed, in order of discovery:
+  (1) `run-issue-eval.sh` never learned the `cvg/` layout (it does not source
+  `_lib.sh`) and resolved a relative tasks dir against the **git root**;
+  (2) it `cd`-ed to the git root before running evals, so a spec's own relative
+  paths (`cvg/capture/orders.py`) resolved against the wrong directory —
+  **WORKSPACE_ROOT** is now derived from the tasks dir and is where evals run;
+  (3) the runtime contract was looked up at `$GIT_ROOT/cvg/execution/…`, but
+  `cvg bind` writes it beside the specs;
+  (4) `open-issue-pr.sh` `cd`-ed to the git root before any resolution, so
+  staging, the scope check and the receipt all used the wrong base;
+  (5) **`check-path-policy.py` ran `git diff` without `--relative`** — for a
+  nested workspace that reports the WHOLE repo using repo-root-relative paths,
+  while `fs.write` scope is workspace-relative. Every authorized file would have
+  looked like a violation and every unrelated file in the repo like the task's.
+  (`git ls-files --others` already returned workspace-relative paths, which is
+  why only the diff half was wrong.)
+  (6) three more hardcoded `tasks/` in `backup-backlog.sh`, `accept-task.sh` and
+  the `install-hooks.sh` commit-hook regex.
+  **Why none of this ever showed:** every test built a repo whose root *is* the
+  workspace — the one layout in which git-root anchoring and workspace anchoring
+  are indistinguishable. Two new rows now build a workspace at
+  `<repo>/projects/demo` and assert the loop resolves task, contract and eval
+  cwd there. runtime-contract 35 → **37**.
+  **`cvg loop --issue T-20260721-cap-steelthread` now runs end to end**, goes
+  RED for the right reason (unbuilt work), refuses to open a PR, and writes a
+  `blocked` receipt into the workspace. Descent re-verified unchanged; all 9
+  seals still Tier 1 after `transition` (status is mutable-by-design).
+  **Known and accepted:** `.github/workflows/ci.yml` has never executed — 8
+  commits are unpushed, so CI is written but unproven.
 - **2026-07-25 · PASS 6 CLOSED LIVE — THE DESCENT 0→7 IS COMPLETE** — the
   operator ran `cvg register` (created 0, **updated 9**, 8 blocked-by links, 9
   `tracker_ref` receipts) and `cvg register --check`, which cleared the **live**

@@ -35,7 +35,9 @@ cat > "$PRE_COMMIT" << 'HOOK'
 set -euo pipefail
 
 # Only run if task files are being committed
-if git diff --cached --name-only | grep -qE '^tasks/T-.*\.md$|^tasks/queue/T-.*\.md$|^tasks/done/T-.*\.md$|^tasks/parked/T-.*\.md$'; then
+# Match the bare layout AND the cvg/ workspace layout (any depth), so the hook
+# fires in a nested workspace too.
+if git diff --cached --name-only | grep -qE '(^|/)tasks/(queue/|done/|parked/)?T-.*\.md$'; then
   SKILL_DIR="$(cd "$(dirname "$0")/../.claude/skills/task-spec/scripts" 2>/dev/null && pwd || true)"
   if [[ -z "$SKILL_DIR" || ! -f "$SKILL_DIR/rebuild-state.sh" ]]; then
     # Fallback: search from repo root

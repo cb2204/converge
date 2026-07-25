@@ -8,6 +8,7 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOL_HOME="$(cd "$SKILL_DIR/../.." && pwd)"
 CVG="$TOOL_HOME/bin/cvg"
 SAFE="$TOOL_HOME/skills/task-spec/scripts/safe-to-delegate.sh"
+EVAL_RUNNER="$TOOL_HOME/skills/task-loop/scripts/run-issue-eval.sh"
 FIXTURE="$TOOL_HOME/skills/task-spec/tests/fixtures/T-20260602-golden.md"
 LOOP="$TOOL_HOME/skills/task-loop/scripts/run-issue-eval.sh"
 OPEN_PR="$TOOL_HOME/skills/task-loop/scripts/open-issue-pr.sh"
@@ -586,6 +587,50 @@ fi
 # Its own disposable repo: earlier rows deliberately leave branches, blocked
 # receipts and a dirty tree behind, and settlement assertions must not inherit
 # that state or they test the leftovers instead of the behaviour.
+# ---------------------------------------------------------------------------
+# The loop must work in a workspace NESTED inside a larger repo
+# ---------------------------------------------------------------------------
+# Every earlier row builds a repo whose root IS the workspace, which is the one
+# layout where git-root anchoring cannot be told apart from workspace anchoring.
+# Real projects put the workspace in a subdirectory, and there the loop was
+# resolving the tasks dir, the contract and the eval's cwd against the wrong
+# directory — it could not find its own task.
+NEST_REPO="$(mktemp -d -t cvg-nestloop.XXXXXX)"
+git -C "$NEST_REPO" init --quiet
+git -C "$NEST_REPO" config user.email nest@test.local
+git -C "$NEST_REPO" config user.name "nest test"
+WS="$NEST_REPO/projects/demo"
+mkdir -p "$WS/cvg/tasks"
+cp "$FIXTURE" "$WS/cvg/tasks/T-20260602-golden.md"
+printf '# readme\n' > "$WS/README.md"
+printf '# root\n' > "$NEST_REPO/README.md"
+(
+  cd "$WS"
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$SAFE" --stamp --stamp-by nest cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind --task cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+) || true
+git -C "$NEST_REPO" add -A >/dev/null 2>&1
+git -C "$NEST_REPO" commit --quiet -m baseline >/dev/null 2>&1
+
+set +e
+NEST_OUT="$(cd "$WS" && TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$EVAL_RUNNER" \
+  --issue T-20260602-golden 2>&1)"
+set -e
+if ! grep -qE 'could not resolve|does not exist yet|contract is missing' <<<"$NEST_OUT"; then
+  ok "the loop resolves its task, contract and eval cwd in a nested workspace"
+else
+  bad "the loop cannot find its own task in a nested workspace: $(head -3 <<<"$NEST_OUT" | tail -1)"
+fi
+
+# The contract must be found beside the specs, not at the git root.
+if [ -f "$WS/cvg/execution/T-20260602-golden/execution-profile.yaml" ] \
+  && [ ! -e "$NEST_REPO/cvg/execution" ]; then
+  ok "bind writes the contract into the workspace, not the repo root"
+else
+  bad "the contract landed outside the workspace"
+fi
+rm -rf "$NEST_REPO"
+
 WP4_REPO="$(mktemp -d -t cvg-wp4.XXXXXX)"
 git -C "$WP4_REPO" init --quiet
 git -C "$WP4_REPO" config user.email wp4@test.local
