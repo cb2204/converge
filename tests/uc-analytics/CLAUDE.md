@@ -26,7 +26,7 @@ chaos generator), `Makefile` (`make help`), `docker-compose.yml`.
 
 ## Standing rules for sessions in this project
 
-- The chain's working contract is the repo-root [`cvg-todo.md`](../../cvg-todo.md)
+- The chain's working contract is the repo-root [`PLAN.md`](../../PLAN.md)
   — find the current beat there before doing anything.
 - Technology choices are made at Pass 3 against ADRs, never earlier; the
   owner's preferences ride in the BRD's open questions.

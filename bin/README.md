@@ -80,7 +80,7 @@ directory to the first repo carrying `skills/task-spec/scripts/`.
 ## Contracts every future subcommand inherits
 
 1. **Wrap, don't rewrite** (rule 3) — route to the proven scripts; a
-   rewrite needs a written reason in `cvg-todo.md`.
+   rewrite needs a written reason in `PLAN.md`.
 2. **Byte-parity pass-through** — no decoration of wrapped output, ever;
    beauty lives in `help`/`version`/error surfaces only.
 3. **Degradation floor** — no ANSI on non-TTY, `NO_COLOR`, or
@@ -104,7 +104,7 @@ directory to the first repo carrying `skills/task-spec/scripts/`.
    (`retryable`/`side_effects`) is published in `agent-context`. Proven:
    `tests/test-cvg-json-envelope.sh` (12/12).
 
-## Not yet built (see cvg-todo.md for order and detail)
+## Not yet built (see PLAN.md §6–§7 for order and detail)
 
 `status` (1.2) ·
 `next` (1.3) · `ci` (2.2) · `doctor`/`work` (M3) · `run`/`route` (M4) ·

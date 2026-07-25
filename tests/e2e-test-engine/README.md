@@ -1,7 +1,7 @@
 # e2e-test-engine — the cvg golden fixture (B-9)
 
 The tiny, deterministic test bed every `cvg` piece is proven on
-(see [`cvg-todo.md`](../../cvg-todo.md), Milestone 0). A brownfield-shaped
+(see [`PLAN.md`](../../PLAN.md), §6). A brownfield-shaped
 mini data stack: raw tables + a silver view exist; the **gold layer is
 deliberately missing** — building it is the fixture backlog's work.
 
