@@ -19,9 +19,20 @@ PHASE 1 · DESIGN — human-led · make intent crystal-clear
                                                                                 ▼
 PHASE 2 · BUILD — machine-led · the dark factory
   5 Tasking ─▶ 6 Register (opt-in) ─▶ 7A Contract ─▶ 7B Brief ─▶ 8 Loop ─▶ tier-2 verify ─▶ green ↺
+                                                                   │  ▲
+                                                    attempt ─▶ verify ─┘  bounded · fresh context
+                                                                          per attempt · one named
+                                                                          terminal state
 
   cvg lane routes work to FAST (5,7,8) · NORMAL (1,2,5,7,8) · FULL (0-8) — never waiving a gate.
 ```
+
+**Where the passes look for your work.** Every pass discovers the **`cvg/`
+workspace first, then the bare directory** — `cvg/docs/`, `cvg/docs/adrs/`,
+`cvg/sketch/`, `cvg/tasks/` — and an explicit path always wins. The workspace is
+not necessarily the git root (`<repo>/projects/demo/cvg/` is a supported layout),
+so everything resolves relative to the workspace: the specs, the execution
+profiles, and the directory a spec's own evals run in.
 
 | # | Skill | One line |
 |:--:|-------|----------|
@@ -185,12 +196,23 @@ explicitly waived. See [`references/verification.md`](task-to-runtime-contract/r
 The execution loop you build (the Manager that schedules it across the fleet is
 future CI/CD). Takes ONE issue (`--issue N`), verifies its Pass 7 execution
 profile, reads the signed Task-Spec + hash-bound evidence (**the only instruction
-source**), cuts a branch, writes code, and runs the task's own eval. RED: feed the
-failure back and revise — a tight local loop. GREEN: open a PR that closes the
-issue only after the portable path guard passes. Bounded by the spec's
-`budget_iterations`; failure exits as an explicit blocked-task report, never
-silence.
-**Ships:** `run-issue-eval.sh`, `open-issue-pr.sh`, `references/blocked-task-report.md`. **CLI:** `cvg loop --issue <id>`. **Flags:** `--issue N` (required), `--agent claude|codex|kimi`, `--dry-run`, `--allow-external-writes`. **Emits:** `TASK_LOOP=SETTLED|LOCAL_SETTLED|BLOCKED`.
+source**), cuts a branch, and then **actually loops**: attempt → verify → learn →
+repeat, until the task's own eval exits 0. GREEN opens a PR that closes the issue,
+but only after the portable path guard passes.
+**A gate is not a loop.** Until `loop-kernel.sh`, this pass ran the eval *once*
+while every spec declared `budget_iterations` and `circuit_breaker_no_progress`
+that **nothing enforced** — a control in the artifact and not in the runtime. The
+kernel makes the loop specification executable: **each attempt is a fresh process**
+(state on disk, never a growing conversation, because a retry otherwise re-reads
+every prior failure at quadratic cost and degrading attention); **budgets are
+three-axis** (iterations · wall-clock · tokens) and checked *before* the call,
+where the money has not yet been spent; **stagnation beats a fixed count** — the
+same failure the same way N times lands `STALLED` instead of burning the remainder;
+and **exhaustion is a planned landing** — work-in-progress committed, `HANDOFF.md`
+written, `--resume` available. Engines are one adapter file each
+(`scripts/engines/<name>.sh`, two calls: `--available`, `--prompt-file`), so the
+kernel spells no vendor and a hung CLI dies at a watchdog cap.
+**Ships:** `loop-kernel.sh` (the loop), `run-issue-eval.sh` (the level-1 check), `open-issue-pr.sh` (the settlement leg), `engines/{claude,codex,kimi}.sh`, `references/loop-spec.md` (the design + its sources), `references/blocked-task-report.md`. **CLI:** `cvg loop --issue <id>`. **Flags:** `--issue N` (required), `--agent claude|codex|kimi`, `--no-agent`/`--gate-only`, `--max-iterations|--max-seconds|--max-tokens` (tighten only), `--resume`, `--dry-run`, `--allow-external-writes`. **Emits one named terminal state:** `TASK_LOOP=SETTLED|LOCAL_SETTLED|NO_OP|BLOCKED|STALLED|EXHAUSTED|CANCELLED|ERROR` — only the first three exit zero, because an error or an exhausted budget is never a success.
 **Gate:** the task's own eval is green — none by hand, none by attempt-count.
 
 ---

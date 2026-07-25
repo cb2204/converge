@@ -42,11 +42,15 @@ jobs:
           if ! command -v shellcheck >/dev/null 2>&1; then
             sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
           fi
+          # Every nested script directory must be listed explicitly — a glob that
+          # stops at scripts/*.sh silently exempts the newest code from the gate,
+          # which is how engines/ and adapters/ came to need naming here.
           shellcheck -S error \
             bin/cvg install.sh \
             skills/*/tests/*.sh \
             skills/*/scripts/*.sh \
             skills/*/scripts/adapters/*.sh \
+            skills/*/scripts/engines/*.sh \
             tests/*.sh
         if: runner.os == 'Linux'
 
@@ -88,6 +92,11 @@ jobs:
 
       - name: install surface
         run: bash tests/test-install.sh
+
+      - name: loop kernel (Pass 8) — the brakes
+        # Hermetic: stub engines only. No model is called and no token spent, so
+        # the result cannot drift with a vendor CLI's behaviour.
+        run: bash tests/test-loop-kernel.sh
 
       - name: pass gates
         run: |

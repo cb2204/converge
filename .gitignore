@@ -15,6 +15,17 @@ venv/
 tasks/_state.yaml
 _fleet.jsonl
 
+# Pass 8 loop scratch. Each attempt writes a brief, a transcript and a durable
+# checkpoint under cvg/loop/<task-id>/ so a crashed run can resume and a human
+# can read what happened — but they are per-run state, not evidence, and an
+# engine transcript is exactly the kind of file that quietly carries a key.
+# HANDOFF.md is deliberately NOT ignored: it is the planned landing a human
+# picks up.
+cvg/loop/*/state.env
+cvg/loop/*/STOP
+cvg/loop/*/brief-*.md
+cvg/loop/*/attempts/
+
 # Build artifacts
 dist/
 

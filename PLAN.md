@@ -18,8 +18,11 @@
 
 ## §✦ · THE METHOD — current shape (2026-07-24 pivot: the fork is gone)
 
-> This section supersedes the fork model everywhere. `readme.md` + `skills/README.md`
-> are being propagated to match; until they are, THIS is canonical.
+> This section supersedes the fork model everywhere. ✅ **2026-07-25 —
+> `readme.md`, `skills/README.md`, `bin/README.md` and every SKILL.md are
+> propagated and consistent with it** (linear 0–8, two phases, one barrier, the
+> `cvg/` workspace, Pass 8 as a real loop). This section stays canonical when they
+> disagree; a disagreement is now a bug in them, not a lag.
 
 **Thesis — intent-driven development.** The durable human job is making *intent
 crystal-clear*; the machine's job is figuring out *how*. Converge invests the
@@ -37,8 +40,10 @@ dark factory (specs in, software out). The barrier at Consensus **is** the L4→
 line. The field names **three load-bearing properties** of a *real* dark factory
 (vs "agentic coding with automation"): (a) agents work from **written specs** —
 Converge ✅; (b) an **isolated evaluator grades against holdout the coder can't
-see** — Converge ⚠️ (this is exactly **B-12**, now promoted from polish to
-load-bearing); (c) **deploy path unchanged** — Converge ✅. "Dark factory" is now
+see** — Converge ✅ **as of 0.19.0** (`cvg verify`: a different-*family* engine
+grades the diff against intent plus a holdout, prompted to refute, failing
+closed). **B-12's remaining half is making it a gate rather than a command** —
+that is B-2, the CI eval-gate; (c) **deploy path unchanged** — Converge ✅. "Dark factory" is now
 crowded (Stripe Minions 1,300 PRs/wk, Ramp, OpenAI Harness Eng, `peter-stratton/
 dark-factory`, Terraphim). **Converge's durable moat:** the full front-of-funnel
 intent descent (0–4) — most tools start at "you already have a spec"; cross-*family*
@@ -72,14 +77,17 @@ PHASE 2 · BUILD — machine-led · the dark factory
 
 ### Phase 2 — machine-side, step by step
 
-- **5 · Tasking** — the sharpened plans → atomic, self-verifying `tasks/T-*.md`.
+- **5 · Tasking** — the sharpened plans → atomic, self-verifying `cvg/tasks/T-*.md`.
   Each carries: intent (the leg's responsibility), a **runnable eval** (definition
   of done), `depends_on` (the DAG), `touches_paths` (blast radius), effort, and an
   **HMAC sign-off seal** (the spec becomes the only trusted instruction source).
-- **6 · Register — OPT-IN.** Two modes: **repo-local** (specs stay in `tasks/`,
+- **6 · Register — OPT-IN.** Two modes: **repo-local** (specs stay in `cvg/tasks/`,
   queue derived locally) or **tracked** (`cvg register` → Linear/GitHub/Jira issues
   + blocked-by links; the board becomes the shared visible queue). `register --check`
-  is a real 1:1 parity gate. *(Repo-local Loop is a near-term gap — B-5 / `cvg next`.)*
+  is a real 1:1 parity gate. *Repo-local now works end to end: `cvg ready` derives
+  the frontier from `depends_on`, and `cvg loop --issue <task-id>` resolves the spec
+  directly — no tracker required. What B-5 / `cvg next` still owes is auto-selecting
+  the next task, which is deliberately the Manager's job (B-1).*
 - **7 · Bind (+ harness emit)** — two moves:
   - **7a Contract** — bind ONE signed task to a hash-bound evidence slice, explicit
     topology, portable path guards, pinned docs → `CHECK_RUNTIME_CONTRACT`.
@@ -89,11 +97,18 @@ PHASE 2 · BUILD — machine-led · the dark factory
     Principle (Delacretaz): *the harness orchestrates, the documentation teaches* —
     context is queryable, not baked in. This is what lets the SAME task run on
     `claude -p`, `codex exec`, a **kimi swarm**, or a cloud workflow.
-- **8 · Loop ↺** — dispatch the bound task INTO a harness: branch/worktree, the
-  engine reads AGENTS.md + the sealed contract (**only** instruction source) +
-  queryable docs, implements → runs the eval → RED feeds back (bounded) → GREEN →
-  PR closes the issue → the frontier advances. The **isolated holdout verifier**
-  (B-12) is the merge gate. Orchestrated across the fleet by the Manager (B-1).
+- **8 · Loop ↺** — dispatch the bound task INTO a harness: branch, the engine reads
+  AGENTS.md + the sealed contract (**only** instruction source) + queryable docs,
+  implements → runs the eval → RED feeds back → **the kernel repeats, bounded** →
+  GREEN → PR closes the issue → the frontier advances. The loop's own properties are
+  the interesting part and they are now enforced, not declared: three-axis budgets
+  checked *before* each call, a stagnation detector that lands `STALLED` instead of
+  spending the remainder, a **fresh process per attempt** (state on disk, because a
+  growing conversation costs quadratically and attends least to what is buried),
+  durable checkpoints for `--resume`, an external `STOP` signal, and **eight named
+  terminal states** where only `SETTLED`/`LOCAL_SETTLED`/`NO_OP` exit zero.
+  Tier-2 `cvg verify` is the independent judge; making it a **merge gate** is B-2.
+  Orchestrated across the fleet by the Manager (B-1).
 
 ### The graph / observability layer — `cvg graph` (NEW, answers "see it move")
 
@@ -144,11 +159,10 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 ---
 
-## §1 · Where we are — 2026-07-24
+## §1 · Where we are — 2026-07-25
 
-**`cvg` v0.16.0 · 12 skills · Track R is at the Loop's doorstep.**
-
-The descent is validated end-to-end from a raw idea to a live tracker board:
+**`cvg` v0.20.0 · 12 skills · the descent 0→7 is CLOSED on a real use case, and
+Pass 8 is a real loop for the first time.**
 
 | Pass | Skill | State |
 |:--:|---|---|
@@ -156,20 +170,35 @@ The descent is validated end-to-end from a raw idea to a live tracker board:
 | 1 Intent | `brd-docs-to-tech-req` | ✅ closed end-to-end |
 | 2 Structure | `tech-req-to-adrs` | ✅ closed end-to-end (7 ADRs canonical) |
 | 3 Decompose | `reqs-to-swimlane-plans` | ✅ closed end-to-end (3 swimlanes, 9 legs) |
-| 4 Consensus | `sketch-plans-adversarial-review` | ✅ closed on a **real** cross-family adversary; **FORK B** named |
-| 5B Tasking | `task-spec` | ◐ 9 specs cut, signed Tier-1, all `validate`/`gate`/`dod` green — beats U/C/I/P not formally closed |
-| ① Register | `task-specs-to-issues` | ✅ **closed live 2026-07-24** — CVG-21…29 on Linear, 1:1 gate green |
-| 6 Bind | `task-to-runtime-contract` | ◐ skill v1.0.0 + `cvg bind` **exist but are uncommitted**; never run on a real task |
-| 8 The Loop | `task-loop` | ⬜ not started — **the next frontier** |
+| 4 Consensus | `sketch-plans-adversarial-review` | ✅ closed on a **real** cross-family adversary — **the barrier** |
+| 5 Tasking | `task-spec` | ✅ **closed 2026-07-25** — 9 specs, all Tier 1; evals assert database state or execute the artifact, proven by the maximal stub attack (all 9 red) |
+| 6 Register *(opt-in)* | `task-specs-to-issues` | ✅ **closed live 2026-07-25** — created 0 / updated 9, 8 blocked-by links, 9 `tracker_ref` receipts; live `[D]` parity 9⇄9, ready frontier 1 |
+| 7 Bind | `task-to-runtime-contract` | ✅ **closed 2026-07-25** — 9× `CHECK_RUNTIME_CONTRACT=PASS`, 6 artifacts each, host attested `OK` |
+| 8 The Loop | `task-loop` | ◐ **the kernel exists and is proven** — 11 hermetic checks green (brakes, stagnation, exhaustion, resume, cancel, no-op, honest `--no-agent`); run end-to-end on the frontier task, correctly RED, PR refused, blocked receipt written. **Not yet driven to green.** |
+
+**The descent, gate by gate:** `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS ·
+CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1 ×9 ·
+CHECK_REGISTER=OK (live) · CHECK_RUNTIME_CONTRACT=PASS ×9 ·
+DOCTOR_RUNTIME_CONTRACT=OK`.
+
+**Pass 8 stopped being a gate pretending to be a loop.** `cvg loop` now routes to
+`loop-kernel.sh`: attempt → verify → repeat, three-axis budgets checked *before*
+each engine call, a stagnation detector, a fresh process per attempt with state on
+disk, and eight named terminal states of which only `SETTLED`/`LOCAL_SETTLED`/
+`NO_OP` exit zero. Every spec had declared `budget_iterations` and
+`circuit_breaker_no_progress` since v3 and **nothing enforced them** — the same
+defect class as WP4's unenforced `external_writes`. Engines are now one adapter
+file each (`scripts/engines/`), so the kernel spells no vendor and a hung CLI dies
+at a watchdog cap. Design + sources: `skills/task-loop/references/loop-spec.md`.
 
 **The board is the queue and it is live.** 9 issues, 8 blocked-by links,
 Initiative → Project → Capture/Transform/Serve milestones, append-only health.
-The ready frontier is exactly **CVG-21** (`cap-steelthread`); the other eight sit
-behind it. `cvg register --check` is now a **real** 1:1 parity gate (count ·
-orphan · missing · dup) — it can fail, and it's proven to.
+The ready frontier is exactly **CVG-21** (`cap-steelthread`) — and `cvg ready` now
+*agrees*, having been taught `depends_on`; it previously called all 9 ready.
 
-**Pass 7 remains the hole** — nothing dispatches ready issues, watches PRs, or
-detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
+**The Manager remains the hole** — nothing dispatches ready issues across the
+fleet, watches PRs, or detects fleet-green. That is **B-1**, and it is still the
+load-bearing gap. It is deliberately *after* the loop closes once by hand.
 
 ---
 
@@ -178,22 +207,30 @@ detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
 1. ~~Commit the in-flight Pass 6 work~~ — **done.**
 2. ~~R6 · Bind, for real~~ — **done.** Pass 7 now emits 7A (contract) + 7B (task
    brief), carries an epoch-bound capability envelope, and gates fail-closed.
-3. **R8 · The Loop, once, by hand** ⟵ **NOW** — drive **CVG-21** (the sole
-   frontier task; `cvg ready` returns exactly it) to a green eval. The frontier then advances to CVG-22 on its own. *This is the
-   single highest-value next act: it closes the loop for the first time, and
-   settlement is now trustworthy enough to try it (WP4).*
-4. **Then, and only then, automate it** — B-1 (the Manager) + B-2 (the CI
+3. ~~The loop must actually be a loop~~ — **done.** `loop-kernel.sh` enforces the
+   budgets the specs always declared: three-axis ceilings checked before each
+   call, a stagnation detector, a fresh process per attempt, durable checkpoints,
+   eight named terminal states, one adapter per engine. 11 hermetic checks green
+   (`tests/test-loop-kernel.sh`, stub engines — no model called, no token spent).
+4. **R8 · drive CVG-21 to GREEN** ⟵ **NOW** — the loop runs end to end and lands
+   correctly RED on the frontier task; what remains is the work itself
+   (`cap-steelthread`). *This is the single highest-value next act: it closes the
+   loop for the first time.* Two things to expect: `uc-analytics-postgres` must
+   be up (`make up`), because the evals now talk to it; and the profile denies
+   external writes, so a green run settles **locally**
+   (`TASK_LOOP=LOCAL_SETTLED`) — that is the WP4 gate working, and the push/PR
+   leg is a deliberate second run with `--allow-external-writes`.
+5. **Then, and only then, automate it** — B-1 (the Manager) + B-2 (the CI
    eval-gate). Building the Manager before the loop has ever closed once is
-   automating an unproven path.
-5. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
+   automating an unproven path. `cvg ready` is now the honest dispatch surface it
+   will select from.
+6. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
    Approval), so the envelope's authority is externally checkable.
 
-> **R8 pre-flight is CLEAR.** CVG-21's evals now assert database state and the
-> stub attack is red; the spec is re-sealed Tier 1 and re-bound. Two things to
-> expect on the run: the profile denies external writes, so it will settle
-> **locally** (`TASK_LOOP=LOCAL_SETTLED`) — that is the WP4 gate working, and the
-> push/PR leg is a deliberate second run with `--allow-external-writes`; and
-> `uc-analytics-postgres` must be up (`make up`) because the evals now talk to it.
+> **The one thing CI still cannot tell us:** `.github/workflows/ci.yml` has never
+> executed — the branch is unpushed, so the gauntlet is written and unproven. It
+> now also covers the loop kernel and shellchecks `scripts/engines/`, both of
+> which were outside its globs.
 
 **Housekeeping that should not block the above:** nothing is pushed (branch is
 ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
@@ -306,15 +343,21 @@ their full narrative lives in §10 and in git history.
   append-only health note. **`register --check` is now a real 1:1 parity gate**
   (count · orphan · missing · dup) via a new six-verb-contract `list-issues`;
   proven to fail on injected orphan/missing. 120 offline tests, shellcheck 0.
-- [~] **R6 · Pass 6 Bind** — `task-to-runtime-contract` v1.0.0 **exists**
-  (skill + agents + references + scripts + tests) and `cvg bind` ships in
-  v0.16.0 — **both uncommitted**. Never run on a real signed task.
-  **Next:** commit it, then bind `T-20260721-cap-steelthread` and take
-  `CHECK_RUNTIME_CONTRACT`. Note this **replaces the legacy `stack-to-harness`**
-  workflow (now demoted to a migration-only package).
-- [ ] **R8 · Pass 8 The Loop** — `task-loop --issue CVG-21` by hand, one issue.
-  This is where Track M wakes up. **No `cvg` verb exists for the loop yet** —
-  it is invoked as a skill; decide whether it earns one.
+- [x] **R7 · Pass 7 Bind** — committed and **run on all 9 real signed tasks**:
+  `CHECK_RUNTIME_CONTRACT=PASS` ×9, six artifacts each (profile, `AGENTS.task.md`,
+  four adapter manifests), every profile carrying an epoch-bound capability
+  envelope with mandatory closure, and `cvg doctor runtime-contract` attesting this
+  host `OK`. This **replaces the legacy `stack-to-harness`** workflow (now demoted
+  to a migration-only package).
+- [~] **R8 · Pass 8 The Loop** — the verb exists (`cvg loop`, 0.19.0) and now
+  routes to the **kernel** (0.20.0) rather than the settler, so the pass is finally
+  a loop: budgets enforced, stagnation detected, fresh process per attempt, named
+  terminal states, `tests/test-loop-kernel.sh` 11/11 green with stub engines.
+  Run end-to-end on `T-20260721-cap-steelthread`: resolved its spec and contract in
+  the nested workspace, went RED for the right reason, refused the PR, wrote a
+  blocked receipt. **What remains: drive it to GREEN.** Requires
+  `uc-analytics-postgres` up, and it will land `LOCAL_SETTLED` because the profile
+  denies external writes. This is where Track M wakes up.
 
 ---
 
@@ -336,7 +379,7 @@ R0.I. The rest activate when Track R reaches the Loop.
 | **3.3** · conformance: cvg certifies itself | — | ⬜ open |
 | **4.1–4.3** · Manager tick, parallel fleet, routing | B-1 | ⬜ open |
 | **5.1–5.2** · the board (harvester + ledger rail) | B-4 | ⬜ open (spiked & validated) |
-| **6.1–6.2** · tier-2 judge, provenance/injection defense | B-12, B-13 | ⬜ open |
+| **6.1–6.2** · tier-2 judge, provenance/injection defense | B-12, B-13 | ◐ judge SHIPPED (`cvg verify`, 0.19.0); making it a merge gate is B-2 |
 | **7.1–7.3** · `cvg deliver`, Profile C, receipts routing | — | ⬜ horizon |
 
 ### Open milestone detail
@@ -396,7 +439,7 @@ makes Pass 8's gate real; **P1** hardens trust and makes the machine visible;
 | **B-2** | CI eval-gate — server-side re-verification | **P0** | 🔥 makes "closed by evals" true | M | — | M2.1–2.2 | open |
 | **B-3** | `converge-status` — spine as derived JSON | P1 | feeds board + resumability | S | — | M1.2–1.3 | open — design proven in the B-4 spike |
 | **B-4** | `converge-board` — the graphical interface | P1 | see the machine run | M | B-3 (soft) | M5.1–5.2 | open — **spiked & validated 2026-07-07** |
-| **B-12** | Graded verifier stack — the Goodhart defense | P1 | 🔥 hardens the eval moat | M | B-2 (soft) | M6.1 | open |
+| **B-12** | Graded verifier stack — the Goodhart defense | P1 | 🔥 hardens the eval moat | M | B-2 (soft) | M6.1 | ◐ `cvg verify` ships (different-family + holdout, fails closed); the gate half is B-2 |
 | **B-13** | Security pass — threat model & guardrails | P1 | 🔥 closes the injection surface | M | — | M6.2 | open |
 | **B-5** | Fork A's loop story (synthetic issue) | P2 | closes Fork A's gap | S | B-1 | — | open |
 | **B-6** | Pass 9 · Sustain — keep the fleet green | P2 | drift defense | M | B-1, B-2 | — | open |
@@ -766,18 +809,17 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 ## §9 · Needs cleaning — verified drift (2026-07-24)
 
+**Re-verified 2026-07-25: items 1–8 and 10 of the previous list are all resolved**
+(readme says 12 skills; `task-to-runtime-contract` is tracked; `docs/source/`,
+`proposal.md`, root `tasks/` and root `.claude/` are gone; no `stack-to-harness`
+references survive in the READMEs). What is actually left:
+
 | # | What | Where | Fix |
 |:--:|---|---|---|
-| 1 | **Skill count says 11** | root `readme.md` | Actual = **14**. `skills/README.md` is already correct. This is **P-6**. |
-| 2 | **Pass 6 work is uncommitted** | `skills/task-to-runtime-contract/` (untracked), `bin/cvg` (modified, 0.16.0) | Run its tests, then commit. Highest-priority cleaning item. |
-| 3 | **Other parallel edits uncommitted** | `skills/task-loop/*`, `skills/agents-kbs-tech-stack/scripts/*` | Review + commit or revert. |
-| 4 | **Unrelated deletions staged in the tree** | `docs/source/README.md`, `docs/source/cvg-aut-systems-spine-steps-v5.html` | Decide: commit the deletion or restore. |
-| 5 | **Untracked `proposal.md`** | repo root | Keep (and commit) or delete. |
-| 6 | **Duplicate spec id** | `T-20260721-cvg-decompose` exists in **both** `tasks/` and `tasks/done/` | Same `id:` in two files — will collide on any register that sees both. Delete/rename one. |
-| 7 | **Root `tasks/` is mostly fixtures** | 6 of 7 are `register: false` e2e fixtures; only `cvg-decompose` is real (CVG-12) | Fine, but know that `cvg register` with no `--tasks-dir` projects **one** issue. The real backbone is `tests/uc-analytics/cvg/tasks/`. |
-| 8 | **`stack-to-harness` is now legacy** | superseded by `task-to-runtime-contract` at Pass 6 | Ensure the root README and any Pass 6 prose stop pointing at it. |
-| 9 | **Nothing is pushed** | branch ahead of `origin/feat/e2e` | `git push --follow-tags` when ready. |
-| 10 | **`.claude/` scaffolding** | repo root | B-11's last chore: scaffold for real or drop. |
+| 1 | **Nothing is pushed — so CI has never executed** | branch is **9 commits** ahead of `origin/feat/e2e` | `git push` and read the first real gauntlet run. The workflow is written, covers the loop kernel, and is unproven. Everything green here was proven on one macOS host. |
+| 2 | **The blueprint PDF lags the method** | `docs/src/converge-method-v6.html` still says **v0.16.0** in three places and describes Pass 8 before the kernel existed (no terminal states, no budgets-actually-enforced, no `cvg/` workspace) | Edit the HTML, then re-render: `bash docs/src/render.sh` (needs Chrome). Deliberately NOT half-done: editing the source without re-rendering would leave the HTML and the shipped PDF disagreeing, which is worse than a PDF that is honestly one version behind. |
+| 3 | **Stub-engine test artifacts in the proving ground** | `tests/uc-analytics/cvg/receipts/T-20260721-cap-steelthread{,.attempt-1c35c4849ef2}.json` | These came from kernel test runs, not from a real beat. Delete them, or keep them knowingly — `cvg/loop/` scratch is now gitignored, receipts are not (they are evidence by design). |
+| 4 | **`loop-tracker.sh` is referenced and optional** | `loop-kernel.sh` calls it fail-soft at claim / attempt / terminal | Intentional (a tracker that is down must never change a verdict), but until it is finished the tracker narration described in `loop-spec.md` does not happen. Finish it or note it as post-B-1. |
 
 ---
 
@@ -785,6 +827,55 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · PASS 8 BECOMES A LOOP (research-grounded)** — a scan of the
+  loop-engineering literature (Exa · Tavily · Firecrawl · Context7) produced the
+  design in `skills/task-loop/references/loop-spec.md`, and the audit it implied
+  found the headline defect: **Converge's "loop" was not a loop.** It ran the
+  eval once. Every spec declared `budget_iterations: 15`,
+  `circuit_breaker_no_progress: 3`, `on_terminal_failure: park_with_context` and
+  **nothing enforced any of it** — the same defect class as WP4's unenforced
+  `external_writes`. An agent was never invoked at all; `--agent` was a label
+  written into the receipt.
+  **Now shipped — `loop-kernel.sh`:**
+  *Named terminal states* — SETTLED · LOCAL_SETTLED · NO_OP · BLOCKED · STALLED ·
+  EXHAUSTED · CANCELLED · ERROR. An error or an exhausted budget is never
+  reported as success, which is the rule that stops a loop calling "I got tired
+  of iterating" a win.
+  *Three budgets* — iterations, wall-clock, tokens; they fail differently. Checked
+  BEFORE each engine call, and a flag may only **tighten** what the spec
+  declared, never raise it.
+  *Stagnation over counting* — when the same eval fails the same way N times the
+  loop lands STALLED. Measured on the proving ground: it stops at **3 attempts
+  instead of burning all 15.**
+  *Fresh context per attempt* — each attempt is a new engine process, briefed from
+  disk; memory lives in `cvg/loop/<id>/` (brief, attempt log, checkpoint,
+  handoff), not in a context window.
+  *Planned landing* — exhaustion writes `HANDOFF.md` and `--resume` continues from
+  the checkpoint.
+  **Engines are real:** `engines/{claude,codex,kimi}.sh` behind a two-verb
+  contract (`--available`, `--prompt-file/--workdir`), each wall-clock capped by
+  the bash-3.2 watchdog Pass 4 proved (macOS ships no `timeout`). All three
+  present on this host. Codex uses `--sandbox workspace-write`, which makes
+  `fs.write` a *prevented* capability rather than a merely detected one.
+  **Linear closes the circle:** `loop-tracker.sh` claims the issue (backlog →
+  first `started` state, idempotently), narrates the first attempt, and posts the
+  named terminal state — closing the issue **only** on a real green.
+  `LOCAL_SETTLED` deliberately does NOT close it, because nothing left the
+  machine. `cvg/loop/<id>/STOP` is the kill switch. Two invariants hold: **the
+  tracker never instructs** (the signed spec is the only instruction source), and
+  **every call is fail-soft** — no key, no ref, or a dead API changes nothing
+  about the verdict the evals produced.
+  **Four bugs found by building the tests, not by reading the code:**
+  (a) a `set +e … set -e` pair *enabled* errexit in a script that never used it,
+  so the first RED verify killed the loop silently — a loop that dies on its own
+  red path is not a loop; (b) `ENGINE_RC` leaked across iterations; (c) the
+  guard convicted the loop of its own bookkeeping — `cvg/loop/**` is framework
+  output and is now exempt, as `_state.yaml` already was; (d) the suite wrote
+  stub engines into the **shipped** adapter dir, and an inherited `EXIT` trap
+  fired inside every `( )` subshell and deleted them mid-run. The kernel now
+  honors `CVG_ENGINES_DIR` so a test can never mutate the product it tests.
+  Proof: **11 loop-kernel checks**, green on 3 consecutive runs. cvg **0.20.0**.
+  Descent re-verified unchanged; `cvg ready` still returns exactly CVG-21.
 - **2026-07-25 · THE PASS-8 SCAN — the loop could not find its own task** —
   asked whether 0→7 was truly done, a cold scan for the recurring
   git-root-anchoring disease found **six more instances, five of them inside

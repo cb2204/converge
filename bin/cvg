@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.19.2"
+CVG_VERSION="0.20.0"
 
 # Resolve THIS script through any symlink chain before locating its companions.
 # The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
@@ -641,9 +641,15 @@ cmd_help() {
   printf '                           saw; fails closed (CHECK_VERIFY token)\n'
   printf '  bind --check --task <spec>\n'
   printf '                           re-check hashes, topology, evidence, and adapters\n'
-  printf '  loop --issue <id>        Pass 8 · Loop — one assigned task, a bounded RED/GREEN\n'
-  printf '                           cycle, one settlement. Settles LOCALLY unless the\n'
-  printf '                           profile allows external writes (TASK_LOOP token)\n'
+  printf '  loop --issue <id> [--agent claude|codex|kimi]\n'
+  printf '                           Pass 8 · Loop — attempt → verify → repeat, bounded by\n'
+  printf '                           iterations · wall-clock · tokens, with a stagnation\n'
+  printf '                           detector. Each attempt gets a FRESH context. Lands in\n'
+  printf '                           exactly one named state: TASK_LOOP=SETTLED |\n'
+  printf '                           LOCAL_SETTLED | NO_OP | BLOCKED | STALLED | EXHAUSTED |\n'
+  printf '                           CANCELLED | ERROR. An error is never a success.\n'
+  printf '  loop --gate-only         verdict only — no agent, no attempts\n'
+  printf '  loop --resume            continue from the durable checkpoint\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint + six-tier sizing (XS/S/M/L leaf\n'
@@ -718,7 +724,11 @@ is_mutating() {
     tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
     review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
     bind)       for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
-    loop)       for a in "$@"; do [ "$a" = "--dry-run" ] && return 1; done; return 0 ;;
+    # cvg strips --dry-run from "$@" before this guard runs, so scanning args
+    # here would be dead code — consult the parsed flag. The loop kernel owns
+    # its own dry-run because it reports the resolved budgets, which is the part
+    # worth reading before letting a run go unattended.
+    loop)       [ "$CVG_DRY_RUN" -eq 1 ] && return 1; return 0 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
@@ -1169,9 +1179,29 @@ case "$CMD" in
     # policy is a real gate. This loop never picks its own work: --issue is
     # required, and the signed Task-Spec (not the issue body) is the only
     # instruction source.
+    # The KERNEL is the loop; open-issue-pr.sh is only its settlement half.
+    # --gate-only keeps the old single-shot behaviour for anyone who wants a
+    # verdict without an agent attempting a fix.
+    KERNEL="$CVG_HOME_DIR/skills/task-loop/scripts/loop-kernel.sh"
     LOOPER="$CVG_HOME_DIR/skills/task-loop/scripts/open-issue-pr.sh"
-    [ -f "$LOOPER" ] || { ui_err "task-loop skill is incomplete under $CVG_HOME_DIR/skills"; printf 'TASK_LOOP=USAGE_ERROR\n'; exit 2; }
-    exec bash "$LOOPER" "$@"
+    LOOP_GATE_ONLY=0
+    LOOP_ARGS=()
+    for A in "$@"; do
+      case "$A" in
+        --gate-only) LOOP_GATE_ONLY=1 ;;
+        *)           LOOP_ARGS+=("$A") ;;
+      esac
+    done
+    # The kernel's own dry-run reports the resolved budgets, which is the part
+    # worth seeing before an unattended run. cvg strips --dry-run globally, so
+    # hand it back.
+    [ "$CVG_DRY_RUN" -eq 1 ] && LOOP_ARGS+=(--dry-run)
+    if [ "$LOOP_GATE_ONLY" -eq 1 ]; then
+      [ -f "$LOOPER" ] || { ui_err "task-loop skill is incomplete under $CVG_HOME_DIR/skills"; printf 'TASK_LOOP=USAGE_ERROR\n'; exit 2; }
+      exec bash "$LOOPER" ${LOOP_ARGS[@]+"${LOOP_ARGS[@]}"}
+    fi
+    [ -f "$KERNEL" ] || { ui_err "task-loop skill is incomplete under $CVG_HOME_DIR/skills"; printf 'TASK_LOOP=USAGE_ERROR\n'; exit 2; }
+    exec bash "$KERNEL" ${LOOP_ARGS[@]+"${LOOP_ARGS[@]}"}
     ;;
   verify)
     # Tier-2 adversarial verification — a different-family engine grades the diff
@@ -1349,7 +1379,7 @@ m = {
     c("doctor", 4, "sketch-plans-adversarial-review/doctor.sh", ["DOCTOR=OK|FAIL"], False, "cvg doctor", "Engine readiness for Pass 4 dispatch (>=2 engines, >=1 cross-family)."),
     c("bind --task <spec>", 7, "task-to-runtime-contract/bind-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], True, "cvg bind --task tasks/T-...md", "Pass 7 · Bind — verify one signed Task-Spec, select the initial intra-task topology, hash-bind the evidence slice, and emit portable path guards plus vendor adapter manifests."),
     c("bind --check --task <spec>", 7, "task-to-runtime-contract/check-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], False, "cvg bind --check --task tasks/T-...md", "Re-check Task-Spec freshness, sign-off, context hashes, topology substance, ownership, and enforcement artifacts."),
-    c("loop --issue <id>", 8, "task-loop/open-issue-pr.sh", ["TASK_LOOP=SETTLED|LOCAL_SETTLED|BLOCKED|USAGE_ERROR"], True, "cvg loop --issue T-...", "Pass 8 · Loop — execute ONE assigned task through a bounded RED/GREEN cycle and settle it. Never selects its own work. Staging is scoped to the capability envelope's fs.write grant; settlement stops at a local commit unless the profile's external_writes policy permits a push."),
+    c("loop --issue <id>", 8, "task-loop/loop-kernel.sh", ["TASK_LOOP=SETTLED|LOCAL_SETTLED|NO_OP|BLOCKED|STALLED|EXHAUSTED|CANCELLED|ERROR"], True, "cvg loop --issue T-... --agent codex", "Pass 8 · Loop — attempt/verify/repeat over ONE assigned task, bounded on three axes (iterations, wall-clock, tokens) with a stagnation detector. Each attempt runs in a fresh engine process; state is durable on disk. Never selects its own work. Lands in exactly one named terminal state; an error or an exhausted budget is never reported as success."),
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),
@@ -1368,7 +1398,7 @@ m = {
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
-    c("ready", "5B", "task-spec/list-ready.sh", ["ready task list"], False, "cvg ready", "List ready-to-run tasks."),
+    c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
     c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
     c("version", None, "native", ["cvg <semver>"], False, "cvg version", "Print the version."),
     c("agent-context", None, "native", ["this JSON document"], False, "cvg agent-context", "This machine-readable manifest (also: cvg manifest).")

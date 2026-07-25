@@ -93,18 +93,35 @@ def main() -> int:
                     (task_dir / "_metrics.jsonl").as_posix(),
                 }
             )
-            if receipt_value:
-                receipt = Path(receipt_value)
-                candidates = [
-                    path
-                    for path in candidates
-                    if path not in framework_paths
-                    and not (
+            # The loop's own bookkeeping is FRAMEWORK output, not task output.
+            # Pass 8 writes briefs, attempt logs, a durable checkpoint and a
+            # handoff note under cvg/loop/<task-id>/ — that is how the loop
+            # externalizes memory instead of keeping it in a context window.
+            # Counting it as the task's diff made every green run fail its own
+            # path policy: the loop was convicted of the evidence it is required
+            # to leave behind. It is exempt from the scope AND never staged,
+            # because open-issue-pr.sh stages only the contract's fs.write paths.
+            task_id = str(profile.get("task", {}).get("id", "")).strip()
+            loop_prefixes = ["cvg/loop/"]
+            if task_id:
+                loop_prefixes.append(f"cvg/loop/{task_id}/")
+
+            def _is_framework(path: str) -> bool:
+                if path in framework_paths:
+                    return True
+                if any(path.startswith(prefix) for prefix in loop_prefixes):
+                    return True
+                if receipt_value:
+                    receipt = Path(receipt_value)
+                    if (
                         Path(path).parent == receipt.parent
                         and Path(path).name.startswith(receipt.stem + ".attempt-")
                         and Path(path).suffix == receipt.suffix
-                    )
-                ]
+                    ):
+                        return True
+                return False
+
+            candidates = [path for path in candidates if not _is_framework(path)]
         if not candidates:
             print("No changed paths.")
             print("CHECK_PATH_POLICY=PASS")

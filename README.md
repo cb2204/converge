@@ -99,7 +99,7 @@ flowchart TB
     P6["6 · Register (opt-in) — task-specs-to-issues"]
     P7["7A · Bind contract — epoch · grants · closure · guards"]
     P7B["7B · Task brief — AGENTS.task.md (identifiers, not content)"]
-    P8["8 · Loop ↺ — task-loop · green-eval PR"]
+    P8["8 · Loop ↺ — task-loop · attempt→verify, bounded<br/>one named terminal state · green-eval PR"]
     VER{"tier-2 verify — different family + holdout · fails closed"}
     P5 --> P6 --> P7 --> P7B --> P8 --> VER
   end
@@ -147,7 +147,7 @@ bash ~/converge/install.sh --help          # all the flags
 
 ```bash
 cvg version
-# → cvg 0.19.2 (task-spec 3.6.0)
+# → cvg 0.20.0 (task-spec 3.6.0)
 
 python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
 # → Skill is valid!
@@ -168,6 +168,29 @@ phrases:
 "run issue 41"                          → Pass 8 · task-loop
 ```
 
+**Where your work lives — the `cvg/` workspace.** Converge keeps everything it
+produces under one root, so each kind of knowledge has one home and one
+lifecycle:
+
+```text
+cvg/
+├── brain/        your raw inputs — append-only, never gated, feed it constantly
+├── docs/         consensus artifacts — brd-*, tech-spec-*, adrs/, CONTEXT.md, lessons/
+├── sketch/       swimlane plans — transient by design, superseded at Pass 5
+├── tasks/        sealed execution units — HMAC-stamped T-*.md
+├── execution/    per-task runtime contracts + task briefs (Pass 7)
+└── receipts/     evidence — gate verdicts and pass receipts, write-once
+```
+
+*brain feeds → docs agree → sketch explores → tasks execute → receipts prove.*
+
+Every pass discovers this workspace first and the bare directory second
+(`cvg/tasks/` then `tasks/`), and an explicit path or `--tasks-dir` always wins.
+The workspace **need not be the git root** — `<repo>/projects/demo/cvg/` works —
+and everything resolves relative to it, including the directory a spec's own
+evals run in. You do not have to create this by hand: the passes write into it,
+and `cvg setup harness` scaffolds the project router that points a worker at it.
+
 **Author + gate a single Task-Spec (the cornerstone unit), start to finish:**
 
 ```bash
@@ -180,11 +203,11 @@ bash .claude/skills/task-spec/configs/setup-taskspec-signing-key.sh
 bash .claude/skills/task-spec/scripts/generate-task-spec.sh <slug> <effort> [agent] [source]
 
 # 2 · VALIDATE — structural linter (warns on unfilled stubs; does NOT stamp)
-bash .claude/skills/task-spec/scripts/validate-task-spec.sh tasks/T-<slug>.md
+bash .claude/skills/task-spec/scripts/validate-task-spec.sh cvg/tasks/T-<slug>.md
 
 # 3 · GATE — the autonomy contract; flips signed_off:true on structural + eval pass,
 #     then seals the eval bodies in an HMAC envelope so hand-stamping is rejected
-bash .claude/skills/task-spec/scripts/safe-to-delegate.sh --stamp tasks/T-<slug>.md
+bash .claude/skills/task-spec/scripts/safe-to-delegate.sh --stamp cvg/tasks/T-<slug>.md
 #    → VERDICT: DELEGATE   (the only path to a dispatchable spec)
 ```
 
@@ -246,8 +269,11 @@ it keeps going past *Implement* to a fleet running green.
 > 2 is L5**. The field's litmus test for a *real* dark factory is three
 > load-bearing properties — **written specs**, an **isolated evaluator grading
 > against holdout the coder can't see**, and an **unchanged deploy path**. Converge
-> ships the first and third today; the second (a graded holdout verifier) is the
-> named next step. What keeps it durable as the pattern gets crowded: the full
+> now ships all three: the holdout verifier is `cvg verify`, where a
+> *different-family* engine grades the diff against the spec's intent and criteria
+> the implementer never saw, and fails closed. The honest caveat is that this is a
+> model judging (assurance, not proof), which is why it is a **secondary** check
+> behind a deterministic eval and never reported as one. What keeps it durable as the pattern gets crowded: the full
 > front-of-funnel intent descent, cross-*family* consensus, HMAC-sealed specs,
 > multi-harness portability, and derived-not-stored state.
 
@@ -265,10 +291,10 @@ and a machine-checkable **gate**. Passes 0–4 are human-led; 5–8 are machine-
 | **2** | Structure | `tech-req-to-adrs` | system | `docs/adrs/*` · `CHECK_ADR` |
 | **3** | Decompose | `reqs-to-swimlane-plans` | plan | `sketch/*.plan` · `CHECK_PLAN` |
 | **4** | **Consensus — THE BARRIER** | `sketch-plans-adversarial-review` | plan (hardened) | sharpened plans + objection log · `CHECK_CONSENSUS` · **last human sign-off** |
-| **5** | Tasking | `task-spec` | atomic unit | `tasks/T-*.md` · `DELEGATE` (HMAC-sealed) |
+| **5** | Tasking | `task-spec` | atomic unit | `cvg/tasks/T-*.md` · `DELEGATE` (HMAC-sealed) |
 | **6** | Register *(opt-in)* | `task-specs-to-issues` | board | 1 spec = 1 issue · `CHECK_REGISTER` |
 | **7** | Bind *(7A contract + 7B brief)* | `task-to-runtime-contract` | runtime contract | profile + guards + task brief · `CHECK_RUNTIME_CONTRACT` |
-| **8** | The Loop *(+ tier-2 verify)* | `cvg loop` · `cvg verify` | runtime | branch → green eval → independent refutation → settle |
+| **8** | The Loop *(+ tier-2 verify)* | `cvg loop` · `cvg verify` | runtime | branch → **attempt ↺ verify** → independent refutation → one named terminal state |
 
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
 dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
@@ -319,10 +345,15 @@ emit the task brief the worker reads (7B). **Gate:**
 `CHECK_RUNTIME_CONTRACT=PASS`.
 
 **8 · The Loop** — *build the execution loop; schedule the Manager later.* Read one
-issue → signed spec + bound evidence → cut a branch → run the eval → **RED:** feed
-the failure back · **GREEN:** path guard, then one PR. **Gate:** the task's own
-eval and the runtime path policy are green — *green-eval-closes-the-issue is the
-dark factory, one issue at a time.*
+issue → signed spec + bound evidence → cut a branch → **attempt → verify →
+repeat**, each attempt a fresh engine process briefed from disk, bounded on
+iterations · wall-clock · tokens with a stagnation detector, until **GREEN:** path
+guard, then one PR. Every run lands in exactly one **named terminal state**
+(`SETTLED`, `LOCAL_SETTLED`, `NO_OP`, `BLOCKED`, `STALLED`, `EXHAUSTED`,
+`CANCELLED`, `ERROR`) — an error or an exhausted budget is never reported as
+success, and exhaustion is a *planned* landing with a handoff note. **Gate:** the
+task's own eval and the runtime path policy are green — *green-eval-closes-the-issue
+is the dark factory, one issue at a time.*
 
 </details>
 
@@ -509,7 +540,7 @@ served via MCP so a non-engineer can ask for it"* — on a real
 | **5 · Tasking** | `build_gold_revenue` (eval: dbt test + control-sum) and `build_mcp_revenue` (eval: tool result == gold query). Each born with its eval, HMAC-sealed. |
 | **6 · Register** | `--tracker linear`: `build_gold_revenue → ISSUE-41 [ready]`; `build_mcp_revenue → ISSUE-42 [blocked-by 41]`. |
 | **7 · Bind** | `cvg bind --task build_gold_revenue.md`: bind the signed hash to ADRs + cached dbt docs + single-agent topology + path guards; emit the task brief → `CHECK_RUNTIME_CONTRACT=PASS`. |
-| **8 · The Loop** | `task-loop --issue 41`: contract PASS → dbt test RED (null categories) → add `COALESCE` → GREEN + path policy PASS → PR; 41 done, 42 unblocks. |
+| **8 · The Loop** | `cvg loop --issue 41`: contract PASS → dbt test RED (null categories) → attempt 2 adds `COALESCE` → GREEN + path policy PASS → `TASK_LOOP=SETTLED`, one PR; 41 done, 42 unblocks. Had it failed the same way three times running, it would have landed `STALLED` with a handoff instead of burning the remaining twelve attempts. |
 
 **The Dark Factory, on this repo:** a non-engineer asks the MCP *"revenue by
 category yesterday?"* — and it answers. Built brief → deploy, every step
@@ -544,7 +575,12 @@ converge/
 │   ├── src/                             #   HTML sources + render.sh (Chrome → PDF)
 │   ├── presentation/                    #   interactive HTML walkthroughs
 │   └── archive/                         #   superseded blueprints + proposals
-├── tests/                               # e2e-test-engine (machine floor) · uc-analytics (method proving ground)
+├── tests/                               # the hermetic suites + two fixtures
+│   ├── test-loop-kernel.sh              #   Pass 8's brakes, proven with stub engines only
+│   ├── test-cvg-json-envelope.sh        #   the agent-facing output contract
+│   ├── test-install.sh                  #   the install surface
+│   ├── e2e-test-engine/                 #   the machine floor (incl. a designed-RED eval)
+│   └── uc-analytics/                    #   the method proving ground (a real cvg/ workspace)
 ├── .github/workflows/ci.yml             # the gauntlet, in public — offline, no secrets, macOS + Linux
 ├── install.sh                           # skills → .claude/skills/ · cvg → PATH
 └── PLAN.md                              # the one working document (state · rules · backlog · log)
@@ -562,12 +598,24 @@ converge/
 
 ## 🧾 Status
 
-**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.16.0** ·
+**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.20.0** ·
 Anthropic validator passing on all 12 skills · extracted from a production
-**postgres → duckdb → dbt → MCP** run, and proven end-to-end through **Register**
-on a live tracker. Next ([`PLAN.md`](PLAN.md)): the first hand-run of **the Loop**
-to close the chain once end-to-end, then **P0** — the Manager and the CI eval-gate
-that make Pass 8's "fleet green, closed by evals" true at scale.
+**postgres → duckdb → dbt → MCP** run.
+
+**The descent 0→7 is closed on a real use case** (`tests/uc-analytics`, a
+greenfield analytical backbone over an operational Postgres): `CHECK_BRD=PASS ·
+CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1
+×9 · CHECK_REGISTER=OK` (live board, 9⇄9, ready frontier 1) `·
+CHECK_RUNTIME_CONTRACT=PASS ×9 · DOCTOR_RUNTIME_CONTRACT=OK`.
+
+**Pass 8 is now a real loop, not a gate.** The kernel enforces the budgets specs
+had always declared — three-axis ceilings, a stagnation detector, a fresh process
+per attempt, durable checkpoints, and eight named terminal states — proven by its
+own hermetic suite (stub engines, no model called). The loop has been run
+end-to-end on the frontier task and correctly went RED, refused to open a PR, and
+wrote a blocked receipt. Next ([`PLAN.md`](PLAN.md)): drive that task to green,
+then **P0** — the Manager and the CI eval-gate that make "fleet green, closed by
+evals" true at scale.
 
 ---
 
@@ -596,7 +644,7 @@ explicitly optional.
 
 No — **Register (Pass 6) is opt-in.** Run it when you want a shared, visible board
 with the frontier, assignees, and parallel dispatch; skip it to keep the queue
-repo-local in `tasks/`. The Loop can read either.
+repo-local in `cvg/tasks/`. The Loop can read either.
 </details>
 
 <details>
