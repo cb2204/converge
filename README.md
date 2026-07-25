@@ -43,7 +43,7 @@ way where they're strong — *implementation*. As more is automated, sending the
 right intent stays the one irreducible driver of building the right thing.
 
 > [!TIP]
-> **New here?** Read [`docs/cvg-aut-systems-spine-steps-v5.pdf`](docs/cvg-aut-systems-spine-steps-v5.pdf)
+> **New here?** Read [`docs/converge-method-v6.pdf`](docs/converge-method-v6.pdf)
 > — the canonical blueprint — and [`skills/README.md`](skills/README.md) for the
 > skill-by-skill map. This repo is the *portable method*, kept independent of any
 > single use-case so it can evolve on its own.
@@ -408,10 +408,10 @@ blocks evals that also pass on the unpatched baseline. An **effort gate** routes
 work by size (XS–M → Task-Spec; L conditional on a long-horizon engine; XL and
 subjective work refused).
 
-Ships as a plugin at **v3.x** with a JSON Schema (Draft 2020-12), an L0/L1/L2
+Ships as a plugin at **v3.6.0** with a JSON Schema (Draft 2020-12), an L0/L1/L2
 executor-conformance suite, and dispatch recipes for Claude Code, Codex, Kimi,
 Cursor, Gemini, taskship, and anthive. Deep-dive PDF:
-[`docs/task-spec-v3.2.0.pdf`](docs/task-spec-v3.2.0.pdf).
+[`docs/task-spec-v3.6.0.pdf`](docs/task-spec-v3.6.0.pdf).
 
 ---
 
@@ -504,7 +504,11 @@ converge/
 │   ├── pass-to-lesson/                  # util · teach after any pass
 │   ├── skill-creator/                   # util · author + validate skills
 │   └── agents-kbs-tech-stack/           # legacy · cross-tool emitter (harness donor)
-├── docs/                                # canonical blueprint + task-spec deep-dive (PDF)
+├── docs/                                # the two canonical PDFs
+│   ├── converge-method-v6.pdf           #   the blueprint — method, architecture, agent protocol
+│   ├── task-spec-v3.6.0.pdf             #   the cornerstone unit, in depth
+│   ├── src/                             #   HTML sources + render.sh (Chrome → PDF)
+│   └── archive/                         #   superseded blueprints, kept for provenance
 ├── presentation/                        # interactive HTML walkthroughs
 ├── sketch/                              # Pass 3 swimlane plans land here (per run)
 ├── tests/                               # e2e-test-engine (machine floor) · uc-analytics (method proving ground)
@@ -513,20 +517,22 @@ converge/
 
 | Doc | What it is |
 |-----|------------|
-| [`docs/cvg-aut-systems-spine-steps-v5.pdf`](docs/cvg-aut-systems-spine-steps-v5.pdf) | **the canonical blueprint** — the descent, the barrier, the runtime, the worked example |
-| [`docs/task-spec-v3.2.0.pdf`](docs/task-spec-v3.2.0.pdf) | the cornerstone skill, in depth — closed loop, dual gates, six zones, effort gate, conformance |
+| [`docs/converge-method-v6.pdf`](docs/converge-method-v6.pdf) | **the canonical blueprint** — the descent, the barrier, the architecture, the agent protocol, the worked example |
+| [`docs/task-spec-v3.6.0.pdf`](docs/task-spec-v3.6.0.pdf) | the cornerstone unit, in depth — six tiers, dual gates, six zones, anti-reward-hacking, conformance |
+| [`docs/src/`](docs/src/) | the HTML sources both PDFs render from (`render.sh`) |
+| [`docs/archive/`](docs/archive/) | superseded blueprints, kept for provenance |
 | [`PLAN.md`](PLAN.md) | the single working document — where we are, what's next, the rules, both tracks, the backlog, the log |
 
 ---
 
 ## 🧾 Status
 
-**Method v5** (blueprint PDF) · **task-spec plugin v3.x** · Anthropic validator
-passing · extracted from a production **postgres → duckdb → dbt → MCP** run, and
-proven end-to-end through **Register** on a live tracker. Next
-([`PLAN.md`](PLAN.md)): the first hand-run of **the Loop** to close the chain once
-end-to-end, then **P0** — the Manager and the CI eval-gate that make Pass 8's
-"fleet green, closed by evals" true at scale.
+**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.16.0** ·
+Anthropic validator passing on all 12 skills · extracted from a production
+**postgres → duckdb → dbt → MCP** run, and proven end-to-end through **Register**
+on a live tracker. Next ([`PLAN.md`](PLAN.md)): the first hand-run of **the Loop**
+to close the chain once end-to-end, then **P0** — the Manager and the CI eval-gate
+that make Pass 8's "fleet green, closed by evals" true at scale.
 
 ---
 

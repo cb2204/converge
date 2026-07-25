@@ -181,7 +181,7 @@ The pass closed overnight in an autonomous run; the owner reads later. Actions: 
 | A decision has no alternative to name | It was a description, or the alternative was never articulated | Check the pass's session and gate; if the alternative is genuinely unrecorded, write "alternative unrecorded — inferred: X" and flag it under What to watch. |
 | The owner fails the quiz on the same section twice | The lesson section teaches the what, not the why | Rewrite that section around its decision and failure mode, then re-quiz only that section. |
 | Teaching keeps turning into re-litigating the pass | Debrief and review got blurred | Park every objection as a change request against the owning pass; the lesson explains the artifact as gated, disagreements ride separately. |
-| The lesson is enormous and the owner tunes out | `--depth full` on a pass with a large artifact surface (Pass 6, Pass 5B backlogs) | Use `--depth brief` for the walkthrough and let the full component table live in the file; teach the top three load-bearing components by voice. |
+| The lesson is enormous and the owner tunes out | `--depth full` on a pass with a large artifact surface (Pass 6, Pass 5 backlogs) | Use `--depth brief` for the walkthrough and let the full component table live in the file; teach the top three load-bearing components by voice. |
 | No one can say which pass produced an artifact | Locate step skipped, or artifacts from several passes are interleaved | Bound the inventory with git (the pass's commits) before teaching; a lesson spanning two passes should be two lessons. |
 
 ## Notes

@@ -1,17 +1,17 @@
 ---
 name: task-specs-to-issues
-description: Register a backlog of signed-off Task-Specs (tasks/T-*.md) as tracker issues — one issue per task-spec, with blocked-by links carrying the dependency graph — so the execution loop reads a board instead of repo files. Implements the Converge REGISTER bridge (Fork B into the Loop). The tracker is a pluggable backend behind a five-verb adapter (preflight · upsert · link · list-ready · write-result), selected by --tracker github|linear|jira (default linear), never baked into the name. After each upsert it stamps a tracker_ref backlink back into the spec (the issue-side marker stays the idempotency key). Use when the user says register the tasks, push tasks to Linear, push tasks to GitHub issues, task-specs to issues, or bridge the backlog onto a tracker. Not for authoring tasks (that is Pass 5B task-spec) and not for running them (that is Pass 8 task-loop).
+description: Converge Pass 6 (Register) — optional, like Capture (Pass 0). Register a backlog of signed-off Task-Specs (tasks/T-*.md) as tracker issues — one issue per task-spec, with blocked-by links carrying the dependency graph — so the execution loop reads a board instead of repo files. The tracker is a pluggable backend behind a six-verb adapter (preflight · upsert · link · list-ready · list-issues · write-result), selected by --tracker github|linear|jira (default linear), never baked into the name. After each upsert it stamps a tracker_ref backlink back into the spec (the issue-side marker stays the idempotency key). Use when the user says register the tasks, push tasks to Linear, push tasks to GitHub issues, task-specs to issues, or bridge the backlog onto a tracker. Skip it to keep the queue repo-local in tasks/. Not for authoring tasks (that is Pass 5 task-spec) and not for running them (that is Pass 8 task-loop).
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 license: Apache-2.0
 ---
 
-# task-specs-to-issues — REGISTER ① (Fork B bridge into the Loop)
+# task-specs-to-issues — Pass 6 · Register (opt-in)
 
 The one-way bridge that projects repo-local Task-Specs onto a tracker board the execution loop can read. It creates exactly one issue per `signed_off` task-spec and encodes each `depends_on` edge as a `blocked-by` link, so the board carries both the work and its dependency graph. The tracker is a pluggable backend selected by `--tracker {github|linear|jira}` (default `linear`); the skill never bakes a tracker into its name.
 
-- **Converge Pass:** REGISTER ① — the bridge from Fork B (Pass 5B `task-spec --tracker repo`) into the execution loop.
-- **Altitude:** projects sideways, lowers nothing. Pass 5B already set the altitude (atomic, eval-bearing tasks); this pass shadows them onto a durable surface.
+- **Converge Pass:** 6 of 8 — Register. **Optional**, like Capture (Pass 0): run it when you want a shared, visible board; skip it to keep the queue repo-local in `tasks/`. The Loop (Pass 8) reads either.
+- **Altitude:** projects sideways, lowers nothing. Pass 5 (`task-spec`) already set the altitude (atomic, eval-bearing tasks); this pass shadows them onto a durable surface.
 - **Gate:** the 1:1 mapping holds and the graph is faithful — `count(issues) == count(signed_off specs)`, every `depends_on` edge is one `blocked-by` link, no orphans, no cycles.
 
 ## Important
@@ -41,12 +41,12 @@ Build a table of `{id, title, signed_off, depends_on[]}`. Drop every spec where 
 
 ### Step 2 — Bind the tracker adapter
 
-Pick the backend from `--tracker {github|linear|jira}` (default `linear`; a no-network `fake` backend backs the offline test suite). Each adapter is the same **five-verb** contract behind one CLI (`preflight · upsert · link · list-ready · write-result`); the loop itself needs only two of them:
+Pick the backend from `--tracker {github|linear|jira}` (default `linear`; a no-network `fake` backend backs the offline test suite). Each adapter is the same **six-verb** contract behind one CLI (`preflight · upsert · link · list-ready · list-issues · write-result`); the loop itself needs only two of them:
 
 - **read ready** — `adapter list-ready` → issues with no open `blocked-by` (what the loop pulls).
 - **write result** — `adapter write-result --issue N --status {pass|fail} ...` (what the loop writes; not used during registration).
 
-Registration additionally uses the adapter's `upsert` and `link` verbs. Confirm the backend is reachable before writing: `scripts/adapters/<tracker>.sh preflight` (checks `gh auth status` for github, `LINEAR_API_KEY` for linear, etc.). If preflight fails, STOP and report the exact remediation — do not half-register a board.
+Registration additionally uses the adapter's `upsert` and `link` verbs, and the parity gate (`verify-registration.sh`) uses the read-only `list-issues` verb. Confirm the backend is reachable before writing: `scripts/adapters/<tracker>.sh preflight` (checks `gh auth status` for github, `LINEAR_API_KEY` for linear, etc.). If preflight fails, STOP and report the exact remediation — do not half-register a board.
 
 ### Step 3 — MIRROR: one spec → one issue (idempotent upsert)
 
@@ -109,8 +109,8 @@ Result: *"7 issues (created 0, updated 1), links unchanged."*
 |-------|-------|----------|
 | `preflight failed: gh not authenticated` | No GitHub token in session | `gh auth login` (or set `GH_TOKEN`); re-run. Never half-register. |
 | `preflight failed: LINEAR_API_KEY unset` | Linear adapter has no key | `export LINEAR_API_KEY=lin_api_...` (and `LINEAR_TEAM_ID`); re-run. |
-| `refusing to register: dependency cycle A → B → A` | A `depends_on` loop in `tasks/*` | Fix the specs upstream (Pass 5B). A cycle is a spec bug, not a board state. |
-| `spec skipped: signed_off=false` | Un-gated spec | Run `safe-to-delegate.sh --stamp` on it (Pass 5B gate) first, then re-register. Expected for a partly-built backlog. |
+| `refusing to register: dependency cycle A → B → A` | A `depends_on` loop in `tasks/*` | Fix the specs upstream (Pass 5). A cycle is a spec bug, not a board state. |
+| `spec skipped: signed_off=false` | Un-gated spec | Run `safe-to-delegate.sh --stamp` on it (Pass 5 gate) first, then re-register. Expected for a partly-built backlog. |
 | Duplicate issues appear on re-run | Adapter created instead of upserting | The `id` key marker/label was stripped from the issue. Restore it (github: the HTML comment marker; linear: the external id) so lookup matches. |
 | `blocked-by target not found for T-x` | A dependency `id` isn't registered | Its spec is un-gated/skipped. Either sign it off and register, or the edge is stale — fix `depends_on`. |
 | `verify: count mismatch (issues 8 != specs 7)` | An orphan issue or a double-registered spec | Re-run `register.sh` (idempotent) to converge; `verify-registration.sh --prune` flags orphans. |
@@ -118,8 +118,9 @@ Result: *"7 issues (created 0, updated 1), links unchanged."*
 ## Handoff
 
 The board this skill registers is the exact surface the execution loop reads.
-Before dispatch, **`task-to-runtime-contract`** (Pass 6 · Bind) binds the linked
-signed Task-Spec to its current evidence and guards. A human or Pass 7 Manager
+Before dispatch, **`task-to-runtime-contract`** (Pass 7 · Bind) binds the linked
+signed Task-Spec to its current evidence and guards, and emits the multi-engine
+harness. A human or the Manager (future CI/CD, not a numbered pass)
 then passes one ready issue to **`task-loop --issue N`** (Pass 8): it verifies
 that execution profile, runs the eval to GREEN, checks the final diff against
 the Task-Spec path policy, and opens one PR. Only the loop writes result state.

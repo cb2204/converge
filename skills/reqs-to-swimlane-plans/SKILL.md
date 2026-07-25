@@ -1,7 +1,7 @@
 ---
 
 name: reqs-to-swimlane-plans
-description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5B. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
+description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
 metadata:
   version: "0.7.0"
 compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
@@ -11,7 +11,7 @@ compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs
 
 > **Identity:** The decomposition pass that cuts a confirmed system into one sketch plan per swimlane, along its real seams.
 > **Domain:** Plan-altitude decomposition, swimlane partitioning, ADR inheritance, seam/interface naming.
-> **Decomposition chain:** **seam → swimlane → leg → task-spec.** The seam is the joint; the lane is what gets planned; the leg is the lane's named stretch (one responsibility, one proving test); the task-spec is the atomic unit with an eval — born at Pass 5B, never here. See `references/legs.md`.
+> **Decomposition chain:** **seam → swimlane → leg → task-spec.** The seam is the joint; the lane is what gets planned; the leg is the lane's named stretch (one responsibility, one proving test); the task-spec is the atomic unit with an eval — born at Pass 5, never here. See `references/legs.md`.
 > **Converge Pass:** 3 of 8 — DECOMPOSE. Lowers altitude from Pass 2's "what is true about the terrain" (ADRs) to "what to build in each lane, and in what order" (plans) — but never as far as Pass 5's tasks or code.
 > **Engine/flags:** Claude Code, SAME session as Pass 2. No flags — single transformation.
 
@@ -32,7 +32,7 @@ compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs
 
 ## Flags
 
-No engine/tracker flags — this is a single transformation. It runs in the SAME session as Pass 2 because the understanding is the handoff and cannot survive a session boundary. There is no adversary and no tracker at this pass: the adversary binds in Pass 4 (`--adversary`), the tracker in the Pass 5B/register fork (`--tracker`). The lane count is not a flag either — it is the number of genuine seams the architecture reveals (see Step 1).
+No engine/tracker flags — this is a single transformation. It runs in the SAME session as Pass 2 because the understanding is the handoff and cannot survive a session boundary. There is no adversary and no tracker at this pass: the adversary binds in Pass 4 (`--adversary`), the tracker in the Pass 5/register fork (`--tracker`). The lane count is not a flag either — it is the number of genuine seams the architecture reveals (see Step 1).
 
 ## Instructions
 
@@ -60,7 +60,7 @@ Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.
 3. **The consumed interface + seam evolution (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals. **Seam evolution (H4):** the frozen contract *will* change — state how safely. Additive changes (a new column/field/endpoint) are non-breaking; renames, removals, and newly-required fields are **breaking** and need a coexistence window before this lane cuts over. Recommend a consumer-driven contract test the upstream must keep green, so a later change can't silently break this lane.
 4. **Dependencies** — a small DAG showing the build order between the lane's own pieces and its inbound seam.
 5. **Build order** — a sane sequence, with the gating input called out (for example, a frozen acceptance-question set may gate the output layer and the final serving surface).
-6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5B, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
+6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
 7. **Open questions** — anything the ADRs do not cover, with an owner and whether it blocks the build. Surface it here; do not invent the answer inside the plan.
 
 ### The swimlane is a directory: a lean PRD + one file per leg (v0.7.0)
@@ -81,7 +81,7 @@ A swimlane is **`sketch/swimlane-<seam>/`**, containing:
   `status`, `spec_ref`, `depends_on`) **· Responsibility** (one job) **· Proves**
   (**declarative Given/When/Then acceptance criteria, 1–3, never an eval**) **·
   Independence · Consumes/Produces · Appetite** (size token) **· Yields** (the
-  1:N task-specs it seeds at 5B) **· Re-verify when.** Status enum:
+  1:N task-specs it seeds at Pass 5) **· Re-verify when.** Status enum:
   `proposed → accepted → in_progress → done` (+ `superseded`); an accepted leg is
   edited by superseding, not in place.
 
@@ -120,7 +120,7 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 - [ ] **Links are bidirectional and consistent** — every leg file is referenced in the PRD index (no orphan) and every index row has a file (no dangling); legs are **contiguous** `leg-01..leg-0N` across the files.
 - [ ] **Leg nomenclature holds** — in-plan `leg-NN-<tech>`, fully-qualified `swimlane-<seam>-leg-NN-<tech>`; the stable key is `swimlane-<seam>-leg-NN` and `<tech>` is a swappable label, **never** part of the key.
 - [ ] Each leg carries one responsibility in prose + one proving-test cluster, is **independently finishable**, and fits one context window — bigger is two legs; two stretches sharing one proving test are one leg.
-- [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5B and is cited by them (`swimlane-<seam>-leg-NN`).
+- [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5 and is cited by them (`swimlane-<seam>-leg-NN`).
 - [ ] Each plan inherits the relevant `docs/adrs/*` decisions and **contradicts none** of them.
 - [ ] The downstream lane names the **exact upstream interface** it consumes (the published tables/columns/fields) and never reaches below it.
 - [ ] Open questions the ADRs do not cover are surfaced with an owner and a blocks-build flag — not answered inside the plan.
@@ -144,7 +144,7 @@ User says *"split it into plans and write the dedup query while you're at it."* 
 User proposes three lanes where two of them are just two transports (say, an HTTP API and a tool interface) over the same logic. → You note they share one query core and differ only in protocol framing — that is one lane (serve) with two transports, not two lanes. → You fold them into a single serve plan as components B2/B3 over a shared B1, and record the split-later condition (only if one transport needs logic the other doesn't). Two lanes, not three.
 
 **Example 4 — legs inside a lane.**
-The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `leg-02` conform to silver — dedup, types, UTC grain; `leg-03` publish gold — serving-ready tables shaped to the frozen questions. Each leg: one responsibility, one proving-test cluster, independently finishable in order. → At Pass 4 the adversary attacks leg by leg and objects by leg ID (*"leg-02 assumes a dedup key the ADRs don't name — FIXED in swimlane-transform-leg-02"*). → At Pass 5B, `swimlane-transform-leg-03` yields three task-specs (one per published table) — 1:N, with every task citing the leg. A drafter who writes `leg-04: the conform query` has left plan altitude — the query is a task, not a leg.
+The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `leg-02` conform to silver — dedup, types, UTC grain; `leg-03` publish gold — serving-ready tables shaped to the frozen questions. Each leg: one responsibility, one proving-test cluster, independently finishable in order. → At Pass 4 the adversary attacks leg by leg and objects by leg ID (*"leg-02 assumes a dedup key the ADRs don't name — FIXED in swimlane-transform-leg-02"*). → At Pass 5, `swimlane-transform-leg-03` yields three task-specs (one per published table) — 1:N, with every task citing the leg. A drafter who writes `leg-04: the conform query` has left plan altitude — the query is a task, not a leg.
 
 ## Troubleshooting
 
@@ -161,7 +161,7 @@ The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `l
 | `--check` flags "lane-meta missing thread/risk/owner" | A lane left the seam-economics placeholders unfilled | Fill real values: `thread=yes|no`, `risk=low|med|high`, `owner=<stream>` (H1/H2/H3). The unfilled `<yes|no>` placeholder does not count. |
 | A leg needs more than one context window to build | The leg is too big | Split it: one leg = one build-order step + one proving-test cluster. Bigger is two legs. |
 | Every leg in a lane maps to exactly one task-spec | The leg level is redundant there | Fold: legs are not a quota. If leg == task everywhere, keep the pieces and drop the extra naming layer for that lane. |
-| A leg carries an `eval:` or a query body | Altitude leak at leg level | The leg keeps the *responsibility* and *what the eval must assert* in prose; the runnable eval is born at Pass 5B inside the task-spec. |
+| A leg carries an `eval:` or a query body | Altitude leak at leg level | The leg keeps the *responsibility* and *what the eval must assert* in prose; the runnable eval is born at Pass 5 inside the task-spec. |
 
 ## Notes
 

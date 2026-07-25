@@ -129,7 +129,7 @@ metrics ledger, an L0–L2 executor conformance suite, and dispatch recipes
 (Claude, Codex, Kimi, Gemini, taskship, anthive, custom) round out the runtime.
 **Ships:** 20 scripts · reference docs · runbooks · JSON Schemas · test + conformance suites.
 **Gate:** every task carries a runnable eval — *no eval, not a task yet.*
-Full details: [`task-spec/README.md`](task-spec/README.md) · deep-dive PDF: [`../docs/task-spec-v3.2.0.pdf`](../docs/task-spec-v3.2.0.pdf).
+Full details: [`task-spec/README.md`](task-spec/README.md) · deep-dive PDF: [`../docs/task-spec-v3.6.0.pdf`](../docs/task-spec-v3.6.0.pdf).
 
 ### 6 · `task-specs-to-issues` — the tracker as state · **opt-in**
 

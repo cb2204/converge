@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Converge — The Canonical Blueprint · v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cvg-theme.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<!-- ============ 01 · COVER ============ -->
+<section class="page cover">
+  <div class="wordmark">Conver<em>ge</em></div>
+
+  <div class="kicker">The canonical blueprint · v6 — two phases, one barrier · the cvg CLI · agent operating protocol</div>
+  <h1>The Converge System —<br>Compile Intent,<br><span class="accent">Prove Every Step.</span></h1>
+
+  <p class="lede">The canonical blueprint for compiling a fuzzy brief — or a raw idea — into an
+  autonomous, eval-gated system. <b>Nine passes, two phases, and one barrier</b> where the human
+  hands off. Above the barrier, people make intent crystal-clear. Below it, the machine builds:
+  sealed specs in, green-eval PRs out. A referee CLI — <b>cvg</b> — exposes every gate as a stable
+  machine contract. v6 records both halves: what each pass means, and exactly how an agent
+  discovers, runs, interprets, repairs, and hands off each one.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">9</div><div class="l">passes · 0–8<br>one path</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">phases · one<br>barrier</div></div>
+    <div class="stat"><div class="n">12</div><div class="l">claude code<br>skills</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">task sizes<br>xs → xxl</div></div>
+    <div class="stat"><div class="n sm">cvg</div><div class="l">referee cli<br>v0.16.0</div></div>
+  </div>
+
+  <div class="rule"></div>
+  <div class="meta">
+    <div><div class="k">Document</div><div class="v">Canonical process blueprint · v6 (agent-operable)</div></div>
+    <div><div class="k">Converged means</div><div class="v">an eval passed — not that you feel done</div></div>
+  </div>
+
+  <div class="fine">The invariant — every pass lowers altitude, binds an engine by flag, ends at a gate.
+  Pass 8 is the exception: it does not lower, it closes. v6 supersedes v5: <code>Register</code> is now
+  <code>Pass 6</code>, <code>Bind</code> is <code>Pass 7</code> and absorbs the harness emit, the retired
+  <code>stack-to-harness</code> skill is gone, and the Manager leaves the numbered chain entirely.
+  Task-Spec <code>3.6.0</code>, <code>cvg 0.16.0</code>. No pass is closed until its artifact, gate, proof, and lesson agree.</div>
+</section>
+
+<!-- ============ 02 · INTRODUCTION ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">Introduction</h2>
+
+  <h3 class="sec">Why Converge exists</h3>
+  <p>The old loop ran in your head. A requirement arrived fuzzy, and you held the definition of "done"
+  as private judgment — refined by taste, defended in review, never written down. That loop does not
+  scale to AI engines, because <b>an engine cannot execute a standard it cannot read</b>. The bottleneck
+  was never typing speed; it was that intent lived in a human and had to be re-supervised at every step.
+  The AI-native engineer inverts it: take a fuzzy requirement and lower it through a repeatable descent —
+  each step more precise than the last — until "done" is a machine-checkable condition an engine can
+  satisfy unsupervised.</p>
+
+  <h3 class="sec">The main idea — compile intent, don't write the system</h3>
+  <p>Stop writing the system. <b>Compile it.</b> Converge treats building software as a compilation
+  pipeline that lowers altitude in fixed stages: intent → structure → plan → tasks → code → loop. Each
+  stage is a transformation with a typed output and a gate that must pass before the next stage runs —
+  exactly how a compiler lowers source through intermediate representations down to machine code. You
+  author the high-level intent and the checks; the pipeline emits the system. When no client brief
+  exists, an optional on-ramp — <b>Pass 0 · Capture</b> — compiles the raw idea into the BRD that starts
+  the descent.</p>
+
+  <h3 class="sec">The thesis — intent-driven development</h3>
+  <p>The durable human job is making <em>intent crystal-clear</em>; the machine's job is figuring out
+  <em>how</em>. Converge invests human effort where models stay weak — getting the intent right and
+  verifying the result — and gets out of the way where they are strong — implementation. This is the
+  horizon, and it holds for years: as more is automated, sending the <em>right intent</em> to the machine
+  remains the one irreducible driver of building the right thing. So: reduce <b>procedural blockers</b>
+  relentlessly; never reduce the <b>verification gate</b>. The isolated eval is not a blocker — it is the
+  load-bearing property.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="k">Every pass</div><h4>Lowers altitude</h4>
+      <p>intent → structure → plan → tasks → code → loop. Each step closer to something a machine runs.</p>
+    </div>
+    <div class="card">
+      <div class="k">Binds</div><h4>An engine</h4>
+      <p>the right tool for the altitude — a thinking session to shape, Claude Code to build, a different
+      family to attack, a fleet to crank.</p>
+    </div>
+    <div class="card">
+      <div class="k">Ends at</div><h4>A gate</h4>
+      <p>converged means an eval passed — not that you feel done. The gate is the unit of trust.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="k">The invariant</div>
+    <p>Every pass lowers altitude, binds an engine, ends at a gate. Pass 8 is the exception — it does not
+    lower, it <b>closes</b>. You are converged when the eval passes, not when you feel done. And in the
+    operating model, no pass is closed until its lesson exists.</p>
+  </div>
+</section>
+
+<!-- ============ 03 · CONTENTS ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">Contents</h2>
+  <div style="margin-top:5mm">
+    <div class="toc-row"><div class="n">—</div><div class="t">Introduction</div><div class="d"></div><div class="r">what Converge is, and why</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Whole Method, On One Line</div><div class="d"></div><div class="r">the flat table + the invariant</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Spine, Drawn</div><div class="d"></div><div class="r">nine passes, two phases, one path</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Barrier — where the human hands off</div><div class="d"></div><div class="r">the L4 → L5 line</div></div>
+    <div class="toc-row"><div class="n">0</div><div class="t">Capture — idea-to-brd</div><div class="d"></div><div class="r">the optional on-ramp · altitude: idea</div></div>
+    <div class="toc-row"><div class="n">1</div><div class="t">Intent — brd-docs-to-tech-req</div><div class="d"></div><div class="r">altitude: intent</div></div>
+    <div class="toc-row"><div class="n">2</div><div class="t">Structure — tech-req-to-adrs</div><div class="d"></div><div class="r">altitude: system</div></div>
+    <div class="toc-row"><div class="n">3</div><div class="t">Decompose — reqs-to-swimlane-plans</div><div class="d"></div><div class="r">altitude: plan</div></div>
+    <div class="toc-row"><div class="n">4</div><div class="t">Consensus — sketch-plans-adversarial-review</div><div class="d"></div><div class="r">THE BARRIER</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">One Spine, No Fork</div><div class="d"></div><div class="r">tasks all the way down · the compat token</div></div>
+    <div class="toc-row"><div class="n">5</div><div class="t">Tasking — task-spec (six-tier engine)</div><div class="d"></div><div class="r">XS/S/M/L leaves · XL/XXL nodes</div></div>
+    <div class="toc-row"><div class="n">6</div><div class="t">Register — task-specs-to-issues (opt-in)</div><div class="d"></div><div class="r">the tracker as state</div></div>
+    <div class="toc-row"><div class="n">7</div><div class="t">Bind — task-to-runtime-contract (+ harness)</div><div class="d"></div><div class="r">authority in motion</div></div>
+    <div class="toc-row"><div class="n">8</div><div class="t">The Loop — task-loop; Manager = future CI/CD</div><div class="d"></div><div class="r">altitude: runtime</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Architecture, Whole</div><div class="d"></div><div class="r">skills · referee · engines · trackers</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Operating Model</div><div class="d"></div><div class="r">five beats per pass + the TEACH beat</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Knowledge Home</div><div class="d"></div><div class="r">brain → docs → sketch → tasks → receipts</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The cvg CLI — a Referee</div><div class="d"></div><div class="r">the command surface + --json</div></div>
+    <div class="toc-row"><div class="n">II</div><div class="t">The Agent Operating the CLI</div><div class="d"></div><div class="r">discover → author → gate → repair → hand off</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">Machine Contracts &amp; Evidence Ledger</div><div class="d"></div><div class="r">JSON · exits · shipped vs proved</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">Why This Is Defensible</div><div class="d"></div><div class="r">two moats · positioning · honest boundary</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">One Method, Every Engineer</div><div class="d"></div><div class="r">the role lives in the eval</div></div>
+    <div class="toc-row"><div class="n">—</div><div class="t">The Method, End to End on One Feature</div><div class="d"></div><div class="r">the worked example</div></div>
+  </div>
+  <div class="folio">03</div>
+</section>
+
+<!-- ============ 04 · WHOLE METHOD ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The Whole Method, On One Line</h2>
+  <p class="eyebrow" style="font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:none;font-size:8pt;color:var(--ink-2)">
+  Capture⁰ → Intent → Structure → Decompose → <b>Consensus ⟨THE BARRIER⟩</b> → Tasking → Register → Bind → Loop ↺</p>
+
+  <p>A raw idea becomes a signed BRD, the BRD becomes a tech-spec, the tech-spec becomes ADRs, the ADRs
+  become swimlane plans, the plans survive an adversarial review — <b>the owner signs off</b> — and from
+  there the machine cuts tasks, registers a board, binds a runtime, and drives each issue to a green-eval
+  PR. There is <b>one spine and no decision branch</b>: a six-tier engine sizes every unit from a one-liner
+  to a whole backbone, so no separate spec-driven paradigm is needed. Each output is the next input.</p>
+
+  <table>
+    <thead><tr><th style="width:8mm">#</th><th style="width:34mm">Pass</th><th style="width:52mm">Skill</th><th>Out · Gate</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td><b>Capture</b> <span style="color:var(--muted)">(optional)</span></td><td><code>idea-to-brd</code></td><td>signed BRD — or a no-go record · <code>CHECK_BRD</code></td></tr>
+      <tr><td class="num">1</td><td><b>Intent</b></td><td><code>brd-docs-to-tech-req</code></td><td>tech-spec · answers the brief · <code>CHECK_TECH_SPEC</code></td></tr>
+      <tr><td class="num">2</td><td><b>Structure</b></td><td><code>tech-req-to-adrs</code></td><td><code>docs/adrs/*</code> + <code>CONTEXT.md</code> · <code>CHECK_ADR</code></td></tr>
+      <tr><td class="num">3</td><td><b>Decompose</b></td><td><code>reqs-to-swimlane-plans</code></td><td>swimlane plans, legs · plan-altitude · <code>CHECK_PLAN</code></td></tr>
+      <tr style="background:var(--green-wash)"><td class="num">4</td><td><b>Consensus</b><br><span style="font-size:6.4pt;letter-spacing:.12em;color:var(--green-dim)">THE BARRIER</span></td><td><code>sketch-plans-adversarial-review</code></td><td>plans attacked + sharpened · <code>CHECK_CONSENSUS</code><br><b>+ the owner signs off</b></td></tr>
+      <tr><td class="num">5</td><td><b>Tasking</b></td><td><code>task-spec</code> (six-tier)</td><td>XS/S/M/L leaves · XL/XXL nodes · HMAC <code>DELEGATE</code></td></tr>
+      <tr><td class="num">6</td><td><b>Register</b> <span style="color:var(--muted)">(opt-in)</span></td><td><code>task-specs-to-issues</code></td><td>1 spec = 1 issue · the board is state · <code>CHECK_REGISTER</code></td></tr>
+      <tr><td class="num">7</td><td><b>Bind</b> <span style="color:var(--muted)">(+ harness)</span></td><td><code>task-to-runtime-contract</code></td><td>profile + guards + <code>AGENTS.md</code> · <code>CHECK_RUNTIME_CONTRACT</code></td></tr>
+      <tr><td class="num">8</td><td><b>The Loop</b></td><td><code>task-loop --issue N</code></td><td>each task → green eval → PR closes the issue</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="k">Guardrails make the sequence canonical</div>
+    <p>Pass 0 never touches the repo — idea in, brief out; and Pass 1 must not consume an unsigned brief.
+    Pass 2 writes ADRs only (no code). Pass 3 is plan-altitude only (no tasks, no SQL). Pass 4 always ends
+    at the barrier — the sign-off is an output, never assumed earlier. Pass 8 does not lower — it closes.
+    No pass is closed until its artifact, gate, proof, and lesson agree.</p>
+  </div>
+  <div class="folio">04</div>
+</section>
+
+<!-- ============ 05 · THE SPINE DRAWN ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The spine, drawn — nine passes, two phases, one path</h2>
+  <p class="eyebrow">The full descent, as a straight line through one barrier</p>
+
+  <p>The descent is linear. An optional Capture on-ramp feeds it when no brief exists; four passes lower
+  altitude; at Consensus the plans are hardened and <b>the owner signs off</b> — the barrier. From there the
+  line runs on through Tasking, Register, Bind, and the Loop. No branch, no rejoin.</p>
+
+  <div class="fig tall">
+    <pre class="mermaid">
+flowchart LR
+  RAW(["raw idea<br>no brief yet"]):::ghost
+
+  subgraph PH1["PHASE 1 · DESIGN — human-led · make intent crystal-clear"]
+    direction TB
+    P0["<b>0 · CAPTURE</b> · optional<br>idea-to-brd<br><i>signed BRD or a no-go</i>"]
+    P1["<b>1 · INTENT</b><br>brd-docs-to-tech-req<br><i>the spec answers the brief</i>"]
+    P2["<b>2 · STRUCTURE</b><br>tech-req-to-adrs<br><i>ADRs recorded vs reality</i>"]
+    P3["<b>3 · DECOMPOSE</b><br>reqs-to-swimlane-plans<br><i>swimlane plans · legs</i>"]
+    P4["<b>4 · CONSENSUS</b><br>sketch-plans-adversarial-review<br><i>a different family refutes</i>"]
+    P0 --> P1 --> P2 --> P3 --> P4
+  end
+
+  BAR{{"THE BARRIER<br>the owner<br>signs off"}}:::barrier
+
+  subgraph PH2["PHASE 2 · BUILD — machine-led · the dark factory"]
+    direction TB
+    P5["<b>5 · TASKING</b><br>task-spec · six-tier engine<br><i>XS·S·M·L leaves / XL·XXL nodes</i>"]
+    P6["<b>6 · REGISTER</b> · opt-in<br>task-specs-to-issues<br><i>1 spec = 1 issue</i>"]
+    P7["<b>7 · BIND</b> + harness<br>task-to-runtime-contract<br><i>profile · guards · AGENTS.md</i>"]
+    P8["<b>8 · THE LOOP</b><br>task-loop --issue N<br><i>green eval → PR</i>"]
+    P5 --> P6 --> P7 --> P8
+  end
+
+  RAW -.-> P0
+  P4 --> BAR --> P5
+  P8 -. "green PR closes the issue<br>→ next ready" .-> P8
+
+  classDef ghost fill:#0f2740,stroke:#3a5670,color:#8fa6ba,font-style:italic;
+  classDef barrier fill:#1f7a4a,stroke:#47b87c,color:#ffffff,font-weight:bold;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 1</b> The nine-pass descent. Passes 0–4 are human-led design; passes 5–8 are
+  machine-led build. Capture (0) and Register (6) are optional; everything else is on the required path.
+  Pass 8 closes the loop rather than lowering altitude — a green PR closes its issue and unblocks the next.</p>
+
+  <div class="callout gate">
+    <div class="k">Read the diagram as a contract</div>
+    <p>Each box is a transformation that must end in a stable token before the next box may run. The
+    barrier is the only node that a machine cannot pass on its own — everything above it is judgment,
+    everything below it is verification.</p>
+  </div>
+  <div class="folio">05</div>
+</section>
+
+<!-- ============ 06 · THE BARRIER ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The Barrier — where the human hands off</h2>
+  <p class="eyebrow">The single most important line in the method · <em>this is the L4 → L5 boundary</em></p>
+
+  <p>Pass 4 ends by doing one thing: <b>the owner signs off.</b> Every pass before it is human-led — you
+  are making intent crystal-clear. Every pass after it is machine-led — the sealed spec is the only
+  instruction, and the eval is the only judge of done. That single line is the whole shape of the method.</p>
+
+  <div class="fig xlow">
+    <pre class="mermaid">
+flowchart TB
+  A["<b>ABOVE THE BARRIER · passes 0–4</b><br>human-led design — make intent crystal-clear<br>BRD → tech-spec → ADRs → plans → sign-off"]:::above
+  BAR{{"THE BARRIER — the owner signs off"}}:::barrier
+  B["<b>BELOW THE BARRIER · passes 5–8</b><br>machine-led build — intent becomes green-eval PRs<br>sealed specs → issues → contracts → merged PRs"]:::below
+  A --> BAR --> B
+  classDef above fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef below fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+  classDef barrier fill:#1f7a4a,stroke:#47b87c,color:#ffffff,font-weight:bold;
+    </pre>
+  </div>
+
+  <table>
+    <thead><tr><th style="width:30mm"></th><th>Above the barrier (0–4)</th><th>Below the barrier (5–8)</th></tr></thead>
+    <tbody>
+      <tr><td><b>who</b></td><td>human-led design</td><td>machine-led build</td></tr>
+      <tr><td><b>the work</b></td><td>make intent crystal-clear</td><td>turn intent into green-eval PRs</td></tr>
+      <tr><td><b>the artifact</b></td><td>BRD → spec → ADRs → plans → sign-off</td><td>sealed task-specs → issues → contracts → merged PRs</td></tr>
+      <tr><td><b>the human's job</b></td><td>own the intent + the verification</td><td>walk out at the gate</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sec">Why here, and not earlier?</h3>
+  <p>Because this is the first moment the plan has survived <em>a different model trying to break it.</em>
+  Signing off before that is signing off on an unexamined plan — and the machine would then faithfully
+  build the flaw, quickly and at scale. <b>The adversary is what makes the sign-off worth something.</b></p>
+
+  <div class="callout warn">
+    <div class="k">The half no script can check</div>
+    <p><code>check-consensus-gate.sh</code> proves the machine-checkable half: a different-family adversary
+    attacked the live plans (provenance stamp + input hashes, not a grep of a word), every objection is
+    FIXED or ACCEPTED-with-owner, and the plans have not drifted since. It <b>cannot</b> prove the sign-off.
+    An agent that reaches a green consensus gate with no owner signature must stop and say so — not
+    proceed to Pass 5.</p>
+  </div>
+
+  <div class="callout">
+    <div class="k">Where this sits in the field</div>
+    <p>Dan Shapiro's <em>Five Levels: from Spicy Autocomplete to the Dark Factory</em> (Jan 2026) tops out at
+    <b>L5 — the dark factory</b>: specs in, software out, no human reading the diff. Converge's <b>Phase 1 is
+    the L4 work</b> (write and argue the spec, craft the skills); <b>Phase 2 is L5</b>. The barrier at
+    Consensus <em>is</em> the L4 → L5 line.</p>
+  </div>
+  <div class="folio">06</div>
+</section>
+
+<!-- ============ 07 · PASS 0 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">0</div><div>
+    <h2 class="title">No brief yet? Compile the idea into one.</h2>
+    <p class="eyebrow">Pass 0 of 8 · optional on-ramp · altitude: idea — <em>receive &amp; interrogate the raw idea</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">thinking session</span><span class="chip k">Skill</span><span class="chip v">idea-to-brd v0.6.0</span><span class="chip g">Out · signed BRD or no-go</span></div>
+
+  <p>Not every engagement starts with a client brief. Pass 0 takes a raw idea with no document behind it
+  and compiles it into a BRD written <em>in the owner's voice</em> — or kills it cheaply. It scope-checks
+  that this is one idea, grills the owner in <b>frontier rounds</b> (each round asks every question whose
+  prerequisites are settled, numbered, each with a recommended default; one reply answers the whole round),
+  then drafts the brief and self-reviews it against the gate.</p>
+
+  <p>Two honest exits: a signed BRD that Pass 1 can consume unchanged, or a <b>no-go record</b> parked with
+  the reasoning intact. A gate that can only pass or "not yet" pressures the interview to manufacture
+  numbers; the no-go exit removes that pressure.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Scope-check</div><h4>One idea</h4>
+      <p>is this one idea, or four? Explore the environment for facts first — facts never enter a round, and never block one.</p></div>
+    <div class="card"><div class="k">Grill</div><h4>Frontier rounds</h4>
+      <p>seven branches in leverage order — pain → do-nothing test → goal → scope boundary → success → constraints → pre-mortem.</p></div>
+    <div class="card"><div class="k">Draft</div><h4>BRD + self-review</h4>
+      <p><code>docs/brd-&lt;slug&gt;.md</code> in the owner's voice, then audited against the gate before sign-off.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate</div>
+    <p>The pain carries a <b>provenance-tagged number</b> — <code>(measured)</code> / <code>(estimated)</code> /
+    <code>(guessed)</code> — with at least one KPI in the owner's terms; scope in/out are non-empty; every open
+    question has a named owner; the do-nothing test and pre-mortem ran. The gate speaks in tokens —
+    <code>CHECK_BRD=PASS|FAIL|DRAFT_OK|NOGO_OK</code> — and <b>canonical</b> must sit on the Sign-off verdict line.
+    Pass 1 must not consume an unsigned brief, and a no-go here is the <b>cheapest kill in the whole descent</b>.</p>
+  </div>
+
+  <p style="font-size:7.6pt;color:var(--muted);font-style:italic;margin-top:auto">The frontier-rounds grill adapts Matt Pocock's <code>batch-grill-me</code>;
+  Pass 0 adds the fixed branch map, the no-go exit, provenance tags, and the gate.</p>
+  <div class="folio">07</div>
+</section>
+
+<!-- ============ 08 · PASS 1 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">1</div><div>
+    <h2 class="title">The client hands you the problem. You produce the spec.</h2>
+    <p class="eyebrow">Pass 1 of 8 · altitude: intent — <em>receive &amp; comprehend the brief</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">thinking session · --engine cowork</span><span class="chip k">Skill</span><span class="chip v">brd-docs-to-tech-req v0.6.0</span><span class="chip g">Out · tech-spec</span></div>
+
+  <p>Read the BRD like a senior engineer, not a stenographer. Find the real problem underneath the ask,
+  name who actually hurts when it is unsolved, and pin the numbers that define success. <b>Ambiguity killed
+  here is the cheapest kill in the whole spine</b>, and the most expensive to leave alone — it compounds
+  through every pass downstream.</p>
+
+  <p>The interrogation runs in frontier rounds; facts never enter a round. Unanswered questions ride twice,
+  then become owned open questions. What survives becomes a typed <b>gap register</b>
+  (<code>GAP-001 · scope | definition | number | data · blocker | minor</code>): a blocker left open fails the
+  gate. Prior art is checked at the problem level only — never the codebase, which is Pass 2's altitude.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Understand</div><h4>Read</h4>
+      <p>the one-paragraph "solved" statement comes first: the real problem underneath, who hurts, the numbers that define success.</p></div>
+    <div class="card"><div class="k">Interrogate</div><h4>Grill</h4>
+      <p>the 2–3 questions whose answers most change how this gets built; ambiguity here compounds downstream.</p></div>
+    <div class="card"><div class="k">Crystallize</div><h4>Spec</h4>
+      <p>replay the "Locked:" recap, then resolve into one technical answer — falsifiable requirements, metrics traced to the BRD's KPIs.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate</div>
+    <p>You can restate the client's problem <b>in one breath</b> and show the tech-spec answers it — scope,
+    data, and success metric named, every requirement falsifiable, every blocker gap closed.
+    <code>--draft</code> validates structure but never authorizes; the canonical run passes only a spec whose
+    Sign-off verdict line reads <b>canonical</b>. <code>CHECK_TECH_SPEC=PASS</code> is the only verdict that hands
+    to Pass 2.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The most common Pass 1 failure</div>
+    <p><b>No premature technology.</b> No schema, no data store, no framework names. Describe <em>what</em> the
+    system must do and <em>how well</em>. Brief-in, spec-out — never blur them: the BRD is the client's, in the
+    client's words; the tech-spec is yours. The stack is decided at Pass 3, not here.</p>
+  </div>
+  <div class="folio">08</div>
+</section>
+
+<!-- ============ 09 · PASS 2 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">2</div><div>
+    <h2 class="title">Greenfield or brownfield — and write the ADRs.</h2>
+    <p class="eyebrow">Pass 2 of 8 · altitude: system — <em>ground the spec, record the decisions</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">Claude Code · on the repo</span><span class="chip k">Skill</span><span class="chip v">tech-req-to-adrs v0.4.0</span><span class="chip g">Out · docs/adrs/*.md + CONTEXT.md</span></div>
+
+  <p>Before any plan, <b>name the ground</b>. Brownfield is a system you did not write: open it end to end,
+  and check the spec against the real schemas, sources, and jobs you find. Greenfield is a system that does
+  not yet exist: confirm there is nothing to inherit, then ground the spec in the source systems and
+  constraints it must honour. Either way you leave Pass 2 knowing the terrain — what is actually there, and
+  what the work must respect.</p>
+
+  <p>Not every fact earns an ADR. The <b>worthiness test</b> keeps the record honest: a decision qualifies
+  only if it is <em>hard to reverse</em>, <em>stood on downstream</em>, and <em>could have been otherwise</em>.
+  Shared vocabulary goes to <code>docs/CONTEXT.md</code> — the glossary every later pass speaks, pinned as terms
+  crystallize.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Name the ground</div><h4>Field</h4>
+      <p>brownfield (a system you didn't write) vs greenfield (nothing yet) — name it explicitly; the rest follows.</p></div>
+    <div class="card"><div class="k">Ground</div><h4>Check</h4>
+      <p>open the system end to end; reconcile the spec against real schemas, sources, and jobs.</p></div>
+    <div class="card"><div class="k">Record</div><h4>ADRs</h4>
+      <p>write <code>docs/adrs/*.md</code> — grounding decisions that pass the worthiness test. Facts and constraints, never how to build.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate</div>
+    <p>The system is understood and its grounding decisions are recorded durably, so Pass 3 can read them
+    without re-deriving the terrain. <code>CHECK_ADR=OK</code>. An ADR records what <em>is</em> true — schemas,
+    joins, constraints — never how to build.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The single failure mode of this pass</div>
+    <p>The moment an ADR says <b>"build X"</b>, you have drifted into planning and must split it: the fact
+    stays here, the design moves to Pass 3. The <code>--check</code> gate detects build-verbs for exactly this
+    reason. <em>An ADR says what is true; <code>CONTEXT.md</code> says what things mean.</em></p>
+  </div>
+  <div class="folio">09</div>
+</section>
+
+<!-- ============ 10 · PASS 3 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">3</div><div>
+    <h2 class="title">Split the work along its natural seams.</h2>
+    <p class="eyebrow">Pass 3 of 8 · altitude: plan — <em>decomposition · break it into swimlanes</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">Claude Code · SAME session as Pass 2</span><span class="chip k">Skill</span><span class="chip v">reqs-to-swimlane-plans v0.7.0</span><span class="chip g">In · reads the ADRs</span></div>
+
+  <p>Take the system understood in Pass 2 — same session, ADRs in hand — and cut it where it is
+  <em>already jointed</em>: at a feature edge or a component edge, not an arbitrary slice. Each seam becomes
+  one swimlane; each swimlane gets its own focus-oriented sketch plan. <b>The right number of lanes is the
+  number of genuine seams</b> — no more, no fewer.</p>
+
+  <p>The decomposition chain is <b>seam → swimlane → leg → task-spec</b>. A <em>leg</em> is a lane's named
+  stretch: one responsibility, one proving test, independently finishable in order. Legs are where Pass 5
+  will later cut 1:N task-specs — but the leg itself never carries a runnable eval.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Decompose</div><h4>Seams</h4>
+      <p>cut where the system is already jointed. Prefer the <b>highest seam, and the fewest</b> — every seam is an interface someone must freeze, attack, and honour.</p></div>
+    <div class="card"><div class="k">Swimlane</div><h4>One plan each</h4>
+      <p>every seam becomes one lane carrying exactly one sketch plan — one lane, one plan, one focus.</p></div>
+    <div class="card"><div class="k">Grounded</div><h4>Inherits ADRs</h4>
+      <p>each lane stands on <code>docs/adrs/</code>. A plan that contradicts an ADR, or silently re-settles it, fails the gate.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate</div>
+    <p>One sketch plan per genuine seam, each listing legs, dependencies, build order, and the exact upstream
+    interface it consumes — inheriting the ADR decisions. Legs are present, named, and <b>contiguous</b>
+    (<code>leg-01..leg-0N</code>). <code>CHECK_PLAN=OK|FAIL|EMPTY|USAGE_ERROR</code>. Plan-altitude only.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The one guardrail that defines the pass</div>
+    <p>The moment a plan holds a query body, a handler body, or an atomic task with an eval, it has left
+    Pass 3 and skipped the adversarial review meant to harden the plan <em>first</em>. A green <code>--check</code>
+    proves the legs exist, are named, and are ordered — it does <b>not</b> prove they are well-cut. Whether a
+    leg is genuinely independently-finishable is Pass 4's judgment, not a grep's.</p>
+  </div>
+  <div class="folio">10</div>
+</section>
+
+<!-- ============ 11 · PASS 4 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">4</div><div>
+    <h2 class="title">Bring a different engine to refute the plans — then sign off.</h2>
+    <p class="eyebrow">Pass 4 of 8 · altitude: plan (hardened) · <b style="color:var(--green-dim)">THE BARRIER</b></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">cross-family adversary (codex / kimi)</span><span class="chip k">Skill</span><span class="chip v">sketch-plans-adversarial-review v0.6.0</span><span class="chip g">CLI · cvg review</span></div>
+
+  <p>A single model won't refute itself hard enough. So Pass 4 brings a <b>different-family</b> engine to
+  attack the plans, one lane and one leg at a time, as a skeptic who defaults to "refuted." It grounds each
+  plan against the tech-spec and the ADRs — hunting contradictions, gaps, and silent assumptions — and every
+  objection is either <b>FIXED</b> in a plan or <b>ACCEPTED</b> with a named owner. Nothing is silently dropped.
+  Cross-model disagreement is not noise here; it is the entire point.</p>
+
+  <p>When argument can't settle an objection, settle it with a <b>throwaway prototype</b> — the smallest
+  disposable artifact that answers the question, run against real data. The result decides FIX or ACCEPT; the
+  prototype is <em>evidence, not deliverable</em>. Then the pass does the one thing that defines it:
+  <b>the owner signs off</b>.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Attack</div><h4>Refute</h4>
+      <p>a different family, one plan at a time, as a skeptic who didn't write it. Default to refuted — silence is not passing.</p></div>
+    <div class="card"><div class="k">Ground</div><h4>Drift?</h4>
+      <p>check each plan against the tech-spec and the ADRs — contradictions, gaps, silent assumptions, disagreeing numbers.</p></div>
+    <div class="card"><div class="k">Sharpen</div><h4>Fix / Own</h4>
+      <p>every objection FIXED in a plan or ACCEPTED with a named owner — nothing silently dropped.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate — two halves</div>
+    <p><b>Machine (falsifiable, not honour-system):</b> the gate reads a <b>stamped objection log</b>, never plan
+    prose. It passes only when a <b>different-family</b> adversary attacked — proven by a provenance stamp plus
+    input hashes computed by the referee, not a grep of a word — every objection is FIX-or-ACCEPT-with-owner,
+    and the plans have <b>not drifted</b> since the review (re-hashed). <code>cvg review --check</code> →
+    <code>CHECK_CONSENSUS=OK</code>.</p>
+    <p><b>Human:</b> <b>the owner signs off.</b> This is the barrier, and no script can check it.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The compatibility token</div>
+    <p>The objection-log schema still <em>requires</em> a <code>fork</code> object, and the gate still requires a
+    <code>FORK: B</code> line atop every swimlane PRD. This is a <b>frozen compatibility field, not a decision</b> —
+    the method has one path. Agents must never present it to the owner as a route to pick.</p>
+  </div>
+  <div class="folio">11</div>
+</section>
+
+<!-- ============ 12 · ONE SPINE ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">One spine — no fork, no route decision.</h2>
+  <p class="eyebrow">Tasking is the architecture · recursion absorbs scale</p>
+
+  <p>Converge does not fork at Consensus. A different-family adversary attacks the plans, every objection is
+  settled, the owner signs — and the hardened plan tree goes directly to Tasking. Frontier engines execute
+  well-scoped atoms reliably, and a tree of verified atoms composes back up more safely than one monolith. A
+  single <b>six-tier Task-Spec engine</b> therefore carries the whole range — from a one-line change to a
+  complete backbone — without a second specification paradigm.</p>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart TB
+  C["<b>Pass 4 · Consensus</b><br><i>one required handoff: hardened plans + sign-off → six-tier Tasking</i>"]:::hdr
+  H["<b>Historical route — retired</b><br>plans-to-coherent-spec · DELETED<br>wrapped the whole system in one SDD spec<br>one big end-to-end eval · one long human gate"]:::old
+  N["<b>Current method — THE ONE SPINE</b><br>task-spec 3.6.0 · six-tier sizing engine<br>the boundary wraps each unit; each carries an eval<br>XS a one-liner → XXL a whole backbone<br>XL/XXL decompose into leaves — tasks all the way down"]:::new
+  R["one path · every unit gated by its own eval"]:::ok
+  C --> H
+  C --> N --> R
+  classDef hdr fill:#1a3a28,stroke:#47b87c,color:#eaf5ef;
+  classDef old fill:#12283f,stroke:#3a5670,color:#7f97ad;
+  classDef new fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+  classDef ok  fill:#1f7a4a,stroke:#47b87c,color:#ffffff,font-weight:bold;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 3</b> There is no architectural choice after Consensus. The schema still stamps
+  <code>FORK: B</code> for backward compatibility with the consensus gate; agents treat it as a required
+  compatibility value, never as a prompt to choose a branch.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">The six-tier engine absorbs the range</div><h4>Leaves run · nodes decompose</h4>
+      <p><b>Leaves</b> (XS/S/M/L) are runnable atoms — each fits one fresh context window and verifies as one
+      PR or test-suite; a gate-checked <b>write-surface budget</b> catches a mis-sized unit. <b>Nodes</b>
+      (XL/XXL) are not runnable — they MUST declare <code>children:</code> and expand into leaves. A worker
+      dispatches the children, never the node.</p></div>
+    <div class="card"><div class="k">Why one path is safer</div><h4>Recursion, not escalation</h4>
+      <p>Big work used to route <b>out</b> to SDD. Now it decomposes <b>in</b>: the same task-spec format,
+      self-similar at every scale, so the seam contracts are written once and per-unit tasks can't drift.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Tasks all the way down — and back up</div>
+    <p>The dark factory needs one unit model at every scale. A subjective slice becomes a human-checkpoint
+    eval; a coupled slice becomes an <b>L leaf</b>; a whole backbone becomes an <b>XXL node</b> that decomposes to
+    a tree of leaves. There is no route out: descend by decomposition, run only leaves, then compose verified
+    results back up.</p>
+  </div>
+  <div class="folio">12</div>
+</section>
+
+<!-- ============ 13 · PASS 5 ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">5</div><div>
+    <h2 class="title">The six-tier engine — size every unit, from XS to XXL.</h2>
+    <p class="eyebrow">Pass 5 · the sizing model · task-spec v3.6 — <em>one engine, a one-liner to a whole backbone</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Engine</span><span class="chip v">task-spec (six-tier)</span><span class="chip k">Skill</span><span class="chip v">task-spec v3.6.0</span><span class="chip g">Gate · cvg tasks validate</span></div>
+
+  <p>Every unit gets a t-shirt size — sized the agent-native way: not by human hours, but by
+  <b>context, verification, and blast radius</b>. <b>Leaves</b> (XS/S/M/L) are runnable atoms that fit one
+  fresh context window. <b>Nodes</b> (XL/XXL) are decomposition directives — not runnable.</p>
+
+  <table>
+    <thead><tr><th style="width:14mm">Size</th><th style="width:26mm">Kind</th><th style="width:40mm">Write budget · backend</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td class="num">XS</td><td>leaf</td><td>≤ 1 path</td><td>a config key; bump a dependency</td></tr>
+      <tr><td class="num">S</td><td>leaf</td><td>≤ 2 paths</td><td>a <code>/health</code> endpoint + its test</td></tr>
+      <tr><td class="num">M</td><td>leaf</td><td>≤ 3 paths</td><td>a dbt model + schema + test</td></tr>
+      <tr><td class="num">L</td><td>leaf · ceiling</td><td>≤ 5 paths · long-horizon backend</td><td>a service slice as ONE coherent goal</td></tr>
+      <tr><td class="num">XL</td><td>node · decomposes</td><td>children ≥ 2 (owns none)</td><td>a whole swimlane → its leg leaves</td></tr>
+      <tr><td class="num">XXL</td><td>node · decomposes</td><td>children ≥ 3 (owns none)</td><td>a whole backbone → swimlane nodes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="fig xlow">
+    <pre class="mermaid">
+flowchart TB
+  XXL["<b>XXL</b> · analytical backbone<br><i>node — owns no paths</i>"]:::node
+  X1["<b>XL</b> · swimlane-transform"]:::node
+  X2["<b>XL</b> · swimlane-serve"]:::node
+  L1["<b>M</b> · silver conform<br><i>leaf · eval: dbt test</i>"]:::leaf
+  L2["<b>M</b> · gold marts<br><i>leaf · eval: control-sum</i>"]:::leaf
+  L3["<b>S</b> · query core<br><i>leaf · eval: contract test</i>"]:::leaf
+  L4["<b>S</b> · mcp tool<br><i>leaf · eval: tool == gold</i>"]:::leaf
+  XXL --> X1 --> L1 --> L2
+  XXL --> X2 --> L3 --> L4
+  classDef node fill:#12283f,stroke:#5d7a95,color:#9fb6cb;
+  classDef leaf fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 4</b> The recursion — this is the whole idea. A worker runs the <b>leaves</b> and
+  composes their verified results back up the tree. A budget that gets breached means the decomposition was
+  too coarse — the signal to split further. Big work decomposes <em>in</em>; it never routes <em>out</em>.</p>
+
+  <div class="callout gate">
+    <div class="k">Gate — cvg tasks validate</div>
+    <p>Sizing is <b>enforced, not advisory</b>: a leaf over its write-surface budget WARNs "mis-sized — split or
+    reclassify UP"; an XL/XXL node with too few children FAILs "must decompose — no route out"; L requires
+    a <b>long-horizon</b> <code>execution_backend</code> and one coherent done-condition. As of v3.6 that is a
+    fleet-configurable set (<code>glm claude codex kimi</code> by default), not one hard-coded vendor — the
+    format stays vendor-neutral and self-verifying.</p>
+  </div>
+  <div class="folio">13</div>
+</section>
+
+<!-- ============ 14 · PASS 5 IN PRACTICE ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">5</div><div>
+    <h2 class="title">Tasking, in practice — a backbone into eval-backed units.</h2>
+    <p class="eyebrow">Pass 5 of 8 · altitude: atomic unit — <em>the plans decompose into task-specs</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Skill</span><span class="chip v">task-spec v3.6.0</span><span class="chip g">CLI · cvg tasks validate | gate | dod</span></div>
+
+  <p>Consensus hands off here, always. The hardened swimlane plans decompose into <b>eval-backed task-specs</b>
+  — the trust boundary wraps each unit, and verification is per-unit. Trust is earned one unit at a time:
+  each eval that goes green is a gate you no longer hold by hand. This is the path to the Dark Factory —
+  many small, automatable gates a fleet can close on a schedule. On the proving ground, the whole analytics
+  backbone is already tasked: <b>9 legs → 9 task-specs</b>, wired into a dependency DAG, every one
+  <code>validate</code> ok · <code>gate</code> DELEGATE · <code>dod</code> COMPLETE.</p>
+
+  <p>Each unit is a <b>vertical slice</b> — a tracer bullet, not a horizontal layer — sized by the six-tier
+  engine; behaviors (<code>B-1</code>, <code>B-2</code>…) trace to evals and back; and the seam contracts hardened at
+  Pass 4 ride in as guardrails, so a per-unit task can't drift from the consensus.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">Size</div><h4>Six tiers</h4>
+      <p>XS/S/M/L leaves run; XL/XXL nodes decompose. The write-surface budget catches a mis-sized unit at the gate.</p></div>
+    <div class="card"><div class="k">Bind eval</div><h4>Done = ?</h4>
+      <p>a runnable eval defines done — the test passes, the query returns N, the probe reaches a served answer.</p></div>
+    <div class="card"><div class="k">Trace</div><h4>DoD matrix</h4>
+      <p><code>cvg tasks dod</code> renders every behavior → its verifying eval → result; an untraced behavior FAILS the DoD.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">Gate — cvg tasks gate (safe-to-delegate)</div>
+    <p>Every task carries a runnable eval — <b>no eval, not a task yet</b>. The delegation gate runs two stages:
+    structural + sizing validation, then a broken-eval guard — and <b>refuses to delegate an XL/XXL node</b>
+    (a worker dispatches its children). Sign-off is a key-optional <b>HMAC seal</b>, <b>tamper-evident</b>: it
+    proves the evals were not weakened after sign-off, so the sealed spec becomes the only trusted
+    instruction source. Self-contained and vendor-portable: Claude, Codex, Kimi, or manual.</p>
+  </div>
+  <div class="folio">14</div>
+</section>
+
+<!-- ============ 15 · PASS 6 REGISTER ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">6</div><div>
+    <h2 class="title">Each Task-Spec becomes one tracked issue.</h2>
+    <p class="eyebrow">Pass 6 of 8 · <em>opt-in, like Capture</em> · the tracker as state</p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Skill</span><span class="chip v">task-specs-to-issues v0.5.0</span><span class="chip v">github | linear | jira · fake</span><span class="chip g">CLI · cvg register</span></div>
+
+  <p>Register projects every <code>signed_off: true</code> Task-Spec onto exactly one tracker issue — a
+  disposable <b>state shadow</b> of the repo-owned work. The tracker is a pluggable backend behind
+  <b>six verbs</b>: <code>preflight · upsert · link · list-ready · list-issues · write-result</code>. Upsert is
+  idempotent by the spec ID; each <code>depends_on</code> edge becomes one <code>blocked-by</code> relation; the
+  task's Exit Check travels into the issue as its close condition. After a successful upsert, Register
+  writes only a receipt — <code>tracker_ref</code> — back into frontmatter. <b>The issue-side marker remains the
+  idempotency key</b>, so CI can use <code>--no-stamp-refs</code> without losing convergence.</p>
+
+  <div class="fig">
+    <pre class="mermaid">
+flowchart TB
+  TS["<b>TASK-SPEC</b> · tasks/T-*.md<br><i>the atomic unit + its eval — the repo owns the work</i>"]:::src
+  IS["<b>TRACKER ISSUE</b> · the state shadow<br>status · blocked-by · eval close-condition · spec marker<br><i>GitHub / Linear / Jira — one six-verb adapter</i>"]:::shadow
+  MG["<b>CI/CD · THE MANAGER</b> — future work<br><i>reads ready issues, dispatches one</i>"]:::mgr
+  LP["<b>THE LOOP</b> · task-loop --issue N<br><i>the only writer of result state</i>"]:::loop
+  TS -- "register · 1 spec = 1 issue<br>depends_on → blocked-by" --> IS
+  IS -- "read ready" --> MG
+  MG -- "dispatch" --> LP
+  LP -- "write-result · a green PR closes the issue" --> IS
+  IS -. "tracker_ref receipt (a backlink, never the key)" .-> TS
+  classDef src fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+  classDef shadow fill:#12283f,stroke:#5d7a95,color:#cfe0ee;
+  classDef mgr fill:#3d3212,stroke:#c08a1e,color:#f0e0b8;
+  classDef loop fill:#17324d,stroke:#47b87c,color:#dce7f0;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 5</b> The repo owns the work; the tracker carries its dispatchable shadow. Only the
+  loop writes result state, and only a green eval closes an issue — which is why the board never lies.</p>
+
+  <div class="cards">
+    <div class="card"><div class="k">A real parity gate</div><h4>It can fail</h4>
+      <p><code>cvg register --check</code> uses the read-only <code>list-issues</code> verb to prove
+      <code>count(issues) == count(signed-off specs)</code>, every edge is one link, no orphans, no cycles,
+      no un-gated leak.</p></div>
+    <div class="card"><div class="k">The source and the shadow</div><h4>Skip it freely</h4>
+      <p>Stay repo-local when you want the specs to travel with the code and need no external system. Add
+      Register when you want a board the loops read across sessions and machines. The tracker is replaceable
+      shared memory; the repo files remain authoritative and can rebuild it.</p></div>
+  </div>
+  <div class="folio">15</div>
+</section>
+
+<!-- ============ 16 · PASS 7 BIND ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">7</div><div>
+    <h2 class="title">Bind one task to its runtime — and emit the harness.</h2>
+    <p class="eyebrow">Pass 7 of 8 · altitude: runtime contract — <em>authority in motion</em></p>
+  </div></div>
+
+  <div class="chips"><span class="chip k">Skill</span><span class="chip v">task-to-runtime-contract v1.1.0</span><span class="chip g">CLI · cvg bind · CHECK_RUNTIME_CONTRACT</span></div>
+
+  <p>Pass 7 makes two moves. <b>(7a) Contract:</b> verify one signed runnable Task-Spec, bind its exact hash
+  to the <em>smallest</em> evidence slice it needs, pick a topology, and emit portable path guards.
+  <b>(7b) Harness:</b> auto-detect the available engines and emit the multi-engine context glue —
+  <code>AGENTS.md</code> plus Claude / Codex / cloud adapters — so the <em>same</em> sealed task runs anywhere.</p>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart TB
+  SPEC["signed Task-Spec<br><i>hash-bound</i>"]:::src
+  BIND["<b>cvg bind</b><br>verify sign-off · hash the spec<br>bind evidence · choose topology<br>emit path guards"]:::bind
+  PROF["<b>execution-profile.yaml</b><br><i>JSON subset of YAML 1.2</i>"]:::art
+  ADR["cited ADRs"]:::ev
+  KN["approved knowledge"]:::ev
+  DOC["cached external docs<br><i>URL + content hash</i>"]:::ev
+  AG["AGENTS.md<br><i>universal doctrine</i>"]:::out
+  AD["adapters/<br>generic · claude · codex · kimi"]:::out
+  LOOP["<b>Pass 8 · the Loop</b>"]:::loop
+  ADR --> BIND
+  KN --> BIND
+  DOC --> BIND
+  SPEC --> BIND --> PROF
+  BIND --> AG
+  BIND --> AD
+  PROF --> LOOP
+  AG --> LOOP
+  AD --> LOOP
+  classDef src fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+  classDef bind fill:#17324d,stroke:#47b87c,color:#dce7f0;
+  classDef art fill:#12283f,stroke:#5d7a95,color:#cfe0ee;
+  classDef ev fill:#0f2740,stroke:#3a5670,color:#8fa6ba;
+  classDef out fill:#12283f,stroke:#5d7a95,color:#cfe0ee;
+  classDef loop fill:#1f7a4a,stroke:#47b87c,color:#ffffff;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 6</b> Bind is task-scoped and hash-bound. External docs must have a local cached
+  copy; the profile records URL and content hash so offline, version-pinned execution stays possible.</p>
+
+  <div class="callout gate">
+    <div class="k">Gate — CHECK_RUNTIME_CONTRACT=PASS</div>
+    <p>The Task-Spec is a signed runnable <b>leaf</b> and its current hash matches; required ADRs, knowledge, and
+    cached docs exist and match their recorded hashes; a non-<code>single</code> topology carries a substantive
+    <em>static</em> justification; parallel write ownership is explicit and disjoint; guards and all declared
+    adapter manifests exist; no unresolved placeholders remain.</p>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The capability envelope — authority that closes</div>
+    <p>Bind's central claim is not "the agent was told what it may touch." It is that <b>authority is granted
+    against one signed revision, scoped to that revision's own paths, and revoked the moment the task
+    settles.</b> The envelope is keyed to an <b>epoch</b> — <code>&lt;task-id&gt;@&lt;spec-sha12&gt;</code> — so changing a
+    byte of the spec voids every grant derived from it. This answers <em>lingering authority</em>: coding-agent
+    CLIs grant permissions for a <em>session</em>, and a session outlives a task. Each adapter declares, per
+    capability, whether the runtime <b>prevents</b> the violation, only <b>detects</b> it, or <b>cannot honor</b>
+    it — and a required control the runtime cannot enforce <b>fails the gate closed</b>, unless waived in the open.</p>
+  </div>
+
+  <p style="font-size:8.2pt;color:var(--muted);font-style:italic;margin-top:2mm">The boundary Pass 7 defends —
+  <em>the harness orchestrates; the documentation teaches.</em> External docs are cached and hashed, approved
+  knowledge referenced, never copied. Topology defaults to <code>single</code> and escalates only for a reason
+  visible <em>before</em> runtime.</p>
+  <div class="folio">16</div>
+</section>
+
+<!-- ============ 17 · PASS 8 LOOP ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <div class="titlerow"><div class="passnum">8</div><div>
+    <h2 class="title">Build the execution loop. Schedule the Manager later.</h2>
+    <p class="eyebrow">Pass 8 of 8 · altitude: runtime — <em>loop engineering</em></p>
+  </div></div>
+
+  <p><b>Loop Engineering</b> is the discipline of designing the loops that prompt agents, rather than
+  prompting agents. The unit of work is no longer the message but the cycle. One primitive recurs
+  everywhere — take an action, read the feedback the environment returns, decide the next move, repeat until
+  the <b>goal condition</b> holds. Convergence is defined by the goal, never by attempt-count: a loop that
+  stops because it tried three times has <em>not</em> converged; a loop that stops because the eval is green has.</p>
+
+  <div class="fig mid">
+    <pre class="mermaid">
+flowchart TB
+  MG["<b>THE MANAGER</b> · future CI/CD — <i>not a numbered pass, not an in-session skill</i><br>scheduler · picks which issue · fan-out · watches PRs · settles deps"]:::mgr
+  IN(["hands the loop <b>--issue N</b>"]):::ghost
+  BINDV["<b>BIND + READ</b><br>verify CHECK_RUNTIME_CONTRACT=PASS<br>load signed spec + hash-bound evidence"]:::step
+  ACT["<b>ACT</b><br>cut branch task/&lt;id&gt;-&lt;slug&gt;<br>write code inside touches_paths"]:::step
+  EVAL{"<b>run the task's OWN eval</b>"}:::gate
+  RED["<b>RED</b> · feed the exact failure back → revise<br><i>bounded by budget_iterations</i><br>2× same RED → stop patching, diagnose"]:::red
+  GUARD["<b>path guard</b> · diff stayed inside the blast radius"]:::step
+  PR["<b>GREEN · SETTLE</b><br>open a PR that closes the issue"]:::ok
+  BLOCK["<b>blocked-task report</b><br><i>explicit, never silence</i>"]:::blocked
+  MG --> IN --> BINDV --> ACT --> EVAL
+  EVAL -- "red" --> RED --> ACT
+  EVAL -- "green" --> GUARD --> PR
+  RED -- "budget exhausted" --> BLOCK
+  classDef mgr fill:#3d3212,stroke:#c08a1e,color:#f0e0b8;
+  classDef ghost fill:#0f2740,stroke:#3a5670,color:#8fa6ba,font-style:italic;
+  classDef step fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef gate fill:#12283f,stroke:#47b87c,color:#dff0e6;
+  classDef red fill:#3d1a1a,stroke:#b1543f,color:#f0cfc8;
+  classDef ok fill:#1f7a4a,stroke:#47b87c,color:#ffffff,font-weight:bold;
+  classDef blocked fill:#0f2740,stroke:#8a99a8,color:#b6c4d1;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 7</b> The execution loop takes ONE issue, writes code, runs the task's eval, feeds
+  RED back until GREEN, checks the path guard, then opens a PR. The Manager that picks which issue and fans
+  out is a future CI/CD concern — GitHub Actions as scheduler, the PR as state settlement, branch protection
+  as the gate.</p>
+
+  <div class="callout gate">
+    <div class="k">Gate</div>
+    <p>The task's own eval is green and the runtime path policy holds — <b>none by hand, none by
+    attempt-count</b>. Green-eval-closes-the-issue is the dark factory, one issue at a time.</p>
+  </div>
+  <div class="folio">17</div>
+</section>
+
+<!-- ============ 18 · ARCHITECTURE ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The architecture, whole.</h2>
+  <p class="eyebrow">Skills author · the referee adjudicates · engines execute · trackers shadow</p>
+
+  <p>Four layers, and the discipline is to keep them separate. <b>Skills</b> transform artifacts.
+  The <b>cvg CLI</b> adjudicates — it holds zero model credentials and makes no LLM calls. <b>Engines</b> are
+  commodity slots bound by flag. <b>Trackers</b> carry a disposable shadow of repo-owned state.</p>
+
+  <div class="fig mid">
+    <pre class="mermaid">
+flowchart LR
+  SK["<b>SKILL LAYER</b> · 12 packages<br>─────────────<br>0 idea-to-brd · 1 brd-docs-to-tech-req<br>2 tech-req-to-adrs · 3 reqs-to-swimlane-plans<br>4 sketch-plans-adversarial-review<br>5 task-spec · 6 task-specs-to-issues<br>7 task-to-runtime-contract · 8 task-loop<br><i>util · pass-to-lesson · skill-creator<br>legacy · agents-kbs-tech-stack</i>"]:::sk
+  CLI["<b>cvg — THE REFEREE</b> · v0.16.0<br>─────────────<br>zero model credentials · makes no LLM calls<br>capture · intent · structure · decompose<br>review · doctor · tasks · register · bind<br>eval · setup · agent-context<br><i>every gate ends in ONE stable token<br>+ a typed exit code · --json wraps any command</i>"]:::cli
+  EN["<b>ENGINE SLOTS</b><br>bound by flag, never by name<br>─────────────<br>claude · codex · kimi<br>gemini · cloud / swarm"]:::en
+  ST["<b>STATE</b><br>─────────────<br><b>cvg/ workspace</b><br>brain → docs → sketch → tasks → receipts<br><b>tracker</b> · opt-in shadow<br>github | linear | jira<br><b>git</b> · branch · PR · protection"]:::state
+  SK -- "author &amp; sharpen artifacts" --> CLI
+  CLI -- "dispatch headless<br>read-only · provenance" --> EN
+  EN -- "artifacts + stamped logs" --> CLI
+  CLI -- "gated writes" --> ST
+  classDef sk fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+  classDef cli fill:#1f7a4a,stroke:#47b87c,color:#ffffff;
+  classDef en fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef state fill:#0f2740,stroke:#3a5670,color:#b6c4d1;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 8</b> The referee never authors and the skills never adjudicate. That separation is
+  what makes the evidence trustworthy — an agent that asks the referee to be the player has removed it.</p>
+
+  <div class="callout">
+    <div class="k">The two contracts</div>
+    <p><b>Task-Spec = authorization and done.</b> Because the <em>eval</em> — not the agent — defines done, any coding
+    agent is a swappable commodity slot. <b>Runtime contract = authority in motion.</b> It binds the exact signed
+    revision to evidence, topology, permissions, and concrete guards. Keep them separate.
+    <em>Run on commodity models; produce defensible output.</em></p>
+  </div>
+  <div class="folio">18</div>
+</section>
+
+<!-- ============ 19 · OPERATING MODEL ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The operating model — five beats per pass.</h2>
+  <p class="eyebrow">How the method builds itself · track R current · track M parked</p>
+
+  <p>Converge is built with its own method. <b>Track R</b> validates the method one pass at a time, and each
+  pass is a complete vertical slice of five beats — <b>in order, never bundled</b>. <b>Track M</b> — the execution
+  machine, fixture-tested — waits and resumes later.</p>
+
+  <table>
+    <thead><tr><th style="width:36mm">Beat</th><th>What happens · where it lands</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 · UNDERSTAND</b></td><td>read the pass's skill end to end, compare against the field, deliver a hardening list — analysis only, no edits</td></tr>
+      <tr><td><b>2 · RUN</b></td><td>execute the pass <b>for real</b> on the proving ground; the owner judges every output</td></tr>
+      <tr><td><b>3 · CANONIZE</b></td><td>iterate skill + artifact until the owner calls it canonical — blueprints are <b>canonical v0</b>; a later pass may send a retro-edit back</td></tr>
+      <tr><td><b>4 · IMPLEMENT</b></td><td>the <code>cvg</code> subcommand for this pass — frame → dispatch → collect → gate, thin by design</td></tr>
+      <tr><td><b>5 · PROVE</b></td><td>re-run the pass through the CLI on the same input; artifacts and gate verdicts must match the golden manual run — <b>nothing to trust, only to diff</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="k">The TEACH beat — inside the C-beat</div>
+    <p>Closing CANONIZE includes the TEACH beat: run <code>pass-to-lesson</code> on the just-canonized artifacts —
+    every component taught (what it is, why it's shaped this way, the decision it encodes, what breaks
+    downstream without it), <code>check-lesson.sh</code> green, the lesson committed under <code>docs/lessons/</code>.
+    <b>A pass is not closed until its lesson exists.</b> Rule 0 is the stance: go slow and teach — the owner's
+    understanding is a deliverable equal to working code. The companion explains decisions, never reopens them.</p>
+  </div>
+
+  <div class="callout">
+    <div class="k">What autonomy actually costs</div>
+    <p>Autonomy is the reward for understanding, not a substitute for it. Converge earns the right to run dark
+    at Pass 8 by spending human judgment at Passes 1–4 — the swimlanes, the ADRs, the adversary. A running
+    loop with no upstream comprehension builds the wrong thing flawlessly. <b>The factory must run dark and be
+    aimed correctly; these passes are what aim it.</b></p>
+  </div>
+  <div class="folio">19</div>
+</section>
+
+<!-- ============ 20 · KNOWLEDGE HOME ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The knowledge home — the cvg/ workspace.</h2>
+  <p class="eyebrow">Five folders, one lifecycle each</p>
+
+  <p>Every consuming project gets one Converge home — <code>cvg/</code>, named for the CLI — with
+  <code>INDEX.md</code> as the front door. Artifacts flow one way and never backward:
+  <b>brain feeds → docs agree → sketch explores → tasks execute → receipts prove.</b></p>
+
+  <table>
+    <thead><tr><th style="width:26mm">Folder</th><th style="width:44mm">Kind</th><th>Lifecycle</th></tr></thead>
+    <tbody>
+      <tr><td><code>brain/</code></td><td>user-generated inputs</td><td>raw, append-only, never gated</td></tr>
+      <tr><td><code>docs/</code></td><td>consensus artifacts</td><td>gated, permanent, never deleted — BRD · tech-spec · <code>adrs/</code> + <code>CONTEXT.md</code> · <code>lessons/</code></td></tr>
+      <tr><td><code>sketch/</code></td><td>drafts</td><td>transient — sharpened at Pass 4, decomposed into tasks at Pass 5</td></tr>
+      <tr><td><code>tasks/</code></td><td>sealed execution units</td><td>HMAC-stamped, tracked</td></tr>
+      <tr><td><code>receipts/</code></td><td>evidence — gate verdicts, pass receipts</td><td>write-once</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cards">
+    <div class="card"><div class="k">One home</div><h4>Per project</h4>
+      <p>the workspace is named for the method's CLI, not the tool of the moment; dot-space (<code>.cvg/</code>) stays reserved for machine config.</p></div>
+    <div class="card"><div class="k">One direction</div><h4>Never backward</h4>
+      <p>inputs feed, agreements gate, drafts expire, units seal, evidence freezes — nothing flows upstream.</p></div>
+    <div class="card"><div class="k">One truth</div><h4>The repo</h4>
+      <p>second-brain tools pull from the repo, never the reverse — the repo stays the single source of truth.</p></div>
+  </div>
+
+  <div class="callout">
+    <div class="k">The convention</div>
+    <p>The repo stays the single source of truth; second-brain tools and trackers are <b>projections</b>.
+    <code>.cvg/</code> records non-secret choices only — credentials live in the environment or a secrets manager,
+    never in project state. Conversation memory is orientation, never proof.</p>
+  </div>
+  <div class="folio">20</div>
+</section>
+
+<!-- ============ 21 · CVG CLI ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The cvg CLI — a referee, never a player.</h2>
+  <p class="eyebrow">Agent-native · v0.16.0 · zero model credentials</p>
+
+  <p>Every pass is gated by one CLI — <code>cvg</code> — wrapping the proven skill scripts. It holds
+  <b>zero model credentials</b> and makes no LLM calls: it frames prompts, dispatches engine CLIs headlessly,
+  and gates their output. Wrapped gates are <b>byte-exact pass-throughs</b>; bash-3.2-safe, stdlib-only,
+  dep-free in CI. Every gate ends in ONE stable, greppable token, and exit codes are contracts — a harness
+  never parses prose.</p>
+
+  <pre class="code"><span class="c"># the whole nine-pass chain — one name, one token each</span>
+cvg <span class="g">capture</span>    → CHECK_BRD=PASS          cvg <span class="g">decompose</span> → CHECK_PLAN=OK
+cvg <span class="g">intent</span>     → CHECK_TECH_SPEC=PASS    cvg <span class="g">review</span> --adversary codex,kimi → REVIEW=OK
+cvg <span class="g">structure</span>  → CHECK_ADR=OK            cvg <span class="g">review</span> --check → CHECK_CONSENSUS=OK
+cvg <span class="g">tasks</span> validate | gate | accept | dod  cvg <span class="g">doctor</span> → DOCTOR=OK
+cvg <span class="g">register</span> [--check] → CHECK_REGISTER=OK
+cvg <span class="g">bind</span> [--check] --task &lt;spec&gt; → CHECK_RUNTIME_CONTRACT=PASS
+
+<span class="c"># agent-native — wrap ANY command in one uniform envelope</span>
+$ cvg --json capture
+{ <span class="y">"ok"</span>:true, <span class="y">"command"</span>:<span class="w">"capture"</span>, <span class="y">"token"</span>:<span class="w">"CHECK_BRD=PASS"</span>,
+  <span class="y">"exit_code"</span>:0, <span class="y">"changed"</span>:false, <span class="y">"error"</span>:null,
+  <span class="y">"meta"</span>:{ <span class="y">"schema_version"</span>:<span class="w">"1.0"</span>, <span class="y">"cvg_version"</span>:<span class="w">"0.16.0"</span> } }
+
+cvg <span class="g">agent-context</span>  → command tree + exit-code taxonomy (retryable), as JSON
+cvg <span class="g">setup</span> tracker linear → discover team · record choice, never key
+cvg &lt;mutation&gt; <span class="g">--dry-run</span>  → reports intent, changes nothing (changed:false)</pre>
+
+  <div class="cards">
+    <div class="card"><div class="k">Agent-native</div><h4>--json · agent-context · dod</h4>
+      <p>a uniform <code>--json</code> envelope on every command, an exit-code taxonomy with
+      <code>retryable</code>/<code>side_effects</code>, a self-describing manifest, <code>--dry-run</code> on mutations,
+      and the DoD/traceability view — all shipped.</p></div>
+    <div class="card"><div class="k">Dogfooding</div><h4>Nothing to trust, only to diff</h4>
+      <p>Every subcommand reproduces the canonical manual run — artifacts and gate verdicts diffed against the
+      golden reference — before it ships. Gates ship as versioned exit contracts whose regression suites prove
+      the <em>negatives</em> fail: a fixture that wrongly PASSes is caught, because evals must discriminate.</p></div>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">The result</div>
+    <p>A referee you can point an autonomous engine at — it never bluffs a pass.</p>
+  </div>
+  <div class="folio">21</div>
+</section>
+
+<!-- ============ 22 · PART II COVER ============ -->
+<section class="page section-cover">
+  <div class="kicker">Part II · operational specification</div>
+  <h1>The Agent<br>Operating <span class="accent">cvg.</span></h1>
+  <p>The first half explains the method. This half explains the machine behavior: how an autonomous agent
+  discovers the available surface, creates the right artifact at the right altitude, invokes the referee,
+  interprets a stable verdict, repairs only the owning stage, and advances without inventing state.</p>
+  <div class="rule" style="height:1px;background:#26405a;margin:14mm 0 6mm"></div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:8pt;color:#47b87c;letter-spacing:.04em">
+    DISCOVER agent-context → AUTHOR with the stage skill → GATE through cvg → INTERPRET token + exit → REPAIR OR HAND OFF
+  </div>
+  <p style="font-size:8.6pt;color:#8fa6ba;margin-top:5mm">One protocol, repeated at every altitude. The CLI is
+  the referee; the skills and engine sessions are the players. The agent never mistakes validation for
+  authorship.</p>
+</section>
+
+<!-- ============ 23 · AGENT PROTOCOL ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The universal agent protocol.</h2>
+  <p class="eyebrow">The same control loop at every pass · only the artifact and gate change</p>
+
+  <p>An agent does not "run Converge" as one giant prompt. It advances a typed state machine one gate at a
+  time. Each pass owns one transformation; <code>cvg</code> publishes the evidence contract that says whether the
+  transformation is allowed to hand off.</p>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart TB
+  A["artifact N−1"]:::ghost
+  SK["<b>STAGE SKILL</b> — author / sharpen"]:::step
+  ART["<b>ARTIFACT N</b>"]:::art
+  G{"<b>cvg GATE --json</b>"}:::gate
+  RED["<b>RED · exit 1</b><br>repair artifact N <b>at its owner</b><br><i>never patch N+1 around it</i>"]:::red
+  GRN["<b>GREEN · exit 0</b><br>receipt + handoff to N+1<br><i>never skip the gate</i>"]:::ok
+  A --> SK --> ART --> G
+  G -- "red" --> RED --> SK
+  G -- "green" --> GRN
+  classDef ghost fill:#0f2740,stroke:#3a5670,color:#8fa6ba,font-style:italic;
+  classDef step fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef art fill:#12283f,stroke:#5d7a95,color:#cfe0ee;
+  classDef gate fill:#12283f,stroke:#47b87c,color:#dff0e6;
+  classDef red fill:#3d1a1a,stroke:#b1543f,color:#f0cfc8;
+  classDef ok fill:#1f7a4a,stroke:#47b87c,color:#ffffff,font-weight:bold;
+    </pre>
+  </div>
+
+  <table>
+    <thead><tr><th style="width:8mm">#</th><th style="width:26mm">Step</th><th>Agent rule</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><b>Discover</b></td><td>Call <code>cvg agent-context</code> once. Learn command names, tokens, mutability, retryability, and the CLI version without scraping help prose.</td></tr>
+      <tr><td class="num">2</td><td><b>Locate state</b></td><td>Read <code>cvg/INDEX.md</code>, then the artifact owned by the current pass. <b>Never infer progress</b> from a branch name, tracker column, or conversation memory.</td></tr>
+      <tr><td class="num">3</td><td><b>Author</b></td><td>Use the stage skill to create or sharpen the artifact. The CLI validates; it does not replace the authoring skill or the stakeholder decision.</td></tr>
+      <tr><td class="num">4</td><td><b>Preview</b></td><td>For a mutation, prefer <code>--dry-run</code> or the stage's read-only check. Confirm targets, blast radius, credentials boundary, and expected receipt before changing state.</td></tr>
+      <tr><td class="num">5</td><td><b>Gate</b></td><td>Invoke <code>cvg … --json</code>. Trust the exit code plus stable token — do not infer success from a pleasant sentence, an engine exit 0, or an artifact merely existing.</td></tr>
+      <tr><td class="num">6</td><td><b>Settle</b></td><td>GREEN → persist proof and hand the typed output to the next pass. RED → repair the artifact <b>in the pass that owns it</b>, rerun the same gate, and never patch downstream around an upstream gap.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="k">The most important distinction</div>
+    <p>A skill <b>transforms</b>; <code>cvg</code> <b>adjudicates</b>. <code>cvg capture</code> does not interview the owner,
+    and <code>cvg intent</code> does not write the tech-spec. An agent that asks the referee to be the player has
+    removed the very separation that makes the evidence trustworthy.</p>
+  </div>
+  <div class="folio">23</div>
+</section>
+
+<!-- ============ 24 · MACHINE CONTRACTS ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">Machine contracts — how the agent decides.</h2>
+  <p class="eyebrow">Tokens · JSON envelope · exit taxonomy · mutation semantics</p>
+
+  <p>An autonomous caller needs a smaller, stricter surface than a human. Every <code>cvg</code> command therefore
+  ends in a stable token and preserves a typed exit code. <code>--json</code> wraps the same command without
+  changing the underlying verdict or the byte-parity default path.</p>
+
+  <table>
+    <thead><tr><th style="width:14mm">Exit</th><th style="width:32mm">Meaning</th><th>Agent response</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0</td><td><b>OK</b></td><td>Persist receipt and advance. For a mutation, confirm <code>changed</code> matches expectation.</td></tr>
+      <tr><td class="num">1</td><td><b>GATE_FAIL</b></td><td>Artifact is red. Repair at the current pass; a blind retry is not progress.</td></tr>
+      <tr><td class="num">2</td><td><b>USAGE_ERROR</b></td><td>Bad flag, ambiguous discovery, or nothing to gate. Fix invocation or identify the artifact.</td></tr>
+      <tr><td class="num">20</td><td><b>SKIP</b></td><td>Engine unavailable. Select an allowed ready engine or stop with an explicit coverage gap.</td></tr>
+      <tr><td class="num">21</td><td><b>TIMEOUT</b></td><td>Retryable dispatch failure. Scope smaller or retry within policy; <b>no fabricated artifact</b>.</td></tr>
+      <tr><td class="num">22</td><td><b>ENGINE_ERROR</b></td><td>Provider output could not become a valid judgment. Preserve raw output and diagnose adapter/format.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cards">
+    <div class="card"><div class="k">Read-only by default</div><h4>Gate without changing</h4>
+      <p><code>capture</code>, <code>intent</code>, <code>structure</code>, <code>decompose</code>, checks, lint, ready, eval, manifest.</p></div>
+    <div class="card"><div class="k">Mutations are explicit</div><h4>Preview, then act</h4>
+      <p>adversary dispatch, acceptance stamps, transitions, setup choice, registration, bind. Use <code>--dry-run</code> where supported.</p></div>
+    <div class="card"><div class="k">Receipts, not stories</div><h4>Persist the verdict</h4>
+      <p>store the token, exit, version, artifact hash/path, and external ref. Human prose is context, never the gate.</p></div>
+  </div>
+
+  <div class="callout">
+    <div class="k">The rule that prevents fabricated progress</div>
+    <p>Exits <b>20 / 21 / 22</b> are <em>infrastructure</em> conditions and are retryable; exit <b>1</b> is an
+    <em>artifact</em> gate failure and must be repaired, not blindly retried. An agent that cannot tell these
+    apart will eventually invent an artifact to satisfy a gate — which is precisely the failure the whole
+    evidence design exists to prevent.</p>
+  </div>
+  <div class="folio">24</div>
+</section>
+
+<!-- ============ 25 · EVIDENCE LEDGER ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">Evidence ledger — what exists, what is proved.</h2>
+  <p class="eyebrow">A blueprint becomes misleading when it treats shipped and proved as the same state</p>
+
+  <p>Code-complete, fixture-proven, live-connected, and proving-ground-closed are four different states. v6
+  keeps them explicit.</p>
+
+  <table>
+    <thead><tr><th style="width:34mm">Surface</th><th style="width:26mm">State</th><th>Evidence boundary</th></tr></thead>
+    <tbody>
+      <tr><td><b>Passes 0–4</b></td><td><b style="color:var(--green-dim)">CLOSED</b></td><td>Canonical proving-ground artifacts, direct-gate parity, and a real cross-family Consensus with provenance re-hash.</td></tr>
+      <tr><td><b>Tasking · Pass 5</b></td><td><b style="color:var(--green-dim)">CLOSED</b></td><td>Nine backbone legs are nine specs; all <code>validate</code> ok, <code>gate</code> DELEGATE, <code>dod</code> COMPLETE.</td></tr>
+      <tr><td><b>Register · Pass 6</b></td><td><b style="color:var(--amber)">LIVE-PROVEN</b></td><td>Six-verb adapters; 120/120 offline suite via the <code>fake</code> backend; live Linear registration exercised (CVG-21…29) with a real 1:1 parity gate.</td></tr>
+      <tr><td><b>Bind · Pass 7</b></td><td><b style="color:var(--amber)">IMPLEMENTED</b></td><td>Binder, readiness gate, path guard, adapters, receipts exist; 19/19 regression checks green. Full proving-ground closure still ahead.</td></tr>
+      <tr><td><b>Loop · Pass 8</b></td><td><b style="color:var(--muted)">SINGLE ISSUE</b></td><td><code>task-loop</code> executes one named issue; <code>cvg eval</code> runs evals. Manager, fan-out, CI board automation remain planned.</td></tr>
+      <tr><td><b>cvg core</b></td><td><b style="color:var(--green-dim)">SHIPPED</b></td><td>0.16.0: pass gates, agent-context, JSON, dry-run, DoD, setup, register, bind.</td></tr>
+      <tr><td><b>Task-Spec</b></td><td><b style="color:var(--green-dim)">3.6.0</b></td><td>Six-tier engine, dual gates, HMAC envelope, L0–L2 conformance suite.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cards">
+    <div class="card"><div class="k">Implemented means</div><h4>It exists on disk</h4>
+      <p>the command or skill exists and its documented contract can be inspected. It may also have fixture
+      proof. <b>This does not automatically close its method round.</b></p></div>
+    <div class="card"><div class="k">Closed means</div><h4>It ran, for real</h4>
+      <p>the real pass ran on the proving ground, the artifact was canonized, the CLI reproduced the golden
+      gate, the proof is durable, and the owner can be taught what closed.</p></div>
+  </div>
+
+  <div class="callout warn">
+    <div class="k">The named next step</div>
+    <p>The field's litmus test for a <em>real</em> dark factory is three load-bearing properties: agents work from
+    <b>written specs</b> (Converge ✅), an <b>isolated evaluator grades against holdout the coder cannot see</b>
+    (Converge ⚠️ — this is the promoted backlog item), and the <b>deploy path is unchanged</b> (Converge ✅).
+    Stating the gap is the point.</p>
+  </div>
+  <div class="folio">25</div>
+</section>
+
+<!-- ============ 26 · DEFENSIBLE ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">Why this is defensible</h2>
+  <p class="eyebrow">Two moats · positioning · the honest boundary</p>
+
+  <h3 class="sec">The two moats</h3>
+  <div class="cards">
+    <div class="card"><div class="k">Optionality</div><h4>Task-Spec</h4>
+      <p>the eval — not the agent — defines done, so you swap Codex / Kimi / Claude freely; the coding agent is
+      a commodity slot.</p></div>
+    <div class="card"><div class="k">Quality</div><h4>Harness</h4>
+      <p>the control-plane files that make any commodity agent succeed; not downloadable, built over thousands
+      of hours.</p></div>
+    <div class="card"><div class="k">Together</div><h4>Defensible</h4>
+      <p>run on commodity models, produce defensible output. Two moats — optionality <em>and</em> quality — not one.</p></div>
+  </div>
+
+  <h3 class="sec">Positioning vs the field</h3>
+  <p>The canonical 2026 spec-driven pipeline is <b>Specify → Plan → Tasks → Implement</b>, punctuated by human
+  checkpoints — Spec Kit, Kiro, OpenSpec, and BMAD all share that shape, and their gates and loops keep
+  growing. Converge's claim is not a feature checklist but a <b>difference in contract</b>: the full
+  front-of-funnel intent descent (0–4) where most tools start at "you already have a spec"; the adversarial
+  <b>Consensus</b> pass where a <em>different-family</em> model attacks each plan default-to-refuted; an
+  <b>explicit barrier</b> instead of implicit checkpoints; <b>HMAC-sealed specs</b> as the only trusted
+  instruction source (injection defense); the <b>one-spine model</b> that decomposes big work in place rather
+  than routing to a second paradigm; and the closed <b>Loop</b> of Pass 8, where every unit is born with a
+  runnable eval and only a green eval closes an issue.</p>
+
+  <div class="callout warn">
+    <div class="k">The honest boundary</div>
+    <p>The Loop converges to <b>green evals, not to correct outcomes</b>. A passing spec test guarantees only that
+    the code matches the spec — if the spec is wrong, the code faithfully implements the wrong thing. The Dark
+    Factory automates the <em>build</em>, not the <em>judgment of whether the spec was right</em>. The defense is
+    structural and partial, not total: Phase 1 exists entirely to make the intent right, Pass 1's gate forces
+    the spec to answer the brief, and Pass 4's adversary attacks it before any code is written. <b>Stating this
+    plainly is the point — the intellectual honesty is the moat's foundation, not a footnote.</b></p>
+  </div>
+  <div class="folio">26</div>
+</section>
+
+<!-- ============ 27 · RUNTIME PROVEN + EVERY ENGINEER ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The runtime, proven</h2>
+  <p class="eyebrow">What the skills already enforce — not a promise, a mechanism</p>
+
+  <p>The gates above are not honour-system prompts. The task-spec skill ships the runtime that makes
+  "done = proved" a mechanism a human cannot fake and an agent cannot shortcut. Five enforcement layers
+  matter most, and all five already exist on disk.</p>
+
+  <table>
+    <thead><tr><th style="width:40mm">Layer</th><th>What it enforces · where it lives</th></tr></thead>
+    <tbody>
+      <tr><td><b>Atomic state machine</b></td><td>A locked, portable transition protocol — advisory lock, read current status, validate the transition against a real state machine, write via tmp-file + atomic move. Two agents cannot both claim one ready task.</td></tr>
+      <tr><td><b>Tool-captured evidence</b></td><td>The acceptance gate <b>re-runs the evals itself</b> — it never trusts the executor's word. A non-zero exit is rejected automatically.</td></tr>
+      <tr><td><b>Anti-reward-hacking</b></td><td>Blast-radius check (changed files must be inside <code>touches_paths</code>), HMAC contract integrity (evals were not weakened after sign-off), and <b>gold-sanity</b> — the eval must FAIL on the unpatched baseline.</td></tr>
+      <tr><td><b>Rebuildable ledger</b></td><td>The spec frontmatter is truth; the metrics ledger is append-only; the state index is rebuildable. The board is a projection of one source of truth — it cannot silently diverge.</td></tr>
+      <tr><td><b>Teaching gate</b></td><td>Every artifact taught, every decision naming a rejected alternative, every term of art defined, 3–5 check-yourself questions. <b>A pass is not closed until its lesson exists.</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <h2 class="title sm">One method, every engineer</h2>
+  <p class="eyebrow">The role lives in the eval, not the loop</p>
+  <p>The loop never inspects <em>what</em> a task is — only whether its eval is green. All role-specificity is
+  pushed down into the per-task eval, so the role does not change the machine; it only changes the assertion
+  the machine waits on.</p>
+
+  <table>
+    <thead><tr><th style="width:44mm">Role</th><th>What its task's eval is</th></tr></thead>
+    <tbody>
+      <tr><td><b>Data Engineer</b></td><td>a dbt test + a control-sum query against gold</td></tr>
+      <tr><td><b>Software Engineer</b></td><td>a unit / integration test that passes</td></tr>
+      <tr><td><b>DevOps</b></td><td><code>terraform plan</code> clean + a smoke test</td></tr>
+      <tr><td><b>AI Engineer</b></td><td>a retrieval-precision or eval-set threshold met</td></tr>
+    </tbody>
+  </table>
+  <div class="folio">27</div>
+</section>
+
+<!-- ============ 28 · END TO END ============ -->
+<section class="page">
+  <div class="page-head">Converge · the canonical blueprint · v6</div>
+  <h2 class="title">The method, end to end on one feature</h2>
+  <p class="eyebrow">postgres → duckdb → dbt → MCP · the worked example</p>
+
+  <p>One feature carries the whole framework: <b>"daily revenue per product category, served via MCP so a
+  non-engineer can ask for it."</b> Every pass runs on the real repo.</p>
+
+  <table>
+    <thead><tr><th style="width:30mm">Pass</th><th>What happens on the real repo</th></tr></thead>
+    <tbody>
+      <tr><td><b>0 · Capture</b></td><td>Raw idea → <code>docs/brd-analytical-backbone.md</code> in the owner's voice, signed. <em>Gate: check-brd green.</em></td></tr>
+      <tr><td><b>1 · Intent</b></td><td>BRD → tech-spec: one gold model + one MCP tool over raw orders + payments + products. <em>Gate: the spec answers the brief.</em></td></tr>
+      <tr><td><b>2 · Structure</b></td><td>Brownfield. Open <code>src/db/01_schema.sql</code>; write ADRs <code>0001-join-on-order-id</code>, <code>0002-utc-date-grain</code>, <code>0003-revenue-is-paid-only</code>.</td></tr>
+      <tr><td><b>3 · Decompose</b></td><td>Two lanes, plan-altitude only: transform (<code>silver → gold_daily_revenue</code>) and serve (<code>mcp tool query_daily_revenue</code>).</td></tr>
+      <tr style="background:var(--green-wash)"><td><b>4 · Consensus</b><br><span style="font-size:6.2pt;letter-spacing:.12em;color:var(--green-dim)">THE BARRIER</span></td><td><code>cvg review --adversary codex</code> attacks: <em>"midnight off-by-one (no TZ)? refunds counted?"</em> FIX: pin UTC (ADR-0002). ACCEPT: refunds out of v1, owner named. <b>The owner signs off — barrier crossed.</b></td></tr>
+      <tr><td><b>5 · Tasking</b></td><td><code>build_gold_revenue</code> (eval: dbt test + control-sum) and <code>build_mcp_revenue</code> (eval: tool result == gold query). Each born with its eval, HMAC-sealed.</td></tr>
+      <tr><td><b>6 · Register</b></td><td><code>--tracker linear</code>: <code>build_gold_revenue → ISSUE-41 [ready]</code>; <code>build_mcp_revenue → ISSUE-42 [blocked-by 41]</code>.</td></tr>
+      <tr><td><b>7 · Bind</b></td><td><code>cvg bind --task build_gold_revenue.md</code>: bind the signed hash to ADRs + cached dbt docs + single topology + path guards; emit <code>AGENTS.md</code> → <code>CHECK_RUNTIME_CONTRACT=PASS</code>.</td></tr>
+      <tr><td><b>8 · The Loop</b></td><td><code>task-loop --issue 41</code>: contract PASS → dbt test RED (null categories) → add <code>COALESCE</code> → GREEN + path policy PASS → PR. 41 done, 42 unblocks.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout gate">
+    <div class="k">The Dark Factory, on this repo</div>
+    <p>A non-engineer asks the MCP <em>"revenue by category yesterday?"</em> — and it answers. Built brief →
+    deploy, every step eval-verified, <b>the human walked out at the barrier</b>.</p>
+  </div>
+  <div class="folio">28</div>
+</section>
+
+<!-- ============ 29 · COLOPHON ============ -->
+<section class="page section-cover">
+  <div class="kicker">Colophon · provenance</div>
+  <h1>You are converged<br>when the eval passes —<br><span class="accent">not when you feel done.</span></h1>
+  <p style="margin-top:8mm">This blueprint was reconciled against the live repository: the twelve
+  <code style="color:#47b87c">SKILL.md</code> contracts, <code style="color:#47b87c">bin/cvg</code> and its surface
+  ledger, the Task-Spec changelog, the six-verb adapter contract, <code style="color:#47b87c">PLAN.md</code>, and
+  the <code style="color:#47b87c">tests/uc-analytics</code> proving ground. Where a surface is implemented but not
+  yet proven end-to-end, the evidence ledger says so plainly rather than rounding it up.</p>
+
+  <div style="height:1px;background:#26405a;margin:10mm 0 6mm"></div>
+
+  <div class="meta" style="display:flex;gap:16mm;flex-wrap:wrap">
+    <div><div class="k" style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Version</div>
+         <div class="v" style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee">Method v6 · supersedes v5</div></div>
+    <div><div class="k" style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Components</div>
+         <div class="v" style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee">12 skills · cvg 0.16.0 · Task-Spec 3.6.0</div></div>
+    <div><div class="k" style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Licence</div>
+         <div class="v" style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee">MIT · built by Luan Moreno</div></div>
+  </div>
+
+  <p style="font-size:8.2pt;color:#6f889f;font-style:italic;margin-top:12mm">What changed from v5 — Register
+  entered the numbered chain as Pass 6, moving Bind to Pass 7 and folding the harness emit into it; the
+  <code style="color:#47b87c">stack-to-harness</code> skill was deleted and the skill count fell from 13 to 12;
+  the Manager left the numbered chain to become a future CI/CD concern; and the barrier at Consensus was
+  promoted from an implicit handoff to the organising idea of the whole method.</p>
+</section>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  securityLevel: 'loose',
+  themeVariables: {
+    darkMode: true,
+    background: '#0c2038',
+    primaryColor: '#17324d',
+    primaryTextColor: '#dce7f0',
+    primaryBorderColor: '#5d7a95',
+    secondaryColor: '#12283f',
+    tertiaryColor: '#0f2740',
+    lineColor: '#6d8ba6',
+    textColor: '#cfe0ee',
+    mainBkg: '#17324d',
+    nodeBorder: '#5d7a95',
+    clusterBkg: '#0a1b2e',
+    clusterBorder: '#2c4761',
+    edgeLabelBackground: '#0c2038',
+    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+    fontSize: '13px'
+  },
+  flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: false, padding: 10, nodeSpacing: 30, rankSpacing: 32 }
+});
+</script>
+</body>
+</html>

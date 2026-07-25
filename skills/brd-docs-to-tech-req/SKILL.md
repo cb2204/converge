@@ -186,7 +186,7 @@ negative fixture must fail for its intended reason).
 | `--out-format md\|pdf` | `pdf` | Deliverable format. `pdf` while the spec is a consensus object the client approves; `md` once locked so the build can read it. |
 | `--questions batch\|one` | `batch` | Interrogation mode. `batch` (canonical) = frontier rounds: each round asks every question whose prerequisites are settled, numbered, with recommended defaults — one reply answers the round. `one` = strict one-question-at-a-time. |
 
-No tracker flag — Pass 1 emits a single consensus document, not a registered work set. Tracker binding starts at Pass 5B / register.
+No tracker flag — Pass 1 emits a single consensus document, not a registered work set. Tracker binding starts at Pass 5 / register.
 
 ## Examples
 

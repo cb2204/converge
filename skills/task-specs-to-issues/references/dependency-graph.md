@@ -47,7 +47,7 @@ is safe because task ids never contain whitespace.
 
 ## Cycle detection (Kahn peel)
 
-A `depends_on` loop is a **spec bug (Pass 5B), not a board state** — registration
+A `depends_on` loop is a **spec bug (Pass 5), not a board state** — registration
 refuses the whole run rather than write a graph the loop could never drain.
 `register.sh` and `verify-registration.sh` both run Kahn's algorithm over the
 signed-off subgraph, held entirely in newline-delimited scratch files:
@@ -103,4 +103,4 @@ is exactly
 `[bronze-views]` — the single root the loop pulls first. Today only
 `bronze-views` is `signed_off: true`, so registration writes **one** issue with
 **zero** links and a ready set of `[bronze-views]`; the other six are skipped and
-reported until they pass the safe-to-delegate gate (Pass 5B).
+reported until they pass the safe-to-delegate gate (Pass 5).

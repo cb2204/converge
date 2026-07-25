@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Task-Spec v3.6 — The Cornerstone Unit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cvg-theme.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+
+<!-- ============ 01 · COVER ============ -->
+<section class="page cover">
+  <div class="wordmark">Task-<em>Spec</em></div>
+
+  <div class="kicker">Converge Pass 5 · the cornerstone unit · v3.6.0 — six tiers, dual gates, one sealed file</div>
+  <h1>The Unit That<br>Verifies <span class="accent">Itself.</span></h1>
+
+  <p class="lede">Every AI coding tool consumes some form of "task." Most of those are PRDs — written for
+  humans, interpreted by humans, judged by humans. That makes agents <em>non-autonomous</em>: they need a
+  person in the middle of the loop. Task-Spec fixes that. Each spec carries its own <b>runnable bash
+  success criteria</b>, so an agent reads it, executes, runs the evals, and loops on failure without a human
+  in the middle. This is <b>Eval-Driven Development</b> — the same conceptual leap as TDD or
+  Infrastructure-as-Code.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n">6</div><div class="l">tiers · XS→XXL<br>leaves &amp; nodes</div></div>
+    <div class="stat"><div class="n">6</div><div class="l">zones per<br>spec</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">gates · duals<br>PRE &amp; POST</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">conformance<br>levels L0–L2</div></div>
+    <div class="stat"><div class="n sm">HMAC</div><div class="l">sealed · the only<br>instruction source</div></div>
+  </div>
+
+  <div class="rule"></div>
+  <div class="meta">
+    <div><div class="k">Document</div><div class="v">The cornerstone unit, in depth · v3.6.0</div></div>
+    <div><div class="k">Format version</div><div class="v"><code style="color:#47b87c">format_version: 3</code> · additive since 3.0</div></div>
+  </div>
+
+  <div class="fine">One format, many executors — Claude, Codex, Kimi, Gemini, taskship, anthive, or a human
+  with a terminal. The eval, not the agent, defines done, which is what makes the coding engine a
+  commodity slot. <b style="color:#47b87c">No eval, not a task yet.</b></div>
+</section>
+
+<!-- ============ 02 · WHY ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Why the unit had to change</h2>
+  <p class="eyebrow">From "a document a human judges" to "a file that judges itself"</p>
+
+  <p>A PRD is a <em>request for interpretation</em>. It describes an outcome in prose and leaves the
+  question of whether the outcome was achieved to a reviewer. That is a perfectly good contract between
+  two humans — and a broken one between a human and a machine, because the machine cannot execute a
+  standard it cannot read, and cannot know when to stop.</p>
+
+  <p>Task-Spec inverts the contract. The definition of done <b>travels inside the file</b>, as bash. That
+  single move changes four things at once:</p>
+
+  <table>
+    <thead><tr><th style="width:44mm">Dimension</th><th style="width:52mm">Prose task (PRD)</th><th>Task-Spec (EDD)</th></tr></thead>
+    <tbody>
+      <tr><td><b>"Done" is decided by</b></td><td>human review</td><td>bash evals returning 0</td></tr>
+      <tr><td><b>Iteration cadence</b></td><td>hours – days</td><td>seconds – minutes</td></tr>
+      <tr><td><b>Portability</b></td><td>vendor-specific</td><td>universal — markdown + YAML + bash</td></tr>
+      <tr><td><b>Audit trail</b></td><td>narrative</td><td>machine ledger</td></tr>
+      <tr><td><b>Catches ambiguity</b></td><td>maybe</td><td>yes — the eval fails to be writable</td></tr>
+      <tr><td><b>Authoring cost</b></td><td>faster (prose)</td><td>slower — evals are harder to write</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="k">The honest cost</div>
+    <p>That last row is real and is not hidden. Writing a runnable eval is harder than writing a
+    paragraph, and the difficulty is the point: <b>if you cannot express done as a check, you have not
+    finished thinking.</b> The cost is paid once, by the author, instead of every time, by a reviewer.</p>
+  </div>
+
+  <div class="callout gate">
+    <div class="k">The rule that makes the whole method work</div>
+    <p><b>No eval, not a task yet.</b> A spec without a runnable check is a wish. Because the eval — and not
+    the agent — defines done, any coding agent becomes a swappable commodity slot: swap Claude for Codex
+    for Kimi and the gate is unmoved.</p>
+  </div>
+</section>
+
+<!-- ============ 03 · ANATOMY ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Anatomy — frontmatter plus six zones</h2>
+  <p class="eyebrow">Everything the executor needs, and nothing it must guess</p>
+
+  <table>
+    <thead><tr><th style="width:14mm">Zone</th><th style="width:40mm">Name</th><th>What it holds · why</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><b>Intent</b></td><td>Why this task exists — goal + bounded context. Keep it short; a Context over ~100 lines means you wrote a PRD.</td></tr>
+      <tr><td class="num">2</td><td><b>Behavior</b></td><td>GIVEN / WHEN / THEN statements, each labelled <code>B-N</code>. Every behavior demands at least one eval — this is the traceability spine.</td></tr>
+      <tr style="background:var(--green-wash)"><td class="num">3</td><td><b>Contract</b><br><span style="font-size:6.2pt;letter-spacing:.12em;color:var(--green-dim)">THE MOAT</span></td><td>Runnable bash <code>eval_N()</code> functions + the Validation Card (YAML) + the Exit Check. This is the self-verifying core.</td></tr>
+      <tr><td class="num">4</td><td><b>Guardrails</b></td><td>Anti-patterns and do-not-touch paths — bound the agent's blast radius, specifically. "Be careful" is not a guardrail.</td></tr>
+      <tr><td class="num">5</td><td><b>Operations</b></td><td>Open questions — admit unknowns honestly so a stalled loop knows where to ask.</td></tr>
+      <tr><td class="num">6</td><td><b>Rollback + Observability</b><br><span style="color:var(--muted);font-size:7.4pt">full profile only</span></td><td>How to reverse a failed execution, and what to watch during and after it.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="k">Profiles — zones scale with effort</div>
+    <p>Not every task earns every zone. A <code>minimal</code> spec carries the load-bearing zones only; the
+    <code>full</code> profile adds Rollback + Observability. The profile is effort-scaled, so an XS config bump
+    does not have to carry a rollback plan it will never use.</p>
+  </div>
+
+  <h3 class="sec">Frontmatter — the machine-readable header</h3>
+  <pre class="code"><span class="c">---</span>
+<span class="y">id</span>: T-20260519-add-health-endpoint     <span class="c"># T-YYYYMMDD-&lt;kebab-slug&gt;</span>
+<span class="y">status</span>: ready                            <span class="c"># ready|in-progress|blocked|done|parked</span>
+<span class="y">format_version</span>: 3
+<span class="y">profile</span>: standard                        <span class="c"># minimal | standard | full</span>
+<span class="y">effort</span>: S                                <span class="c"># XS·S·M·L leaf | XL·XXL node</span>
+<span class="y">budget_iterations</span>: 10                    <span class="c"># the retry ceiling — not a success criterion</span>
+<span class="y">execution_backend</span>: any                    <span class="c"># OPEN STRING — the backend names itself</span>
+<span class="y">depends_on</span>: []                            <span class="c"># the DAG edges — cycle-checked</span>
+<span class="y">touches_paths</span>: [src/api/server.py, tests/test_health.py]   <span class="c"># blast radius</span>
+<span class="y">tracker_ref</span>: (none)                       <span class="c"># receipt written BACK by Pass 6 — never by hand</span>
+<span class="y">signed_off</span>: false                         <span class="c"># only the PRE gate flips this</span>
+<span class="y">accepted</span>: false                           <span class="c"># only the POST gate flips this</span>
+<span class="c">---</span></pre>
+
+  <div class="callout warn">
+    <div class="k">Two fields no human may write</div>
+    <p><code>signed_off</code> and <code>accepted</code> are <b>gate outputs, not author inputs</b>. Hand-stamping either
+    is rejected — the sign-off envelope check recomputes an HMAC over a canonical payload and compares.
+    <code>tracker_ref</code> is likewise a receipt, written back by Register after a successful upsert.</p>
+  </div>
+</section>
+
+<!-- ============ 04 · WORKED EXAMPLE ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">A complete spec, end to end</h2>
+  <p class="eyebrow">~95 lines · every behavior eval-covered · every eval traced to a behavior</p>
+
+  <pre class="code"><span class="g">## Behavior</span>
+- <span class="w">B-1</span> — GIVEN the api server is running WHEN a client GETs /health
+        THEN it responds HTTP 200 with body {"status":"ok"}
+- <span class="w">B-2</span> — GIVEN the new endpoint exists WHEN the test suite runs
+        THEN a regression test for /health passes
+
+<span class="g">## Success Criteria</span>          <span class="c"># THE MOAT — runnable, deterministic</span>
+```bash
+eval_1() { uvicorn src.api.server:app --port 8001 &amp; PID=$!; sleep 2; kill -0 $PID 2&gt;/dev/null; }
+eval_2() { curl -fs http://localhost:8001/health | jq -e '.status == "ok"'; }
+eval_3() { pytest tests/test_health.py -q; }
+```
+
+<span class="g">## Validation Card</span>          <span class="c"># the machine-readable index of the evals</span>
+```yaml
+success_criteria:
+  - {id: eval_1, <span class="y">verifies</span>: [B-1], check_type: deterministic, terminal: true}
+  - {id: eval_2, <span class="y">verifies</span>: [B-1], check_type: deterministic, terminal: true}
+  - {id: eval_3, <span class="y">verifies</span>: [B-2], check_type: deterministic, terminal: true}
+
+retry_policy:
+  max_iterations: 10
+  circuit_breaker_no_progress: 3
+  on_terminal_failure: park_with_context
+
+agent_contract:
+  version: 2
+  required_tools: [git, bash, python3]
+  emit: [pass, fail, retry_with_reason, parked_with_context]
+```
+
+<span class="g">## Exit Check</span>
+```bash
+eval_1 &amp;&amp; eval_2 &amp;&amp; eval_3
+```</pre>
+
+  <div class="cards">
+    <div class="card"><div class="k">Traceability</div><h4>Both directions</h4>
+      <p>B-1 is covered by <code>eval_1</code> + <code>eval_2</code>; B-2 by <code>eval_3</code>. Every behavior has an eval and
+      every eval names a behavior — an untraced behavior FAILS the Definition of Done.</p></div>
+    <div class="card"><div class="k">The circuit breaker</div><h4>Stop patching</h4>
+      <p><code>circuit_breaker_no_progress: 3</code> ends the "try the same thing louder" failure mode; on terminal
+      failure the task <b>parks with context</b> rather than looping or silently dying.</p></div>
+  </div>
+</section>
+
+<!-- ============ 05 · SIX TIERS ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">The six-tier engine — leaves run, nodes decompose</h2>
+  <p class="eyebrow">v3.4 made the cut recursive · size by context, verification, and blast radius</p>
+
+  <p>Sizing is <b>agent-native</b>: not human hours, but how much context the unit needs, how it verifies,
+  and how wide it writes. Two kinds. <b>Leaves</b> (XS/S/M/L) are directly runnable atoms that fit one fresh
+  executor session. <b>Nodes</b> (XL/XXL) are decomposition directives — not runnable at all; they MUST
+  declare a <code>children:</code> block and expand into leaves.</p>
+
+  <table>
+    <thead><tr><th style="width:13mm">Size</th><th style="width:26mm">Kind</th><th style="width:36mm">Write-surface budget</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td class="num">XS</td><td>leaf</td><td>≤ 1 path</td><td>a config key; bump a dependency</td></tr>
+      <tr><td class="num">S</td><td>leaf</td><td>≤ 2 paths</td><td>a <code>/health</code> endpoint + its test</td></tr>
+      <tr><td class="num">M</td><td>leaf</td><td>≤ 3 paths</td><td>a dbt model + schema + test</td></tr>
+      <tr><td class="num">L</td><td>leaf · the ceiling</td><td>≤ 5 paths · long-horizon backend</td><td>a service slice as ONE coherent goal</td></tr>
+      <tr><td class="num">XL</td><td>node · decomposes</td><td>children ≥ 2 · owns none</td><td>a whole swimlane → its leg leaves</td></tr>
+      <tr><td class="num">XXL</td><td>node · decomposes</td><td>children ≥ 3 · owns none</td><td>a whole backbone → swimlane nodes</td></tr>
+    </tbody>
+  </table>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart TB
+  XXL["<b>XXL</b> · analytical backbone<br><i>node — declares children, owns no paths</i>"]:::node
+  X1["<b>XL</b> · swimlane-transform"]:::node
+  X2["<b>XL</b> · swimlane-serve"]:::node
+  L1["<b>M</b> · silver conform<br><i>leaf · eval: dbt test</i>"]:::leaf
+  L2["<b>M</b> · gold marts<br><i>leaf · eval: control-sum</i>"]:::leaf
+  L3["<b>S</b> · query core<br><i>leaf · eval: contract test</i>"]:::leaf
+  L4["<b>S</b> · mcp tool<br><i>leaf · eval: tool == gold</i>"]:::leaf
+  XXL --> X1 --> L1 --> L2
+  XXL --> X2 --> L3 --> L4
+  classDef node fill:#12283f,stroke:#5d7a95,color:#9fb6cb;
+  classDef leaf fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 1</b> Descend by decomposition, run only leaves, compose verified results back up.
+  A breached write-surface budget is a <em>signal that the decomposition was too coarse</em> — split further.</p>
+
+  <div class="callout gate">
+    <div class="k">The gate is enforcement, not advice</div>
+    <p>A leaf over its budget WARNs <em>"mis-sized — split or reclassify UP."</em> An XL/XXL node with too few
+    children FAILs <em>"must decompose — no route out."</em> And <code>safe-to-delegate</code> <b>refuses to delegate a
+    node at all</b> — a worker dispatches a node's children, never the node itself.</p>
+  </div>
+</section>
+
+<!-- ============ 06 · NO ROUTE OUT ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Recursion, not escalation</h2>
+  <p class="eyebrow">v3.4 removed the SDD escape · v3.6 removed the vendor lock</p>
+
+  <p>Task-Spec used to have an exit. The old effort gate routed <code>XL → SDD</code>: work above a size
+  threshold left the format entirely for a plan-driven paradigm (AgentSpec / OpenSpec / Spec Kit). v3.4
+  removed that route. Big work now decomposes <b>in</b> — the same format, self-similar at every scale —
+  rather than escalating <b>out</b>.</p>
+
+  <div class="fig xlow">
+    <pre class="mermaid">
+flowchart LR
+  OLD["<b>v3.2 — the escape</b><br>XS/S/M → build<br>L → build, one vendor only<br><b>XL → route OUT to SDD</b><br><i>a second paradigm, a second format</i>"]:::old
+  NEW["<b>v3.4 + v3.6 — one path</b><br>XS/S/M/L → runnable leaves<br><b>XL/XXL → decompose IN to children</b><br>L → any long-horizon backend<br><i>tasks all the way down</i>"]:::new
+  OLD -- "the fork collapses" --> NEW
+  classDef old fill:#12283f,stroke:#3a5670,color:#8fa6ba;
+  classDef new fill:#0f3a26,stroke:#47b87c,color:#dff0e6;
+    </pre>
+  </div>
+
+  <p>The argument for the change is empirical: frontier engines execute well-scoped atoms reliably, and a
+  <em>tree of verified atoms composes back up more safely than one monolithic spec</em>. A monolith hides
+  which step regressed and makes per-stage evals unenforceable. Decomposition keeps every defect behind
+  its own green check.</p>
+
+  <h3 class="sec">v3.6 — the L tier stops naming a vendor</h3>
+  <p>Until v3.6, <code>effort: L</code> hard-failed unless <code>execution_backend: glm</code>. That contradicted the
+  format's own rule that <code>execution_backend</code> is an <b>open string</b> — "the backend names itself; the
+  values are non-normative examples, not an allow-list." The gate's real intent was <em>an L leaf needs a
+  long-horizon builder</em>, not <em>an L leaf needs one specific vendor</em>.</p>
+
+  <pre class="code"><span class="c"># the gate now checks membership, not identity</span>
+TS_LONG_HORIZON_BACKENDS="${TASKSPEC_LONG_HORIZON_BACKENDS:-<span class="g">glm claude codex kimi</span>}"
+
+<span class="c"># override per fleet — your harness names itself</span>
+export TASKSPEC_LONG_HORIZON_BACKENDS=<span class="w">"claude codex kimi glm my-harness"</span></pre>
+
+  <div class="callout">
+    <div class="k">Why this matters beyond one flag</div>
+    <p>It was surfaced by a real user whose fleet is Claude Code / Codex / Kimi: an L-sized spec could not
+    name the engine that was actually going to run it. A format that claims vendor-neutrality has to mean
+    it at the gate, not just in the prose — otherwise the neutrality is decorative.</p>
+  </div>
+</section>
+
+<!-- ============ 07 · DUAL GATES ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">The two gates are duals</h2>
+  <p class="eyebrow">Same evals · opposite expectations · one certifies the spec, the other the work</p>
+
+  <p>This is the most misunderstood part of the format. There are <b>two</b> gates, they run the same evals,
+  and they expect <b>opposite results</b>. The PRE gate certifies that the <em>spec</em> is safe to hand to a
+  machine. The POST gate certifies that the <em>work</em> actually satisfied it.</p>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart LR
+  AUTH["author writes<br>the spec"]:::ghost
+  VAL["validate<br><i>linter · no stamp</i>"]:::step
+  PRE{"<b>PRE GATE</b><br>evals must FAIL"}:::gate
+  SEAL["<b>HMAC sealed</b><br>signed_off: true"]:::ok
+  WORK["executor builds"]:::step
+  POST{"<b>POST GATE</b><br>evals must PASS"}:::gate
+  DONE["<b>accepted: true</b>"]:::ok
+  PARK["parked<br>with context"]:::red
+  AUTH --> VAL --> PRE
+  PRE -- "pass" --> SEAL --> WORK --> POST
+  PRE -- "fail" --> AUTH
+  POST -- "pass" --> DONE
+  POST -- "fail" --> PARK
+  classDef ghost fill:#0f2740,stroke:#3a5670,color:#8fa6ba,font-style:italic;
+  classDef step fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef gate fill:#12283f,stroke:#47b87c,color:#dff0e6;
+  classDef ok fill:#1f7a4a,stroke:#47b87c,color:#ffffff;
+  classDef red fill:#3d1a1a,stroke:#b1543f,color:#f0cfc8;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 2</b> Same evals, opposite expectations. An eval that passes <em>before</em> any work
+  exists is a broken eval; an eval that fails <em>after</em> it means the work is not done.</p>
+
+  <table>
+    <thead><tr><th style="width:36mm">Gate</th><th style="width:34mm">Expects the evals to</th><th>What it certifies</th></tr></thead>
+    <tbody>
+      <tr><td><b>PRE</b><br><code>safe-to-delegate.sh --stamp</code></td><td><b>FAIL</b><br><span style="color:var(--muted)">nothing is built yet</span></td><td>The <b>spec</b>: evals are well-formed bash, the sizing gate holds, a broken-eval guard passes, and an XL/XXL node is <b>refused outright</b>. Then it seals the eval bodies in an HMAC envelope and writes <code>signed_off: true</code>.</td></tr>
+      <tr><td><b>POST</b><br><code>accept-task.sh --stamp</code></td><td><b>PASS</b><br><span style="color:var(--muted)">from a clean checkout</span></td><td>The <b>work</b>: evals re-run in a clean tree, the change set stayed inside the blast radius, the HMAC is intact, and optionally <code>--gold-sanity</code> proves the eval fails on the unpatched baseline. Writes <code>accepted: true</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout gate">
+    <div class="k">VERDICT: DELEGATE</div>
+    <p>A spec is dispatchable when, and only when, the PRE gate returns <b>VERDICT: DELEGATE</b>. There is no
+    other path — hand-editing <code>signed_off</code> is caught by the envelope check.</p>
+  </div>
+</section>
+
+<!-- ============ 08 · ANTI REWARD HACKING ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Anti-reward-hacking — why a green eval means something</h2>
+  <p class="eyebrow">The acceptance gate assumes the executor may be wrong, or optimising for the wrong thing</p>
+
+  <p>An eval-defined "done" is only as trustworthy as its resistance to being gamed. A sufficiently
+  motivated optimiser can satisfy a check without satisfying the intent: weaken the assertion, widen the
+  blast radius, or write a test that would have passed anyway. The POST gate is built on the assumption
+  that this will happen, and each layer closes one route.</p>
+
+  <table>
+    <thead><tr><th style="width:44mm">Layer</th><th>What it closes</th></tr></thead>
+    <tbody>
+      <tr><td><b>Re-run, never trust</b></td><td>The gate <b>runs the evals itself</b>, from a clean checkout — it never accepts the executor's report of its own success. A non-zero exit is rejected automatically.</td></tr>
+      <tr><td><b>Blast-radius check</b></td><td>Every changed file must be inside <code>touches_paths</code> ∪ <code>creates_paths</code>. "I fixed it by editing the test harness" is caught here.</td></tr>
+      <tr><td><b>HMAC contract integrity</b></td><td>The envelope seals the eval bodies at sign-off. If the evals were weakened <em>after</em> the spec was signed, the recomputed signature no longer matches and acceptance fails.</td></tr>
+      <tr><td><b><code>--gold-sanity</code></b></td><td>The Goodhart guard: the eval must <b>FAIL on the unpatched baseline</b>. An eval that passes without the change proves nothing — it was never discriminating.</td></tr>
+      <tr><td><b>Atomic state machine</b></td><td>Advisory lock, validated transition, tmp-file + atomic move. Two executors cannot both claim one ready task.</td></tr>
+      <tr><td><b>Append-only ledger</b></td><td><code>_metrics.jsonl</code> is forensic and append-only; <code>_state.yaml</code> is a <em>derived, rebuildable</em> index. The frontmatter is the truth, so the index cannot silently diverge.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="k">The evals must discriminate</div>
+    <p>This principle governs the format's own test suites too: every gate ships with regression fixtures
+    that prove the <b>negatives fail</b>. A fixture that wrongly PASSes on a previous version is treated as a
+    defect in the gate. A check that cannot fail is not a check.</p>
+  </div>
+</section>
+
+<!-- ============ 09 · CONFORMANCE ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Conformance — what "this engine can run it" means</h2>
+  <p class="eyebrow">Three cumulative levels · certified by a real suite, not a claim</p>
+
+  <p>"Vendor-portable" is a testable property, not a marketing line. An executor earns a level by driving
+  reference specs to a defined outcome — the suite ships in the skill, and
+  <code>scripts/ref-executor.sh</code> is an L2-conformant reference implementation.</p>
+
+  <table>
+    <thead><tr><th style="width:14mm">Level</th><th style="width:64mm">What it adds</th><th>How it's certified</th></tr></thead>
+    <tbody>
+      <tr><td class="num">L0</td><td>Read the format and run the evals — given a signed spec, produce work that makes the Exit Check return 0.</td><td>Drives a solvable reference spec; the runner exits 0.</td></tr>
+      <tr><td class="num">L1</td><td>L0 <b>+ honor the lifecycle</b> — acquire the lock (<code>status → in-progress</code>) before working, release it (<code>→ done</code>) on success.</td><td>After success the spec's <code>status</code> is <code>done</code>.</td></tr>
+      <tr><td class="num">L2</td><td>L1 <b>+ honor the retry budget</b> — on a spec it cannot satisfy within <code>budget_iterations</code>, stop and <b>park with a reason</b> rather than loop forever.</td><td>An <em>unsolvable</em> reference spec ends <code>parked</code>, and the executor does not time out.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cards">
+    <div class="card"><div class="k">L0</div><h4>Supervised</h4>
+      <p>safe for one-shot dispatch with a human watching.</p></div>
+    <div class="card"><div class="k">L1</div><h4>Shared backlog</h4>
+      <p>the lock prevents two executors double-picking the same ready task.</p></div>
+    <div class="card"><div class="k">L2</div><h4>Unattended</h4>
+      <p>a runaway task self-terminates into <code>parked</code> instead of burning budget forever.</p></div>
+  </div>
+
+  <pre class="code"><span class="c"># certify your own executor against the suite</span>
+bash scripts/conformance-check.sh --level L2 --executor <span class="w">"my-runner --flags"</span></pre>
+
+  <div class="callout">
+    <div class="k">A plain bash loop reaches L0</div>
+    <p>That is deliberate — the floor is low enough that the format is genuinely portable. <b>L2 is the bar
+    for an executor you would trust to run unattended</b>, which is the bar the dark factory actually needs.</p>
+  </div>
+</section>
+
+<!-- ============ 10 · LIFECYCLE + BACKLOG ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Lifecycle and the five-layer backlog</h2>
+  <p class="eyebrow">Every state change atomic, logged, and recoverable</p>
+
+  <div class="fig low">
+    <pre class="mermaid">
+flowchart LR
+  R["<b>ready</b><br><i>signed, dispatchable</i>"]:::ok
+  I["<b>in-progress</b><br><i>lock held</i>"]:::step
+  D["<b>done</b><br><i>eval green + accepted</i>"]:::ok
+  P["<b>parked</b><br><i>budget exhausted, with context</i>"]:::red
+  B["<b>blocked</b><br><i>upstream gap</i>"]:::ghost
+  R -- "acquire lock" --> I
+  I -- "Exit Check = 0" --> D
+  I -- "budget exhausted" --> P
+  I -- "dependency missing" --> B
+  P -- "re-scoped" --> R
+  B -- "unblocked" --> R
+  classDef ok fill:#1f7a4a,stroke:#47b87c,color:#ffffff;
+  classDef step fill:#17324d,stroke:#5d7a95,color:#dce7f0;
+  classDef red fill:#3d1a1a,stroke:#b1543f,color:#f0cfc8;
+  classDef ghost fill:#0f2740,stroke:#3a5670,color:#8fa6ba;
+    </pre>
+  </div>
+  <p class="figcap"><b>Fig 3</b> Transitions are validated against a real state machine and taken under an
+  advisory lock — never by editing frontmatter directly.</p>
+
+  <table>
+    <thead><tr><th style="width:12mm">Layer</th><th style="width:38mm">Surface</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><b>git</b></td><td>the permanent record</td></tr>
+      <tr><td class="num">2</td><td><b><code>tasks/</code> folder</b></td><td>the backlog — active, <code>done/</code>, <code>parked/</code></td></tr>
+      <tr><td class="num">3</td><td><b>frontmatter status</b></td><td><b>authoritative</b> per-file truth</td></tr>
+      <tr><td class="num">4</td><td><b><code>_state.yaml</code></b></td><td>a <em>derived</em> index — rebuildable, never authoritative</td></tr>
+      <tr><td class="num">5</td><td><b><code>_metrics.jsonl</code></b></td><td>append-only forensic ledger</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="k">The anti-pattern that breaks all of it</div>
+    <p>Editing <code>T-*.md</code> frontmatter by hand bypasses the lock <em>and</em> the ledger. Use
+    <code>transition-status.sh</code>. Derived state can always be rebuilt with <code>rebuild-state.sh</code>; a
+    corrupted <em>authoritative</em> state cannot.</p>
+  </div>
+</section>
+
+<!-- ============ 11 · DISPATCH ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">One format, many executors</h2>
+  <p class="eyebrow">The agent contract is what makes the coding engine a commodity slot</p>
+
+  <p>Any agent consuming a Task-Spec honors the same contract. That contract — not a plugin, not an API —
+  is what makes the format portable.</p>
+
+  <pre class="code"><span class="g">on_pickup:</span>
+  - read: zones 1–6
+  - parse: validation_card YAML
+  - acquire: lock via transition-status.sh      <span class="c"># L1</span>
+
+<span class="g">per_iteration:</span>
+  - execute: implementation
+  - run: all success_criteria as bash
+  - emit: pass | fail | retry_with_reason
+
+<span class="g">on_terminal_state:</span>
+  pass:              status → done; archive
+  budget_exhausted:  status → parked            <span class="c"># L2 — with context, never silence</span></pre>
+
+  <table>
+    <thead><tr><th style="width:46mm">Consumer</th><th>How it reads the spec</th></tr></thead>
+    <tbody>
+      <tr><td><b>Claude Code</b></td><td>native — markdown + YAML + bash</td></tr>
+      <tr><td><b>Codex CLI</b></td><td>same file, cross-vendor</td></tr>
+      <tr><td><b>Kimi</b></td><td>same file — the sprinter class, atomic cranks</td></tr>
+      <tr><td><b>Gemini / Cursor / Aider</b></td><td>same file</td></tr>
+      <tr><td><b>anthive</b></td><td>dispatches one session per Task-Spec</td></tr>
+      <tr><td><b>taskship</b></td><td>runs a 3-phase mini-SDD against each spec</td></tr>
+      <tr><td><b>A human with a terminal</b></td><td>reads it as a checklist; runs the evals by hand</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout gate">
+    <div class="k">The black-box guarantee</div>
+    <p>Size → engine routing is <b>advisory</b> — a dispatcher heuristic keyed off <code>effort</code>, never an
+    override of an author's explicit <code>execution_backend</code>. The agent contract keeps the executor a black
+    box: the format specifies <em>what must be true</em>, never <em>how the engine must think</em>.</p>
+  </div>
+</section>
+
+<!-- ============ 12 · WHAT SHIPPED ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">What shipped, and when</h2>
+  <p class="eyebrow">MAJOR is the spec format version · MINOR is additive · <code>format_version: 3</code> unchanged since 3.0</p>
+
+  <table>
+    <thead><tr><th style="width:20mm">Version</th><th style="width:22mm">Date</th><th>What it added</th></tr></thead>
+    <tbody>
+      <tr style="background:var(--green-wash)"><td><b>3.6.0</b></td><td>2026-07-24</td><td><b>The L tier stops naming a vendor.</b> Membership in <code>TS_LONG_HORIZON_BACKENDS</code> replaces the hard <code>glm</code> requirement; overridable per fleet.</td></tr>
+      <tr><td><b>3.5.0</b></td><td>2026-07-23</td><td><code>tracker_ref</code> — the vendor-neutral tracker receipt written back by Register. <code>linear_ref</code> deprecated to an alias.</td></tr>
+      <tr><td><b>3.4.0</b></td><td>2026-07-21</td><td><b>The fork collapses.</b> Six-tier model with two kinds; the <code>XL → SDD</code> escape removed; write-surface budgets; <code>children:</code> / <code>parent:</code>.</td></tr>
+      <tr><td><b>3.3.0</b></td><td>2026-07-17</td><td>Decomposition shape: the vertical-slice rule, the context-window ceiling, the breakdown quiz, expand–contract sequencing.</td></tr>
+      <tr><td><b>3.2.0</b></td><td>2026-07-06</td><td>Size-aware routing — effort becomes an engine-aware dispatch signal.</td></tr>
+      <tr><td><b>3.1.0</b></td><td>2026-06-18</td><td><code>--gold-sanity</code>, <code>requires:</code>, the A2A <code>TaskState</code> dispatcher, DAG cycle detection, the published JSON Schema (Draft 2020-12), generic <code>backend_metadata</code>.</td></tr>
+      <tr><td><b>3.0.0</b></td><td>2026-06-18</td><td>Effort-scaled profiles, the <b>Behavior zone</b> + behavior↔eval traceability, <code>accept-task.sh</code>, conformance L0/L1/L2, open-string <code>execution_backend</code>.</td></tr>
+      <tr><td><b>2.2</b></td><td>2026-06-02</td><td>The key-optional <b>HMAC sign-off envelope</b> (<code>signed_off_sig</code>) — hand-stamping becomes detectable.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="k">Version discipline</div>
+    <p>The canonical version string lives in <code>scripts/_lib.sh</code> and is duplicated in <code>SKILL.md</code>
+    frontmatter, <code>plugin.json</code>, and <code>marketplace.json</code>. A doc-consistency lint
+    (<code>lint-skill-docs.sh</code>) asserts all four match — the format holds itself to the same standard it
+    imposes on tasks.</p>
+  </div>
+</section>
+
+<!-- ============ 13 · ANTI-PATTERNS + CLOSING ============ -->
+<section class="page">
+  <div class="page-head">Task-Spec · the cornerstone unit · v3.6</div>
+  <h2 class="title">Anti-patterns — what people try that doesn't work</h2>
+  <p class="eyebrow">Each one is a real failure mode with a gate behind it</p>
+
+  <table>
+    <thead><tr><th style="width:74mm">The attempt</th><th>Why it fails</th></tr></thead>
+    <tbody>
+      <tr><td>Editing <code>T-*.md</code> frontmatter directly</td><td>bypasses the lock and the ledger — use <code>transition-status.sh</code></td></tr>
+      <tr><td>Skipping evals because "the task is simple"</td><td>every spec needs ≥ 3 evals; simple tasks have simple evals</td></tr>
+      <tr><td>A Context section over ~100 lines</td><td>you wrote a PRD — trim to what the executor needs</td></tr>
+      <tr><td>Vague guardrails ("be careful")</td><td>anti-patterns must name specific things not to do</td></tr>
+      <tr><td>Subjective evals ("looks good")</td><td>bash cannot check beauty — use an explicit human-checkpoint eval</td></tr>
+      <tr><td>Authoring XL/XXL as a runnable leaf</td><td>they are decomposition <b>nodes</b> — give them a <code>children:</code> block</td></tr>
+      <tr><td>Hand-writing <code>signed_off: true</code></td><td>the HMAC envelope check rejects it — only the gate may stamp</td></tr>
+      <tr><td>Hand-writing <code>tracker_ref</code></td><td>it is a receipt from Register, and tooling must tolerate <code>(none)</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <h3 class="sec">Where this sits in Converge</h3>
+  <p>Task-Spec is <b>Pass 5 · Tasking</b> — the first pass below the barrier, and the cornerstone of the whole
+  method. Pass 4's hardened plans decompose into these units; <b>Pass 6 Register</b> (opt-in) projects each
+  signed spec onto one tracker issue; <b>Pass 7 Bind</b> binds a signed spec's exact hash to its runtime and
+  emits the harness; <b>Pass 8 The Loop</b> drives one issue to a green-eval PR. Every one of those passes
+  depends on the property this format provides: <em>the definition of done travels inside the file.</em></p>
+
+  <div class="callout warn">
+    <div class="k">The honest boundary</div>
+    <p>A green eval proves the code matches the spec. It does not prove the spec was right. Task-Spec
+    automates the <em>verification of the build</em>, not the <em>judgment of whether the build was worth
+    making</em> — that judgment is what Converge's Phase 1 and its adversarial Consensus pass exist to protect.</p>
+  </div>
+</section>
+
+<!-- ============ 14 · COLOPHON ============ -->
+<section class="page section-cover">
+  <div class="kicker">Colophon</div>
+  <h1>Specs that verify themselves<br>don't need humans<br><span class="accent">in the middle of the loop.</span></h1>
+
+  <p style="margin-top:8mm">Task-Spec ships as a plugin at <b style="color:#47b87c">v3.6.0</b> with a JSON Schema
+  (Draft 2020-12), an L0/L1/L2 executor-conformance suite, 21 scripts, and dispatch recipes for Claude
+  Code, Codex, Kimi, Cursor, Gemini, taskship, and anthive. This document was reconciled against
+  <code style="color:#47b87c">scripts/_lib.sh</code>, the changelog, the concept references, and the shipped
+  test suites.</p>
+
+  <div style="height:1px;background:#26405a;margin:10mm 0 6mm"></div>
+
+  <div style="display:flex;gap:16mm;flex-wrap:wrap">
+    <div><div style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Skill</div>
+         <div style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee"><code style="color:#47b87c">skills/task-spec</code> · Converge Pass 5</div></div>
+    <div><div style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Format</div>
+         <div style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee"><code style="color:#47b87c">format_version: 3</code> · additive since 3.0.0</div></div>
+    <div><div style="font-size:6.2pt;letter-spacing:.16em;text-transform:uppercase;color:#7f97ad">Licence</div>
+         <div style="margin-top:1.5mm;font-size:9pt;color:#dbe5ee">MIT · built by Luan Moreno</div></div>
+  </div>
+
+  <p style="font-size:8.2pt;color:#6f889f;font-style:italic;margin-top:12mm">Supersedes the v3.2.0 deep dive.
+  What changed since: the fork to SDD was removed and the effort model became a six-tier recursive engine
+  (3.4); the tracker receipt became vendor-neutral (3.5); and the L tier stopped naming a single vendor,
+  making the portability claim true at the gate as well as in the prose (3.6).</p>
+</section>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  securityLevel: 'loose',
+  themeVariables: {
+    darkMode: true,
+    background: '#0c2038',
+    primaryColor: '#17324d',
+    primaryTextColor: '#dce7f0',
+    primaryBorderColor: '#5d7a95',
+    secondaryColor: '#12283f',
+    tertiaryColor: '#0f2740',
+    lineColor: '#6d8ba6',
+    textColor: '#cfe0ee',
+    mainBkg: '#17324d',
+    nodeBorder: '#5d7a95',
+    clusterBkg: '#0a1b2e',
+    clusterBorder: '#2c4761',
+    edgeLabelBackground: '#0c2038',
+    fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+    fontSize: '13px'
+  },
+  flowchart: { curve: 'basis', htmlLabels: true, useMaxWidth: false, padding: 10, nodeSpacing: 30, rankSpacing: 32 }
+});
+</script>
+</body>
+</html>

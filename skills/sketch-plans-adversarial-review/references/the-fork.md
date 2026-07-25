@@ -1,5 +1,10 @@
 # The Fork — RETIRED (v3.4): Converge is single-path (task-driven)
 
+> **Historical document.** The fork is no longer part of the method — Pass 4 ends
+> at **the barrier** (the owner's sign-off), not at a route decision. What survives
+> is a *frozen compatibility token* the gate still requires (see the bottom of this
+> note). Read this for the rationale; do not read it as a choice to make.
+>
 > **The fork is collapsed.** Converge no longer chooses between plan-driven (A) and
 > task-driven (B). Consensus **always** hands off to task-driven decomposition, because
 > `task-spec` is now a six-tier sizing engine (XS/S/M/L leaves + XL/XXL decomposition
@@ -99,18 +104,22 @@ Both plans must agree on the fork — a split system where lane A is task-driven
 and lane B is plan-driven is itself an objection to resolve in Step 3, not a
 valid outcome.
 
-## How each fork feeds Pass 5
+## How the hand-off works now
 
-Pass 5 only makes sense once the fork is committed. The hand-off:
+There is only one hand-off, and it is unconditional:
 
-- **Fork A → Pass 5A (`plans-to-coherent-spec`).** Fuses the two sharpened plans
-  into ONE coherent, coupled spec governed by a single end-to-end eval — the
-  whole system as the unit of trust. No tracker, no per-task backlog.
-- **Fork B → Pass 5B (`task-spec`).** Cuts the sharpened plans into atomic,
+- **→ Pass 5 (`task-spec`).** Cuts the sharpened plans into atomic,
   vendor-portable, self-verifying Task-Specs (`tasks/T-*.md`), each with its own
-  runnable eval. From there the REGISTER bridge (`task-specs-to-issues`) can put
-  the backlog on a tracker, and Pass 8 (`task-loop`) drives each issue to a
-  green-eval PR.
+  runnable eval. From there **Pass 6 Register** (`task-specs-to-issues`, opt-in)
+  can put the backlog on a tracker, **Pass 7 Bind**
+  (`task-to-runtime-contract`) binds each signed spec to its runtime and emits
+  the harness, and **Pass 8** (`task-loop`) drives each issue to a green-eval PR.
 
-Do not start Pass 5 until the gate is green and the fork is written at the top
-of every plan.
+> **Historical note — the retired A branch.** Fork A used to hand off to a
+> `plans-to-coherent-spec` skill (sometimes called "Pass 5A"), which fused the
+> plans into one coupled SDD-style spec under a single end-to-end eval. **That
+> skill was deleted** when the fork was removed; a tightly-coupled slice is now
+> expressed as a single `L` leaf inside the task tree instead. Do not look for it.
+
+Do not start Pass 5 until the gate is green **and the owner has signed off** —
+the barrier is the real exit condition of Pass 4.

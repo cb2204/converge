@@ -6,11 +6,11 @@ Pass 3's decomposition chain has four levels, each more precise than the last:
 SEAM        the natural joint — a nameable interface with a one-way dependency
  SWIMLANE   one lane per seam — one plan, one focus
   LEG       a stretch inside the lane — one responsibility, one proving test
-   TASK-SPEC the atomic unit with an eval — born at Pass 5B, never at Pass 3
+   TASK-SPEC the atomic unit with an eval — born at Pass 5, never at Pass 3
 ```
 
 This reference is the doctrine for the **leg** level: what a leg is, how big it
-is, and how it hands off to Pass 5B.
+is, and how it hands off to Pass 5.
 
 ## Why "leg" (and not "stage")
 
@@ -33,7 +33,7 @@ A leg is the smallest named unit of a plan:
 3. **Sized to one build-order step + one proving-test cluster.** If a stretch
    needs more than one context window to implement, it is two legs. If two
    stretches share one proving test, they are one leg.
-4. **Yields 1:N task-specs.** A leg decomposes into one *or more* Pass 5B
+4. **Yields 1:N task-specs.** A leg decomposes into one *or more* Pass 5
    task-specs. If every leg in a lane maps to exactly one task, the leg level is
    redundant for that lane — collapse it (the "fewest" doctrine applies here
    too: no leg quotas, no forced granularity).
@@ -64,7 +64,7 @@ otherwise silently break every cross-artifact reference, branch name, and PR
 title. Parse anchor: the literal `-leg-` + two digits, so a multi-word seam or
 tech slug stays unambiguous (`<tech>` is always the trailing segment).
 
-A Pass 5B task-spec cites its leg on the **stable key**
+A Pass 5 task-spec cites its leg on the **stable key**
 (`leg: swimlane-transform-leg-02`), so the traceability chain is complete and
 greppable regardless of tool churn:
 
@@ -87,7 +87,7 @@ Gherkin · Shape Up · ADR): small **frontmatter** (`leg:` the stable key,
 `parent`, `swimlane`, `status`, `spec_ref`, `depends_on`, `type`) then
 **Responsibility** (one job) · **Proves** (declarative **Given/When/Then**
 acceptance criteria, **1–3**, never a runnable eval — the eval is generated
-*from* these at Pass 5B) · **Independence** · **Consumes/Produces** ·
+*from* these at Pass 5) · **Independence** · **Consumes/Produces** ·
 **Appetite** (a size token — small/medium) · **Yields** (the 1:N task-specs) ·
 **Re-verify when**. If a leg needs 4+ acceptance criteria, it is too big — split
 it. Status enum: `proposed → accepted → in_progress → done` (+ `superseded`); an
@@ -121,7 +121,7 @@ SWIMLANE serve  (consumes the published contract, never below it)
 
 Each leg: one responsibility, one proving-test cluster, independently
 finishable in order. `swimlane-serve-leg-01` will yield several task-specs at
-Pass 5B (one per published table's reader + the core itself) — 1:N, as intended.
+Pass 5 (one per published table's reader + the core itself) — 1:N, as intended.
 
 ## What Pass 4 does with legs
 
@@ -131,10 +131,10 @@ against the independence and fold tests, and every objection cites a leg ID —
 `FIXED in swimlane-transform-leg-02` or `ACCEPTED with a named owner`. A leg
 that cannot be attacked is a leg that has not been thought about.
 
-## What Pass 5B does with legs
+## What Pass 5 does with legs
 
 Task-specs are cut **per leg**: the leg's responsibility becomes the task's
 intent, the leg's proving-test cluster becomes the eval seeds, and the leg ID
 goes into the task frontmatter. The leg never carries the eval itself — it
-carries *what the eval must assert*, in prose, so Pass 5B can bind it
+carries *what the eval must assert*, in prose, so Pass 5 can bind it
 mechanically.

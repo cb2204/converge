@@ -1,38 +1,40 @@
 ---
 name: task-loop
-description: The single execution loop for Converge Pass 8 (The Loop). Takes ONE issue (--issue N passed by a human or CI), verifies its Pass 6 execution profile, reads its signed Task-Spec and hash-bound evidence, cuts a branch, writes code, and runs the task's own eval in a bounded refinement loop until GREEN, then enforces the path policy and opens a PR. Use when a user or CI says "run issue N", "execute this task", "build task T-...", "work the loop", or "drive this issue to a green-eval PR". Knows one task deeply and never picks which task to run. Do NOT use to choose or fan out across tasks; that is Pass 7 Manager.
+description: The single execution loop for Converge Pass 8 (The Loop). Takes ONE issue (--issue N passed by a human or CI), verifies its Pass 7 execution profile, reads its signed Task-Spec and hash-bound evidence, cuts a branch, writes code, and runs the task's own eval in a bounded refinement loop until GREEN, then enforces the path policy and opens a PR. Use when a user or CI says "run issue N", "execute this task", "build task T-...", "work the loop", or "drive this issue to a green-eval PR". Knows one task deeply and never picks which task to run. Do NOT use to choose or fan out across tasks; that is the Manager, a future CI/CD concern outside the pass chain.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
   compatibility: "Converge chain Pass 8; consumes tasks/T-*.md + cvg/execution/<task-id>/execution-profile.yaml; any stack"
 license: MIT
 ---
 
 # task-loop — Pass 8 · The Loop (the execution loop)
 
-The single EXECUTION loop of the Converge chain. Take exactly ONE issue that was handed to you (`--issue N`), verify its Pass 6 runtime contract, read its signed Task-Spec and bound evidence, cut a branch, write the code, and run **that task's own eval** in a tight local loop until it is GREEN. Before settlement, prove the diff stayed inside the Task-Spec path policy; then open a PR that closes the issue.
+The single EXECUTION loop of the Converge chain. Take exactly ONE issue that was handed to you (`--issue N`), verify its Pass 7 runtime contract, read its signed Task-Spec and bound evidence, cut a branch, write the code, and run **that task's own eval** in a tight local loop until it is GREEN. Before settlement, prove the diff stayed inside the Task-Spec path policy; then open a PR that closes the issue.
 
 ## Important — read these rules first
 
-- **You never pick the task.** `--issue N` is required and comes from outside (a human, or CI). Absence of `--issue N` is an error, not an invitation to triage the backlog. Choosing *which* issue to run is the Manager's job, and the Manager is a future CI/CD pass (see below), not this skill.
+- **You never pick the task.** `--issue N` is required and comes from outside (a human, or CI). Absence of `--issue N` is an error, not an invitation to triage the backlog. Choosing *which* issue to run is the Manager's job, and the Manager is a future CI/CD concern (see below), not this skill and not a numbered pass.
 - **Converged = the eval passed, not "feels done".** The merge gate is the exact eval command the task-spec carries, run in a clean subshell and exiting 0 — never an eyeballed diff. No green eval, no PR.
 - **BIND before ACT is non-negotiable.** `CHECK_RUNTIME_CONTRACT=PASS` must be current before writing. Load the Task-Spec eval and every evidence reference in the profile.
 - **Stay inside the task.** Respect `touches_paths` and `do-not-touch` from the spec. One task, deeply — never wander into a sibling task or refactor the world.
 - **This is Pattern 3 (iterative refinement).** RED feeds the exact failure back and revises in a bounded local loop; it does not escalate or hop tasks. A task that cannot go green is surfaced as a blocked report, never papered over.
 
-## Pass 7 Manager remains outside this skill
+## The Manager remains outside this skill
 
 The **Manager concern** — which issue runs, when, how many tasks run in
-parallel, dependency settlement, locks, and worktrees — belongs to Pass 7,
-outside this skill. A human or CI implementation of that pass supplies
-`--issue N`; this loop drives that one issue to a green-eval PR and stops.
-Task-local helpers allowed by the execution profile do not authorize cross-task
-fan-out.
+parallel, dependency settlement, locks, and worktrees — is an orchestration
+layer **outside the numbered pass chain**: a future CI/CD concern (e.g. GitHub
+Actions as scheduler, the PR as state settlement, branch protection as the
+gate), tracked as item **B-1** in `PLAN.md`. A human or that CI implementation
+supplies `--issue N`; this loop drives that one issue to a green-eval PR and
+stops. Task-local helpers allowed by the execution profile do not authorize
+cross-task fan-out.
 
 ## Inputs / Outputs / Gate
 
 | | Artifact | Path |
 |---|----------|------|
-| **IN** | ONE signed Task-Spec plus its current Pass 6 execution profile and bound evidence | `tasks/T-<id>.md` · `cvg/execution/<task-id>/execution-profile.yaml` |
+| **IN** | ONE signed Task-Spec plus its current Pass 7 execution profile and bound evidence | `tasks/T-<id>.md` · `cvg/execution/<task-id>/execution-profile.yaml` |
 | **OUT** | A Pull Request that closes the issue (branch + diff + green eval in the body), OR an explicit blocked-task report | PR on a `task/<id>-<slug>` branch |
 | **GATE** | The task's own eval is **GREEN** — the exact `eval_N()` / Exit Check command from the spec exits 0, run not read | `bash`-run eval from `tasks/T-<id>.md` |
 
@@ -44,7 +46,7 @@ The eval is whatever the task-spec ships — it is written for *your* stack, not
 |------|--------|---------|---------|
 | `--issue N` | issue id / task id | **required** | The single issue this loop owns. No default — absence is an error. You do not re-pick it. |
 | `--agent` | `claude` \| `codex` \| `kimi` | `claude` | The coding engine that ACTS. `kimi` for mechanical, tightly-specced work; `claude` for judgment work (contract/interface design); `codex` when passed. |
-| `--contract` | profile path | `cvg/execution/<task-id>/execution-profile.yaml` | Explicit Pass 6 profile override. |
+| `--contract` | profile path | `cvg/execution/<task-id>/execution-profile.yaml` | Explicit Pass 7 profile override. |
 | `--legacy-no-contract` | flag | off | Supervised migration escape hatch; never use for new execution. |
 
 The engine is a flag, never baked into the skill name. Whoever passes `--issue N` may also pin `--agent`; the loop does not change the issue.
@@ -62,8 +64,8 @@ capabilities and topology the profile permits.
 
 Stop conditions (do not code, emit a blocked report instead):
 - No `--issue N` supplied → this loop never picks a task.
-- The task-spec is missing or `signed_off: false` → upstream gap (Pass 5B gate not passed).
-- The profile is missing or stale, or bound evidence is missing → upstream gap (Pass 6).
+- The task-spec is missing or `signed_off: false` → upstream gap (Pass 5 gate not passed).
+- The profile is missing or stale, or bound evidence is missing → upstream gap (Pass 7 Bind).
 
 ### Step 2 — ACT (cut a branch, write the code)
 
@@ -127,7 +129,7 @@ Spec cites an ADR that does not exist under `docs/adrs/`. → **Result:** emit a
 | Error | Cause | Solution |
 |-------|-------|----------|
 | Loop asks which task to run | No `--issue N` | Pass `--issue N`; this loop never triages. Fan-out is the future CI/CD Manager. |
-| Eval fails with "syntax error"/"unbound variable" | Broken eval bash, not a real assertion failure | Fix belongs upstream in the task-spec (Pass 5B gate). Emit a blocked report, don't hack the eval. |
+| Eval fails with "syntax error"/"unbound variable" | Broken eval bash, not a real assertion failure | Fix belongs upstream in the task-spec (Pass 5 gate). Emit a blocked report, don't hack the eval. |
 | Eval RED after budget exhausted | Task not settleable in `budget_iterations`, or upstream gap | Stop; emit blocked-task report with last eval output + suspected gap. Do not open a PR. |
 | Green diff but you want to "also fix" a nearby file | Scope creep past `touches_paths` | Stay in scope. Open a new task-spec for the other change; this loop owns one task. |
 | Committed to `main` | Skipped the branch step | Branch first (`task/<id>-<slug>`); revert `main`. The PR is the unit of merge. |

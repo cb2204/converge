@@ -2,12 +2,13 @@
 
 > **This file is the CLI's status card: what exists, what it wraps, what
 > proved it.** It records the present only. The backlog — what comes next
-> and in what order — lives in ONE place: [`cvg-todo.md`](../cvg-todo.md)
-> (the working contract; see its R0/R1 beats and Milestones 1–7). A second
-> todo here would fork the truth — deliberately not done, matching the
-> 2026-07-16 housekeeping call that folded all contracts into one file.
+> and in what order — lives in ONE place: [`PLAN.md`](../PLAN.md)
+> (the working contract; `cvg-todo.md` was folded into it on 2026-07-24 and is
+> now a redirect stub). A second todo here would fork the truth — deliberately
+> not done, matching the 2026-07-16 housekeeping call that folded all contracts
+> into one file.
 
-**cvg v0.16.0** · (0.16.0 adds `bind` / `bind --check` for Pass 6 · Bind:
+**cvg v0.16.0** · (0.16.0 adds `bind` / `bind --check` for Pass 7 · Bind:
 one signed Task-Spec becomes a hash-bound execution profile with portable path
 guards and runtime adapter manifests; the deterministic verdict is
 `CHECK_RUNTIME_CONTRACT=PASS|FAIL`. 0.13.0 R.setup.linear — `setup tracker linear` needs **only
@@ -18,8 +19,8 @@ the API key**: it auto-discovers your team (single team auto-selects, else
 **connectivity surface** (engines · trackers · index/memory-planned): a status
 board + guided connect that records CHOICES in `.cvg/config` and **never
 credentials** (secrets stay in the environment / a secrets manager); `register`
-now defaults `--tracker` from it; 0.11.0 R①.I `register`/`register --check` — the REGISTER ①
-bridge (Fork B → the Loop) onto a **pluggable tracker** (`github|linear|jira`;
+now defaults `--tracker` from it; 0.11.0 R①.I `register`/`register --check` — the Pass 6 · Register
+bridge onto a **pluggable tracker** (`github|linear|jira`;
 `fake` for offline tests): 1 spec = 1 issue, `depends_on` → `blocked-by`, and a
 `tracker_ref` receipt stamped back into each spec; proven offline 42/42 via the
 `fake` adapter; 0.5.0 R3.I `decompose`; 0.6.0 R4.I `review`/`doctor` — the first
@@ -56,13 +57,13 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg review --adversary codex,kimi` | `sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh` (Pass 4 multi-adversary) | a **comma-list** dispatches each engine through the proven single-engine path (reused via `--out`) and **merges** the judgments into ONE referee-stamped log: objections unioned + renumbered + tagged `raised_by`, `adversaries[]` recorded, provenance recomputed by the referee. Fail-closed if **no cross-family** engine ran (`REVIEW=ERROR`) or all absent (`REVIEW=SKIP`). Two independent cross-family views beat one — the ATTACK half of the auto-loop. |
 | `cvg review [--check]` | `sketch-plans-adversarial-review/scripts/check-consensus-gate.sh` (Pass 4 gate, v0.4.0) | validates the stamped objection log (structure + semantics + **provenance re-hash** of the live plans); `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR` |
 | `cvg doctor` | `sketch-plans-adversarial-review/scripts/doctor.sh` | engine readiness for Pass 4 dispatch — per-engine PASS/SKIP; requires ≥2 engines + ≥1 cross-family; `DOCTOR=OK\|FAIL` |
-| `cvg bind --task <spec>` | `task-to-runtime-contract/scripts/bind-runtime-contract.py` | Pass 6 · Bind: Tier-1 sign-off by default, Task-Spec hash, evidence hashes, topology substance, portable path guards, and generic/Claude/Codex/Kimi adapter manifests; immediately gates to `CHECK_RUNTIME_CONTRACT=PASS\|FAIL`. |
-| `cvg bind --check --task <spec>` | `task-to-runtime-contract/scripts/check-runtime-contract.py` | Read-only freshness and enforceability recheck before Pass 7 dispatch or Pass 8 execution. |
+| `cvg bind --task <spec>` | `task-to-runtime-contract/scripts/bind-runtime-contract.py` | Pass 7 · Bind: Tier-1 sign-off by default, Task-Spec hash, evidence hashes, topology substance, portable path guards, and generic/Claude/Codex/Kimi adapter manifests; immediately gates to `CHECK_RUNTIME_CONTRACT=PASS\|FAIL`. |
+| `cvg bind --check --task <spec>` | `task-to-runtime-contract/scripts/check-runtime-contract.py` | Read-only freshness and enforceability recheck before dispatch (the Manager, future CI/CD) or Pass 8 execution. |
 | `cvg tasks validate <spec>` | `validate-task-spec.sh` (task-spec v3.4 six-tier engine) | routed pass-through; enforces the six-tier sizing gate — leaf write-surface budgets (XS≤1/S≤2/M≤3/L≤5) and XL/XXL nodes that must declare `children:` (decompose, no route out) |
 | `cvg tasks gate <spec>` | `safe-to-delegate.sh` | eval_1: byte + exit-code parity vs direct call. Gate 0 **refuses an XL/XXL node** — a worker dispatches its children (leaves), never the node itself |
 | `cvg tasks accept <spec>` | `accept-task.sh` | accepted its own birth task (`--stamp --gold-sanity` → ACCEPT) |
 | `cvg tasks dod <spec>` | `definition-of-done.sh` (task-spec) | renders the **Definition of Done + traceability matrix** (every behavior `B-N` → its verifying eval → terminal); gates `DOD=COMPLETE\|GAPS` (an untraced behavior FAILS). The 2026 agent-spec SOTA review artifact (Brodner/Moai/Thread AI) — inherits `--json`. Proven across the 9-task backbone (all `DOD=COMPLETE`). |
-| `cvg register [--tracker T] [--no-stamp-refs]` | `task-specs-to-issues/scripts/register.sh` (REGISTER ①) | **the bridge Fork B → the Loop** — projects signed-off Task-Specs onto a tracker board (1 spec = 1 issue; `depends_on` → `blocked-by`), then stamps a `tracker_ref: <tracker>:<issue>` receipt back into each spec (the issue-side marker stays the idempotency key). Pluggable **five-verb** adapter `github\|linear\|jira` (default `linear`), `fake` for tests; the referee holds **no** tracker creds — the adapter authenticates itself. Idempotent (re-run upserts, never duplicates). `REGISTER=OK\|FAIL\|DRY_RUN\|EMPTY`. Proven offline: `skills/task-specs-to-issues/tests/test-register.sh` (46/46 via the `fake` adapter). |
+| `cvg register [--tracker T] [--no-stamp-refs]` | `task-specs-to-issues/scripts/register.sh` (Pass 6 · Register) | **the opt-in bridge from the sealed backlog onto a board** — projects signed-off Task-Specs onto a tracker (1 spec = 1 issue; `depends_on` → `blocked-by`), then stamps a `tracker_ref: <tracker>:<issue>` receipt back into each spec (the issue-side marker stays the idempotency key). Pluggable **six-verb** adapter `github\|linear\|jira` (default `linear`), `fake` for tests; the referee holds **no** tracker creds — the adapter authenticates itself. Idempotent (re-run upserts, never duplicates). `REGISTER=OK\|FAIL\|DRY_RUN\|EMPTY`. Proven offline: `skills/task-specs-to-issues/tests/test-register.sh` (46/46 via the `fake` adapter). |
 | `cvg register --check` | `task-specs-to-issues/scripts/verify-registration.sh` | gates the mapping is faithful (1:1 count, every `depends_on` is one `blocked-by`, no cycle, no un-gated leak); read-only. `CHECK_REGISTER=OK\|FAIL`. |
 | `cvg setup` | native (`doctor` + adapter `preflight`) | **connectivity status board** — per-part readiness (engines · trackers; index/memory as planned slots) + the exact next step. Records CHOICES in `.cvg/config`, **never credentials** (the referee-holds-no-creds rule, now security-grounded: *"if an agent can see it, it can leak it"* — Claude Code / Cursor have both leaked `.env` keys). `SETUP=READY\|INCOMPLETE`. |
 | `cvg setup tracker <t> [--team K]` | native (+ adapter `preflight`) | guided connect — validates a backend and records it as the default in `.cvg/config`; `cvg register` then defaults `--tracker` from it. **Linear needs only `LINEAR_API_KEY`** — the team is auto-discovered (one team auto-selects; else `--team <KEY>` from the URL), resolved key→UUID, and recorded (key never stored). `SETUP_TRACKER=OK\|NEEDS_TEAM\|UNREACHABLE\|USAGE_ERROR`. |

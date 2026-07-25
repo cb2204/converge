@@ -1,11 +1,31 @@
 # Proposal: Reframe Converge Pass 6 as Runtime Binding
 
-**Status:** Revised after independent Claude Code and Kimi peer review  
-**Implementation status:** Implemented in the current working tree; promotion benchmark remains pending  
-**Pass name:** Pass 6 · Bind  
-**Skill name:** `task-to-runtime-contract`  
-**Primary artifact:** Execution profile  
-**Gate token:** `CHECK_RUNTIME_CONTRACT=PASS|FAIL`
+> ⚠️ **HISTORICAL DOCUMENT — read the banner before the body.**
+> This proposal is preserved as the record of an *approved decision*, in the
+> numbering and vocabulary that were current when it was written. Two things
+> have changed since, and the body below was deliberately **not** rewritten:
+>
+> 1. **Bind is now Pass 7, not Pass 6.** Register (`task-specs-to-issues`)
+>    took slot 6 when it was promoted into the numbered chain. Everywhere this
+>    document says "Pass 6 · Bind", read **Pass 7 · Bind**; where it says
+>    "Pass 7 Manager", read **the Manager — a future CI/CD concern outside the
+>    numbered chain**.
+> 2. **The fork is gone.** "Fork A integration" is no longer pending — it was
+>    *cancelled*. The plan-driven branch and its `plans-to-coherent-spec` skill
+>    were deleted in v3.4; a tightly-coupled slice is now an `L` leaf inside the
+>    task tree. Pass 4 ends at **the barrier** (the owner's sign-off), not at a
+>    route decision.
+>
+> The canonical, current statement of the method is **[`PLAN.md`](PLAN.md) §✦**
+> and **[`readme.md`](readme.md)**. Trust those over this file.
+
+- **Status:** Approved direction; revised after independent Claude Code and Kimi peer review
+- **Implementation status:** Working v1 prototype; production hardening, real proving grounds, and the promotion benchmark remain pending (*Fork A integration: cancelled — see banner*)
+- **Verification snapshot:** 2026-07-24 — 19/19 disposable runtime-contract regression checks green
+- **Pass name:** Pass 6 · Bind
+- **Skill name:** `task-to-runtime-contract`
+- **Primary artifact:** Execution profile
+- **Gate token:** `CHECK_RUNTIME_CONTRACT=PASS|FAIL`
 
 ## Executive decision
 
@@ -15,7 +35,9 @@ The current design creates permanent architect/developer personas and generic KB
 
 They do not remove the need for a durable control surface. That surface is now:
 
-- One canonical, signed Task-Spec.
+- One canonical, signed execution unit: a Task-Spec in the current task-driven
+  v1 path, or a coherent-spec authorization envelope if the recommended Fork A
+  adapter is implemented.
 - Minimal task-relevant context with provenance and freshness.
 - Explicit permissions and trust boundaries.
 - Dependency-aware execution topology.
@@ -27,13 +49,14 @@ They do not remove the need for a durable control surface. That surface is now:
 
 Pass 6 should bind and prove the runtime contract for one signed task. It should not create a standing fleet for the technology stack.
 
-## Implemented surface
+## Implemented v1 surface
 
-The initial end-to-end implementation now includes:
+The initial end-to-end prototype now includes:
 
 - `skills/task-to-runtime-contract/` with a concise skill entrypoint, runtime
   contract references, and OpenAI interface metadata.
-- `cvg bind --task <spec>` and read-only `cvg bind --check`.
+- `cvg bind --task <spec>` and a `cvg bind --check` verification entrypoint
+  intended to become strictly read-only.
 - Tier-1 sign-off by default with an explicit supervised Tier-2 migration mode.
 - A deterministic JSON-subset-of-YAML execution profile bound to the complete
   Task-Spec hash.
@@ -50,8 +73,175 @@ The initial end-to-end implementation now includes:
   CLI JSON/dry-run behavior, Pass 8 consumption, knowledge accretion, and the
   two legacy safety defects.
 
-The fair five-arm benchmark remains a promotion gate. Implementation does not
-pre-judge its result.
+The disposable suite currently reports **19/19 runtime-contract checks green**.
+That proves the declared v1 flow and its tested negative cases. It does not yet
+prove that every execution-critical field is cryptographically sealed, that
+`bind --check` is side-effect free, that vendor-native controls are installed,
+or that Pass 8 settles work atomically. Those are production-hardening
+requirements, not optional refinements.
+
+The fair five-arm benchmark and real Pass 6/Pass 8 proving-ground runs remain
+promotion gates. The implementation does not pre-judge their result.
+
+## Placement in Converge
+
+Pass 6 sits after a unit of work has been authorized and before any runtime is
+allowed to execute it:
+
+```text
+Pass 5B · Tasking
+signed Task-Spec + eval + scope + budgets
+              │
+              ▼
+① Register
+Task-Spec projected onto one tracker issue
+              │
+              ▼
+Pass 6 · Bind
+task-to-runtime-contract
+              │
+              ├── exact source hash
+              ├── required ADRs and evidence
+              ├── path and capability policy
+              ├── single-agent-first topology
+              ├── runtime adapter contract
+              └── CHECK_RUNTIME_CONTRACT verdict
+              │
+              ▼
+Pass 7 · Manager
+selects which ready unit runs, when, and where
+              │
+              ▼
+Pass 8 · The Loop
+branch/worktree → implement → eval → guard → accept → PR or blocked receipt
+```
+
+Pass 7 is an orchestration plane rather than another in-session skill. It owns
+cross-task selection, dependencies, concurrency, locks, worktrees, and fleet
+settlement. Pass 8 remains one assigned unit, one branch, one acceptance
+contract, and one PR or blocked report.
+
+## What a real invocation should do
+
+An operator or upstream agent says:
+
+> Bind `T-20260724-build-revenue-model` for execution with Codex.
+
+The Pass 6 skill runs the equivalent of:
+
+```bash
+cvg bind \
+  --task tasks/T-20260724-build-revenue-model.md
+```
+
+For work that genuinely needs approved project knowledge or pinned external
+documentation:
+
+```bash
+cvg bind \
+  --task tasks/T-20260724-build-revenue-model.md \
+  --knowledge cvg/knowledge/failures/postgres-locking.md \
+  --doc https://example.dev/v1/reference=cvg/knowledge/references/example-v1.md
+```
+
+The skill then:
+
+1. Verifies one authorized, runnable execution unit.
+2. Binds the exact source revision by SHA-256.
+3. Selects only the ADRs, project knowledge, and pinned documentation needed
+   for this run.
+4. Defaults to one agent and records a more complex topology only when static
+   evidence justifies it.
+5. Compiles portable enforcement plus the selected runtime adapter.
+6. Writes the derived execution artifacts.
+7. Re-runs the readiness gate and stops.
+
+The default v1 artifact shape is:
+
+```text
+cvg/execution/T-20260724-build-revenue-model/
+├── execution-profile.yaml
+└── adapters/
+    ├── generic.json
+    ├── claude.json
+    ├── codex.json
+    └── kimi.json
+```
+
+Successful binding ends with:
+
+```text
+CHECK_RUNTIME_CONTRACT=PASS
+```
+
+Any stale signature, missing evidence, invalid topology, overlapping ownership,
+or unavailable mandatory enforcement ends with:
+
+```text
+CHECK_RUNTIME_CONTRACT=FAIL
+```
+
+Pass 6 does not pick the next issue, implement code, create permanent
+technology personas, or silently expand authority. After Pass 7 assigns the
+unit, Pass 8 consumes the current profile:
+
+```bash
+task-loop \
+  --issue T-20260724-build-revenue-model \
+  --agent codex
+```
+
+The intended Pass 8 sequence is:
+
+1. Re-verify the signed source and Pass 6 profile.
+2. Create the isolated branch or worktree before implementation.
+3. Give the selected runtime only the bound evidence and authority.
+4. Run the bounded RED/GREEN implementation loop.
+5. Require both the task eval and portable path guard to pass.
+6. Run clean-checkout post-execution acceptance.
+7. Commit only authorized paths.
+8. Push and open a PR only when external-write policy and approval permit it.
+9. Emit an evidence-grade receipt, or an explicit blocked receipt.
+10. Optionally derive a proposed, receipt-backed knowledge candidate for human
+    promotion.
+
+In short:
+
+```text
+Task-Spec = what is authorized and what done means
+Pass 6    = that authority compiled into runtime controls
+Pass 8    = work performed and proven under those controls
+```
+
+## Fork A convergence gap
+
+The current Converge documentation says Fork A and Fork B both reconverge at
+Pass 6. The v1 implementation does not yet make that true:
+
+- Fork B produces signed Task-Specs and registered issues, which
+  `task-to-runtime-contract` and `task-loop --issue` consume directly.
+- Fork A produces one coherent specification and one end-to-end eval, with no
+  Task-Spec backlog and no tracker issue.
+- The current binder accepts only `--task <Task-Spec>`, and the current loop is
+  issue-oriented.
+
+This is a method-level contract gap, not merely documentation drift. Before the
+README claims universal reconvergence, choose and implement one of two models:
+
+1. **Recommended — normalized signed execution unit.** Pass 6 accepts a common
+   authorization interface. Fork B adapts a signed Task-Spec; Fork A adapts its
+   coherent spec, human sign-off, one end-to-end eval, and whole-system scope.
+   The Fork A adapter does not decompose the coherent spec into artificial
+   tasks. Both paths then share evidence binding, enforcement, runtime
+   readiness, receipts, and acceptance.
+2. **Separate execution paths.** Scope `task-to-runtime-contract` and
+   `task-loop` explicitly to Fork B and give Fork A a separate coherent-spec
+   runner.
+
+The normalized execution-unit model is preferred because it preserves one
+Bind-to-Loop control plane while keeping the two trust boundaries distinct.
+Until that adapter exists, the honest shipped claim is: **Pass 6 v1 supports
+the task-driven Fork B path.**
 
 ## Peer-review disposition
 
@@ -81,8 +271,8 @@ Both independent reviews returned `APPROVE_WITH_CHANGES`. Their strongest findin
 
 The legacy Pass 6 implementation audited before this redesign was split between:
 
-- [`skills/agents-kbs-tech-stack/`](skills/agents-kbs-tech-stack/), the scaffolding engine.
-- [`skills/stack-to-harness/`](skills/stack-to-harness/), the Converge wrapper.
+- [`skills/agents-kbs-tech-stack/`](skills/agents-kbs-tech-stack/), the scaffolding engine — *retained as legacy; Pass 7 reuses its cross-tool emitter for the harness step.*
+- `skills/stack-to-harness/`, the Converge wrapper — ***deleted***, superseded by `task-to-runtime-contract`.
 
 That behavior creates:
 
@@ -118,9 +308,9 @@ regression tests.
 
 ## Non-negotiable architecture boundaries
 
-### Task-Spec remains canonical
+### The authorized source remains canonical
 
-The signed Task-Spec continues to own:
+In the current task-driven v1 path, the signed Task-Spec continues to own:
 
 - Task identity and authorization.
 - HMAC signature and sign-off.
@@ -134,6 +324,12 @@ The signed Task-Spec continues to own:
 - Executable evaluations and Exit Check.
 
 Pass 6 must reference this state, not copy it into a competing schema.
+
+If the recommended Fork A adapter is implemented, the coherent specification,
+its one end-to-end eval, whole-system scope, and explicit sign-off remain that
+path's canonical authorization source. The adapter normalizes the interface
+needed by Pass 6; it must not manufacture a fake per-task backlog or duplicate
+the coherent spec into a competing Task-Spec.
 
 New author-time constraints such as network policy, external-write permission, approval requirements, and token or cost budgets belong in the Task-Spec schema.
 
@@ -211,7 +407,7 @@ Technology detection remains useful for documentation retrieval and tool selecti
 
 The execution profile records only:
 
-- The exact Task-Spec revision it prepared.
+- The exact authorized execution-unit revision it prepared.
 - Context and knowledge references selected for this run.
 - Initial execution topology and justification.
 - Enforcement and adapter artifacts generated or selected.
@@ -284,18 +480,20 @@ Claude, Codex, Kimi, and other runtimes receive derived adapters for hooks, suba
 
 ### Canonical name: `task-to-runtime-contract`
 
-The name states the complete transformation:
+For the current task-driven rollout, the name states the complete
+transformation:
 
-- **Task** — the signed Task-Spec is the only canonical input.
+- **Task** — the signed Task-Spec is the canonical v1 input.
 - **To** — Pass 6 derives evidence and controls without duplicating the source.
 - **Runtime** — the output is consumed by the actual executor, not a standing
   documentation fleet.
 - **Contract** — hashes, topology, permissions, guards, adapters, and the gate
   are enforceable obligations.
 
-The pass label is **Bind** because Pass 6 binds a specific signed task revision
-to the exact context and controls under which it may run. It does not execute
-the task, schedule sibling tasks, or create permanent technology personas.
+The pass label is **Bind** because Pass 6 binds a specific signed execution-unit
+revision to the exact context and controls under which it may run. It does not
+execute the unit, schedule sibling units, or create permanent technology
+personas.
 
 `prepare-execution` was rejected because “prepare” does not say what becomes
 true or which artifact owns the obligation. `task-to-execution-profile` was
@@ -333,6 +531,11 @@ description: Bind one signed Converge Task-Spec to an enforceable, task-scoped r
 - Runtime capability inventory for the selected execution backend.
 
 An unsigned task, a decomposition-only parent, or a task with unresolved required decisions is not executable input.
+
+Those are the implemented Fork B inputs. A future Fork A adapter must supply
+the same normalized authorization properties from the coherent specification,
+its single end-to-end eval, whole-system scope, and human sign-off without
+converting that path into a per-task backlog.
 
 ### Default outputs
 
@@ -592,7 +795,157 @@ Do not include:
 - Architect/developer templates.
 - User-facing README or changelog files inside the skill.
 
-## Migration status and remaining benchmark
+## Production-hardening plan
+
+The next implementation pass must close the following work packages before
+production sign-off.
+
+### Work package 1: Seal the complete execution authorization
+
+The current HMAC payload covers the task ID, body digest, and sign-off metadata.
+Execution-critical frontmatter is not comprehensively covered. A signed task
+can therefore retain a valid Tier-1 signature while fields such as write scope,
+dependencies, network requirements, budgets, or backend routing change.
+
+Required changes:
+
+- Define a canonical serialization of all authorization-relevant Task-Spec
+  fields, or sign the complete canonical Task-Spec excluding only explicitly
+  mutable receipt/tracker fields.
+- Include paths, dependencies, policy, budgets, routing, eval ownership, and
+  sign-off in that boundary.
+- Prevent a mutable execution profile from lowering `requires_tier1`.
+- Make the execution profile deterministically derivable and freshness-bound;
+  optionally attest the emitted profile when the runtime needs independent
+  transport integrity.
+- Add adversarial tests for scope widening, dependency changes, trust-tier
+  downgrade, profile tampering, and stale evidence.
+
+### Work package 2: Make readiness verification genuinely pure
+
+`cvg bind --check` is documented as read-only, but its current sign-off path
+calls the executable delegation gate. That gate runs task evals and may touch
+repository state such as the Task-Spec state index. Read-only verification
+must not depend on potentially mutating project commands.
+
+Required changes:
+
+- Split structural/signature verification from executable eval probing.
+- Make `cvg bind --check` perform zero repository writes and no untrusted
+  project execution.
+- Put executable preflight in a disposable worktree, sandbox, or container with
+  network denied by default.
+- Add a regression that hashes the repository before and after `bind --check`
+  and proves byte-for-byte stability outside permitted temporary locations.
+
+### Work package 3: Install enforceable runtime adapters
+
+The current adapter JSON files describe expected controls. They do not prove
+that a vendor configuration, hook, sandbox, or permission boundary was
+installed. `guard-tool-input.py` can inspect known path fields but does not
+mediate arbitrary shell side effects.
+
+Required changes:
+
+- Generate or install the selected runtime adapter instead of optimistically
+  emitting every manifest.
+- Implement concrete Claude, Codex, Kimi, and portable-runner adapter paths.
+- Add `cvg doctor runtime-contract` to attest the capabilities actually
+  available in the selected runtime.
+- Mediate direct file writes, shell redirection, destructive commands, symlink
+  and traversal escapes, network use, secrets access, and external writes.
+- Keep the final diff guard mandatory even when a stronger native hook exists.
+- Fail closed when the runtime cannot satisfy a required control.
+
+### Work package 4: Make Pass 8 settlement atomic and policy-consistent
+
+The current settlement script evaluates and writes a receipt before it creates
+the task branch, then stages the entire working tree with `git add -A`, pushes,
+and opens a PR. The profile simultaneously declares external writes denied by
+default. This ordering and policy contradiction must be removed.
+
+Required changes:
+
+- Create the task branch or isolated worktree before dispatch and before any
+  implementation writes.
+- Execute through the selected, doctor-verified runtime adapter.
+- Run the bounded RED/GREEN loop inside that isolation boundary.
+- Run the portable path guard over the complete diff.
+- Run `accept-task.sh --gold-sanity` from a clean checkout before settlement.
+- Stage only the exact authorized paths; never use `git add -A`.
+- Treat commit, push, tracker mutation, and PR creation as separate external
+  effects governed by explicit policy and approval.
+- Write the success receipt only after the commit and PR outcome are known.
+- On any failure, write a blocked receipt without claiming settlement.
+
+### Work package 5: Upgrade receipts and earned knowledge
+
+The v1 receipt proves the basic link among task, profile, eval-output hash,
+path-policy verdict, runtime label, and branch. Production evidence requires a
+fuller trace.
+
+Receipt v2 should include:
+
+- Base commit, final commit, and diff hash.
+- Exact eval command, exit status, duration, and durable raw-log reference.
+- Acceptance and gold-sanity verdicts.
+- Runtime, model, version, effort, and adapter identity.
+- Hook, sandbox, network, secret, and path-policy decisions.
+- Approval and external-write events.
+- Iterations, retries, context size, tokens, cost, and wall-clock time when
+  available.
+- Branch, push, tracker, and PR results.
+- Blocking reason and last proven state when execution does not settle.
+
+Receipt writes must be atomic and safe under concurrent execution. Only a valid
+receipt may seed a knowledge candidate, and promotion must remain a distinct
+human or policy-controlled action.
+
+### Work package 6: Prove promotion on real work
+
+Required evidence:
+
+- Unit, regression, adversarial, and negative-policy tests.
+- Task-Spec signature and portability suites.
+- Skill structure validation.
+- Bash 3.2 compatibility for declared portable shell paths.
+- One genuine Pass 6 proving-ground receipt.
+- One genuine Pass 8 branch-to-PR or branch-to-blocked receipt.
+- The fair five-arm benchmark, including a genuinely curated KB baseline.
+- Honest README, tracker, and proposal status derived from those results.
+
+Production-ready Pass 6 does not by itself make the entire Converge automation
+plane production-ready. The wider method still requires the real Pass 7
+Manager, runtime worker dispatch, CI re-verification, independent acceptance,
+provenance defenses, and operational metrics.
+
+## Recommended implementation and release sequence
+
+Implement in reviewable commits:
+
+1. `task-spec: seal execution authorization fields`
+2. `cvg: make runtime binding checks pure`
+3. `runtime-contract: enforce runtime adapters`
+4. `task-loop: make execution settlement atomic`
+5. `runtime-contract: add evidence receipts and adversarial tests`
+6. `docs: reconcile Pass 6 and live implementation status`
+
+The documentation session should finish and push first. After that:
+
+1. Refresh the local checkout from the exact pushed commit.
+2. Verify branch, upstream, status, and the documentation diff.
+3. Create `feat/runtime-contract-v2` from that stable baseline.
+4. Preserve unrelated files and stage only an explicitly reviewed path list.
+5. Run the complete test and proving-ground sequence.
+6. Push the feature branch and open a PR only with explicit authorization.
+7. Request separate approval before a potentially expensive multi-model
+   benchmark.
+
+Do not use `git add -A`, do not bundle unrelated documentation or deleted
+artifacts, and do not claim the implementation was pushed until the remote
+branch and PR are verified.
+
+## Migration and promotion status
 
 ### Phase 0: Fix the live safety defects — implemented
 
@@ -604,7 +957,7 @@ Do not include:
 
 These fixes are required even if the legacy system is later retired.
 
-### Phase 1: Stabilize the canonical contract — implemented for v1
+### Phase 1: Stabilize the canonical contract — v1 implemented; authorization v2 pending
 
 - Keep current author-time policy in Task-Spec, including
   `requires.network`; add future policy fields there only when a real consumer
@@ -613,8 +966,10 @@ These fixes are required even if the legacy system is later retired.
 - Define the portable enforcement and adapter interfaces.
 - Define the knowledge-candidate approval contract.
 - Update the documented Pass 6, Pass 7, and Pass 8 boundaries.
+- Expand the HMAC boundary over all execution authorization before production
+  promotion.
 
-### Phase 2: Prove the profile on disposable signed tasks — implemented
+### Phase 2: Prove the profile on disposable signed tasks — implemented for v1
 
 Exercise:
 
@@ -625,7 +980,7 @@ Exercise:
 The regression suite covers the cohesive single-agent path, rejects weak or
 overlapping multi-agent profiles, and accepts a disjoint parallel contract.
 
-### Phase 3: Implement `task-to-runtime-contract` — implemented
+### Phase 3: Implement `task-to-runtime-contract` — working v1 prototype
 
 - Create the concise SKILL.md.
 - Implement `bind-runtime-contract.py` and `check-runtime-contract.py`.
@@ -634,7 +989,11 @@ overlapping multi-agent profiles, and accepts a disjoint parallel contract.
 - Validate all scripts on disposable fixtures.
 - Forward-test the skill on fresh tasks without leaking the expected topology.
 
-### Phase 4: Integrate execution while preserving management — implemented
+Adapter manifests and portable path guards exist. Production promotion still
+requires runtime installation/attestation, shell and external-effect
+enforcement, and the Fork A execution-unit adapter.
+
+### Phase 4: Integrate execution while preserving management — v1 integration implemented; settlement hardening pending
 
 - Teach `task-loop` to require the execution profile instead of the legacy `.claude/` KB harness.
 - Preserve `task-loop`'s one-issue invariant.
@@ -642,13 +1001,22 @@ overlapping multi-agent profiles, and accepts a disjoint parallel contract.
 - Keep issue selection, cross-task concurrency, and fleet settlement in Pass 7.
 - Preserve runtime traces outside the coordinator context and return typed receipts.
 
-### Phase 5: Establish knowledge accretion — implemented
+Pass 8 currently consumes the profile and enforces a final path-policy gate.
+Production promotion still requires branch/worktree creation before execution,
+clean-checkout acceptance, scoped staging, approval-aware external effects, and
+receipt emission after settlement.
+
+### Phase 5: Establish knowledge accretion — candidate seam implemented; receipt v2 pending
 
 - Define `cvg/knowledge/` schemas and provenance requirements.
 - Generate proposed knowledge candidates from receipts.
 - Require owner or reviewer promotion.
 - Feed only approved knowledge into future Pass 6 context selection.
 - Keep human lessons and canonical machine knowledge as separate projections.
+
+The v1 candidate boundary is correct. Production promotion still requires the
+evidence-grade receipt schema, atomic concurrent writes, and a deterministic
+promotion policy.
 
 ### Phase 6: Run a fair benchmark — pending promotion gate
 
@@ -678,32 +1046,51 @@ Promote the replacement only when it is non-inferior on acceptance, materially b
 
 ## Acceptance criteria
 
-The redesign is ready for implementation when:
+The redesign is ready for production promotion when:
 
-- The Task-Spec is the only canonical authorization and acceptance contract.
+- The originating signed execution unit is the only canonical authorization
+  and acceptance contract; the profile never competes with it.
+- Every execution-authorizing field is inside the cryptographic integrity
+  boundary.
 - The execution profile contains only derived, consumed fields.
 - Profile freshness is bound to the Task-Spec hash.
+- A mutable profile cannot downgrade the required trust tier.
+- `cvg bind --check` is proven side-effect free.
 - Pass 6, Pass 7, and Pass 8 ownership is unambiguous.
 - Single-agent execution is the default.
 - Preparation-time topology and runtime escalation are distinct.
 - Permissions are enforced, not merely documented.
+- The selected runtime is capability-attested and fails closed when it cannot
+  honor a required control.
 - Portable guards and vendor adapters have an explicit relationship.
+- External-write policy agrees with commit, push, tracker, and PR behavior.
+- Pass 8 creates isolation before implementation, stages only authorized paths,
+  and runs clean-checkout acceptance before settlement.
+- Success receipts are written only after the final commit and PR outcome are
+  known.
+- Receipt v2 captures sufficient provenance to reproduce and audit the run.
 - Version-pinned and offline documentation paths are supported.
 - Durable knowledge is earned, provenance-backed, and review-approved.
 - Human lessons are not confused with canonical machine knowledge.
 - No empty or placeholder artifact can pass readiness.
 - Generated cross-tool files cannot clobber user-authored instructions.
+- Fork A either has a real normalized execution-unit adapter or is explicitly
+  excluded from this Bind-to-Loop path.
+- At least one real Pass 6 and one real Pass 8 proving-ground execution have
+  produced inspectable evidence.
 - The benchmark includes a populated, best-case knowledge baseline.
 - Promotion thresholds are declared before the benchmark.
 
-## Resolved initial implementation decisions
+## Resolved v1 design decisions
 
 1. The profile stores only hashes, selected evidence, topology, adapter
    references, receipt paths, and knowledge-candidate paths.
 2. The portable baseline is candidate-path checking where the runtime supports
    it plus a mandatory git-diff guard before settlement.
 3. Existing Task-Spec fields remain canonical; `requires.network` supplies the
-   current network posture, and external writes default to deny.
+   current network posture. External writes default to deny, so commit, push,
+   tracker mutation, and PR behavior must be brought under explicit policy
+   before production promotion.
 4. Knowledge candidates are receipt-backed Markdown with status `proposed`;
    only a human review promotes them.
 5. The first adapter matrix covers generic, Claude, Codex, and Kimi runtimes.

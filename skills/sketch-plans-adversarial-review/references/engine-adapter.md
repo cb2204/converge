@@ -4,7 +4,7 @@ The CLI is a **referee, never a player**: it holds no model credentials and neve
 calls an LLM API. It shells out to the engine's own headless CLI (which
 authenticates itself), captures a schema-validated artifact, and gates it. This is
 the reusable dispatch layer (Milestone 3.1) — Pass 4 is the first pass that needs
-it; Pass 5B/8 reuse it.
+it; Pass 5/8 reuse it.
 
 ## Interface — `adapters/engines/<engine>.sh`
 

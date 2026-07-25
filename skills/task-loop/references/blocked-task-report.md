@@ -59,7 +59,7 @@ the concrete missing/wrong thing, not just "it fails":
 - [ ] **A dependency (`depends_on`) is not merged** — an upstream task-spec this
       one builds on has not landed (e.g. the output layer depends on a transform
       step that itself depends on ingest, and that upstream step is not merged).
-- [ ] **The runtime contract is missing or stale** — Pass 6 has not bound the
+- [ ] **The runtime contract is missing or stale** — Pass 7 (Bind) has not bound the
       current signed Task-Spec hash to evidence, topology, and enforcement.
 - [ ] **The eval itself is broken** — a syntax error / unbound variable in the
       task-spec's bash, not a real assertion failure. Do **not** hack the eval to
@@ -76,9 +76,10 @@ Route the fix to the Converge pass that owns the gap — do not fix it here:
 | Precondition / repo terrain wrong (source data not landed, data store stale) | operator / run the project's data-prep command before re-dispatch |
 | Missing or wrong cited ADR | **Pass 2** (`tech-req-to-adrs`) |
 | Wrong swimlane seam / build order | **Pass 3** (`reqs-to-swimlane-plans`) |
-| Eval broken / task under-specified / not atomic | **Pass 5B** (`task-spec`) |
-| Missing or stale runtime contract / evidence | **Pass 6 · Bind** (`task-to-runtime-contract`) |
-| Dispatch order / dependency not yet merged | **Pass 7 · Manager** (not this loop) |
+| Eval broken / task under-specified / not atomic | **Pass 5** (`task-spec`) |
+| Issue missing / dependency links wrong on the board | **Pass 6 · Register** (`task-specs-to-issues`, opt-in) |
+| Missing or stale runtime contract / evidence | **Pass 7 · Bind** (`task-to-runtime-contract`) |
+| Dispatch order / dependency not yet merged | **the Manager** — future CI/CD, not a pass and not this loop |
 
 ## Next action
 

@@ -49,7 +49,7 @@ stand on it.
   `proposed` (`--check --final`).
 - **Records speak machine (agents are first-class consumers).** Metadata
   lives in YAML frontmatter (`status`, `date`, `ground`, `spec_ref`,
-  `supersedes`, `superseded_by`, `deciders`) so Pass 3 / Pass 5B agents grep
+  `supersedes`, `superseded_by`, `deciders`) so Pass 3 / Pass 5 agents grep
   fields, never prose. `spec_ref` cites the requirement ID(s) (`R-n`) the
   fact grounds — the chain the whole descent stands on: R-n in the spec →
   ADR grounds it → plan cites the ADR → task eval verifies R-n. `--check`
