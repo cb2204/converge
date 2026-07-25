@@ -40,3 +40,7 @@ temp/legs-e2e/
 
 # scratch render output (deck PDFs, intermediates)
 tmp/
+
+# Local tool scratch — never part of the method
+.ruff_cache/
+.sc/
