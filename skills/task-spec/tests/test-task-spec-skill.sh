@@ -579,6 +579,65 @@ fi
 rm -f "$gate_ok" "$gate_broken"
 
 # ---------------------------------------------------------------------------
+# `ready` is the frontier, not every green status field
+# ---------------------------------------------------------------------------
+# A spec whose depends_on is unmet is NOT dispatchable, however green its own
+# status looks. This is the surface a Manager selects work from, so listing a
+# blocked task there starts work whose inputs do not exist yet.
+FRONT="$(mktemp -d -t cvg-front.XXXXXX)"
+mkdir -p "$FRONT/tasks"
+cat > "$FRONT/tasks/T-20990301-root.md" <<'EOF'
+---
+id: T-20990301-root
+title: "root"
+status: ready
+effort: S
+agent: any
+depends_on: []
+---
+EOF
+cat > "$FRONT/tasks/T-20990302-blocked.md" <<'EOF'
+---
+id: T-20990302-blocked
+title: "blocked"
+status: ready
+effort: S
+agent: any
+depends_on: [T-20990301-root]
+---
+EOF
+FRONT_OUT="$( (cd "$FRONT" && bash "$SCRIPT_DIR/list-ready.sh") 2>&1 || true )"
+if echo "$FRONT_OUT" | grep -q 'T-20990301-root' && ! echo "$FRONT_OUT" | grep -q 'T-20990302-blocked'; then
+  pass "ready shows the frontier and hides a blocked spec"
+else
+  fail "ready listed a spec whose depends_on is unmet"
+fi
+ALL_OUT="$( (cd "$FRONT" && bash "$SCRIPT_DIR/list-ready.sh" --all) 2>&1 || true )"
+if echo "$ALL_OUT" | grep -q 'T-20990302-blocked'; then
+  pass "--all still shows every status:ready spec"
+else
+  fail "--all did not restore the unfiltered listing"
+fi
+# A dangling depends_on must fail CLOSED, not silently unblock the task.
+cat > "$FRONT/tasks/T-20990303-dangling.md" <<'EOF'
+---
+id: T-20990303-dangling
+title: "dangling"
+status: ready
+effort: S
+agent: any
+depends_on: [T-19990101-nonexistent]
+---
+EOF
+DANG_OUT="$( (cd "$FRONT" && bash "$SCRIPT_DIR/list-ready.sh") 2>&1 || true )"
+if ! echo "$DANG_OUT" | grep -q 'T-20990303-dangling'; then
+  pass "a dangling depends_on fails closed (task stays blocked)"
+else
+  fail "a task with a nonexistent dependency was listed as ready"
+fi
+rm -rf "$FRONT"
+
+# ---------------------------------------------------------------------------
 # Existence-only evals cannot be delegated blind
 # ---------------------------------------------------------------------------
 # `test -f x.py && grep -q assert x.py` is satisfied by `echo "# assert" > x.py`.

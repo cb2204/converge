@@ -58,12 +58,15 @@ One kind of knowledge per folder, one lifecycle each:
   never file shape. Proven by the maximal stub attack: planting a stub for all
   27 declared `creates_paths` leaves **all 9 specs red**. An eval you can satisfy
   with `echo` is not an eval, and the gate now refuses to delegate one blind.
-- **Pass 6 (Register): spec side CLOSED** — `cvg register --check --dry-run` →
-  **`CHECK_REGISTER=OK`** (9 signed specs, 8 `depends_on` edges, DAG, no orphan,
-  no un-gated spec). Issues **CVG-21…29** are stamped back into the specs as
-  `tracker_ref`. *Open:* the live board leg needs `LINEAR_API_KEY` in the
-  environment — the bodies changed when the evals were sharpened, so the board
-  must be re-pushed and re-verified against `[D]`.
+- **Pass 6 (Register): CLOSED LIVE** (2026-07-25) — `cvg register` pushed the
+  sharpened bodies (**created 0, updated 9**, 8 blocked-by links, 9 `tracker_ref`
+  receipts stamped back) and `cvg register --check` cleared the **live** `[D]`
+  gate: *spec 9 signed-off ⇄ board 9 registered (9 distinct) — no orphan, no
+  missing, no dup; ready frontier: spec roots 1 · board ready 1* →
+  **`CHECK_REGISTER=OK`**. All 9 seals still verify **Tier 1** afterwards, which
+  is the v2 envelope working as designed: `tracker_ref` is deliberately outside
+  the sealed payload, so the tracker bridge writes back without touching crypto
+  trust.
 - **Pass 7 (Bind): CLOSED** (2026-07-25) — all **9** tasks bound:
   **`CHECK_RUNTIME_CONTRACT=PASS`** each, 6 artifacts apiece (execution profile,
   `AGENTS.task.md` brief, 4 adapter manifests). Every profile carries an
@@ -80,7 +83,7 @@ One kind of knowledge per folder, one lifecycle each:
 | 3 · Decompose | `cvg decompose` | `CHECK_PLAN=OK` |
 | **4 · Consensus** | `cvg review --check` | **`CHECK_CONSENSUS=OK`** ⟵ the barrier |
 | 5 · Tasking | `cvg tasks gate` ×9 | `TIER=1` ×9 |
-| 6 · Register | `cvg register --check` | `CHECK_REGISTER=OK` *(spec side)* |
+| 6 · Register | `cvg register --check` | `CHECK_REGISTER=OK` *(live board, 9⇄9)* |
 | 7 · Bind | `cvg bind --check` ×9 | `CHECK_RUNTIME_CONTRACT=PASS` ×9 |
 | 7 · Attest | `cvg doctor runtime-contract` | `DOCTOR_RUNTIME_CONTRACT=OK` |
 

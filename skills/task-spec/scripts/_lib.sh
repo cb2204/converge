@@ -32,9 +32,22 @@ TASKSPEC_SKILL_DIR="$(cd "$__lib_dir/.." && pwd)"
 export TASKSPEC_VERSION TASKSPEC_SKILL_DIR
 
 # ----- Configurable backlog dir (allow downstream users to override) -----
-# Defaults to "tasks" relative to PWD (preserves existing behavior).
-# Override per-call: TASKSPEC_BACKLOG_DIR=path/to/backlog command...
-: "${TASKSPEC_BACKLOG_DIR:=tasks}"
+# Resolution order, highest first:
+#   1. TASKSPEC_BACKLOG_DIR from the environment  (explicit always wins)
+#   2. cvg/tasks   — the Converge workspace layout that cvg/INDEX.md prescribes
+#   3. tasks       — the bare layout (preserves the original behavior)
+#
+# Passes 0-3 already auto-discover cvg/docs, cvg/docs/adrs and cvg/sketch. The
+# task family did not, so `cvg ready`, `cvg lint` and the Pass 8 loop all
+# reported an empty backlog inside a perfectly valid workspace. Fixing it here
+# rather than in each script covers every consumer, task-loop included.
+if [ -z "${TASKSPEC_BACKLOG_DIR:-}" ]; then
+  if [ -d "cvg/tasks" ]; then
+    TASKSPEC_BACKLOG_DIR="cvg/tasks"
+  else
+    TASKSPEC_BACKLOG_DIR="tasks"
+  fi
+fi
 export TASKSPEC_BACKLOG_DIR
 
 # ----- --version handler -----

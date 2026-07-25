@@ -37,6 +37,14 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve the backlog to an ABSOLUTE path before moving anywhere. The cd below
+# assumes the backlog hangs off the git root; in a nested workspace (a proving
+# ground, a monorepo package) it does not, and a relative TASKSPEC_BACKLOG_DIR
+# silently stops resolving the moment we leave the invocation directory.
+if [[ -d "$TASKSPEC_BACKLOG_DIR" ]]; then
+  TASKSPEC_BACKLOG_DIR="$(cd "$TASKSPEC_BACKLOG_DIR" && pwd)"
+  export TASKSPEC_BACKLOG_DIR
+fi
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR/../../..")"
 cd "$REPO_ROOT"
 
@@ -81,10 +89,10 @@ parse_yaml_list() {
 }
 
 # Discover all task files
-mapfile -t task_files < <(find tasks -name 'T-*.md' -type f 2>/dev/null | sort)
+mapfile -t task_files < <(find "$TASKSPEC_BACKLOG_DIR" -name 'T-*.md' -type f 2>/dev/null | sort)
 
 if [[ ${#task_files[@]} -eq 0 ]]; then
-  echo "No task files found in tasks/"
+  echo "No task files found in $TASKSPEC_BACKLOG_DIR/"
   exit 0
 fi
 
@@ -138,7 +146,7 @@ for id in "${all_ids[@]}"; do
   if [[ "$status" == "parked" ]]; then
     continue
   fi
-  if [[ "$f" == tasks/archive/* ]]; then
+  if [[ "$f" == "$TASKSPEC_BACKLOG_DIR"/archive/* ]]; then
     continue
   fi
   
@@ -170,7 +178,7 @@ for path in "${!path_owners[@]}"; do
     for owner in $owners; do
       owner_status=${task_status[$owner]}
       owner_file=${task_file[$owner]}
-      if [[ "$owner_status" != "parked" && "$owner_file" != tasks/archive/* ]]; then
+      if [[ "$owner_status" != "parked" && "$owner_file" != "$TASKSPEC_BACKLOG_DIR"/archive/* ]]; then
         if [[ -z "$active_owners" ]]; then
           active_owners="$owner"
         else

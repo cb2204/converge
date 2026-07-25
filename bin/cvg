@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.19.1"
+CVG_VERSION="0.19.2"
 
 # Resolve THIS script through any symlink chain before locating its companions.
 # The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
@@ -667,7 +667,8 @@ cmd_help() {
   printf '  register --check         gate the mapping (1:1, DAG, no orphans); read-only\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
-  printf '  ready                    list ready-to-run tasks\n'
+  printf '  ready [--all]            the FRONTIER — ready AND unblocked. --all lists\n'
+  printf '                           every status:ready spec, blocked or not\n'
   printf '  lint                     lint the whole backlog (cycles, overlaps)\n'
   printf '  transition <id> <state>  move a task between statuses\n'
   printf '\n'

@@ -178,8 +178,8 @@ detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
 1. ~~Commit the in-flight Pass 6 work~~ — **done.**
 2. ~~R6 · Bind, for real~~ — **done.** Pass 7 now emits 7A (contract) + 7B (task
    brief), carries an epoch-bound capability envelope, and gates fail-closed.
-3. **R8 · The Loop, once, by hand** — drive **CVG-21** to a green eval and a PR
-   that closes it. The frontier then advances to CVG-22 on its own. *This is the
+3. **R8 · The Loop, once, by hand** ⟵ **NOW** — drive **CVG-21** (the sole
+   frontier task; `cvg ready` returns exactly it) to a green eval. The frontier then advances to CVG-22 on its own. *This is the
    single highest-value next act: it closes the loop for the first time, and
    settlement is now trustworthy enough to try it (WP4).*
 4. **Then, and only then, automate it** — B-1 (the Manager) + B-2 (the CI
@@ -785,6 +785,33 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · PASS 6 CLOSED LIVE — THE DESCENT 0→7 IS COMPLETE** — the
+  operator ran `cvg register` (created 0, **updated 9**, 8 blocked-by links, 9
+  `tracker_ref` receipts) and `cvg register --check`, which cleared the **live**
+  `[D]` gate: *spec 9 ⇄ board 9 (9 distinct), no orphan, no missing, no dup;
+  ready frontier: spec roots 1 · board ready 1* → **`CHECK_REGISTER=OK`**.
+  All 9 seals still verify **Tier 1** after the write-back — the v2 envelope
+  working exactly as designed, since `tracker_ref` sits outside the sealed
+  payload precisely so the tracker bridge cannot break crypto trust.
+  **Three more workspace-blindness bugs, same family as the `register` one, all
+  found by using the CLI rather than reasoning about it:**
+  (a) `cvg ready` and everything else keyed on `TASKSPEC_BACKLOG_DIR` reported an
+  empty backlog inside a valid workspace — fixed at the source in `_lib.sh`
+  (`cvg/tasks` → `tasks`, explicit env still wins), which also covers
+  **`task-loop`**, so Pass 8 would have hit the same wall.
+  (b) `lint-backlog.sh` `cd`s to the git root, which silently invalidated the
+  relative backlog path — the backlog is now resolved to an absolute path
+  *before* the cd.
+  (c) **`cvg ready` ignored `depends_on` entirely.** It listed all 9 specs as
+  ready when the true frontier is **1**, directly contradicting the register
+  gate — and `cvg ready` is the surface a Manager (B-1) selects work from, so it
+  would have dispatched 8 tasks whose inputs do not exist. Now dependency-aware,
+  failing closed on a dangling edge, with `--all` preserving the old listing.
+  cvg **0.19.2**.
+  **The descent, complete:** `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS ·
+  CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1 ×9 ·
+  CHECK_REGISTER=OK (live) · CHECK_RUNTIME_CONTRACT=PASS ×9 ·
+  DOCTOR_RUNTIME_CONTRACT=OK`. **Next: R8 on CVG-21, the sole frontier task.**
 - **2026-07-25 · THE DESCENT CLOSES 0→7 ON uc-analytics** — the use case, not
   the machinery. Every gate run in sequence on the real workspace:
   `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK ·
