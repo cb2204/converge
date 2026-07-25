@@ -190,7 +190,7 @@ failure back and revise — a tight local loop. GREEN: open a PR that closes the
 issue only after the portable path guard passes. Bounded by the spec's
 `budget_iterations`; failure exits as an explicit blocked-task report, never
 silence.
-**Ships:** `run-issue-eval.sh`, `open-issue-pr.sh`, `references/blocked-task-report.md`. **Flags:** `--issue N` (required), `--agent claude|codex|kimi`.
+**Ships:** `run-issue-eval.sh`, `open-issue-pr.sh`, `references/blocked-task-report.md`. **CLI:** `cvg loop --issue <id>`. **Flags:** `--issue N` (required), `--agent claude|codex|kimi`, `--dry-run`, `--allow-external-writes`. **Emits:** `TASK_LOOP=SETTLED|LOCAL_SETTLED|BLOCKED`.
 **Gate:** the task's own eval is green — none by hand, none by attempt-count.
 
 ---

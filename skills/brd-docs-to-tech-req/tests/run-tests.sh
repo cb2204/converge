@@ -78,13 +78,10 @@ run_case pdf-refused             "$PDF_TMP"                     -- 2 'consensus 
 run_case pdf-refused-token       "$PDF_TMP"                     -- 2 '^CHECK_TECH_SPEC=USAGE_ERROR$' ''
 rm -f "$PDF_TMP"
 
-# --- the true positive: the signed proving-ground spec stays green ----------
-REPO_SPEC="$HERE/../../../tests/uc-analytics/cvg/docs/tech-spec-analytical-backbone.md"
-if [ -f "$REPO_SPEC" ]; then
-  run_case proving-ground-spec   "$REPO_SPEC"                   -- 0 '^CHECK_TECH_SPEC=PASS$' ''
-else
-  printf 'skip  %-38s (proving-ground spec not present)\n' proving-ground-spec
-fi
+# --- the true positive: a real signed tech-spec stays green -----------------
+# The fixture is OWNED here, not borrowed from a use case. A skill that reaches
+# outside itself for a golden is a skill that breaks when the use case moves.
+run_case golden-signed-spec      "$FIX/golden-signed-tech-spec.md" -- 0 '^CHECK_TECH_SPEC=PASS$' ''
 
 echo "────────────────────────────────────────────"
 echo "rows: $TOTAL  failed: $FAILED"

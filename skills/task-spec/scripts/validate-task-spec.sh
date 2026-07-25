@@ -970,7 +970,24 @@ if [[ ${#ERRORS[@]} -gt 0 ]]; then
 fi
 
 # --- State writer (only on successful validation) ---
-STATE_DIR="$GIT_ROOT/tasks"
+# The index belongs to the WORKSPACE that owns the spec, never to the git root.
+# Anchoring it at the git root makes a nested workspace (a proving ground, a
+# sub-project, a monorepo package) spill its task list into the parent repo —
+# and check-path-policy.py already treats `_state.yaml` as a sibling of the
+# spec, so the git-root location was the odd one out.
+abs_file="$FILE"
+if [[ "$abs_file" != /* ]]; then
+  abs_file="$(cd "$(dirname "$FILE")" 2>/dev/null && pwd)/$(basename "$FILE")"
+fi
+
+STATE_DIR="$(dirname "$abs_file")"
+# Paths stay relative to the workspace (the parent of `tasks/`) so the index
+# reads the same whether or not the workspace is itself a git repo.
+if [[ "$(basename "$STATE_DIR")" == "tasks" ]]; then
+  ANCHOR="$(dirname "$STATE_DIR")"
+else
+  ANCHOR="${GIT_ROOT:-$STATE_DIR}"
+fi
 STATE_FILE="$STATE_DIR/_state.yaml"
 VALIDATOR_VERSION="2"
 TS="$(date -u +%FT%TZ)"
@@ -978,12 +995,7 @@ TS="$(date -u +%FT%TZ)"
 mkdir -p "$STATE_DIR"
 TMP_STATE="${STATE_FILE}.tmp.$$"
 
-# Compute relative path from git root
-abs_file="$FILE"
-if [[ "$abs_file" != /* ]]; then
-  abs_file="$(cd "$(dirname "$FILE")" 2>/dev/null && pwd)/$(basename "$FILE")"
-fi
-REL_PATH="${abs_file#$GIT_ROOT/}"
+REL_PATH="${abs_file#"$ANCHOR"/}"
 
 ts_prepare_tmp "$TMP_STATE"
 

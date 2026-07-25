@@ -3,7 +3,7 @@
 > **This file is the CLI's status card: what exists, what it wraps, what
 > proved it.** It records the present only. The backlog — what comes next
 > and in what order — lives in ONE place: [`PLAN.md`](../PLAN.md)
-> (the working contract; `cvg-todo.md` was folded into it on 2026-07-24 and is
+> (the working contract; `MAP.md`, `todo.md` and `cvg-todo.md` were folded into it
 > now a redirect stub). A second todo here would fork the truth — deliberately
 > not done, matching the 2026-07-16 housekeeping call that folded all contracts
 > into one file.

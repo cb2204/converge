@@ -121,24 +121,34 @@ exception: it does not lower, it *closes*.**
 ## 🚀 Quickstart
 
 The skills live in this repo so the method can evolve on its own. To **use** them
-in a consuming repo, make them visible to Claude Code under that repo's
-`.claude/skills/` — symlink (tracks upstream) or copy (pins a version):
+in your project, run the installer from that project:
 
 ```bash
-# from your project root — symlink the whole chain (recommended)
-mkdir -p .claude/skills
-for s in /path/to/converge/skills/*/; do
-  ln -s "$s" ".claude/skills/$(basename "$s")"
-done
+git clone https://github.com/luanmorenommaciel/converge.git ~/converge
 
-# …or copy just the ones you need
-cp -R /path/to/converge/skills/task-spec  .claude/skills/
-cp -R /path/to/converge/skills/task-loop  .claude/skills/
+cd ~/my-project
+bash ~/converge/install.sh
+```
+
+That does two separate things: it makes the twelve skills visible to Claude Code
+under `.claude/skills/`, and it puts the `cvg` CLI on your PATH. It verifies
+itself and prints `INSTALL=OK`. Re-running it is safe.
+
+Symlinks are the default, so `git pull` in the checkout updates every project at
+once. Pin a version instead when a repo must build the same way in six months:
+
+```bash
+bash ~/converge/install.sh --copy          # pins this version
+bash ~/converge/install.sh --no-bin        # skills only, leave my PATH alone
+bash ~/converge/install.sh --help          # all the flags
 ```
 
 **Verify the wiring:**
 
 ```bash
+cvg version
+# → cvg 0.19.0 (task-spec 3.6.0)
+
 python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
 # → Skill is valid!
 ```
@@ -258,7 +268,7 @@ and a machine-checkable **gate**. Passes 0–4 are human-led; 5–8 are machine-
 | **5** | Tasking | `task-spec` | atomic unit | `tasks/T-*.md` · `DELEGATE` (HMAC-sealed) |
 | **6** | Register *(opt-in)* | `task-specs-to-issues` | board | 1 spec = 1 issue · `CHECK_REGISTER` |
 | **7** | Bind *(7A contract + 7B brief)* | `task-to-runtime-contract` | runtime contract | profile + guards + task brief · `CHECK_RUNTIME_CONTRACT` |
-| **8** | The Loop *(+ tier-2 verify)* | `task-loop` · `cvg verify` | runtime | branch → green eval → independent refutation → PR |
+| **8** | The Loop *(+ tier-2 verify)* | `cvg loop` · `cvg verify` | runtime | branch → green eval → independent refutation → settle |
 
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
 dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
@@ -532,10 +542,11 @@ converge/
 │   ├── converge-method-v6.pdf           #   the blueprint — method, architecture, agent protocol
 │   ├── task-spec-v3.6.0.pdf             #   the cornerstone unit, in depth
 │   ├── src/                             #   HTML sources + render.sh (Chrome → PDF)
-│   └── archive/                         #   superseded blueprints, kept for provenance
-├── presentation/                        # interactive HTML walkthroughs
-├── sketch/                              # Pass 3 swimlane plans land here (per run)
+│   ├── presentation/                    #   interactive HTML walkthroughs
+│   └── archive/                         #   superseded blueprints + proposals
 ├── tests/                               # e2e-test-engine (machine floor) · uc-analytics (method proving ground)
+├── .github/workflows/ci.yml             # the gauntlet, in public — offline, no secrets, macOS + Linux
+├── install.sh                           # skills → .claude/skills/ · cvg → PATH
 └── PLAN.md                              # the one working document (state · rules · backlog · log)
 ```
 

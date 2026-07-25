@@ -1,0 +1,107 @@
+# CI — the gauntlet Converge asks of everyone else.
+#
+# A method whose pitch is "the eval decides done" has to run its own evals in
+# public. Everything here is offline and hermetic: no tracker, no engine, no
+# network, no credentials. The suites that need a live Linear board are NOT run
+# here by design — a gate that needs a secret is a gate that silently skips on
+# a fork's PR, and a silently-skipped gate is worse than no gate.
+name: ci
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gauntlet:
+    name: gauntlet (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # macOS ships bash 3.2 and BSD userland; Linux ships bash 5 and GNU. The
+    # core is written for the older, stricter of the two, so both must pass or
+    # the portability claim is decoration.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash version (portability floor is 3.2)
+        run: bash --version | head -1
+
+      - name: shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          fi
+          shellcheck -S error \
+            bin/cvg install.sh \
+            skills/*/tests/*.sh \
+            skills/*/scripts/*.sh \
+            skills/*/scripts/adapters/*.sh \
+            tests/*.sh
+        if: runner.os == 'Linux'
+
+      - name: every skill is valid
+        run: |
+          fail=0
+          for d in skills/*/; do
+            [ -f "$d/SKILL.md" ] || continue
+            python3 skills/skill-creator/scripts/quick_validate.py "$d" >/dev/null 2>&1 \
+              || { echo "INVALID: $d"; fail=1; }
+          done
+          exit $fail
+
+      - name: syntax — every shell script parses
+        run: |
+          fail=0
+          for f in bin/cvg install.sh $(find skills tests -name '*.sh'); do
+            bash -n "$f" || { echo "SYNTAX: $f"; fail=1; }
+          done
+          exit $fail
+
+      - name: task-spec
+        run: bash skills/task-spec/tests/test-task-spec-skill.sh
+
+      - name: hmac envelope
+        run: bash skills/task-spec/tests/test-hmac-envelope.sh
+
+      - name: bash 3.2 portability
+        run: bash skills/task-spec/tests/test-bash-portability.sh
+
+      - name: runtime contract (Pass 7)
+        run: bash skills/task-to-runtime-contract/tests/run-tests.sh
+
+      - name: register (Pass 6, offline)
+        run: bash skills/task-specs-to-issues/tests/test-register.sh
+
+      - name: cvg json envelope
+        run: bash tests/test-cvg-json-envelope.sh
+
+      - name: install surface
+        run: bash tests/test-install.sh
+
+      - name: pass gates
+        run: |
+          bash skills/idea-to-brd/tests/run-tests.sh
+          bash skills/brd-docs-to-tech-req/tests/run-tests.sh
+
+      - name: the product must not depend on the proving ground
+        # skills/ and bin/ ship; tests/uc-analytics is a fixture. If the arrow
+        # ever points that way again, the install breaks for everyone who does
+        # not clone the whole repo.
+        run: |
+          if grep -rl "uc-analytics" bin/ skills/ 2>/dev/null | grep -q .; then
+            echo "the shipped product references the proving ground:"
+            grep -rn "uc-analytics" bin/ skills/ 2>/dev/null
+            exit 1
+          fi
+          echo "clean — the product does not know the use case exists"

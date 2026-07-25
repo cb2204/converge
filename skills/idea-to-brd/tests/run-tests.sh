@@ -96,13 +96,10 @@ run_case pdf-refused             "$PDF_TMP"                     -- 2 '[Cc]onvert
 run_case pdf-refused-token       "$PDF_TMP"                     -- 2 '^CHECK_BRD=USAGE_ERROR$' ''
 rm -f "$PDF_TMP"
 
-# --- the true positive: the signed proving-ground BRD stays green ----------
-REPO_BRD="$HERE/../../../tests/uc-analytics/cvg/docs/brd-analytical-backbone.md"
-if [ -f "$REPO_BRD" ]; then
-  run_case proving-ground-brd    "$REPO_BRD"                    -- 0 '^CHECK_BRD=PASS$' ''
-else
-  printf 'skip  %-38s (proving-ground BRD not present)\n' proving-ground-brd
-fi
+# --- the true positive: a real signed BRD stays green ----------------------
+# The fixture is OWNED here, not borrowed from a use case. A skill that reaches
+# outside itself for a golden is a skill that breaks when the use case moves.
+run_case golden-signed-brd       "$FIX/golden-signed-brd.md"    -- 0 '^CHECK_BRD=PASS$' ''
 
 echo "────────────────────────────────────────────"
 echo "rows: $TOTAL  failed: $FAILED"

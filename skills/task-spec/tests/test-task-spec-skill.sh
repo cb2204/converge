@@ -579,6 +579,36 @@ fi
 rm -f "$gate_ok" "$gate_broken"
 
 # ---------------------------------------------------------------------------
+# The index belongs to the workspace, never to the git root
+# ---------------------------------------------------------------------------
+# A nested workspace (proving ground, monorepo package, sub-project) must not
+# spill its task list into the parent repo's root. This leaked for months: the
+# validator anchored `_state.yaml` at the git root while check-path-policy.py
+# already treated it as a sibling of the spec.
+NEST="$(mktemp -d -t cvg-nest.XXXXXX)"
+git -C "$NEST" init --quiet
+git -C "$NEST" config user.email nest@test.local
+git -C "$NEST" config user.name "nest test"
+mkdir -p "$NEST/deep/workspace/tasks"
+NESTED_SPEC="$NEST/deep/workspace/tasks/T-20260602-golden.md"
+cp "$FIXTURES_DIR/T-20260602-golden.md" "$NESTED_SPEC"
+# the golden fixture declares README.md in touches_paths, which resolves
+# against the git root — unlike the index, which is workspace-scoped
+printf '# readme\n' > "$NEST/README.md"
+bash "$SCRIPT_DIR/validate-task-spec.sh" "$NESTED_SPEC" >/dev/null 2>&1 || true
+if [ ! -e "$NEST/tasks/_state.yaml" ] && [ -f "$NEST/deep/workspace/tasks/_state.yaml" ]; then
+  pass "the task index lands in the workspace, not the git root"
+else
+  fail "the task index leaked to the git root (nested workspace spills upward)"
+fi
+if grep -q 'path: tasks/T-20260602-golden.md' "$NEST/deep/workspace/tasks/_state.yaml" 2>/dev/null; then
+  pass "indexed paths are workspace-relative, not git-root-relative"
+else
+  fail "indexed paths are not workspace-relative"
+fi
+rm -rf "$NEST"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

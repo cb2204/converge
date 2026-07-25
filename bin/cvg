@@ -14,9 +14,23 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.18.0"
+CVG_VERSION="0.19.0"
 
-BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve THIS script through any symlink chain before locating its companions.
+# The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
+# so `dirname "$0"` is the bin dir on PATH, not the checkout — and _ui.sh lives
+# beside the real file. `readlink -f` is not portable (absent on stock macOS),
+# so walk the chain by hand. Bash 3.2 safe.
+_cvg_self="$0"
+while [ -L "$_cvg_self" ]; do
+  _cvg_link="$(readlink "$_cvg_self")"
+  case "$_cvg_link" in
+    /*) _cvg_self="$_cvg_link" ;;
+    *)  _cvg_self="$(dirname "$_cvg_self")/$_cvg_link" ;;
+  esac
+done
+BIN_DIR="$(cd "$(dirname "$_cvg_self")" && pwd)"
+unset _cvg_self _cvg_link
 # shellcheck source=bin/_ui.sh
 . "$BIN_DIR/_ui.sh"
 
@@ -40,6 +54,14 @@ resolve_home() {
     fi
     dir="$(dirname "$dir")"
   done
+  # Fall back to the checkout this very script lives in. The normal install
+  # symlinks `cvg` onto PATH and runs it from a CONSUMING repo, which has no
+  # skills/ of its own — without this, the installed CLI only works while you
+  # are standing inside Converge, which is the one place a user never is.
+  if [ -d "$BIN_DIR/../skills/task-spec/scripts" ]; then
+    (cd "$BIN_DIR/.." && pwd)
+    return 0
+  fi
   ui_err "no Converge home found walking up from '$PWD' — run inside a repo with skills/task-spec/scripts/, or set CVG_HOME"
   return 1
 }
@@ -619,6 +641,9 @@ cmd_help() {
   printf '                           saw; fails closed (CHECK_VERIFY token)\n'
   printf '  bind --check --task <spec>\n'
   printf '                           re-check hashes, topology, evidence, and adapters\n'
+  printf '  loop --issue <id>        Pass 8 · Loop — one assigned task, a bounded RED/GREEN\n'
+  printf '                           cycle, one settlement. Settles LOCALLY unless the\n'
+  printf '                           profile allows external writes (TASK_LOOP token)\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint + six-tier sizing (XS/S/M/L leaf\n'
@@ -691,6 +716,7 @@ is_mutating() {
     tasks)      [ "${1:-}" = "accept" ] && return 0 || return 1 ;;
     review)     for a in "$@"; do [ "$a" = "--adversary" ] && return 0; done; return 1 ;;
     bind)       for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
+    loop)       for a in "$@"; do [ "$a" = "--dry-run" ] && return 1; done; return 0 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
@@ -728,11 +754,13 @@ elif cmd == "register":
 elif cmd == "bind":
     mutating = ("--check" not in parts)
     disp = "bind --check" if ("--check" in parts) else "bind"
+elif cmd == "loop":
+    mutating = ("--dry-run" not in parts)
 elif cmd == "setup":
     sub = parts[0] if parts else "status"
     disp = ("setup " + sub).strip() if sub != "status" else "setup"
     mutating = (sub in ("tracker", "repo", "people", "projection"))
-PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4, "bind": 7}
+PASS = {"capture": 0, "intent": 1, "structure": 2, "decompose": 3, "review": 4, "doctor": 4, "bind": 7, "loop": 8}
 env = {
     "ok": ok, "command": disp, "converge_pass": PASS.get(cmd),
     "token": token, "verdict": verdict, "exit_code": rc,
@@ -1133,6 +1161,16 @@ case "$CMD" in
     [ -f "$LANER" ] || { ui_err "task-spec skill is incomplete under $CVG_HOME_DIR/skills"; printf 'LANE=USAGE_ERROR\n'; exit 2; }
     exec python3 "$LANER" "$@"
     ;;
+  loop)
+    # Pass 8 · Loop. One assigned task, a bounded RED/GREEN cycle, and one
+    # settlement — local by default, because the profile's external_writes
+    # policy is a real gate. This loop never picks its own work: --issue is
+    # required, and the signed Task-Spec (not the issue body) is the only
+    # instruction source.
+    LOOPER="$CVG_HOME_DIR/skills/task-loop/scripts/open-issue-pr.sh"
+    [ -f "$LOOPER" ] || { ui_err "task-loop skill is incomplete under $CVG_HOME_DIR/skills"; printf 'TASK_LOOP=USAGE_ERROR\n'; exit 2; }
+    exec bash "$LOOPER" "$@"
+    ;;
   verify)
     # Tier-2 adversarial verification — a different-family engine grades the diff
     # against the spec's intent and the holdout it never saw. Fails closed.
@@ -1291,6 +1329,7 @@ m = {
     c("doctor", 4, "sketch-plans-adversarial-review/doctor.sh", ["DOCTOR=OK|FAIL"], False, "cvg doctor", "Engine readiness for Pass 4 dispatch (>=2 engines, >=1 cross-family)."),
     c("bind --task <spec>", 7, "task-to-runtime-contract/bind-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], True, "cvg bind --task tasks/T-...md", "Pass 7 · Bind — verify one signed Task-Spec, select the initial intra-task topology, hash-bind the evidence slice, and emit portable path guards plus vendor adapter manifests."),
     c("bind --check --task <spec>", 7, "task-to-runtime-contract/check-runtime-contract.py", ["CHECK_RUNTIME_CONTRACT=PASS|FAIL"], False, "cvg bind --check --task tasks/T-...md", "Re-check Task-Spec freshness, sign-off, context hashes, topology substance, ownership, and enforcement artifacts."),
+    c("loop --issue <id>", 8, "task-loop/open-issue-pr.sh", ["TASK_LOOP=SETTLED|LOCAL_SETTLED|BLOCKED|USAGE_ERROR"], True, "cvg loop --issue T-...", "Pass 8 · Loop — execute ONE assigned task through a bounded RED/GREEN cycle and settle it. Never selects its own work. Staging is scoped to the capability envelope's fs.write grant; settlement stops at a local commit unless the profile's external_writes policy permits a push."),
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children)."),
     c("tasks gate <spec>", "5B", "task-spec/safe-to-delegate.sh", ["VERDICT: DELEGATE|DO NOT DELEGATE", "TIER=1|2|3"], False, "cvg tasks gate T-...md", "Sign-off gate; refuses an XL/XXL node (dispatch its children, not the node)."),
     c("tasks accept <spec>", "5B", "task-spec/accept-task.sh", ["ACCEPT / REJECT"], True, "cvg tasks accept T-...md --stamp", "Post-execution acceptance."),

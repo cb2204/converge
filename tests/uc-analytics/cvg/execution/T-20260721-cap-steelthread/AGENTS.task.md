@@ -34,7 +34,7 @@ eval_1 && eval_2 && eval_3
 ## Boundaries
 
 - network: **deny** · external writes: **deny**
-- enforcement on `codex`: **prevent** (`prevent` = blocked before it happens; `detect` = caught at settlement)
+- enforcement on `generic`: **detect** (`prevent` = blocked before it happens; `detect` = caught at settlement)
 - authority closes on: settle, block, budget_exhausted, epoch_change — a new epoch requires a fresh bind
 
 ## Before you settle

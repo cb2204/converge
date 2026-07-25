@@ -55,4 +55,4 @@ One kind of knowledge per folder, one lifecycle each:
 - **Next beat:** R5.R — **Pass 5B tasking**: decompose the backbone into task-specs,
   steel thread first (`swimlane-capture-leg-01`, an L leaf).
 - The authoritative beat log lives in the repo-root
-  [`cvg-todo.md`](../../../cvg-todo.md).
+  [`PLAN.md`](../../../PLAN.md).

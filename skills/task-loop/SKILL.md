@@ -94,6 +94,16 @@ It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each
   after both gates pass may the loop open its one PR and emit its execution
   receipt.
 
+## Entry point
+
+```bash
+cvg loop --issue <task-id>            # settles locally unless the profile allows more
+cvg loop --issue <task-id> --dry-run  # show the plan, touch nothing
+```
+
+This loop never picks its own work — `--issue` is required. The signed Task-Spec
+is the only instruction source; the tracker issue is state, never instruction.
+
 ## Settlement — scoped, ordered, policy-governed
 
 Settlement is where a green eval becomes a commit, and it is the easiest place to

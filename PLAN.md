@@ -188,6 +188,13 @@ detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
 5. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
    Approval), so the envelope's authority is externally checkable.
 
+> **Before R8 is worth running:** CVG-21's Exit Check is `test -f` + `grep`, and
+> three stub files satisfy all of it (verified). The first-ever loop run must
+> not be able to go green on stubs. Sharpen those evals to exercise the pipeline
+> against `uc-analytics-postgres`, or gate the result on `cvg verify`. Note also
+> that the profile denies external writes, so R8 will settle **locally** —
+> that's the WP4 gate working; take the push/PR leg as a deliberate second run.
+
 **Housekeeping that should not block the above:** nothing is pushed (branch is
 ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
 
@@ -778,6 +785,41 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE ROOT BECOMES THE PRODUCT** — the repo root is the install
+  surface, so it was audited as one. Four things were wrong, and two of them
+  broke the install for everyone who is not us.
+  **The proving ground leaked upward.** `validate-task-spec.sh` anchored
+  `tasks/_state.yaml` at the **git root**, so validating a nested workspace
+  spilled its task list into the parent repo — the shipping root carried an
+  index of nine `tests/uc-analytics/` specs. `check-path-policy.py` already
+  treated `_state.yaml` as a sibling of the spec, so the validator was the one
+  out of step; it is now workspace-scoped, with workspace-relative paths.
+  Two shipped skills (`idea-to-brd`, `brd-docs-to-tech-req`) also reached into
+  `tests/uc-analytics/` for golden fixtures — the product depending on the use
+  case. Each now owns its golden. **`grep -rl uc-analytics bin/ skills/` is
+  empty, and CI fails the build if it ever isn't.**
+  **`cvg loop` — Pass 8 joins the CLI.** Passes 0–7 were `cvg <verb>`; Pass 8
+  was a raw script path the readme nonetheless advertised. Wired with help,
+  pass map, mutation guard, and agent manifest (`TASK_LOOP=SETTLED|
+  LOCAL_SETTLED|BLOCKED|USAGE_ERROR`). cvg 0.18.0 → **0.19.0**.
+  **`install.sh` + CI.** One command installs the twelve skills into
+  `.claude/skills/` and puts `cvg` on PATH; symlink by default, `--copy` pins,
+  idempotent, self-verifying, refuses to install onto its own checkout.
+  Writing its test found **two bugs that only ever appear on the install path**:
+  `cvg` located `_ui.sh` via `dirname $0` without resolving its own symlink (so
+  the PATH entry died on line 21), and `resolve_home()` had no fallback to the
+  checkout containing the script (so an installed `cvg` only worked while you
+  stood inside Converge — the one place a user never is). Both fixed, both
+  pinned by `tests/test-install.sh`. `.github/workflows/ci.yml` runs the whole
+  offline gauntlet on macOS **and** Linux — no tracker, no engine, no secrets,
+  because a gate that needs a secret silently skips on a fork's PR.
+  **The root is now seven entries:** `LICENSE · PLAN.md · readme.md · bin ·
+  skills · docs · tests` (+ `install.sh`, `.github`). Dead stubs `MAP.md` /
+  `todo.md` / `cvg-todo.md`, leftover `tasks/` and `sketch/` scaffolding
+  deleted; `proposal.md` → `docs/archive/`, `presentation/` → `docs/`.
+  Proof: 12/12 skills · runtime-contract 35 · register 120 · hmac 32 ·
+  task-spec 23 · portability 35 · json-envelope 12 · install 7 · pass-gates 42 ·
+  shellcheck 0.
 - **2026-07-25 · WP1–WP4 · the harness becomes trustworthy** — four correctness
   gaps closed, 255 offline checks green.
   **WP1 · authorization sealed (HMAC v2).** v1 sealed only identity and body, so
