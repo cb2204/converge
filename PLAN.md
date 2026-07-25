@@ -819,7 +819,7 @@ references survive in the READMEs). What is actually left:
 | 1 | **Nothing is pushed — so CI has never executed** | branch is **9 commits** ahead of `origin/feat/e2e` | `git push` and read the first real gauntlet run. The workflow is written, covers the loop kernel, and is unproven. Everything green here was proven on one macOS host. |
 | 2 | **The blueprint PDF lags the method** | `docs/src/converge-method-v6.html` still says **v0.16.0** in three places and describes Pass 8 before the kernel existed (no terminal states, no budgets-actually-enforced, no `cvg/` workspace) | Edit the HTML, then re-render: `bash docs/src/render.sh` (needs Chrome). Deliberately NOT half-done: editing the source without re-rendering would leave the HTML and the shipped PDF disagreeing, which is worse than a PDF that is honestly one version behind. |
 | 3 | **Stub-engine test artifacts in the proving ground** | `tests/uc-analytics/cvg/receipts/T-20260721-cap-steelthread{,.attempt-1c35c4849ef2}.json` | These came from kernel test runs, not from a real beat. Delete them, or keep them knowingly — `cvg/loop/` scratch is now gitignored, receipts are not (they are evidence by design). |
-| 4 | **`loop-tracker.sh` is referenced and optional** | `loop-kernel.sh` calls it fail-soft at claim / attempt / terminal | Intentional (a tracker that is down must never change a verdict), but until it is finished the tracker narration described in `loop-spec.md` does not happen. Finish it or note it as post-B-1. |
+| 4 | **The tracker bridge is written but never exercised live** | `skills/task-loop/scripts/loop-tracker.sh` (217 lines: claim → attempt → terminal, Linear `AgentSession`/`AgentActivity`, every call fail-soft) | It is invoked only when present and never allowed to change a verdict, which is correct — but "narrates to the board" is unproven until one loop runs against the live board. Prove it on the R8 run. |
 
 ---
 
@@ -827,6 +827,52 @@ references survive in the READMEs). What is actually left:
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE DOCS CATCH UP TO THE LOOP — and the manifest was lying to
+  agents** — a surface nobody can read is not shipped, so every document was walked
+  against the actual CLI. **`bin/README.md` was missing six shipped commands**
+  (`doctor runtime-contract`, `lane`, `setup repo|people|projection`) and still
+  listed `verify` under *"not yet built"* three versions after it shipped. Worse,
+  **`cvg agent-context` — the machine-readable contract an agent reads instead of
+  iterating `help` — still described `ready` as "List ready-to-run tasks"** after
+  `ready` became dependency-aware. That is the one lie with teeth: a Manager
+  reading the manifest would have believed the old semantics of the exact surface
+  it selects work from. Fixed, with the token line made honest (a frontier listing
+  plus a hidden-blocked count — `ready` emits no verdict token, and claiming one
+  would have been the same class of error).
+  **The `cvg/` workspace is finally documented where a newcomer meets it** — the
+  root readme now shows the six-folder layout, the discovery order (`cvg/X` then
+  `X`, explicit path always wins), and the rule that produced four separate bugs:
+  *the workspace need not be the git root, so everything resolves against the
+  workspace* — including the directory a spec's own evals run in. The stale
+  `tasks/T-*.md` paths went with it.
+  **Pass 8's own docs** gained the loop specification, the terminal-state table,
+  the engine-adapter contract, the real flag set (`--no-agent`/`--gate-only`,
+  the three tightening budgets, `--resume`, `STOP`) and troubleshooting rows for
+  `STALLED`, `EXHAUSTED` and a watchdog kill; `skills/README.md` and the root
+  readme's Pass 8 narrative now say the same thing. The kernel also learned to
+  forward `--base` / `--contract` / `--legacy-no-contract`, which existed on the
+  settler and would otherwise have been silently dropped from `cvg loop` the
+  moment the kernel moved in front of it.
+  **The readme stopped under-claiming, too:** it still called a holdout verifier
+  "the named next step" although `cvg verify` shipped in 0.19.0. It now claims all
+  three dark-factory properties, with the honest caveat that the judge is a
+  *model* — assurance, not proof — which is why it is a hardened secondary behind
+  a deterministic eval and is never reported as one.
+  **Two infrastructure gaps found by using the thing, not reading it:** CI's
+  shellcheck globs stopped at `skills/*/scripts/*.sh` and therefore **silently
+  exempted the brand-new `engines/`** — the newest code was the least checked;
+  and loop scratch was untracked-but-not-ignored, so attempt transcripts (exactly
+  the kind of file that quietly carries a key) were one `git add -A` from being
+  committed. Both closed — `HANDOFF.md` deliberately stays trackable, being the
+  one file a human is meant to pick up.
+  §9's cleaning list was re-verified item by item: **nine of ten were already
+  resolved**, so it now names only what is real — nothing pushed (so CI has never
+  executed), the blueprint PDF still at v0.16.0, stub-run receipts in the proving
+  ground, and a tracker bridge that is written but not yet proven against a live
+  board. task-loop skill **0.5.0 → 0.6.0**.
+  Re-proven after the pass: skills **12/12** · task-spec 30 · hmac 32 ·
+  portability 35 · runtime-contract 37 · register 122 · json-envelope 12 ·
+  install 7 · loop-kernel 11 · pass-gates 42 · shellcheck 0.
 - **2026-07-25 · PASS 8 BECOMES A LOOP (research-grounded)** — a scan of the
   loop-engineering literature (Exa · Tavily · Firecrawl · Context7) produced the
   design in `skills/task-loop/references/loop-spec.md`, and the audit it implied

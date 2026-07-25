@@ -159,6 +159,48 @@ BUDGET_TOKENS="$(tighter "${SPEC_TOKENS:-}" "$MAX_TOKENS")"
 BUDGET_SECONDS="$(tighter "$((SPEC_MINUTES * 60))" "$MAX_SECONDS")"
 
 # --------------------------------------------------------------------------
+# Is the loop authorized to WRITE to the tracker?
+#
+# Posting to Linear is an external write — the same class of effect as a push or
+# a PR, and WP4 established those are four distinct effects rather than one. The
+# capability envelope says so explicitly: `tracker.write` carries its own grant,
+# and `policy.external_writes` defaults to deny. Narrating progress to a board
+# without that authority would be the loop quietly exceeding its contract, which
+# is precisely the defect class this envelope exists to prevent.
+#
+# Denied is not broken: the run proceeds, fully, locally. It just does not speak.
+# --------------------------------------------------------------------------
+RESOLVED_CONTRACT="$CONTRACT"
+[ -n "$RESOLVED_CONTRACT" ] || RESOLVED_CONTRACT="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+TRACKER_WRITE=false
+if [ "$ALLOW_EXTERNAL" = true ]; then
+  TRACKER_WRITE=true
+elif [ -f "$RESOLVED_CONTRACT" ]; then
+  _tw="$(python3 -c '
+import json, sys
+try:
+    p = json.load(open(sys.argv[1]))
+except Exception:
+    print("deny"); raise SystemExit
+if str(p.get("policy", {}).get("external_writes", "deny")) == "allow":
+    print("allow"); raise SystemExit
+grant = next((g for g in p.get("authority", {}).get("grants", [])
+              if g.get("capability") == "tracker.write"), {})
+print("allow" if grant.get("scope") else "deny")
+' "$RESOLVED_CONTRACT" 2>/dev/null || printf 'deny')"
+  [ "$_tw" = "allow" ] && TRACKER_WRITE=true
+fi
+
+# tracker <phase> [args...] — narrate ONLY when authorized, and never let a
+# tracker failure change the verdict the evals produced.
+tracker() {
+  [ "$TRACKER_WRITE" = true ] || return 0
+  [ -f "$TRACKER_BRIDGE" ] || return 0
+  ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" "$@" ) >/dev/null 2>&1 || true
+  return 0
+}
+
+# --------------------------------------------------------------------------
 # Durable state — the loop's position must survive a crash, or a restart
 # silently restarts the work and double-applies its side effects.
 # --------------------------------------------------------------------------
@@ -205,10 +247,7 @@ land() {  # land <STATE> <exit-code> <why>
   printf 'TASK_LOOP=%s\n' "$_state"
   # Narrate the outcome to the tracker. Fail-soft: a tracker that is down must
   # never change the verdict the evals produced.
-  if [ -x "$TRACKER_BRIDGE" ] || [ -f "$TRACKER_BRIDGE" ]; then
-    ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" --phase terminal \
-        --state "$_state" --note "$_why" >/dev/null 2>&1 ) || true
-  fi
+  tracker --phase terminal --state "$_state" --note "$_why"
   exit "$_rc"
 }
 
@@ -248,9 +287,18 @@ verify() {  # -> 0 GREEN, 1 RED, 2 unresolvable; output on stdout
 # A fingerprint of HOW it failed, not merely that it failed. Two identical
 # fingerprints in a row is the stagnation signal — the loop is re-deriving the
 # same wrong answer, and more iterations will not help.
+#
+# The eval runner stamps each line with a duration — `[fail] eval_1 (0s)` — and
+# that duration MUST be stripped before hashing. Otherwise the same failure taking
+# 1s instead of 0s under load reads as progress: the strike counter resets, the
+# stagnation detector never fires, and the loop spends its whole budget (and real
+# money) on precisely the case the detector exists to stop. A stopping rule that
+# depends on machine load is not a stopping rule. Observed as a flaky brake test:
+# the circuit breaker fired at 3 attempts on most runs and 6 on a slow one.
 fingerprint() {
   printf '%s' "$1" \
     | grep -E '^\[(fail|pass)\]|^Exit Check:' \
+    | sed -E 's/ \([0-9]+s\)$//' \
     | shasum -a 256 2>/dev/null | awk '{print $1}' \
     || printf 'nofp\n'
 }
@@ -263,6 +311,11 @@ printf 'spec: %s\n' "${TASK_FILE#"$WORKSPACE_ROOT"/}"
 printf 'budgets: %s iterations · %ss wall-clock' "$BUDGET_ITER" "$BUDGET_SECONDS"
 [ -n "$BUDGET_TOKENS" ] && printf ' · %s tokens' "$BUDGET_TOKENS"
 printf '\nstagnation: %s identical failures\n' "$SPEC_CB"
+if [ "$TRACKER_WRITE" = true ]; then
+  printf 'tracker: authorized — the board will follow this run\n'
+else
+  printf 'tracker: not authorized by the contract (external_writes deny) — local only\n'
+fi
 if [ "$NO_AGENT" = true ]; then
   printf 'engine: none (--no-agent: gate only, no attempts)\n'
 else
@@ -289,9 +342,7 @@ LAST_FINGERPRINT="$(fingerprint "$PRE_OUT")"
 printf 'preflight: RED (expected — the work is not built yet)\n\n'
 
 # Claim the work in the tracker: this is where backlog becomes in-progress.
-if [ -f "$TRACKER_BRIDGE" ]; then
-  ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" --phase claim --agent "$AGENT" ) || true
-fi
+tracker --phase claim --agent "$AGENT"
 
 # --------------------------------------------------------------------------
 # The loop
@@ -348,10 +399,7 @@ while :; do
     fi
   } > "$BRIEF"
 
-  if [ -f "$TRACKER_BRIDGE" ]; then
-    ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" --phase attempt \
-        --agent "$AGENT" --iteration "$ITER" --of "$BUDGET_ITER" ) || true
-  fi
+  tracker --phase attempt --agent "$AGENT" --iteration "$ITER" --of "$BUDGET_ITER"
 
   # NOTE: this script runs under `set -uo pipefail` and deliberately NOT under
   # -e. Do not "restore" errexit here — `set -e` would ENABLE it, and the very

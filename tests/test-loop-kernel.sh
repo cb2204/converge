@@ -173,6 +173,25 @@ rm -rf "$W"
 
 rm -rf "$STUBS"; rm -f "$KEY"
 
+# ---------------------------------------------------------- tracker authority
+# Posting to a board is an external write. The envelope grants tracker.write its
+# own scope and policy.external_writes defaults to deny, so a loop that narrated
+# anyway would be quietly exceeding its contract — the exact defect class the
+# envelope exists to prevent.
+W="$(new_ws)"
+run_kernel "$W" --agent tstnoop
+if grep -q 'tracker: not authorized' <<<"$RK_OUT"; then
+  ok "a deny-by-default contract suppresses tracker writes, and says so"
+else
+  bad "the loop did not report its tracker authority"
+fi
+if ! grep -qE 'tracker: .* → (in progress|done)' <<<"$RK_OUT"; then
+  ok "no board mutation happens without tracker.write authority"
+else
+  bad "the loop wrote to the board it was not authorized to touch"
+fi
+rm -rf "$W"
+
 echo "------------------------------------------------------------------"
 if [ "$FAIL" -eq 0 ]; then
   printf 'PASS — %d loop-kernel checks green.\n' "$PASS"; exit 0
