@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.19.0"
+CVG_VERSION="0.19.1"
 
 # Resolve THIS script through any symlink chain before locating its companions.
 # The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
@@ -657,8 +657,9 @@ cmd_help() {
   printf '                           hard floors it can never lower (LANE token)\n'
   printf '\n'
   printf '%sregister ① — into the loop%s\n' "$UI_CYAN" "$UI_RESET"
-  printf '  register [--tracker github|linear|jira] [--no-stamp-refs]\n'
-  printf '                           bridge signed-off tasks onto a tracker board\n'
+  printf '  register [--tracker github|linear|jira] [--tasks-dir D] [--no-stamp-refs]\n'
+  printf '                           bridge signed-off tasks onto a tracker board (finds\n'
+  printf '                           cvg/tasks/, then tasks/, when --tasks-dir is omitted)\n'
   printf '                           (1 spec = 1 issue, depends_on → blocked-by); stamps a\n'
   printf '                           tracker_ref receipt back into each spec. On Linear also\n'
   printf '                           seeds assignee/state/subscribers from frontmatter and\n'
@@ -1236,6 +1237,24 @@ case "$CMD" in
         REG_PASS=(--tracker "$CFG_TRACKER" ${REG_PASS[@]+"${REG_PASS[@]}"})
         printf '%susing configured tracker: %s (from .cvg/config)%s\n' "$UI_DIM" "$CFG_TRACKER" "$UI_RESET" >&2
       fi
+    fi
+    # Find the specs the same way passes 0-3 find their inputs: the cvg/
+    # workspace first, then the bare directory. Pass 6 was the only pass that
+    # did not know about `cvg/`, so `cvg register` failed out of the box in a
+    # standard workspace — the exact layout cvg/INDEX.md prescribes.
+    REG_HAS_DIR=0
+    if [ "${#REG_PASS[@]}" -gt 0 ]; then
+      for A in "${REG_PASS[@]}"; do
+        case "$A" in --tasks-dir|--tasks-dir=*) REG_HAS_DIR=1 ;; esac
+      done
+    fi
+    if [ "$REG_HAS_DIR" -eq 0 ]; then
+      for D in cvg/tasks tasks; do
+        if [ -d "$D" ]; then
+          REG_PASS=(--tasks-dir "$D" ${REG_PASS[@]+"${REG_PASS[@]}"})
+          break
+        fi
+      done
     fi
     cvg_export_linear_team   # bridge the non-secret Linear team UUID from config (key stays in env)
     cvg_export_spec_base     # bridge the repo base URL so issues link back to their spec

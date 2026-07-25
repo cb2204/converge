@@ -550,6 +550,36 @@ LEFT="${LEFT//[^0-9]/}"; LEFT="${LEFT:-0}"
 rc_is "no fail-soft site still calls _linear_gql directly" "$LEFT" "0"
 
 # -----------------------------------------------------------------------------
+# Pass 6 must find the cvg/ workspace, like every other pass
+# -----------------------------------------------------------------------------
+# Passes 0-3 auto-discover cvg/docs, cvg/docs/adrs and cvg/sketch. Pass 6 was
+# the only one that did not know about cvg/, so `cvg register` failed with
+# "tasks dir 'tasks' not found" in the exact layout cvg/INDEX.md prescribes.
+WS="$(mktemp -d -t cvg-ws.XXXXXX)"
+git -C "$WS" init --quiet
+mkdir -p "$WS/cvg/tasks"
+CVG_BIN="$SKILL_DIR/../../bin/cvg"
+if [ -f "$CVG_BIN" ]; then
+  WS_OUT="$( (cd "$WS" && CVG_HOME="$SKILL_DIR/../.." bash "$CVG_BIN" register --check --dry-run 2>&1) || true )"
+  if ! printf '%s' "$WS_OUT" | grep -q "tasks dir 'tasks' not found"; then
+    ok "register discovers cvg/tasks without an explicit --tasks-dir"
+  else
+    bad "register does not know about the cvg/ workspace"
+  fi
+  # An explicit --tasks-dir must still win over discovery.
+  EXP_OUT="$( (cd "$WS" && CVG_HOME="$SKILL_DIR/../.." bash "$CVG_BIN" register --check --dry-run --tasks-dir nope 2>&1) || true )"
+  if printf '%s' "$EXP_OUT" | grep -q "nope"; then
+    ok "an explicit --tasks-dir still overrides discovery"
+  else
+    bad "explicit --tasks-dir was ignored"
+  fi
+else
+  ok "register workspace discovery (skipped — bin/cvg not reachable)"
+  ok "explicit --tasks-dir override (skipped — bin/cvg not reachable)"
+fi
+rm -rf "$WS"
+
+# -----------------------------------------------------------------------------
 echo
 echo "=================================================================="
 echo "RESULTS: $PASS passed, $FAIL failed"

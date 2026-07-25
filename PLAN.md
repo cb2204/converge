@@ -785,6 +785,25 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · PASSES 0–7 WALKED END TO END (and Pass 6 was not done)** —
+  asked "are 0–7 complete?", the honest way to answer was to run them rather
+  than assert. All nine gates, on the real proving ground:
+  `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK ·
+  CHECK_CONSENSUS=OK · TIER=1 · DOD=COMPLETE · CHECK_RUNTIME_CONTRACT=PASS ·
+  DOCTOR_RUNTIME_CONTRACT=OK`.
+  **Pass 6 failed.** `cvg register --check` → `ERROR: tasks dir 'tasks' not
+  found`. Passes 0–3 all auto-discover the `cvg/` workspace (`cvg/docs`,
+  `cvg/docs/adrs`, `cvg/sketch`); Pass 6 was the only pass that did not know
+  `cvg/` existed, so `cvg register` failed out of the box in the exact layout
+  `cvg/INDEX.md` prescribes. It worked live in R① only because that run passed
+  `--tasks-dir` explicitly — the gap was masked by how we happened to call it.
+  Fixed: discovery tries `cvg/tasks` then `tasks`; an explicit `--tasks-dir`
+  still wins. Both pinned by tests. Offline gate now `CHECK_REGISTER=OK`
+  (9 specs, 8 edges); the live board leg fails closed without `LINEAR_API_KEY`,
+  which is correct. cvg **0.19.1**.
+  Remaining, and NOT blockers for R8: the live `register --check` re-run after
+  CVG-21's body changed (needs the key), and `cvg verify` has never graded a
+  real diff because no diff exists yet — R8 produces its first one.
 - **2026-07-25 · THE EVALS BECOME REAL (R8 pre-flight cleared)** — the last
   thing standing before the Loop, and it was worse than one bad spec.
   **All 25 evals across all 9 registered specs were existence-only** — `test -f`

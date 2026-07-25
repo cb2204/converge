@@ -147,7 +147,7 @@ bash ~/converge/install.sh --help          # all the flags
 
 ```bash
 cvg version
-# → cvg 0.19.0 (task-spec 3.6.0)
+# → cvg 0.19.1 (task-spec 3.6.0)
 
 python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
 # → Skill is valid!
