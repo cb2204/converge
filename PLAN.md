@@ -785,6 +785,33 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE DESCENT CLOSES 0→7 ON uc-analytics** — the use case, not
+  the machinery. Every gate run in sequence on the real workspace:
+  `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK ·
+  CHECK_CONSENSUS=OK · TIER=1 ×9 · CHECK_REGISTER=OK · CHECK_RUNTIME_CONTRACT=PASS ×9 ·
+  DOCTOR_RUNTIME_CONTRACT=OK`.
+  **Pass 5 closed properly.** All 8 remaining specs had existence-only evals, so
+  they were signed-but-not-delegatable — the board was showing nine ready tasks
+  when eight were fake. Their ~22 evals now assert **database state or execute
+  the artifact**: silver's grain proven by `count = count(distinct order_id)`,
+  gold reconciled against an independent oracle, no-fan-out proven by row count
+  vs distinct products, UTC discipline by `data_type <> 'timestamp without time
+  zone'`, isolation by `has_schema_privilege(serve_role,'raw','USAGE') = f`, the
+  MCP surface by importing the module and requiring a non-empty tool list.
+  All 8 re-sealed **Tier 1**.
+  **Proven, not asserted:** the maximal stub attack — a stub planted for all
+  **27** declared `creates_paths` — leaves **all 9 specs red**.
+  **Pass 7 closed for all 9** (was 1 of 9): 9 contracts, 9 task briefs, 36
+  adapter manifests, every one epoch-bound with mandatory closure.
+  `cvg/INDEX.md` now carries the whole descent as a verdict table.
+  **Open (needs the operator):** the live Pass 6 leg. The bodies changed, so the
+  Linear board must be re-pushed and re-verified against `[D]` with
+  `LINEAR_API_KEY` in the environment. The spec side is green.
+  Correction worth recording: I previously said the 8 specs could be sharpened
+  "at their own bind time." That was wrong — an eval *describes* the
+  done-condition, so the layer not existing yet is precisely why it is RED, not
+  a reason it cannot be written. Following that advice would have left the board
+  lying.
 - **2026-07-25 · PASSES 0–7 WALKED END TO END (and Pass 6 was not done)** —
   asked "are 0–7 complete?", the honest way to answer was to run them rather
   than assert. All nine gates, on the real proving ground:

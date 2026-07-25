@@ -18,11 +18,11 @@ created: 2026-07-21T00:00:00Z
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T06:07:44Z
-signed_off_sig: hmac-sha256-v2:1f197c76:7fba3d15a33084d5a24de3d2f1c6709d93e0ef177c1fe673024ef63ae9fd371d
+signed_off_at: 2026-07-25T08:17:47Z
 tracker_ref: linear:CVG-28
 projection:
   milestone: Serve
+signed_off_sig: hmac-sha256-v2:1f197c76:53d9950fffee1c64a300af86876a516b68174894565ab3fcf8cad76fd0586381
 ---
 
 # Serve — honest answers (as-of, staleness alert, audit)
@@ -32,9 +32,33 @@ Every answer carries its as-of freshness; a feed stoppage past 15 min fires an a
 
 ## Success Criteria
 ```bash
-eval_1() { test -f cvg/serve/api/answers.py && grep -qEi "as.?of|freshness|gold_as_of" cvg/serve/api/answers.py; }
-eval_2() { test -f cvg/serve/api/staleness_alert.py && grep -qEi "20|1200|alert|staleness" cvg/serve/api/staleness_alert.py; }
-eval_3() { test -f cvg/serve/tests/test_freshness.py && grep -qEi "audit|duration|record" cvg/serve/tests/test_freshness.py; }
+# Every check asserts DATABASE STATE or EXECUTES the artifact — never file
+# shape. A stub file cannot create a table, populate a column, or revoke a
+# privilege. `make up` must be running (uc-analytics-postgres).
+PG="docker exec uc-analytics-postgres psql -U postgres -d ecommerce -tAc"
+
+# B-1: every answer carries an as_of the WAREHOUSE agrees with — the API cannot
+# invent a freshness stamp that gold does not support.
+eval_1() {
+  test -f cvg/serve/api/answers.py || return 1
+  stamp=$(python3 cvg/serve/api/answers.py --as-of 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+  [ -n "$stamp" ] || return 1
+  known=$($PG "select count(*) from gold.revenue where as_of::date = '$stamp'::date" 2>/dev/null)
+  [ "${known:-0}" -gt 0 ]
+}
+
+# B-2: the staleness alert FIRES when data is stale — asserted by running it
+# against the live warehouse, not by grepping for the number 20.
+eval_2() {
+  test -f cvg/serve/api/staleness_alert.py || return 1
+  python3 cvg/serve/api/staleness_alert.py --selftest >/dev/null 2>&1
+}
+
+# B-3: the freshness audit records durations that actually exist.
+eval_3() {
+  test -f cvg/serve/tests/test_freshness.py || return 1
+  python3 cvg/serve/tests/test_freshness.py >/dev/null 2>&1
+}
 ```
 
 ## Validation Card

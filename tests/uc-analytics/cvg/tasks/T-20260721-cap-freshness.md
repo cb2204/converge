@@ -18,11 +18,11 @@ created: 2026-07-21T00:00:00Z
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T06:07:40Z
-signed_off_sig: hmac-sha256-v2:1f197c76:65760b85b736970738dc05072a725882471a8d64a263f0b408e2045798828fd3
+signed_off_at: 2026-07-25T08:17:46Z
 tracker_ref: linear:CVG-23
 projection:
   milestone: Capture
+signed_off_sig: hmac-sha256-v2:1f197c76:acccb2aa8e748ac470c3cbe6a582093118d44c619af4969321b44760d0027e8a
 ---
 
 # Capture — freshness + by-principal instrumentation (Dagster)
@@ -32,9 +32,38 @@ Make R-1 and R-2 observable: p99 write->queryable freshness (<=5min), the by-pri
 
 ## Success Criteria
 ```bash
-eval_1() { test -f cvg/capture/dagster/freshness_check.py && grep -qEi "p99|300|5 ?min" cvg/capture/dagster/freshness_check.py; }
-eval_2() { test -f cvg/capture/dagster/principal_count_check.py && grep -qEi "principal|connection.?log" cvg/capture/dagster/principal_count_check.py; }
-eval_3() { test -f cvg/capture/dagster/overhead_probe.py && grep -qEi "overhead|feed.?off|20" cvg/capture/dagster/overhead_probe.py; }
+# Every check asserts DATABASE STATE or EXECUTES the artifact — never file
+# shape. A stub file cannot create a table, populate a column, or revoke a
+# privilege. `make up` must be running (uc-analytics-postgres).
+PG="docker exec uc-analytics-postgres psql -U postgres -d ecommerce -tAc"
+
+# B-1: freshness is MEASURED in the database, not asserted in a comment. The
+# newest change record must be inside the R-1 budget (300s).
+eval_1() {
+  test -f cvg/capture/dagster/freshness_check.py || return 1
+  python3 cvg/capture/dagster/freshness_check.py >/dev/null 2>&1 || return 1
+  lag=$($PG "select coalesce(ceil(extract(epoch from now() - max(_captured_at))), 999999) from raw.orders" 2>/dev/null)
+  [ "${lag:-999999}" -lt 300 ]
+}
+
+# B-2: exactly ONE dedicated capture principal exists — the check is only
+# meaningful if the cluster really has a single distinct role.
+eval_2() {
+  test -f cvg/capture/dagster/principal_count_check.py || return 1
+  python3 cvg/capture/dagster/principal_count_check.py >/dev/null 2>&1 || return 1
+  n=$($PG "select count(*) from pg_roles where rolname like '%capture%' and rolname <> 'postgres'" 2>/dev/null)
+  [ "${n:-0}" -eq 1 ]
+}
+
+# B-3: the overhead probe runs against the live source and reports a bounded
+# number it measured itself.
+eval_3() {
+  test -f cvg/capture/dagster/overhead_probe.py || return 1
+  out=$(python3 cvg/capture/dagster/overhead_probe.py 2>/dev/null)
+  printf '%s' "$out" | grep -qE '[0-9]' || return 1
+  pct=$(printf '%s' "$out" | grep -oE '[0-9]+' | head -1)
+  [ "${pct:-100}" -le 20 ]
+}
 ```
 
 ## Validation Card

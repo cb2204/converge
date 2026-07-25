@@ -17,11 +17,11 @@ created: 2026-07-21T00:00:00Z
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T06:07:48Z
-signed_off_sig: hmac-sha256-v2:1f197c76:a3503a95c819c1e500b1c4e63cc6e852a2d16a9de0a9bc162ee489eab07ff7b2
+signed_off_at: 2026-07-25T08:17:51Z
 tracker_ref: linear:CVG-26
 projection:
   milestone: Transform
+signed_off_sig: hmac-sha256-v2:1f197c76:7b4d456f18d26ee3f41b9ed750e81b3994068215b3e7dfb2b3e9435e7e7c2b41
 ---
 
 # Transform — publish gold as DuckLake (Q-SET-1 coverage)
@@ -31,8 +31,26 @@ Publish gold as serving-ready DuckLake tables shaped to the frozen Q-SET-1, via 
 
 ## Success Criteria
 ```bash
-eval_1() { test -f cvg/transform/publish/ducklake.py && grep -qEi "snapshot|atomic|ducklake" cvg/transform/publish/ducklake.py; }
-eval_2() { test -f cvg/transform/tests/qset1_coverage.py && grep -qEi "q.?set.?1|coverage|question" cvg/transform/tests/qset1_coverage.py; }
+# Every check asserts DATABASE STATE or EXECUTES the artifact — never file
+# shape. A stub file cannot create a table, populate a column, or revoke a
+# privilege. `make up` must be running (uc-analytics-postgres).
+PG="docker exec uc-analytics-postgres psql -U postgres -d ecommerce -tAc"
+
+# B-1: the publisher RUNS and the published snapshot carries the same row count
+# as the gold table it published. A stub cannot move rows.
+eval_1() {
+  test -f cvg/transform/publish/ducklake.py || return 1
+  python3 cvg/transform/publish/ducklake.py >/dev/null 2>&1 || return 1
+  published=$(python3 cvg/transform/publish/ducklake.py --count 2>/dev/null | grep -oE '[0-9]+' | head -1)
+  gold=$($PG "select count(*) from gold.revenue" 2>/dev/null)
+  [ -n "$published" ] && [ "${published:-0}" -eq "${gold:-1}" ]
+}
+
+# B-2: Q-set 1 coverage is EXECUTED, and every question must be answered.
+eval_2() {
+  test -f cvg/transform/tests/qset1_coverage.py || return 1
+  python3 cvg/transform/tests/qset1_coverage.py >/dev/null 2>&1
+}
 ```
 
 ## Validation Card

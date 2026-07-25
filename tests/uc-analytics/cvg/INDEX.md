@@ -52,7 +52,41 @@ One kind of knowledge per folder, one lifecycle each:
 - **Engine upgrade:** `task-spec` is now the universal **six-tier sizing engine** (v3.4)
   — XS/S/M/L runnable leaf atoms, XL/XXL decomposition nodes; the delegation gate
   refuses to run a node. Tasks all the way down.
-- **Next beat:** R5.R — **Pass 5B tasking**: decompose the backbone into task-specs,
-  steel thread first (`swimlane-capture-leg-01`, an L leaf).
+- **Pass 5 (Tasking): CLOSED** (2026-07-25) — the backbone cut into **9 signed
+  task-specs**, every one **Tier 1** (HMAC v2, crypto trust, unsupervised
+  dispatch OK). Their evals assert **database state or execute the artifact** —
+  never file shape. Proven by the maximal stub attack: planting a stub for all
+  27 declared `creates_paths` leaves **all 9 specs red**. An eval you can satisfy
+  with `echo` is not an eval, and the gate now refuses to delegate one blind.
+- **Pass 6 (Register): spec side CLOSED** — `cvg register --check --dry-run` →
+  **`CHECK_REGISTER=OK`** (9 signed specs, 8 `depends_on` edges, DAG, no orphan,
+  no un-gated spec). Issues **CVG-21…29** are stamped back into the specs as
+  `tracker_ref`. *Open:* the live board leg needs `LINEAR_API_KEY` in the
+  environment — the bodies changed when the evals were sharpened, so the board
+  must be re-pushed and re-verified against `[D]`.
+- **Pass 7 (Bind): CLOSED** (2026-07-25) — all **9** tasks bound:
+  **`CHECK_RUNTIME_CONTRACT=PASS`** each, 6 artifacts apiece (execution profile,
+  `AGENTS.task.md` brief, 4 adapter manifests). Every profile carries an
+  epoch-bound capability envelope with mandatory closure, and
+  `cvg doctor runtime-contract` attests this host **OK**.
+
+### The descent, end to end (2026-07-25)
+
+| Pass | Gate | Verdict |
+|---|---|---|
+| 0 · Capture | `cvg capture` | `CHECK_BRD=PASS` |
+| 1 · Intent | `cvg intent` | `CHECK_TECH_SPEC=PASS` |
+| 2 · Structure | `cvg structure` | `CHECK_ADR=OK` |
+| 3 · Decompose | `cvg decompose` | `CHECK_PLAN=OK` |
+| **4 · Consensus** | `cvg review --check` | **`CHECK_CONSENSUS=OK`** ⟵ the barrier |
+| 5 · Tasking | `cvg tasks gate` ×9 | `TIER=1` ×9 |
+| 6 · Register | `cvg register --check` | `CHECK_REGISTER=OK` *(spec side)* |
+| 7 · Bind | `cvg bind --check` ×9 | `CHECK_RUNTIME_CONTRACT=PASS` ×9 |
+| 7 · Attest | `cvg doctor runtime-contract` | `DOCTOR_RUNTIME_CONTRACT=OK` |
+
+- **Next beat:** **R8 — Pass 8, the Loop**, on **CVG-21** (`cap-steelthread`).
+  Requires `uc-analytics-postgres` up, because the evals now query it. Expect
+  `TASK_LOOP=LOCAL_SETTLED`: the profile denies external writes, so the run
+  settles to a local commit and the push/PR leg is a deliberate second run.
 - The authoritative beat log lives in the repo-root
   [`PLAN.md`](../../../PLAN.md).

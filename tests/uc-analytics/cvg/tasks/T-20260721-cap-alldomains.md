@@ -19,11 +19,11 @@ created: 2026-07-21T00:00:00Z
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T06:07:39Z
-signed_off_sig: hmac-sha256-v2:1f197c76:d4888ddcf0b6611baac4c8a8be25ebde9579da68865d76039637dca4fb96ad30
+signed_off_at: 2026-07-25T08:17:45Z
 tracker_ref: linear:CVG-22
 projection:
   milestone: Capture
+signed_off_sig: hmac-sha256-v2:1f197c76:0ff6c5c41d476753c3a9e9e9357daf01c1477039a505853f7c67dd01fad8e7a0
 ---
 
 # Capture — land all four domains into raw.*
@@ -33,9 +33,39 @@ Fatten the thread: land customers, products, orders, payments into `raw.*` as ch
 
 ## Success Criteria
 ```bash
-eval_1() { for d in customers products orders payments; do test -f "cvg/capture/pipelines/$d.py" || return 1; done; }
-eval_2() { test -f cvg/capture/pipelines/customers.py && grep -qEi "_captured_at|as.?of|lag" cvg/capture/pipelines/customers.py; }
-eval_3() { test -f cvg/capture/pipelines/customers.py && ! grep -rq "_control" cvg/capture/pipelines/; }
+# Every check asserts DATABASE STATE or EXECUTES the artifact — never file
+# shape. A stub file cannot create a table, populate a column, or revoke a
+# privilege. `make up` must be running (uc-analytics-postgres).
+PG="docker exec uc-analytics-postgres psql -U postgres -d ecommerce -tAc"
+
+# B-1: all four domains land off the WAL in the frozen change-record shape.
+eval_1() {
+  for d in customers products orders payments; do
+    test -f "cvg/capture/pipelines/$d.py" || return 1
+    cols=$($PG "select count(*) from information_schema.columns
+                where table_schema='raw' and table_name='$d'
+                  and column_name in ('_lsn','_op','_captured_at','_source_committed_at')" 2>/dev/null)
+    [ "${cols:-0}" -eq 4 ] || return 1
+  done
+}
+
+# B-2: every domain actually carries rows — a landed table with no change
+# records has not captured anything.
+eval_2() {
+  for d in customers products orders payments; do
+    n=$($PG "select count(*) from raw.$d" 2>/dev/null)
+    [ "${n:-0}" -gt 0 ] || return 1
+  done
+}
+
+# B-3: the _control fence holds in the cluster, not merely in the source.
+eval_3() {
+  grep -rq '_control' cvg/capture/pipelines/ && return 1
+  role=$($PG "select rolname from pg_roles where rolname like '%capture%' and rolname <> 'postgres' limit 1" 2>/dev/null)
+  [ -n "$role" ] || return 1
+  fenced=$($PG "select has_schema_privilege('$role','_control','USAGE')" 2>/dev/null)
+  [ "$fenced" = "f" ]
+}
 ```
 
 ## Validation Card
