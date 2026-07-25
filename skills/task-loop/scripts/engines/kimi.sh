@@ -15,6 +15,6 @@ CMD="${CVG_KIMI_CMD:-kimi}"
 
 RC=0
 cd "$ENG_WORKDIR" || exit 4
-to "$ENG_TIMEOUT" "$CMD" --output-format text -p "$(cat "$ENG_PROMPT")" 2>&1 || RC=$?
+to "$ENG_TIMEOUT" "$CMD" --output-format text -p "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
 
 eng_finish "$RC"

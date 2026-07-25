@@ -21,10 +21,14 @@ _fleet.jsonl
 # engine transcript is exactly the kind of file that quietly carries a key.
 # HANDOFF.md is deliberately NOT ignored: it is the planned landing a human
 # picks up.
-cvg/loop/*/state.env
-cvg/loop/*/STOP
-cvg/loop/*/brief-*.md
-cvg/loop/*/attempts/
+# The `**/` prefix is load-bearing: a pattern containing a slash is anchored to
+# this file's directory, so a root-anchored `cvg/loop/...` would silently miss
+# every workspace that is not the repo root — including the proving ground at
+# tests/uc-analytics/cvg/, which is the layout these patterns exist for.
+**/cvg/loop/*/state.env
+**/cvg/loop/*/STOP
+**/cvg/loop/*/brief-*.md
+**/cvg/loop/*/attempts/
 
 # Build artifacts
 dist/

@@ -399,6 +399,12 @@ while :; do
     fi
   } > "$BRIEF"
 
+  # Checkpoint BEFORE the attempt, not after. An engine call can run for many
+  # minutes; if the process is killed during one, a checkpoint written only on
+  # the way out means --resume has nothing to resume from and the whole attempt
+  # is silently redone. The checkpoint must already exist when the loop pauses.
+  save_state
+
   tracker --phase attempt --agent "$AGENT" --iteration "$ITER" --of "$BUDGET_ITER"
 
   # NOTE: this script runs under `set -uo pipefail` and deliberately NOT under

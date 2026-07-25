@@ -15,6 +15,16 @@ CMD="${CVG_CODEX_CMD:-codex}"
 
 RC=0
 cd "$ENG_WORKDIR" || exit 4
-to "$ENG_TIMEOUT" "$CMD" exec --sandbox workspace-write - < "$ENG_PROMPT" 2>&1 || RC=$?
+# Positional prompt rather than stdin: `codex exec [PROMPT]` accepts it directly,
+# and passing it as an argument removes a whole class of plumbing failure (a
+# backgrounded job losing its redirect) that is invisible in the transcript —
+# it looks like the model produced nothing.
+# stdin MUST be explicitly closed. `codex exec` documents that "if stdin is
+# piped and a prompt is also provided, stdin is appended as a <stdin> block" —
+# so with an open-but-never-closed stdin it reads the positional prompt, does
+# the work, and then BLOCKS forever waiting for an EOF that never arrives. The
+# watchdog eventually kills it at 124 and the whole attempt reads as a timeout,
+# which hides the fact that the model finished minutes earlier.
+to "$ENG_TIMEOUT" "$CMD" exec --sandbox workspace-write "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
 
 eng_finish "$RC"

@@ -819,7 +819,8 @@ references survive in the READMEs). What is actually left:
 | 1 | **Nothing is pushed — so CI has never executed** | branch is **9 commits** ahead of `origin/feat/e2e` | `git push` and read the first real gauntlet run. The workflow is written, covers the loop kernel, and is unproven. Everything green here was proven on one macOS host. |
 | 2 | **The blueprint PDF lags the method** | `docs/src/converge-method-v6.html` still says **v0.16.0** in three places and describes Pass 8 before the kernel existed (no terminal states, no budgets-actually-enforced, no `cvg/` workspace) | Edit the HTML, then re-render: `bash docs/src/render.sh` (needs Chrome). Deliberately NOT half-done: editing the source without re-rendering would leave the HTML and the shipped PDF disagreeing, which is worse than a PDF that is honestly one version behind. |
 | 3 | **Stub-engine test artifacts in the proving ground** | `tests/uc-analytics/cvg/receipts/T-20260721-cap-steelthread{,.attempt-1c35c4849ef2}.json` | These came from kernel test runs, not from a real beat. Delete them, or keep them knowingly — `cvg/loop/` scratch is now gitignored, receipts are not (they are evidence by design). |
-| 4 | **The tracker bridge is written but never exercised live** | `skills/task-loop/scripts/loop-tracker.sh` (217 lines: claim → attempt → terminal, Linear `AgentSession`/`AgentActivity`, every call fail-soft) | It is invoked only when present and never allowed to change a verdict, which is correct — but "narrates to the board" is unproven until one loop runs against the live board. Prove it on the R8 run. |
+| 4 | **The stagnation detector's load-independence is not pinned by a test** | `loop-kernel.sh` `fingerprint()` strips the `(Ns)` duration; only the *flakiness* of the circuit-breaker row ever caught the bug | Add a deterministic row: copy the golden fixture, inject an alternating `sleep 1` into the eval body **before** stamping (the suite stamps its own copy, so the seal stays valid), then assert `STALLED` at ≤4 attempts. Pre-fix that case lands `EXHAUSTED` instead, because an alternating fingerprint never scores two strikes in a row — which makes it a clean discriminator. |
+| 5 | **The tracker bridge is written but never exercised live** | `skills/task-loop/scripts/loop-tracker.sh` (217 lines: claim → attempt → terminal, Linear `AgentSession`/`AgentActivity`, every call fail-soft) | It is invoked only when present and never allowed to change a verdict, which is correct — but "narrates to the board" is unproven until one loop runs against the live board. Prove it on the R8 run. |
 
 ---
 
@@ -864,7 +865,32 @@ references survive in the READMEs). What is actually left:
   and loop scratch was untracked-but-not-ignored, so attempt transcripts (exactly
   the kind of file that quietly carries a key) were one `git add -A` from being
   committed. Both closed — `HANDOFF.md` deliberately stays trackable, being the
-  one file a human is meant to pick up.
+  one file a human is meant to pick up. The ignore rule needed a **`**/`
+  prefix**: a pattern containing a slash is anchored to the `.gitignore`'s own
+  directory, so a root-anchored `cvg/loop/…` silently missed every workspace that
+  is not the repo root — *the same git-root-vs-workspace confusion as the code
+  bugs, this time in the ignore file.* Verified both ways: scratch ignored inside
+  `tests/uc-analytics/cvg/`, `HANDOFF.md` still trackable.
+  **Two defects the docs pass turned up, both in the brand-new brakes.** The
+  kernel suite was **flaky — 2 red in 5 runs**, always on an attempt count ("it
+  burned 6 attempts before stopping", "`--max-iterations 999` overrode the spec
+  budget (7 attempts)"). Cause: **the stagnation fingerprint hashed the eval's
+  duration.** The eval runner stamps every line `[fail] eval_1 (0s)`, so the same
+  failure taking 1s instead of 0s under load read as *progress* — the strike
+  counter reset, the detector never fired, and the loop spent its whole budget on
+  exactly the case the detector exists to stop. **A stopping rule that depends on
+  machine load is not a stopping rule.** The duration is now stripped before
+  hashing; demonstrated directly (identical failure at 0s/1s/2s → one fingerprint;
+  a genuinely different failure still differs, so it is not over-normalized), and
+  the suite is green 13 consecutive runs.
+  Second: **the suite's last two rows were passing vacuously.** `rm -rf "$STUBS"`
+  sat *above* the tracker-authority block, so by the time those rows ran the engine
+  adapter was gone: the loop landed `ERROR` with **zero attempts**, and both
+  assertions still matched — one greps for a suppression notice the `ERROR` landing
+  also prints, the other is a negative. Cleanup moved to the end, and the block now
+  proves the run it inspects really happened (`STALLED`, attempts > 0). 13 → **14
+  checks**. Both are the same lesson as the fixture rule: *a check that cannot fail
+  is not a check* — and the flake was the suite trying to say so.
   §9's cleaning list was re-verified item by item: **nine of ten were already
   resolved**, so it now names only what is real — nothing pushed (so CI has never
   executed), the blueprint PDF still at v0.16.0, stub-run receipts in the proving

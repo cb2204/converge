@@ -87,8 +87,16 @@ to() {
   # outlives $TIMEOUT, leaving a marker so we can report 124 like timeout(1) does.
   local flag rc=0 cmd_pid wd_pid
   flag="$(mktemp)"
-  "$@" &
+  # Bash gives a BACKGROUND job stdin from /dev/null, so `to ... < "$PROMPT"`
+  # delivered nothing and `codex exec -` reported "No prompt provided via
+  # stdin" — a promptless adversary whose review still parsed. Duplicating the
+  # caller's stdin onto FD 3 keeps the redirect intact. This only ever bit hosts
+  # without timeout(1)/gtimeout, i.e. stock macOS, which is the portability
+  # floor this project targets.
+  exec 3<&0
+  "$@" <&3 &
   cmd_pid=$!
+  exec 3<&-
   ( sleep "$TIMEOUT"
     if kill -0 "$cmd_pid" 2>/dev/null; then
       printf T > "$flag"; kill -TERM "$cmd_pid" 2>/dev/null

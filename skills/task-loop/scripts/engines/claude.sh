@@ -21,6 +21,6 @@ cd "$ENG_WORKDIR" || exit 4
 # acceptEdits keeps the run unattended without granting shell-level authority.
 to "$ENG_TIMEOUT" "$CMD" -p "$(cat "$ENG_PROMPT")" \
   --permission-mode acceptEdits \
-  --output-format json 2>&1 || RC=$?
+  --output-format json </dev/null 2>&1 || RC=$?
 
 eng_finish "$RC"

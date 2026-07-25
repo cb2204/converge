@@ -37,8 +37,16 @@ to() {
   _to_secs="$1"; shift
   if [ -n "$_eng_timeout_bin" ]; then "$_eng_timeout_bin" "$_to_secs" "$@"; return $?; fi
   _to_flag="$(mktemp)"; _to_rc=0
-  "$@" &
+  # Preserve stdin across the backgrounding. Bash redirects a background job's
+  # stdin from /dev/null, so `to ... < prompt` silently delivers NOTHING — the
+  # engine then reports "no prompt provided" and the loop records a failed
+  # attempt whose real cause is the watchdog, not the model. Duplicating the
+  # caller's stdin onto FD 3 and handing that to the job keeps the redirect
+  # intact whichever timeout mechanism is in play.
+  exec 3<&0
+  "$@" <&3 &
   _to_pid=$!
+  exec 3<&-
   ( sleep "$_to_secs"
     if kill -0 "$_to_pid" 2>/dev/null; then
       printf T > "$_to_flag"; kill -TERM "$_to_pid" 2>/dev/null

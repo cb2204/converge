@@ -171,7 +171,50 @@ else
 fi
 rm -rf "$W"
 
-rm -rf "$STUBS"; rm -f "$KEY"
+# ------------------------------------------------ engines must not inherit stdin
+# An engine handed an open-but-never-closing stdin can finish its work and then
+# BLOCK waiting for an EOF that never arrives. The watchdog eventually kills it,
+# the attempt is recorded as a timeout, and the transcript hides the fact that
+# the model was done minutes earlier. This cost a 25-minute run to learn once.
+# Each adapter honours CVG_<ENGINE>_CMD, so point it at a stub that READS stdin:
+# with a closed stdin the stub returns at once, with an inherited one it hangs.
+STDIN_PROBE="$STUBS/stdin-probe.sh"
+printf '#!/usr/bin/env bash\ncat >/dev/null\necho probe-returned\n' > "$STDIN_PROBE"
+chmod +x "$STDIN_PROBE"
+printf 'prompt\n' > "$STUBS/probe-prompt.md"
+for _eng in claude codex kimi; do
+  _var="CVG_$(echo "$_eng" | tr '[:lower:]' '[:upper:]')_CMD"
+  _out="$( ( echo "an open pipe that never closes" | \
+      env "$_var=$STDIN_PROBE" ENGINE_TIMEOUT=10 \
+      bash "$SRC/skills/task-loop/scripts/engines/$_eng.sh" \
+        --prompt-file "$STUBS/probe-prompt.md" --workdir "$STUBS" 2>&1 ) )"
+  if printf '%s' "$_out" | grep -q 'probe-returned' \
+     && ! printf '%s' "$_out" | grep -q 'engine timed out'; then
+    ok "$_eng passes the engine a CLOSED stdin (returns, does not hang)"
+  else
+    bad "$_eng leaves stdin open — the engine can block after finishing"
+  fi
+done
+
+# ------------------------------------------------- checkpoint before the pause
+# An engine call can run for many minutes. If the checkpoint is written only on
+# the way OUT, a process killed mid-attempt leaves --resume nothing to resume
+# from and the attempt is silently redone. The checkpoint must already exist
+# while the loop is paused inside the engine.
+W="$(new_ws)"
+stub_engine "" tstslow 'sleep 30; echo "slow"; exit 0'
+( cd "$W" && TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" CVG_ENGINES_DIR="$STUBS" \
+  bash "$KERNEL" --issue T-20260602-golden --agent tstslow >/dev/null 2>&1 ) &
+_kpid=$!
+sleep 8   # long enough to be inside the engine call, nowhere near its return
+if grep -q '^ITER=1$' "$W/cvg/loop/T-20260602-golden/state.env" 2>/dev/null; then
+  ok "the checkpoint exists WHILE the loop is paused inside an attempt"
+else
+  bad "no checkpoint mid-attempt — a kill here would silently redo the work"
+fi
+kill "$_kpid" 2>/dev/null; wait "$_kpid" 2>/dev/null
+pkill -f 'sleep 30' 2>/dev/null || true
+rm -rf "$W"
 
 # ---------------------------------------------------------- tracker authority
 # Posting to a board is an external write. The envelope grants tracker.write its
@@ -190,7 +233,24 @@ if ! grep -qE 'tracker: .* → (in progress|done)' <<<"$RK_OUT"; then
 else
   bad "the loop wrote to the board it was not authorized to touch"
 fi
+# This row must run against a REAL stalled loop, so prove the run it inspects
+# actually happened. Both assertions above are satisfiable by a loop that never
+# attempted anything — one greps for a suppression notice the ERROR landing also
+# prints, the other is a negative. When the stub cleanup sat above this block,
+# the engine adapter was already deleted: the loop landed ERROR with zero
+# attempts and both rows passed for the wrong reason.
+if grep -q '^TASK_LOOP=STALLED$' <<<"$RK_OUT" && [ "$(grep -c '── attempt ' <<<"$RK_OUT")" -gt 0 ]; then
+  ok "…and it proved that on a loop that really ran (STALLED, attempts > 0)"
+else
+  ok_state="$(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+  bad "the tracker rows inspected a loop that never ran (${ok_state:-no terminal state})"
+fi
 rm -rf "$W"
+
+# Cleanup belongs AFTER the last row that needs the stubs and the signing key.
+# (Still no `trap ... EXIT`: bash fires an inherited EXIT trap when a `( )`
+# subshell exits, and run_kernel uses one.)
+rm -rf "$STUBS"; rm -f "$KEY"
 
 echo "------------------------------------------------------------------"
 if [ "$FAIL" -eq 0 ]; then
