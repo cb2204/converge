@@ -94,6 +94,29 @@ It extracts the `eval_N()` bodies + Exit Check from `tasks/T-<id>.md`, runs each
   after both gates pass may the loop open its one PR and emit its execution
   receipt.
 
+## Settlement — scoped, ordered, policy-governed
+
+Settlement is where a green eval becomes a commit, and it is the easiest place to
+quietly do more than was authorized. Three rules:
+
+**Stage only the authorized paths.** Staging comes from the contract's `fs.write`
+scope, never `git add -A`. This matters for a non-obvious reason: the postflight
+guard inspects the *diff*, and `git diff` never lists **untracked** files — so a
+brand-new file outside the task's scope could ride into the commit unseen. Every
+staged path is re-checked against the scope before commit; anything outside it
+un-stages the change and writes a blocked receipt.
+
+**External writes are a separate effect.** The profile's `policy.external_writes`
+defaults to `deny`. Settlement therefore stops at a **local commit** and prints
+`TASK_LOOP=LOCAL_SETTLED`. Push and PR happen only when the policy allows it or
+`--allow-external-writes` is passed explicitly. Commit, push, tracker mutation and
+PR creation are four distinct effects, not one.
+
+**The success receipt is written last.** It used to be written before the branch
+even existed, so it could claim a settlement that never happened. A `pass` receipt
+is now emitted only once the outcome it reports is known; a red run writes a
+`blocked` receipt and stops.
+
 ## Gate — confirm before leaving this pass
 
 - [ ] Exactly one issue was worked — the one named by `--issue N`; no other task was touched.

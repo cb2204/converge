@@ -47,6 +47,7 @@ AGENT="claude"
 TASKS_DIR=""
 CONTRACT=""
 LEGACY_NO_CONTRACT=false
+ALLOW_EXTERNAL=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -62,6 +63,7 @@ while [ $# -gt 0 ]; do
     --contract)   [ $# -ge 2 ] || err "--contract requires a value"; CONTRACT="$2"; shift 2 ;;
     --contract=*) CONTRACT="${1#--contract=}"; shift ;;
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
+    --allow-external-writes) ALLOW_EXTERNAL=true; shift ;;
     --help|-h)   sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)           err "unknown argument: $1" ;;
   esac
@@ -159,6 +161,9 @@ RED — green eval rejected by the Pass 6 path policy."
     EVAL_OUT="${EVAL_OUT}
 
 ${PATH_OUT}"
+    # Always surface the guard's verdict. It used to reach the operator only via
+    # the PR body, so a run that settled locally hid whether the gate had passed.
+    printf '%s\n' "$PATH_OUT"
   fi
 fi
 
@@ -177,13 +182,18 @@ SLUG="$(printf '%s' "$TASK_ID" | sed -E 's/^T-[0-9]+-//')"
   SLUG="$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
 BRANCH="task/$SLUG"
 
-# ----- Structured execution receipt -----
-# The latest receipt remains at the profile's canonical path; an existing
-# predecessor is archived by content hash before replacement.
-if [ "$LEGACY_NO_CONTRACT" != true ] && [ "$DRY_RUN" != true ]; then
+# ----- Structured execution receipt (WP4: BLOCKED path only) -----
+# A SUCCESS receipt must not be written before the outcome it reports is known.
+# Previously this ran here, ahead of branch/commit/push/PR, so a receipt could
+# claim settlement that never happened. The blocked receipt still belongs here —
+# a red run settles nothing, so there is nothing left to learn.
+write_receipt() {  # write_receipt <result>
+  local result="$1"
+  [ "$LEGACY_NO_CONTRACT" = true ] && return 0
+  [ "$DRY_RUN" = true ] && return 0
+  local RECEIPT_WRITER RECEIPT_RESULT EVAL_TMP RECEIPT_OUT RECEIPT_RC
   RECEIPT_WRITER="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/write-execution-receipt.py"
-  RECEIPT_RESULT="blocked"
-  [ "$EVAL_RC" -eq 0 ] && RECEIPT_RESULT="pass"
+  RECEIPT_RESULT="$result"
   EVAL_TMP="$(mktemp -t cvg-eval-output.XXXXXX)"
   printf '%s\n' "$EVAL_OUT" > "$EVAL_TMP"
   set +e
@@ -199,16 +209,17 @@ if [ "$LEGACY_NO_CONTRACT" != true ] && [ "$DRY_RUN" != true ]; then
   set -e
   unlink "$EVAL_TMP"
   if [ "$RECEIPT_RC" -ne 0 ]; then
-    EVAL_RC=1
-    EVAL_OUT="${EVAL_OUT}
-
-${RECEIPT_OUT}
-RED — execution receipt could not be written."
-  else
-    EVAL_OUT="${EVAL_OUT}
-
-${RECEIPT_OUT}"
+    printf '%s\n' "$RECEIPT_OUT"
+    echo "RED — execution receipt could not be written."
+    return 1
   fi
+  printf '%s\n' "$RECEIPT_OUT"
+  return 0
+}
+
+# A red run settles nothing: write the blocked receipt now and stop.
+if [ "$EVAL_RC" -ne 0 ]; then
+  write_receipt blocked || true
 fi
 
 # tracker issue number for the "Closes #N" line (linear_ref/tracker_issue).
@@ -293,21 +304,99 @@ else
   run_cmd git checkout -b "$BRANCH"
 fi
 
-# --- commit the working tree (only if there is something to commit) ---
+# --- stage ONLY the paths the contract authorized (WP4) ---
+# `git add -A` staged the whole working tree. The postflight guard inspects the
+# DIFF, which never shows untracked files — so a brand-new file outside the
+# task's scope could ride into the commit unseen. Stage from the contract
+# instead, then prove nothing unauthorized got staged.
 COMMIT_TITLE="$TASK_ID: green eval"
 COMMIT_BODY="Implements ${TASK_ID}. The task's own eval (Exit Check) exits 0."
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-  run_cmd git add -A
-  if [ "$DRY_RUN" = true ]; then
-    echo "DRY-RUN would run: git commit -m \"$COMMIT_TITLE\" -m \"$COMMIT_BODY\""
-  else
-    git commit -m "$COMMIT_TITLE" -m "$COMMIT_BODY"
-  fi
-else
-  echo "working tree clean — nothing to commit (assuming the branch already carries the work)."
+
+AUTHORIZED_PATHS=()
+if [ "$LEGACY_NO_CONTRACT" != true ] && [ -f "$CONTRACT" ]; then
+  while IFS= read -r scoped; do
+    [ -n "$scoped" ] && AUTHORIZED_PATHS+=("$scoped")
+  done < <(python3 -c '
+import json, sys
+profile = json.load(open(sys.argv[1]))
+grant = next((g for g in profile.get("authority", {}).get("grants", [])
+              if g.get("capability") == "fs.write"), {})
+for path in grant.get("scope", []):
+    print(path)
+' "$CONTRACT" 2>/dev/null || true)
 fi
 
-# --- push ---
+if [ "${#AUTHORIZED_PATHS[@]}" -eq 0 ]; then
+  if [ "$LEGACY_NO_CONTRACT" = true ]; then
+    echo "legacy mode: no contract to scope staging by — staging tracked changes only."
+    run_cmd git add -u
+  else
+    err "the contract declares no writable scope; refusing to stage anything"
+  fi
+else
+  echo "staging only the ${#AUTHORIZED_PATHS[@]} path(s) the contract authorizes."
+  for scoped in "${AUTHORIZED_PATHS[@]}"; do
+    # A declared path may legitimately not exist (nothing was created there).
+    run_cmd git add -- "$scoped" 2>/dev/null || true
+  done
+fi
+
+# Prove it: every staged path must be inside the authorized scope.
+if [ "$DRY_RUN" != true ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
+  STAGED="$(git diff --cached --name-only 2>/dev/null || true)"
+  if [ -n "$STAGED" ]; then
+    UNAUTHORIZED="$(printf '%s\n' "$STAGED" | python3 -c '
+import sys, json
+sys.path.insert(0, sys.argv[2])
+from _runtime_contract import path_matches
+scope = json.load(open(sys.argv[1]))
+grant = next((g for g in scope.get("authority", {}).get("grants", [])
+              if g.get("capability") == "fs.write"), {})
+allowed = grant.get("scope", [])
+for line in sys.stdin.read().splitlines():
+    line = line.strip()
+    if line and not any(path_matches(line, rule) for rule in allowed):
+        print(line)
+' "$CONTRACT" "$SCRIPT_DIR/../../task-to-runtime-contract/scripts" 2>/dev/null || true)"
+    if [ -n "$UNAUTHORIZED" ]; then
+      echo "RED — refusing to commit: these staged paths are outside the contract:" >&2
+      printf '  %s\n' $UNAUTHORIZED >&2
+      git reset >/dev/null 2>&1 || true
+      write_receipt blocked || true
+      exit 1
+    fi
+  fi
+fi
+
+if [ "$DRY_RUN" = true ]; then
+  echo "DRY-RUN would run: git commit -m \"$COMMIT_TITLE\" -m \"$COMMIT_BODY\""
+elif [ -n "$(git diff --cached --name-only 2>/dev/null)" ]; then
+  git commit -m "$COMMIT_TITLE" -m "$COMMIT_BODY"
+else
+  echo "nothing authorized to commit (assuming the branch already carries the work)."
+fi
+
+# --- external writes are a SEPARATE, policy-governed effect (WP4) ---
+# The profile denies external writes by default, yet settlement used to push and
+# open a PR unconditionally — the artifact said one thing and the code did another.
+EXTERNAL_POLICY="deny"
+if [ "$LEGACY_NO_CONTRACT" != true ] && [ -f "$CONTRACT" ]; then
+  EXTERNAL_POLICY="$(python3 -c '
+import json, sys
+print(json.load(open(sys.argv[1])).get("policy", {}).get("external_writes", "deny"))
+' "$CONTRACT" 2>/dev/null || echo deny)"
+fi
+if [ "$EXTERNAL_POLICY" != "allow" ] && [ "$ALLOW_EXTERNAL" != true ]; then
+  echo
+  echo "SETTLED LOCALLY — the commit is on '$BRANCH'."
+  echo "external_writes policy is '$EXTERNAL_POLICY', so push and PR were NOT performed."
+  echo "Re-run with --allow-external-writes (or set the policy to allow) to publish."
+  write_receipt pass || true
+  echo "TASK_LOOP=LOCAL_SETTLED"
+  exit 0
+fi
+
+# --- push (authorized) ---
 run_cmd git push -u origin "$BRANCH"
 
 # --- assemble the PR body with the green eval embedded ---
@@ -355,10 +444,18 @@ fi
 
 rm -f "$PR_BODY_FILE"
 
+# --- the success receipt, written LAST (WP4) ---
+# Only now is the outcome it reports actually known: branch cut, authorized paths
+# staged and committed, push and PR performed under an explicit policy.
+if [ "$DRY_RUN" != true ]; then
+  write_receipt pass || true
+fi
+
 echo "======================================================================"
 if [ "$DRY_RUN" = true ]; then
   echo "DRY-RUN complete — nothing was committed, pushed, or opened."
 else
   echo "PR opened for $TASK_ID. Stop here — merge order is the future CI/CD Manager's job."
 fi
+echo "TASK_LOOP=SETTLED"
 exit 0

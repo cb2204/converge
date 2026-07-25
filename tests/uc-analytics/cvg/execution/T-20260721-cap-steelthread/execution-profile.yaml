@@ -102,7 +102,7 @@
             },
             "net.egress": {
               "enforcement_kind": "unenforced",
-              "gate_relevant": false,
+              "gate_relevant": true,
               "mechanism": "none",
               "status": "ignored"
             },
@@ -122,9 +122,11 @@
           "detect_only": [
             "fs.write"
           ],
-          "fails_closed": false,
+          "fails_closed": true,
           "runtime": "generic",
-          "unenforced_required": []
+          "unenforced_required": [
+            "net.egress"
+          ]
         },
         "runtime": "generic"
       },
@@ -140,7 +142,7 @@
             },
             "net.egress": {
               "enforcement_kind": "prevent",
-              "gate_relevant": false,
+              "gate_relevant": true,
               "mechanism": "sandbox deniedDomains + WebFetch deny rules",
               "status": "handled"
             },
@@ -176,7 +178,7 @@
             },
             "net.egress": {
               "enforcement_kind": "prevent",
-              "gate_relevant": false,
+              "gate_relevant": true,
               "mechanism": "seccomp blocks network syscalls unless allowlisted",
               "status": "handled"
             },
@@ -212,7 +214,7 @@
             },
             "net.egress": {
               "enforcement_kind": "unenforced",
-              "gate_relevant": false,
+              "gate_relevant": true,
               "mechanism": "none",
               "status": "ignored"
             },
@@ -232,9 +234,11 @@
           "detect_only": [
             "fs.write"
           ],
-          "fails_closed": false,
+          "fails_closed": true,
           "runtime": "kimi",
-          "unenforced_required": []
+          "unenforced_required": [
+            "net.egress"
+          ]
         },
         "runtime": "kimi"
       }
@@ -243,10 +247,11 @@
     "candidate_guard": "skills/task-to-runtime-contract/scripts/check-path-policy.py",
     "path_policy_source": "task_spec",
     "portable_postflight_required": true,
-    "primary_runtime": "claude",
+    "primary_runtime": "codex",
     "receipt_writer": "skills/task-to-runtime-contract/scripts/write-execution-receipt.py",
     "required_controls": [
-      "fs.write"
+      "fs.write",
+      "net.egress"
     ],
     "task_brief": "cvg/execution/T-20260721-cap-steelthread/AGENTS.task.md",
     "tool_input_guard": "skills/task-to-runtime-contract/scripts/guard-tool-input.py",

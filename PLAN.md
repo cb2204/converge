@@ -175,16 +175,18 @@ detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
 
 ## §2 · What's next (ordered)
 
-1. **Commit the in-flight Pass 6 work** — `skills/task-to-runtime-contract/` is
-   untracked and `bin/cvg` (0.16.0) is modified. Run its tests, then commit.
-2. **R6 · Bind, for real** — `cvg bind --task tests/uc-analytics/cvg/tasks/T-20260721-cap-steelthread.md`
-   → `CHECK_RUNTIME_CONTRACT`. First real runtime contract on a signed task.
+1. ~~Commit the in-flight Pass 6 work~~ — **done.**
+2. ~~R6 · Bind, for real~~ — **done.** Pass 7 now emits 7A (contract) + 7B (task
+   brief), carries an epoch-bound capability envelope, and gates fail-closed.
 3. **R8 · The Loop, once, by hand** — drive **CVG-21** to a green eval and a PR
    that closes it. The frontier then advances to CVG-22 on its own. *This is the
-   single highest-value next act: it closes the loop for the first time.*
+   single highest-value next act: it closes the loop for the first time, and
+   settlement is now trustworthy enough to try it (WP4).*
 4. **Then, and only then, automate it** — B-1 (the Manager) + B-2 (the CI
    eval-gate). Building the Manager before the loop has ever closed once is
    automating an unproven path.
+5. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
+   Approval), so the envelope's authority is externally checkable.
 
 **Housekeeping that should not block the above:** nothing is pushed (branch is
 ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
@@ -776,6 +778,37 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · WP1–WP4 · the harness becomes trustworthy** — four correctness
+  gaps closed, 255 offline checks green.
+  **WP1 · authorization sealed (HMAC v2).** v1 sealed only identity and body, so
+  `touches_paths`, `budget_*`, `agent` and `requires` could be edited after a
+  human signed. v2 adds an `authz_digest` over all nine authorization fields.
+  v1 seals still verify — as **Tier 2 (supervised)**, with a re-stamp
+  instruction — so no existing spec is orphaned.
+  **WP2 · `bind --check` is genuinely read-only.** It used to re-derive through
+  the writing path; it now runs `verify_signoff_pure()` and performs zero
+  repository writes.
+  **WP3 · tier-2 verification.** A different-family judge re-checks a green run
+  against holdout evals, with train/test separation and fail-closed
+  `UPHELD|REFUTED|UNAVAILABLE`. With no second engine the flag is simply omitted
+  — the gate never invents a pass.
+  **WP4 · settlement is scoped, ordered and policy-consistent.** Three real
+  defects: `git add -A` could sweep an **untracked** out-of-scope file past a
+  postflight guard that only ever reads the *diff*; the success receipt was
+  written *before* the outcome it claimed; and `external_writes: deny` was
+  documented but not honored. Staging now comes from the envelope's `fs.write`
+  scope and is re-verified path-by-path, the `pass` receipt is written last, and
+  denial settles locally with `TASK_LOOP=LOCAL_SETTLED`.
+  Also shipped: the **capability envelope** (epoch `<task-id>@<spec-sha12>`,
+  mandatory closure on settle/block/budget-exhaustion/epoch-change), fail-closed
+  **resolver manifests** with prevent/detect/unenforced assurance, **7A/7B**
+  (contract vs. task brief — identifiers, never content), **lane routing**
+  (FAST/NORMAL/FULL with floors that only tighten), `cvg doctor
+  runtime-contract`, `cvg verify`, `cvg lane`, `cvg setup harness` (router
+  scaffold only — auto-generated AGENTS.md measurably *hurts*), and the fork's
+  removal (linear 0–8, two phases, twelve skills).
+  Proof: 12/12 skills valid · runtime-contract 35 · register 120 · hmac-envelope
+  32 · task-spec 21 · portability 35 · json-envelope 12 · shellcheck 0 errors.
 - **2026-07-24 · R① REGISTER CLOSED LIVE** — the uc-analytics backbone (9 signed
   specs) projected onto Linear as **CVG-21…29** (9 created, then re-registered
   idempotently `created 0, updated 9`), 8 blocked-by links, receipts stamped.

@@ -580,6 +580,71 @@ else
   bad "router scaffold clobbered a user file"
 fi
 
+# ---------------------------------------------------------------------------
+# WP4 — settlement is scoped, ordered, and policy-consistent
+# ---------------------------------------------------------------------------
+# Its own disposable repo: earlier rows deliberately leave branches, blocked
+# receipts and a dirty tree behind, and settlement assertions must not inherit
+# that state or they test the leftovers instead of the behaviour.
+WP4_REPO="$(mktemp -d -t cvg-wp4.XXXXXX)"
+git -C "$WP4_REPO" init --quiet
+git -C "$WP4_REPO" config user.email wp4@test.local
+git -C "$WP4_REPO" config user.name "wp4 test"
+mkdir -p "$WP4_REPO/tasks"
+cp "$FIXTURE" "$WP4_REPO/tasks/T-20260602-golden.md"
+printf '# readme\n' > "$WP4_REPO/README.md"
+(
+  cd "$WP4_REPO"
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$SAFE" --stamp --stamp-by wp4 tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind --task tasks/T-20260602-golden.md >/dev/null 2>&1
+  git add -A && git commit --quiet -m "baseline"
+) || true
+
+# The authorized change alone must settle — locally, because external writes are
+# denied by the profile. The artifact and the behaviour have to agree.
+printf 'authorized change\n' >> "$WP4_REPO/README.md"
+set +e
+LOCAL_OUT="$(cd "$WP4_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$OPEN_PR" \
+  --issue T-20260602-golden --tasks-dir tasks --base main 2>&1)"
+LOCAL_RC=$?
+set -e
+if [ "$LOCAL_RC" -eq 0 ] \
+  && grep -q '^TASK_LOOP=LOCAL_SETTLED$' <<<"$LOCAL_OUT" \
+  && ! grep -q 'git push' <<<"$LOCAL_OUT"; then
+  ok "external_writes=deny settles locally — no push, no PR (WP4)"
+else
+  bad "settlement ignored the external-writes policy: $(tail -3 <<<"$LOCAL_OUT")"
+fi
+
+# The success receipt exists only because settlement actually happened.
+if python3 -c "
+import json
+r = json.load(open('$WP4_REPO/cvg/receipts/T-20260602-golden.json'))
+assert r['result'] == 'pass', r['result']
+" 2>/dev/null; then
+  ok "the success receipt is written after settlement, not before (WP4)"
+else
+  bad "receipt ordering is wrong"
+fi
+
+# An UNTRACKED out-of-scope file must never be staged. `git add -A` swept it in,
+# and the postflight guard reads the DIFF, which never lists untracked files.
+git -C "$WP4_REPO" checkout --quiet main 2>/dev/null || true
+mkdir -p "$WP4_REPO/src"
+printf 'smuggled\n' > "$WP4_REPO/src/not-authorized.py"
+printf 'more authorized\n' >> "$WP4_REPO/README.md"
+set +e
+(cd "$WP4_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$OPEN_PR" \
+  --issue T-20260602-golden --tasks-dir tasks --base main >/dev/null 2>&1)
+set -e
+SMUGGLED="$(git -C "$WP4_REPO" log --all --name-only --format= 2>/dev/null | grep -c 'not-authorized' || true)"
+if [ "${SMUGGLED//[^0-9]/}" = "0" ]; then
+  ok "an untracked out-of-scope file never reaches a commit (WP4)"
+else
+  bad "an out-of-scope file was committed"
+fi
+rm -rf "$WP4_REPO"
+
 printf '\n'
 if [ "$FAIL" -eq 0 ]; then
   printf 'PASS — %s runtime-contract checks green.\n' "$PASS"
