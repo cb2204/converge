@@ -678,7 +678,57 @@ ts_body_digest() {
 # depend on frontmatter line ordering — each field is grepped by name. This is
 # what makes the MAC verify on the very next read after stamping.
 # $1=file. Echoes the payload (no trailing newline) on stdout.
-ts_signoff_payload() {
+# ---------------------------------------------------------------------------
+# The AUTHORIZATION boundary (envelope v2).
+# ---------------------------------------------------------------------------
+# v1 sealed `id + body_digest + signed_off*`. That left every execution-critical
+# frontmatter field OUTSIDE the seal — so a signed spec could have its write
+# scope widened, its dependencies rewritten, its budget raised, or its engine
+# re-routed, and the signature would still verify. The seal proved the PROSE was
+# untouched while the AUTHORITY silently changed underneath it.
+#
+# v2 closes that: the fields that decide what a worker may do are hashed into the
+# payload. Fields that are *meant* to change during a task's life stay out on
+# purpose — `status` (moves ready→done), `accepted` (flips post-execution),
+# `tracker_ref` (a receipt written back after registration), `signed_off_sig`
+# (the seal itself), and any `projection:` block (tracker cosmetics). Sealing
+# those would make ordinary progress look like tampering.
+TS_AUTHZ_FIELDS="touches_paths creates_paths depends_on effort execution_backend agent budget_iterations budget_tokens requires"
+
+# ts_field_block FILE NAME — one frontmatter field plus its indented block,
+# verbatim (trailing whitespace trimmed). Handles both `k: []` and the block
+# form. Empty output when the field is absent, so adding a field later changes
+# the digest — which is the point.
+ts_field_block() {
+  local file="$1" name="$2"
+  awk -v k="$name" '
+    NR==1 && $0=="---" { infm=1; next }
+    infm && $0=="---" { exit }
+    !infm { next }
+    {
+      if (index($0, k ":") == 1) { grab=1; print; next }
+      if (grab && $0 ~ /^[ \t]/) { print; next }
+      if (grab) { grab=0 }
+    }
+  ' "$file" | sed -E 's/[[:space:]]+$//'
+}
+
+# ts_authz_digest FILE — sha256 over the canonical serialization of every
+# authorization-relevant field, in a FIXED order (so field reordering in the file
+# cannot change the digest, but a value change always does).
+ts_authz_digest() {
+  local file="$1" field
+  {
+    for field in $TS_AUTHZ_FIELDS; do
+      printf '[%s]\n' "$field"
+      ts_field_block "$file" "$field"
+    done
+  } | ts_sha256
+}
+
+# The legacy (v1) payload, preserved verbatim so an old seal can still be
+# verified as AUTHENTIC-BUT-NARROW rather than mistaken for a forgery.
+ts_signoff_payload_v1() {
   local file="$1"
   local id body_digest so so_by so_at
   id=$(grep -m1 '^id:' "$file" | sed -E 's/^id:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
@@ -690,12 +740,30 @@ ts_signoff_payload() {
     "$id" "$body_digest" "$so" "$so_by" "$so_at"
 }
 
+ts_signoff_payload() {
+  local file="$1"
+  local id body_digest authz_digest so so_by so_at
+  id=$(grep -m1 '^id:' "$file" | sed -E 's/^id:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  body_digest=$(ts_body_digest "$file")
+  authz_digest=$(ts_authz_digest "$file")
+  so=$(grep -m1 '^signed_off:' "$file" | sed -E 's/^signed_off:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  so_by=$(grep -m1 '^signed_off_by:' "$file" | sed -E 's/^signed_off_by:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  so_at=$(grep -m1 '^signed_off_at:' "$file" | sed -E 's/^signed_off_at:[[:space:]]*//' | sed -E 's/[[:space:]]*$//')
+  printf 'id=%s\nbody_digest=%s\nauthz_digest=%s\nsigned_off=%s\nsigned_off_by=%s\nsigned_off_at=%s' \
+    "$id" "$body_digest" "$authz_digest" "$so" "$so_by" "$so_at"
+}
+
 # Compute the full signed_off_sig field value for a spec, given a key.
 # Format: hmac-sha256-v1:<keyid>:<hex>
 # Echoes the value; returns 1 (and echoes nothing) if crypto is unavailable.
+# $3 = envelope version ("v2" default, "v1" only to re-verify a legacy seal).
 ts_compute_signoff_sig() {
-  local file="$1" key="$2" payload keyid mac
-  payload="$(ts_signoff_payload "$file")"
+  local file="$1" key="$2" version="${3:-v2}" payload keyid mac
+  if [[ "$version" == "v1" ]]; then
+    payload="$(ts_signoff_payload_v1 "$file")"
+  else
+    payload="$(ts_signoff_payload "$file")"
+  fi
   if [[ "$payload" == *"$TS_CRYPTO_UNAVAILABLE"* ]]; then
     return 1
   fi
@@ -704,7 +772,7 @@ ts_compute_signoff_sig() {
     return 1
   fi
   keyid="$(ts_keyid "$key")"
-  printf 'hmac-sha256-v1:%s:%s' "$keyid" "$mac"
+  printf 'hmac-sha256-%s:%s:%s' "$version" "$keyid" "$mac"
   return 0
 }
 

@@ -84,7 +84,7 @@ echo "── Scenario 1: Tier 1 stamp-then-verify ──"
     else
       echo "FAIL stamp did not seal: $stamp_out"
     fi
-    if grep -qE '^signed_off_sig: hmac-sha256-v1:[0-9a-zA-Z]+:[0-9a-f]+$' "tasks/$ID.md"; then
+    if grep -qE '^signed_off_sig: hmac-sha256-v2:[0-9a-zA-Z]+:[0-9a-f]+$' "tasks/$ID.md"; then
       echo "PASS sig-format"
     else
       echo "FAIL sig field malformed or absent"
@@ -133,7 +133,7 @@ echo "── Scenario 2: Tier 3 tampered body ──"
     set +e
     post_out=$(bash "$VALIDATE" "tasks/$ID.md" 2>&1); post_rc=$?
     set -e
-    if [[ $post_rc -ne 0 ]] && echo "$post_out" | grep -q "DO NOT DELEGATE: spec body or envelope modified after stamping"; then
+    if [[ $post_rc -ne 0 ]] && echo "$post_out" | grep -q "DO NOT DELEGATE: spec body"; then
       echo "PASS tamper-caught-tier3"
     else
       echo "FAIL tamper not caught (rc=$post_rc): $(echo "$post_out" | tail -2)"
@@ -495,6 +495,57 @@ echo "── Scenario 9: ts_set_frontmatter_field newline + malformed + backslas
     esac
   done < "$WORK/out.txt"
   rm -rf "$WORK"
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 10 — envelope v2: the AUTHORIZATION boundary
+# ---------------------------------------------------------------------------
+# v1 sealed only the prose. A signed spec could have its write scope widened,
+# its budget raised, or its engine re-routed and still verify — the seal proved
+# the words were untouched while the authority changed underneath. These rows
+# prove v2 closes that, and that fields which are MEANT to move still may.
+echo "── Scenario 10: envelope v2 seals the authorization fields ──"
+{
+  ID="T-20260604-authz-envelope"
+  probe() {  # probe <perl-expr> <expect: caught|allowed> <label>
+    local expr="$1" expect="$2" label="$3" repo keyfile out rc
+    repo=$(make_repo "$ID.md" "$ID")
+    keyfile=$(mktemp); head -c 32 /dev/urandom | xxd -p | tr -d '\n' > "$keyfile"
+    (
+      cd "$repo"
+      export TASKSPEC_SIGNING_KEY="$keyfile"
+      bash "$SAFE" --stamp --stamp-by hmac-test "tasks/$ID.md" >/dev/null 2>&1 || true
+      perl -0pi -e "$expr" "tasks/$ID.md"
+      set +e
+      out=$(bash "$VALIDATE" "tasks/$ID.md" 2>&1); rc=$?
+      set -e
+      if [[ "$expect" == "caught" ]]; then
+        if [[ $rc -ne 0 ]] && echo "$out" | grep -q "DO NOT DELEGATE"; then
+          echo "PASS $label"
+        else
+          echo "FAIL $label (rc=$rc — tamper NOT caught)"
+        fi
+      else
+        if [[ $rc -eq 0 ]]; then echo "PASS $label"; else
+          echo "FAIL $label (rc=$rc — legitimate change wrongly rejected)"; fi
+      fi
+    ) > "$repo/out.txt" 2>&1
+    while IFS= read -r line; do
+      case "$line" in
+        PASS\ *) pass "S10 ${line#PASS }" ;;
+        FAIL\ *) fail "S10 ${line#FAIL }" ;;
+      esac
+    done < "$repo/out.txt"
+    rm -rf "$repo" "$keyfile"
+  }
+
+  # ATTACKS — each must break the seal.
+  probe 's/^touches_paths:.*$/touches_paths: [\/etc\/passwd]/m'      caught  "scope-widening-caught"
+  probe 's/^execution_backend: .*$/execution_backend: attacker/m'     caught  "backend-reroute-caught"
+  probe 's/^effort: .*$/effort: XXL/m'                                caught  "effort-change-caught"
+
+  # CONTROLS — fields that legitimately move during a task's life must NOT break it.
+  probe 's/^status: .*$/status: in-progress/m'                        allowed "status-change-allowed"
 }
 
 echo ""

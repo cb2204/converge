@@ -899,9 +899,9 @@ if [[ "$SIGNED_OFF_RAW" == "true" ]]; then
     elif [[ -z "$SIGNED_SIG" ]]; then
       # TIER 2: key present but no sig field (legacy v2.1.1 spec). Structural-only.
       echo "WARN(Tier 2): $FILE — signed_off_sig absent (legacy/structural-only sign-off). Re-stamp with safe-to-delegate.sh --stamp under a key for Tier 1 crypto trust. Supervised dispatch only."
-    elif ! [[ "$SIGNED_SIG" =~ ^hmac-sha256-v1:[0-9a-zA-Z]+:[0-9a-f]+$ ]]; then
+    elif ! [[ "$SIGNED_SIG" =~ ^hmac-sha256-v[12]:[0-9a-zA-Z]+:[0-9a-f]+$ ]]; then
       # TIER 3: sig field malformed.
-      ERRORS+=("DO NOT DELEGATE: signed_off_sig is malformed (got: '$SIGNED_SIG'); expected hmac-sha256-v1:<keyid>:<hex>. Spec body or envelope modified after stamping. Re-run safe-to-delegate.sh --stamp.")
+      ERRORS+=("DO NOT DELEGATE: signed_off_sig is malformed (got: '$SIGNED_SIG'); expected hmac-sha256-v2:<keyid>:<hex>. Spec body or envelope modified after stamping. Re-run safe-to-delegate.sh --stamp.")
     else
       set +e
       EXPECTED_SIG="$(ts_compute_signoff_sig "$FILE" "$SIGN_KEY")"
@@ -913,9 +913,21 @@ if [[ "$SIGNED_OFF_RAW" == "true" ]]; then
       elif [[ "$EXPECTED_SIG" == "$SIGNED_SIG" ]]; then
         # TIER 1: full crypto trust.
         echo "OK(Tier 1): $FILE — signed_off_sig HMAC verified (full crypto trust)."
+      elif [[ "$SIGNED_SIG" == hmac-sha256-v1:* ]]; then
+        # A v1 envelope predates authorization sealing: it never covered write
+        # scope, dependencies, budgets, or routing. Verify it on its own terms —
+        # authentic means Tier 2 (supervised), NOT a forgery.
+        set +e
+        LEGACY_SIG="$(ts_compute_signoff_sig "$FILE" "$SIGN_KEY" v1)"
+        set -e
+        if [[ -n "$LEGACY_SIG" && "$LEGACY_SIG" == "$SIGNED_SIG" ]]; then
+          echo "WARN(Tier 2): $FILE — legacy envelope v1: authentic, but write scope, dependencies, budgets and routing were NOT sealed. Re-stamp with safe-to-delegate.sh --stamp for Tier 1."
+        else
+          ERRORS+=("DO NOT DELEGATE: spec body or envelope modified after stamping — signed_off_sig HMAC mismatch. Re-run safe-to-delegate.sh --stamp to re-seal.")
+        fi
       else
-        # TIER 3: MAC mismatch.
-        ERRORS+=("DO NOT DELEGATE: spec body or envelope modified after stamping — signed_off_sig HMAC mismatch. The body digest or a signed_off* value changed since the stamp. Re-run safe-to-delegate.sh --stamp to re-seal.")
+        # TIER 3: MAC mismatch — body OR an authorization field changed.
+        ERRORS+=("DO NOT DELEGATE: spec body, authorization fields (touches_paths/creates_paths/depends_on/effort/backend/agent/budgets/requires), or envelope modified after stamping — signed_off_sig HMAC mismatch. Re-run safe-to-delegate.sh --stamp to re-seal.")
       fi
     fi
   fi

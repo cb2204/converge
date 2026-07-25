@@ -243,9 +243,26 @@ if [[ $blockers -eq 0 ]]; then
       if [[ -n "$expected_sig" && "$expected_sig" == "$sig_now" ]]; then
         TIER=1
         echo "   ${GREEN}sign-off: Tier 1${RESET} — HMAC verified, full crypto trust (unsupervised dispatch OK)"
+      elif [[ "$sig_now" == hmac-sha256-v1:* ]]; then
+        # A v1 seal is AUTHENTIC-BUT-NARROW: it proves the prose is untouched, but
+        # it never covered write scope, dependencies, budgets, or routing. Those
+        # could have changed since stamping, so it cannot authorize unsupervised
+        # work. Verify it on its own terms and downgrade rather than cry forgery.
+        set +e
+        legacy_sig="$(ts_compute_signoff_sig "$FILE" "$key_now" v1)"
+        set -e
+        if [[ -n "$legacy_sig" && "$legacy_sig" == "$sig_now" ]]; then
+          TIER=2
+          echo "   ${YELLOW}sign-off: legacy envelope v1 (Tier 2)${RESET} — authentic, but the seal predates authorization sealing"
+          echo "   ${YELLOW}         ${RESET}  write scope, dependencies, budgets and routing were NOT covered."
+          echo "   ${YELLOW}         ${RESET}  Re-stamp to regain Tier 1: safe-to-delegate.sh --stamp ${FILE}"
+        else
+          TIER=3
+          echo "   ${RED}sign-off: Tier 3${RESET} — HMAC MISMATCH; spec body or envelope modified after stamping (DO NOT DELEGATE unsupervised)"
+        fi
       else
         TIER=3
-        echo "   ${RED}sign-off: Tier 3${RESET} — HMAC MISMATCH; spec body or envelope modified after stamping (DO NOT DELEGATE unsupervised)"
+        echo "   ${RED}sign-off: Tier 3${RESET} — HMAC MISMATCH; spec body, authorization fields, or envelope modified after stamping (DO NOT DELEGATE unsupervised)"
       fi
     else
       TIER=2

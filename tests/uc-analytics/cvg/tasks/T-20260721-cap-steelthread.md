@@ -20,8 +20,8 @@ parent: ../sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
 execution_backend: claude
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-23T18:17:08Z
-signed_off_sig: hmac-sha256-v1:1f197c76:48829ec3f603bfb7460685c122022e77a2960bd0e6d745ded559ca85c5948e91
+signed_off_at: 2026-07-25T06:07:42Z
+signed_off_sig: hmac-sha256-v2:1f197c76:bb86d61a9beee9c45406d799679a7ff2a8561b2be5b103f92fd44cf4e1ba87ca
 tracker_ref: linear:CVG-21
 projection:
   milestone: Capture

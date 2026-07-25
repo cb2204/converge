@@ -156,10 +156,21 @@ def do_not_touch(body: str) -> list[str]:
         item = re.match(r"^[ \t]*-[ \t]+(.+?)\s*$", line)
         if not item:
             continue
-        value = item.group(1).strip().strip("`")
+        value = item.group(1).strip()
         if value.lower().startswith("(none"):
             continue
-        value = value.split(" — ", 1)[0].strip().strip("`")
+        # Entries are written for humans, so the path is usually a backticked
+        # token followed by prose:  `_control` schema (the chaos ledger — ADR…).
+        # Take the FIRST backticked span when there is one; stripping backticks
+        # off the whole line instead fuses the path with its explanation and
+        # produces a deny rule that matches nothing.
+        quoted = re.match(r"^`([^`]+)`", value)
+        if quoted:
+            value = quoted.group(1).strip()
+        else:
+            # No backticks: cut at the first prose separator (em dash or ` - `).
+            value = re.split(r"\s+—\s+|\s+-\s+", value, 1)[0].strip().strip("`")
+            value = value.rstrip(".,;")
         if value:
             paths.append(value)
     return sorted(set(paths))

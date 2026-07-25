@@ -18,8 +18,8 @@ created: 2026-07-21T00:00:00Z
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-24T14:26:35Z
-signed_off_sig: hmac-sha256-v1:1f197c76:988cad1d07a648d2ab3e8caeb41e03ec159f7bbd4eebb05b893a59ff6b82532d
+signed_off_at: 2026-07-25T06:07:40Z
+signed_off_sig: hmac-sha256-v2:1f197c76:65760b85b736970738dc05072a725882471a8d64a263f0b408e2045798828fd3
 tracker_ref: linear:CVG-23
 projection:
   milestone: Capture
