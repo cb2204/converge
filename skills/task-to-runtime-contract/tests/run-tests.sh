@@ -498,6 +498,88 @@ else
   bad "runtime attestation failed"
 fi
 
+# ---------------------------------------------------------------------------
+# 7B — the task brief, WP2 — read-only check, lanes, and tier-2 verification
+# ---------------------------------------------------------------------------
+# 7A is what the RUNTIME enforces; 7B is what the MODEL reads. It must exist,
+# belong to this epoch, and carry identifiers rather than a copy of the codebase.
+BRIEF="$TMP_REPO/cvg/execution/T-20260602-golden/AGENTS.task.md"
+if [ -f "$BRIEF" ] \
+  && grep -q '^# Task brief — T-20260602-golden$' "$BRIEF" \
+  && grep -q 'T-20260602-golden@' "$BRIEF" \
+  && grep -q 'only instruction source' "$BRIEF" \
+  && grep -q 'README.md' "$BRIEF"; then
+  ok "7B task brief is written, epoch-stamped, and scope-explicit"
+else
+  bad "task brief missing or malformed"
+fi
+
+# A brief that drifts from the epoch must fail the gate (staleness is not cosmetic).
+cp "$BRIEF" "$BRIEF.bak"
+perl -pi -e 's/T-20260602-golden\@[0-9a-f]+/T-20260602-golden\@deadbeefdead/' "$BRIEF"
+set +e
+STALE_OUT="$(cd "$TMP_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" \
+  "$CVG" bind --check --task tasks/T-20260602-golden.md 2>&1)"
+STALE_RC=$?
+set -e
+mv "$BRIEF.bak" "$BRIEF"
+if [ "$STALE_RC" -ne 0 ] && grep -q 'task brief is stale' <<<"$STALE_OUT"; then
+  ok "a stale task brief fails the gate"
+else
+  bad "stale brief slipped through: $STALE_OUT"
+fi
+
+# WP2 — `bind --check` must be genuinely read-only.
+BEFORE="$(cd "$TMP_REPO" && find . -type f -not -path './.git/*' | sort | xargs shasum -a 256 2>/dev/null | shasum -a 256)"
+(cd "$TMP_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" \
+  "$CVG" bind --check --task tasks/T-20260602-golden.md >/dev/null 2>&1) || true
+AFTER="$(cd "$TMP_REPO" && find . -type f -not -path './.git/*' | sort | xargs shasum -a 256 2>/dev/null | shasum -a 256)"
+if [ "$BEFORE" = "$AFTER" ]; then
+  ok "bind --check performs zero repository writes (WP2)"
+else
+  bad "bind --check mutated the repository"
+fi
+
+# The lane classifier ROUTES but never WAIVES.
+LANE="$TOOL_HOME/skills/task-spec/scripts/classify-lane.py"
+if python3 "$LANE" "fix a typo in the readme" | grep -q '^LANE=FAST$' \
+  && python3 "$LANE" "add oauth token refresh to billing" | grep -q '^LANE=NORMAL$' \
+  && python3 "$LANE" "build a new service from scratch" | grep -q '^LANE=FULL$'; then
+  ok "lane classifier routes trivial/sensitive/greenfield correctly"
+else
+  bad "lane classifier mis-routed"
+fi
+
+# The hard floor cannot be argued down, however the intent is phrased.
+if python3 "$LANE" "tiny one-line typo fix in the auth token handler" \
+  | grep -q 'cannot be lowered'; then
+  ok "hard floor survives a FAST-sounding description"
+else
+  bad "hard floor was talked down by prose"
+fi
+
+# Tier-2 verification fails closed when it cannot obtain a verdict.
+set +e
+VERIFY_OUT="$(cd "$TMP_REPO" && python3 "$SKILL_DIR/scripts/verify-work.py" \
+  --repo "$TMP_REPO" --task tasks/T-20260602-golden.md --judge nonexistent-engine 2>&1)"
+VERIFY_RC=$?
+set -e
+if grep -qE '^CHECK_VERIFY=(ERROR|UNAVAILABLE)$' <<<"$VERIFY_OUT"; then
+  ok "tier-2 verification never returns a pass it did not earn"
+else
+  bad "verification produced an unearned verdict: $VERIFY_OUT"
+fi
+
+# The router scaffold must never clobber a human-authored file.
+printf '# my own router\n' > "$TMP_REPO/AGENTS.md"
+(cd "$TMP_REPO" && python3 "$SKILL_DIR/scripts/scaffold-router.py" --repo "$TMP_REPO" >/dev/null 2>&1) || true
+if [ "$(cat "$TMP_REPO/AGENTS.md")" = "# my own router" ] \
+  && [ -f "$TMP_REPO/AGENTS.md.proposed" ]; then
+  ok "setup harness proposes beside a human router, never over it"
+else
+  bad "router scaffold clobbered a user file"
+fi
+
 printf '\n'
 if [ "$FAIL" -eq 0 ]; then
   printf 'PASS — %s runtime-contract checks green.\n' "$PASS"

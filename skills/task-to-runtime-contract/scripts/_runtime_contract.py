@@ -225,6 +225,52 @@ def profile_task_path(profile: dict[str, Any], repo: Path) -> Path:
     return resolve_inside_repo(str(value), repo, must_exist=True)
 
 
+def verify_signoff_pure(task: Path, repo: Path, tool_home: Path) -> tuple[int, str]:
+    """Read-only sign-off verification — WP2.
+
+    `run_signoff_gate` shells out to safe-to-delegate.sh, which EXECUTES the
+    task's evals and can touch repository state (the spec state index). That is
+    correct for stamping, but wrong for a command documented as read-only: a
+    verifier that runs untrusted project code is not a verifier, it is an
+    execution path. This recomputes the HMAC directly instead — no eval
+    execution, no writes, no project commands.
+
+    Returns (tier, note): 1 = envelope v2 verified, 2 = structural or legacy-v1,
+    3 = mismatch. Never raises for an unsigned spec; the caller decides.
+    """
+    lib = tool_home / "skills/task-spec/scripts/_lib.sh"
+    if not lib.is_file():
+        return 2, f"task-spec library not found at {lib}; structural only"
+    # A tiny bash shim that only READS: source the lib, recompute, compare.
+    script = (
+        f'source "{lib}" >/dev/null 2>&1 || exit 9\n'
+        f'file="{task}"\n'
+        'sig=$(grep -m1 "^signed_off_sig:" "$file" 2>/dev/null | sed -E "s/^signed_off_sig:[[:space:]]*//")\n'
+        'so=$(grep -m1 "^signed_off:" "$file" 2>/dev/null | sed -E "s/^signed_off:[[:space:]]*//" | tr -d " ")\n'
+        '[ "$so" = "true" ] || { echo "UNSIGNED"; exit 0; }\n'
+        'key=$(ts_resolve_signing_key "$file" 2>/dev/null || true)\n'
+        '[ -n "$key" ] && [ -n "$sig" ] || { echo "STRUCTURAL"; exit 0; }\n'
+        'want=$(ts_compute_signoff_sig "$file" "$key" 2>/dev/null || true)\n'
+        '[ "$want" = "$sig" ] && { echo "TIER1"; exit 0; }\n'
+        'case "$sig" in hmac-sha256-v1:*)\n'
+        '  legacy=$(ts_compute_signoff_sig "$file" "$key" v1 2>/dev/null || true)\n'
+        '  [ "$legacy" = "$sig" ] && { echo "LEGACY_V1"; exit 0; } ;;\n'
+        'esac\n'
+        'echo "MISMATCH"\n'
+    )
+    proc = subprocess.run(
+        ["bash", "-c", script], cwd=repo, text=True, capture_output=True, check=False
+    )
+    verdict = (proc.stdout or "").strip().splitlines()[-1] if proc.stdout.strip() else "ERROR"
+    return {
+        "TIER1": (1, "HMAC verified (envelope v2)"),
+        "LEGACY_V1": (2, "legacy envelope v1 — authentic but authorization fields unsealed; re-stamp"),
+        "STRUCTURAL": (2, "structural only — no key or no signature"),
+        "UNSIGNED": (3, "spec is not signed off"),
+        "MISMATCH": (3, "HMAC mismatch — body or authorization fields changed after stamping"),
+    }.get(verdict, (3, f"could not verify sign-off ({verdict})"))
+
+
 def run_signoff_gate(
     task: Path, repo: Path, tool_home: Path, supervised: bool
 ) -> tuple[int, str]:
@@ -496,6 +542,136 @@ def weakest_link(resolutions: list[dict[str, Any]]) -> str:
     if any(res.get("detect_only") for res in resolutions):
         return "detect"
     return "prevent"
+
+
+# ===========================================================================
+# 7B — the task brief (AGENTS.task.md)
+# ===========================================================================
+# 7A is the contract the RUNTIME enforces. 7B is the brief the MODEL reads.
+#
+# It carries IDENTIFIERS, not content: paths, hashes and one-line pointers the
+# worker resolves on demand. That is deliberate. Measured findings that shape it:
+#   * auto-generated context files HURT — task success fell ~3% while cost rose
+#     >20%, because agents dutifully followed generated bulk and shipped worse
+#     patches. So this brief states facts the worker cannot infer (scope, the
+#     eval, the fences) and refuses to narrate the codebase.
+#   * context rot degrades recall well before the window is full, so every token
+#     here competes with the actual work. The brief stays short on purpose.
+#   * just-in-time beats pre-loading: hold a path, fetch when needed.
+# The project's durable doctrine lives in ONE router file (AGENTS.md) that this
+# brief points at — never copied in, so it cannot drift per task.
+
+def section(body: str, heading: str) -> str:
+    """Extract one `## Heading` section's text (empty when absent)."""
+    match = re.search(
+        rf"^## {re.escape(heading)}[ \t]*\n(.*?)(?=^## |\Z)",
+        body,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    return match.group(1).strip() if match else ""
+
+
+def first_sentences(text: str, limit: int = 2) -> str:
+    """First N sentences of a block, whitespace-collapsed — keeps the brief tight."""
+    flat = " ".join(line.strip() for line in text.splitlines() if line.strip())
+    flat = re.sub(r"\s+", " ", flat)
+    parts = re.split(r"(?<=[.!?])\s+", flat)
+    return " ".join(parts[:limit]).strip()
+
+
+def render_task_brief(
+    task_id: str,
+    profile: dict[str, Any],
+    body: str,
+    allowed: list[str],
+    forbidden: list[str],
+    spec_rel: str,
+    profile_rel: str,
+    router_ref: str | None,
+) -> str:
+    """Render the task-scoped brief a worker reads before touching anything."""
+    authority = profile.get("authority", {})
+    enforcement = profile.get("enforcement", {})
+    policy = profile.get("policy", {})
+    # The spec's Exit Check already ships inside a fenced block; strip that fence
+    # so the brief does not nest one code fence inside another (renders broken).
+    exit_check = section(body, "Exit Check")
+    fenced = re.match(r"^```[a-zA-Z]*\n(.*?)\n?```\s*$", exit_check, flags=re.DOTALL)
+    if fenced:
+        exit_check = fenced.group(1).strip()
+    goal = first_sentences(section(body, "Goal"), 2)
+
+    lines: list[str] = []
+    add = lines.append
+    add(f"# Task brief — {task_id}")
+    add("")
+    add(
+        "> Generated by Pass 7 · Bind. **The signed Task-Spec is the only "
+        "instruction source** — this brief points at it, never replaces it. "
+        "It holds identifiers, not content: open what you need, when you need it."
+    )
+    add("")
+    add(f"- **Spec (canonical):** `{spec_rel}`")
+    add(f"- **Contract:** `{profile_rel}`")
+    add(f"- **Epoch:** `{authority.get('epoch', '')}`")
+    if router_ref:
+        add(f"- **Project conventions:** `{router_ref}` (read it once; it is the router)")
+    add("")
+    if goal:
+        add("## Goal")
+        add("")
+        add(goal)
+        add("")
+    add("## You may write ONLY these paths")
+    add("")
+    for path in allowed:
+        add(f"- `{path}`")
+    if forbidden:
+        add("")
+        add("**Never touch:**")
+        add("")
+        for path in forbidden:
+            add(f"- `{path}`")
+    add("")
+    add("## Done means")
+    add("")
+    add(
+        "Done is not your judgement — it is this command exiting zero from a "
+        "clean checkout:"
+    )
+    add("")
+    add("```bash")
+    add(exit_check if exit_check else "(see the spec's Exit Check)")
+    add("```")
+    add("")
+    add("## Boundaries")
+    add("")
+    add(f"- network: **{policy.get('network', 'deny')}** · external writes: "
+        f"**{policy.get('external_writes', 'deny')}**")
+    add(f"- enforcement on `{enforcement.get('primary_runtime', 'generic')}`: "
+        f"**{enforcement.get('assurance', 'unknown')}** "
+        "(`prevent` = blocked before it happens; `detect` = caught at settlement)")
+    add(
+        "- authority closes on: "
+        + ", ".join(authority.get("closure", {}).get("revoke_on", []))
+        + " — a new epoch requires a fresh bind"
+    )
+    add("")
+    add("## Before you settle")
+    add("")
+    add("```bash")
+    add(
+        f"python3 skills/task-to-runtime-contract/scripts/check-path-policy.py "
+        f"--profile {profile_rel} --base \"$CVG_BASE_REF\""
+    )
+    add("```")
+    add("")
+    add(
+        "If you need something outside this scope, **stop and request a re-bind**. "
+        "Widening scope yourself invalidates the seal and the work will be rejected."
+    )
+    add("")
+    return "\n".join(lines)
 
 
 def unresolved_placeholder(text: str) -> bool:

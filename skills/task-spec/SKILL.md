@@ -532,3 +532,28 @@ loop in between runs without them.
 > — it proves a spec's evals were not edited after the gate stamped them, with a
 > repo-shared key. It is a drift/accidental-edit guard, not a security boundary.
 > "Humans at intent + review" is the honest claim; "no humans" is not.
+
+## Holdout evals (optional) — what the worker never sees
+
+`## Exit Check` is what the implementer can read and optimize against. An
+optional `## Holdout` section carries assertions revealed only at tier-2
+verification (`cvg verify`), so the work is graded against criteria it could not
+tune to — train/test separation, borrowed from ML.
+
+```markdown
+## Holdout
+- The endpoint must stay under 100ms at p99 with 50 concurrent clients.
+- A malformed payload must return 400, never 500.
+```
+
+Absent means tier-2 grades on stated intent alone. Add one whenever the eval
+could plausibly be satisfied by a stub. See
+[`references/lanes.md`](references/lanes.md) for how blast radius decides when
+tier-2 is mandatory.
+
+## Lanes — not every change earns nine passes
+
+`cvg lane "<intent>"` routes work to **FAST** (5→7→8), **NORMAL** (1,2,5,7,8) or
+**FULL** (0–8). It routes but never waives: sensitive or irreversible work can
+never ride FAST, and no lane dispatches an unsigned spec. Full rules:
+[`references/lanes.md`](references/lanes.md).

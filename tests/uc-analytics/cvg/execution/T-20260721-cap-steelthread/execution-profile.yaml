@@ -248,6 +248,7 @@
     "required_controls": [
       "fs.write"
     ],
+    "task_brief": "cvg/execution/T-20260721-cap-steelthread/AGENTS.task.md",
     "tool_input_guard": "skills/task-to-runtime-contract/scripts/guard-tool-input.py",
     "unenforced_waivers": []
   },

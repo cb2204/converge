@@ -19,6 +19,7 @@ from _runtime_contract import (
     parse_frontmatter,
     parse_worker,
     relpath,
+    render_task_brief,
     required_controls,
     resolve_adapter,
     resolve_inside_repo,
@@ -307,6 +308,9 @@ def main() -> int:
                 "portable_postflight_required": True,
                 "required_controls": needed,
                 "primary_runtime": args.runtime,
+                # 7B — the model-facing brief. Recorded so the gate can prove it
+                # exists and stays in step with this epoch.
+                "task_brief": relpath(profile_dir / "AGENTS.task.md", repo),
                 # The honest headline: the strongest claim the WEAKEST required
                 # control supports on the PRIMARY runtime.
                 "assurance": weakest_link(
@@ -335,6 +339,24 @@ def main() -> int:
 
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(rendered, encoding="utf-8")
+        # 7B — the task brief. Points at the project router when one exists;
+        # never copies project doctrine in (auto-generated bulk measurably hurts).
+        router = next(
+            (r for r in ("AGENTS.md", "CLAUDE.md") if (repo / r).is_file()), None
+        )
+        (output.parent / "AGENTS.task.md").write_text(
+            render_task_brief(
+                task_id=task_id,
+                profile=profile,
+                body=body,
+                allowed=allowed,
+                forbidden=forbidden,
+                spec_rel=relpath(task, repo),
+                profile_rel=profile_rel,
+                router_ref=router,
+            ),
+            encoding="utf-8",
+        )
         adapter_dir = output.parent / "adapters"
         adapter_dir.mkdir(parents=True, exist_ok=True)
         for adapter in adapters:

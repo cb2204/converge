@@ -1,11 +1,11 @@
 ---
 name: task-to-runtime-contract
-description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract, and emit the multi-engine harness. Use for Pass 7 · Bind, after Pass 6 Register (opt-in) and before task-loop executes the issue, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests (AGENTS.md + adapters), pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy standing-agent-fleet harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
+description: Bind one signed Converge Task-Spec to an enforceable, task-scoped runtime contract, and emit the task brief the worker reads. Use for Pass 7 · Bind (7A contract + 7B brief), after Pass 6 Register (opt-in) and before task-loop executes the issue, when the executor needs a hash-bound evidence slice, explicit topology, portable path guards, vendor adapter manifests, a task-scoped brief, pinned documentation, and a deterministic CHECK_RUNTIME_CONTRACT verdict. Replaces the legacy standing-agent-fleet harness workflow; do not use to author Task-Specs, select work across tasks, or execute the task.
 metadata:
   version: "1.1.0"
 ---
 
-# task-to-runtime-contract — Pass 7 · Bind
+# task-to-runtime-contract — Pass 7 · Bind (7A contract + 7B brief)
 
 Turn one signed Task-Spec into the smallest enforceable runtime contract needed
 to execute it. The Task-Spec remains canonical; the execution profile records
@@ -140,6 +140,26 @@ cvg doctor runtime-contract --runtime codex   # → DOCTOR_RUNTIME_CONTRACT=OK|D
 
 Full model: [`references/capability-envelope.md`](references/capability-envelope.md).
 
+### 4c. Emit the task brief (7B)
+
+7A is what the RUNTIME enforces. **7B is what the MODEL reads** —
+`cvg/execution/<task-id>/AGENTS.task.md`, written by the same bind:
+
+- the spec path, the contract path, the **epoch**
+- the exact paths it may write, and the fences it must never cross
+- the Exit Check — *done is this command exiting zero, not your judgement*
+- boundaries (network/external writes) and the enforcement strength
+- a pointer to the project router — **never a copy of it**
+
+It carries **identifiers, not content**. Auto-generated context measurably lowers
+task success (~3%) while raising cost (>20%), and every token here competes with
+the work, so the brief states only what a worker cannot infer and lets it fetch
+the rest just-in-time. The gate rejects a brief that has drifted from the epoch.
+
+The project's durable doctrine lives in ONE router (`AGENTS.md`, ~50 lines),
+scaffolded once by `cvg setup harness` and owned by a human — cvg never writes
+doctrine.
+
 ### 5. Enforce during execution
 
 Before writes, vendor hooks may pass a candidate path to:
@@ -193,10 +213,14 @@ human teaching projection, not the machine-knowledge writer.
   grant equals the Task-Spec's declared scope, and closure is mandatory.
 - Every required control is enforced by the primary runtime, or explicitly
   waived — and the declared `assurance` matches what the resolver proves.
+- The 7B task brief exists and carries the current epoch.
+- `bind --check` performs **zero repository writes** and runs no project code.
 - The final machine token is `CHECK_RUNTIME_CONTRACT=PASS`.
 
 ## References
 
+- [`references/verification.md`](references/verification.md) — tier-2 adversarial
+  verification, holdout evals, and what happens with no second engine.
 - [`references/capability-envelope.md`](references/capability-envelope.md) —
   epoch-bound authority, closure, prevent-vs-detect, and the fail-closed
   resolver manifest.

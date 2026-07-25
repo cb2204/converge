@@ -97,13 +97,17 @@ flowchart TB
     direction TB
     P5["5 · Tasking — task-spec · sealed DAG"]
     P6["6 · Register (opt-in) — task-specs-to-issues"]
-    P7["7 · Bind (+harness) — task-to-runtime-contract"]
+    P7["7A · Bind contract — epoch · grants · closure · guards"]
+    P7B["7B · Task brief — AGENTS.task.md (identifiers, not content)"]
     P8["8 · Loop ↺ — task-loop · green-eval PR"]
-    P5 --> P6 --> P7 --> P8
+    VER{"tier-2 verify — different family + holdout · fails closed"}
+    P5 --> P6 --> P7 --> P7B --> P8 --> VER
   end
-  P7 -.->|"emit AGENTS.md · CLAUDE.md · cloud"| H[["multi-harness: claude · codex · kimi swarm · cloud"]]
+  LANE{"cvg lane — FAST | NORMAL | FULL<br/>routes, never waives"} -.-> P5
+  P7B -.->|"adapters"| H[["claude · codex · kimi swarm · cloud"]]
   H -.-> P8
-  P8 -.->|"green PR closes issue → next ready"| P8
+  VER -->|refuted| P8
+  VER -->|upheld| P8
 ```
 
 **The invariant** — *every pass lowers altitude, binds an engine (by flag), ends
@@ -220,6 +224,8 @@ it keeps going past *Implement* to a fleet running green.
 | Task-specific runtime contract + multi-engine harness | manual | ❌ | ✅ **Pass 7 · Bind** |
 | Authority that **closes** (no lingering session permissions) | ❌ session-scoped | ❌ | ✅ **capability envelope** |
 | Honest *prevent vs detect* per runtime, failing closed | ❌ | ❌ | ✅ **resolver manifest** |
+| Graded by a model that **didn't write the code**, against a **holdout** | ❌ | ❌ | ✅ **`cvg verify`** |
+| Routes small work around the ceremony **without waiving a gate** | ❌ | ❌ | ✅ **`cvg lane`** |
 | Closed loop → green-eval PR | ❌ | ❌ (stops at Implement) | ✅ **Pass 8 · The Loop** |
 | Vendor-portable (Claude / Codex / Kimi / cloud) | ❌ | vendor-specific | ✅ **engines are flags** |
 
@@ -251,8 +257,8 @@ and a machine-checkable **gate**. Passes 0–4 are human-led; 5–8 are machine-
 | **4** | **Consensus — THE BARRIER** | `sketch-plans-adversarial-review` | plan (hardened) | sharpened plans + objection log · `CHECK_CONSENSUS` · **last human sign-off** |
 | **5** | Tasking | `task-spec` | atomic unit | `tasks/T-*.md` · `DELEGATE` (HMAC-sealed) |
 | **6** | Register *(opt-in)* | `task-specs-to-issues` | board | 1 spec = 1 issue · `CHECK_REGISTER` |
-| **7** | Bind *(+harness)* | `task-to-runtime-contract` | runtime contract | profile + guards + AGENTS.md · `CHECK_RUNTIME_CONTRACT` |
-| **8** | The Loop | `task-loop` | runtime | branch → green eval → PR closes the issue |
+| **7** | Bind *(7A contract + 7B brief)* | `task-to-runtime-contract` | runtime contract | profile + guards + task brief · `CHECK_RUNTIME_CONTRACT` |
+| **8** | The Loop *(+ tier-2 verify)* | `task-loop` · `cvg verify` | runtime | branch → green eval → independent refutation → PR |
 
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
 dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
@@ -299,7 +305,7 @@ cycles — a real parity gate that can fail.
 
 **7 · Bind** — *bind one signed task to the runtime, and emit the harness.* Hash
 the spec to the smallest evidence slice, pick a topology, enforce path guards, and
-emit the multi-engine context (AGENTS.md + adapters). **Gate:**
+emit the task brief the worker reads (7B). **Gate:**
 `CHECK_RUNTIME_CONTRACT=PASS`.
 
 **8 · The Loop** — *build the execution loop; schedule the Manager later.* Read one
@@ -425,7 +431,7 @@ Converge holds two contracts, and the discipline is to keep them separate.
 - **Runtime contract = authority in motion.** It binds the exact signed task
   revision to the evidence, topology, permissions, and concrete guards the
   selected runtime must honor. It is task-scoped, hash-bound, and rechecked — and
-  it emits the multi-engine harness (AGENTS.md + adapters) the loop runs inside.
+  it emits the task brief (7B) and the adapters the loop runs inside.
 
 > **Run on commodity models; produce defensible output.**
 
@@ -443,6 +449,24 @@ change the machine — it only changes the assertion the machine waits on.*
 | Software Engineer | a unit / integration test that passes |
 | DevOps | `terraform plan` clean + a smoke test |
 | AI Engineer | a retrieval-precision or eval-set threshold met |
+
+---
+
+## 🧭 Three things stated plainly
+
+**Converge does not remove complexity — it relocates it into spec and eval
+authoring.** That relocation is the bet: it is cheaper to argue with a spec than
+to debug a regenerated flaw, because a gap in the specification resurfaces every
+time the code is regenerated.
+
+**The loop converges to green evals, not correct outcomes.** If the spec is wrong,
+the machine faithfully builds the wrong thing. The defense is structural and
+partial: Pass 1 forces the spec to answer the brief, Pass 4 has a *different model*
+attack it, and tier-2 verification grades against a holdout the implementer never
+saw. Narrower, not closed.
+
+**Not every change deserves nine passes.** `cvg lane` routes work to the ceremony
+it earns — and can never waive a gate, only choose which passes run.
 
 ---
 
@@ -474,7 +498,7 @@ served via MCP so a non-engineer can ask for it"* — on a real
 | **4 · Consensus** | `--adversary codex` attacks: *"midnight off-by-one (no TZ)? refunds counted?"* Fix: pin UTC (ADR-0002). Accept: refunds out of v1. **Owner signs off — barrier crossed.** |
 | **5 · Tasking** | `build_gold_revenue` (eval: dbt test + control-sum) and `build_mcp_revenue` (eval: tool result == gold query). Each born with its eval, HMAC-sealed. |
 | **6 · Register** | `--tracker linear`: `build_gold_revenue → ISSUE-41 [ready]`; `build_mcp_revenue → ISSUE-42 [blocked-by 41]`. |
-| **7 · Bind** | `cvg bind --task build_gold_revenue.md`: bind the signed hash to ADRs + cached dbt docs + single-agent topology + path guards; emit AGENTS.md → `CHECK_RUNTIME_CONTRACT=PASS`. |
+| **7 · Bind** | `cvg bind --task build_gold_revenue.md`: bind the signed hash to ADRs + cached dbt docs + single-agent topology + path guards; emit the task brief → `CHECK_RUNTIME_CONTRACT=PASS`. |
 | **8 · The Loop** | `task-loop --issue 41`: contract PASS → dbt test RED (null categories) → add `COALESCE` → GREEN + path policy PASS → PR; 41 done, 42 unblocks. |
 
 **The Dark Factory, on this repo:** a non-engineer asks the MCP *"revenue by

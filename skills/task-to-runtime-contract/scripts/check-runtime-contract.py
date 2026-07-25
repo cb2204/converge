@@ -21,6 +21,7 @@ from _runtime_contract import (
     resolve_inside_repo,
     resolve_repo,
     run_signoff_gate,
+    verify_signoff_pure,
     sha256_file,
     task_paths,
     unresolved_placeholder,
@@ -60,14 +61,19 @@ def main() -> int:
             )
         authorization = profile.get("task", {}).get("authorization", {})
         supervised = bool(args.supervised or not authorization.get("requires_tier1", True))
-        try:
-            tier, _ = run_signoff_gate(task, repo, tool_home, supervised)
-            if tier != authorization.get("trust_tier"):
-                findings.append(
-                    f"trust tier drift: profile={authorization.get('trust_tier')} current={tier}"
-                )
-        except ContractError as exc:
-            findings.append(str(exc))
+        # WP2 — READ-ONLY. Recompute the HMAC directly instead of shelling out to
+        # the delegation gate, which runs the task's evals and can write state. A
+        # check that executes untrusted project code is not a check.
+        tier, note = verify_signoff_pure(task, repo, tool_home)
+        if tier == 3:
+            findings.append(f"sign-off is not verifiable: {note}")
+        elif tier != authorization.get("trust_tier"):
+            findings.append(
+                f"trust tier drift: profile={authorization.get('trust_tier')} "
+                f"current={tier} ({note})"
+            )
+        elif tier == 2 and not supervised:
+            findings.append(f"Tier 2 requires supervised dispatch: {note}")
 
         frontmatter, body = parse_frontmatter(task)
         allowed = task_paths(frontmatter)
@@ -219,6 +225,24 @@ def main() -> int:
                         "— accepted by explicit operator approval",
                         file=sys.stderr,
                     )
+
+        # --- 7B: the task brief must exist and belong to THIS epoch.
+        brief_rel = enforcement.get("task_brief")
+        if not brief_rel:
+            findings.append("profile declares no task brief (7B)")
+        else:
+            try:
+                brief_path = resolve_inside_repo(str(brief_rel), repo)
+                brief_text = brief_path.read_text(encoding="utf-8")
+                epoch = str(authority.get("epoch", ""))
+                if epoch and epoch not in brief_text:
+                    findings.append(
+                        "task brief is stale: it does not carry the current epoch — re-bind"
+                    )
+                if unresolved_placeholder(brief_text):
+                    findings.append("task brief contains an unresolved placeholder")
+            except (ContractError, OSError) as exc:
+                findings.append(f"task brief is missing or unreadable: {exc}")
 
         generated = profile.get("generated", {})
         if generated.get("by") != "task-to-runtime-contract":

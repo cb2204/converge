@@ -18,7 +18,9 @@ PHASE 1 · DESIGN — human-led · make intent crystal-clear
                                                         ⟵ THE BARRIER (last human sign-off)
                                                                                 ▼
 PHASE 2 · BUILD — machine-led · the dark factory
-  5 Tasking ─▶ 6 Register (opt-in) ─▶ 7 Bind (+harness) ─▶ 8 Loop ─▶ fleet green ↺
+  5 Tasking ─▶ 6 Register (opt-in) ─▶ 7A Contract ─▶ 7B Brief ─▶ 8 Loop ─▶ tier-2 verify ─▶ green ↺
+
+  cvg lane routes work to FAST (5,7,8) · NORMAL (1,2,5,7,8) · FULL (0-8) — never waiving a gate.
 ```
 
 | # | Skill | One line |
@@ -28,13 +30,13 @@ PHASE 2 · BUILD — machine-led · the dark factory
 | 2 | [`tech-req-to-adrs`](tech-req-to-adrs/) | ground the spec against the real repo → ADRs |
 | 3 | [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | cut the work along its natural seams → swimlane plans |
 | 4 | [`sketch-plans-adversarial-review`](sketch-plans-adversarial-review/) | a *different* model attacks the plans · **THE BARRIER** |
-| 5 | [`task-spec`](task-spec/) | atomic, self-verifying units · **the cornerstone** |
+| 5 | [`task-spec`](task-spec/) | atomic, self-verifying units · **the cornerstone** · also ships `cvg lane` |
 | 6 | [`task-specs-to-issues`](task-specs-to-issues/) | one spec = one tracked issue · *opt-in* · the board is state |
-| 7 | [`task-to-runtime-contract`](task-to-runtime-contract/) | signed task → hash-bound runtime contract + the multi-engine harness |
+| 7 | [`task-to-runtime-contract`](task-to-runtime-contract/) | **7A** hash-bound runtime contract + **7B** the task brief · also ships `cvg verify` (tier-2) |
 | 8 | [`task-loop`](task-loop/) | one issue → green-eval PR · the execution loop |
 | util | [`pass-to-lesson`](pass-to-lesson/) | after any pass, teach the owner what was built and why · *optional* |
 | util | [`skill-creator`](skill-creator/) | author, evaluate, and validate skills |
-| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | technology-agent/KB scaffolder — the cross-tool emitter reused by Pass 7's harness |
+| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | technology-agent/KB scaffolder — retained for migration only |
 
 **Install into a consuming repo** (symlink tracks upstream; copy pins a version):
 
@@ -164,7 +166,18 @@ justified them. Each adapter then declares, per capability, whether the runtime
 **detects** it (portable postflight), or **cannot honor it** — and a required
 control the runtime cannot enforce **fails the gate closed** unless waived in the
 open. `cvg doctor runtime-contract` attests what the host can genuinely do.
-**Ships:** deterministic binder, readiness gate, candidate/diff path guard, tool-hook bridge, adapter manifests + resolver manifests, host attestation, structured execution receipts.
+**7A contract / 7B brief.** 7A is what the RUNTIME enforces; **7B** is the task
+brief the MODEL reads (`AGENTS.task.md`) — epoch, writable paths, fences, the Exit
+Check, and a pointer to the project router. It holds **identifiers, not content**:
+auto-generated context measurably lowers task success while raising cost, so the
+brief states only what a worker cannot infer. `cvg setup harness` scaffolds the
+project router once (~50 lines, routing only — cvg never writes doctrine).
+**Tier-2 verification.** `cvg verify` has a **different-family** engine grade the
+diff against the spec's intent and a **holdout** the implementer never saw, prompted
+to refute. Fails closed: no verdict is never a pass. With no second engine the
+result is `UNAVAILABLE` — fine for low blast radius, blocked for high unless
+explicitly waived. See [`references/verification.md`](task-to-runtime-contract/references/verification.md).
+**Ships:** deterministic binder, readiness gate (read-only), task-brief writer, candidate/diff path guard, tool-hook bridge, adapter + resolver manifests, host attestation, tier-2 verifier, router scaffold, execution receipts.
 **Gate:** `CHECK_RUNTIME_CONTRACT=PASS` — sign-off, freshness, evidence, topology substance, ownership, capability closure, and honest assurance all verify.
 
 ### 8 · `task-loop` — one issue → green-eval PR

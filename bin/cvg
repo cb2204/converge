@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.17.0"
+CVG_VERSION="0.18.0"
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=bin/_ui.sh
@@ -613,6 +613,10 @@ cmd_help() {
   printf '                           (DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL)\n'
   printf '  bind --task <spec>       Pass 7 · Bind — write a task-scoped execution\n'
   printf '                           profile + portable guards; CHECK_RUNTIME_CONTRACT\n'
+  printf '  verify --task <spec> [--judge E]\n'
+  printf '                           tier-2 adversarial check — a different-family engine\n'
+  printf '                           grades the diff against intent + the holdout it never\n'
+  printf '                           saw; fails closed (CHECK_VERIFY token)\n'
   printf '  bind --check --task <spec>\n'
   printf '                           re-check hashes, topology, evidence, and adapters\n'
   printf '\n'
@@ -623,6 +627,9 @@ cmd_help() {
   printf '                           XL/XXL node (dispatch its children, not the node)\n'
   printf '  tasks accept <spec>      acceptance after execution\n'
   printf '  tasks dod <spec>         definition-of-done + traceability matrix (DOD token)\n'
+  printf '\n'
+  printf '  lane <intent>            route work to FAST | NORMAL | FULL — advisory with\n'
+  printf '                           hard floors it can never lower (LANE token)\n'
   printf '\n'
   printf '%sregister ① — into the loop%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  register [--tracker github|linear|jira] [--no-stamp-refs]\n'
@@ -652,6 +659,8 @@ cmd_help() {
   printf '  setup people [--list] [--map KEY=VAL]\n'
   printf '                           discover tracker members + map execution_backend/agent\n'
   printf '                           to a person (assignee/subscribers); choices, never keys\n'
+  printf '  setup harness            scaffold the project router (AGENTS.md, ~50 lines,\n'
+  printf '                           routing only — never generated doctrine)\n'
   printf '  setup projection [--enable|--disable] [--project N] [--initiative N]\n'
   printf '                           opt in to structure projection (Initiative→Project→\n'
   printf '                           Milestones); default off — plain register is unchanged\n'
@@ -1117,6 +1126,20 @@ case "$CMD" in
       exec bash "$GATE" --dir "$REV_DIR"
     fi
     ;;
+  lane)
+    # Route work to the lane it earns. Advisory to a human, hard-floored against
+    # a machine: it can never waive a gate, only pick which passes to run.
+    LANER="$CVG_HOME_DIR/skills/task-spec/scripts/classify-lane.py"
+    [ -f "$LANER" ] || { ui_err "task-spec skill is incomplete under $CVG_HOME_DIR/skills"; printf 'LANE=USAGE_ERROR\n'; exit 2; }
+    exec python3 "$LANER" "$@"
+    ;;
+  verify)
+    # Tier-2 adversarial verification — a different-family engine grades the diff
+    # against the spec's intent and the holdout it never saw. Fails closed.
+    VERIFIER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/verify-work.py"
+    [ -f "$VERIFIER" ] || { ui_err "task-to-runtime-contract skill is incomplete under $CVG_HOME_DIR/skills"; printf 'CHECK_VERIFY=ERROR\n'; exit 2; }
+    exec python3 "$VERIFIER" --repo "$PWD" "$@"
+    ;;
   doctor)
     # Engine readiness. Bare `cvg doctor` reports the Pass-4 adversary engines;
     # `cvg doctor runtime-contract` attests what the HOST can actually enforce for
@@ -1203,8 +1226,15 @@ case "$CMD" in
       repo)       cvg_setup_repo "$@" ;;
       people)     cvg_setup_people "$@" ;;
       projection) cvg_setup_projection "$@" ;;
+      harness)
+        # Scaffold the project ROUTER only (~50 lines). cvg never generates
+        # doctrine: auto-written context files measurably degrade agents.
+        SCAFFOLD="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/scaffold-router.py"
+        [ -f "$SCAFFOLD" ] || { ui_err "task-to-runtime-contract skill is incomplete"; printf 'SETUP_HARNESS=USAGE_ERROR\n'; exit 2; }
+        exec python3 "$SCAFFOLD" --repo "$PWD" "$@"
+        ;;
       engines)    exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
-      *)          ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | repo | people | projection | engines"
+      *)          ui_err "unknown setup part '$SUB' — expected: status | tracker <t> | repo | people | projection | harness | engines"
                   printf 'SETUP=USAGE_ERROR\n'; exit 2 ;;
     esac
     ;;
@@ -1271,6 +1301,9 @@ m = {
     c("setup tracker <t> [--team K]", None, "native (+ adapter preflight)", ["SETUP_TRACKER=OK|NEEDS_TEAM|UNREACHABLE|USAGE_ERROR"], True, "cvg setup tracker linear", "Validate a tracker via preflight and record it as the default in .cvg/config; cvg register then defaults --tracker from it. For linear: export only LINEAR_API_KEY — the team is auto-discovered (a single team auto-selects; otherwise pass --team <KEY>, the key straight from the Linear URL), resolved to a UUID, and recorded. The API key is never stored."),
     c("setup repo [--branch b] [--url u]", None, "native (git remote)", ["SETUP_REPO=OK|UNDETECTED|USAGE_ERROR"], True, "cvg setup repo", "Link the repo to the tracker: derives a browsable blob base URL from the git remote (github/gitlab/bitbucket shapes) and records it as spec_base_url in .cvg/config, so every registered issue links back to the spec it was projected from. Branch-pinned; --branch/--url override."),
     c("doctor runtime-contract [--runtime R]", 7, "task-to-runtime-contract/attest-runtime.py", ["DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL"], False, "cvg doctor runtime-contract --runtime codex", "Attest what THIS host can actually enforce for Pass 7 — the isolation primitive (Seatbelt/Landlock/bubblewrap), whether the runtime binary is installed, and whether git worktrees work. Probes are conservative: an unprovable capability is reported absent, so a contract fails closed instead of assuming a control it never had. DEGRADED means the runtime claims prevent but only detect is provable."),
+    c("lane <intent> [--files N] [--paths p]", None, "task-spec/classify-lane.py", ["LANE=FAST|NORMAL|FULL|USAGE_ERROR"], False, "cvg lane \"add a health endpoint\"", "Route work to the lane it earns. FAST = 5,7,8 (small reversible change); NORMAL = 1,2,5,7,8; FULL = 0-8. Deterministic and offline. It ROUTES but never WAIVES: touching auth/money/migrations/secrets/public-API or anything irreversible can never ride FAST, a new seam forces FULL, and no lane dispatches an unsigned spec. Every lane still ends at a green eval plus the path guard."),
+    c("verify --task <spec> [--judge E]", 8, "task-to-runtime-contract/verify-work.py", ["CHECK_VERIFY=UPHELD|REFUTED|UNAVAILABLE|ERROR"], False, "cvg verify --task tasks/T-...md --judge codex", "Tier-2 adversarial verification: a DIFFERENT-FAMILY engine reads the diff, the spec's stated intent, and the holdout criteria the implementer never saw (never the worker's transcript) and is prompted to refute. Fails closed — a missing, malformed or timed-out verdict is never a pass. With no second engine the verdict is UNAVAILABLE: permitted for low blast radius, blocked for high unless --accept-unverified records the risk."),
+    c("setup harness", 7, "task-to-runtime-contract/scaffold-router.py", ["SETUP_HARNESS=OK|PROPOSED|UNCHANGED|USAGE_ERROR"], True, "cvg setup harness", "Scaffold the project ROUTER (AGENTS.md): identity, folder map, where-to-look table, house rules — routing only, under ~50 lines. cvg never generates doctrine; auto-written context files measurably lower task success while raising cost. Per-task detail is delivered just-in-time by Pass 7B. Non-clobbering: an existing router is untouched and a .proposed sibling is written instead."),
     c("setup people [--list] [--map KEY=VAL]", None, "native (+ adapter users verb)", ["SETUP_PEOPLE=OK|NEEDS_MAP|UNREACHABLE|USAGE_ERROR"], True, "cvg setup people --map backend:claude=you@org.com", "Map an execution_backend/agent CHOICE to a tracker person so register can seed assigneeId (create-only) and subscriberIds (union-merged). No flags / --list discovers members (Linear users: name + email) as a ready-to-paste block; --map KEY=VALUE writes idempotently to .cvg/people-map (repeatable; keys backend:<engine>, agent:<role>, default). CHOICES only (an email/uuid is a routing choice) — never a credential. Optional: unmapped assignees fail-soft, so T1 works with zero setup."),
     c("setup projection [--enable|--disable] [--project N] [--initiative N] [--milestones L]", None, "native (+ adapter preflight)", ["SETUP_PROJECTION=OK|DISABLED|UNREACHABLE|USAGE_ERROR"], True, "cvg setup projection --enable --project 'Converge Backbone' --initiative 'Q3 Delivery'", "Opt in to T3 structure projection: records projection_enabled/project/initiative/milestones in .cvg/config so register's Step-0 pre-pass ensures Initiative→Project→Milestones (idempotent, by-name) and posts append-only health. Default DISABLED — a plain cvg register is byte-identical to today. Enabling preflights the configured tracker (projects need a live team). CHOICES only, never credentials."),
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
