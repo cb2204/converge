@@ -201,6 +201,13 @@ Run `scripts/safe-to-delegate.sh --stamp tasks/T-*.md`:
 
 - Composes `validate-task-spec.sh` (structural) + `run-task-spec.sh` (eval execution) into one go/no-go verdict
 - `validate` must exit 0 (structural pass)
+- Evals must be able to tell real work from a **stub**. An eval that only
+  asserts a file exists (`test -f x.py && grep -q assert x.py`) is satisfied by
+  `echo "# assert" > x.py`. The validator warns; `safe-to-delegate.sh` **blocks**
+  blind delegation; `--supervised` downgrades it to a note (a human reads the
+  diff); `# task-spec:allow-existence-only` opts out when the deliverable really
+  is a document. Assert the *outcome* — a row in a table, a role in the cluster,
+  a revoked privilege — not the shape of a file.
 - Eval bodies must execute without bash-level errors (no `syntax error`, no `unbound variable`, no `command not found`, no inverted-grep-c footguns)
 - Assertion failures are EXPECTED on an unbuilt task — the work isn't done yet. The gate fails for the RIGHT reason (assertion not yet true) not the WRONG reason (eval is broken bash)
 - On success: flips `signed_off: false` → `signed_off: true`, stamps `signed_off_by: $USER` (override with `--stamp-by`), and records `signed_off_at: <iso-8601>`

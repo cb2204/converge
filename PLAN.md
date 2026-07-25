@@ -188,12 +188,12 @@ detects fleet-green. That is **B-1**, and it is still the load-bearing gap.
 5. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
    Approval), so the envelope's authority is externally checkable.
 
-> **Before R8 is worth running:** CVG-21's Exit Check is `test -f` + `grep`, and
-> three stub files satisfy all of it (verified). The first-ever loop run must
-> not be able to go green on stubs. Sharpen those evals to exercise the pipeline
-> against `uc-analytics-postgres`, or gate the result on `cvg verify`. Note also
-> that the profile denies external writes, so R8 will settle **locally** —
-> that's the WP4 gate working; take the push/PR leg as a deliberate second run.
+> **R8 pre-flight is CLEAR.** CVG-21's evals now assert database state and the
+> stub attack is red; the spec is re-sealed Tier 1 and re-bound. Two things to
+> expect on the run: the profile denies external writes, so it will settle
+> **locally** (`TASK_LOOP=LOCAL_SETTLED`) — that is the WP4 gate working, and the
+> push/PR leg is a deliberate second run with `--allow-external-writes`; and
+> `uc-analytics-postgres` must be up (`make up`) because the evals now talk to it.
 
 **Housekeeping that should not block the above:** nothing is pushed (branch is
 ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
@@ -785,6 +785,36 @@ hand-written) so the method is drivable from engines that don't load skills.
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE EVALS BECOME REAL (R8 pre-flight cleared)** — the last
+  thing standing before the Loop, and it was worse than one bad spec.
+  **All 25 evals across all 9 registered specs were existence-only** — `test -f`
+  plus a keyword grep, nothing executed. Verified by attack: the exact three
+  stub files (3 lines total) satisfied CVG-21's entire Exit Check. Every
+  registered task could have gone green having built nothing.
+  **Product fix (root, permanent):** validate-task-spec.sh Check 16b detects
+  existence-only evals and WARNS; `safe-to-delegate.sh` — the gate that claims a
+  task is safe to run with nobody watching — **BLOCKS**. New `--supervised`
+  downgrades it to a note, and `# task-spec:allow-existence-only` opts out for
+  genuinely document-shaped work. That split is the architecture: `validate`
+  lints, `safe-to-delegate` decides autonomy.
+  **Fixture fix:** CVG-21's evals now assert **database state** — a change
+  record actually lands in `raw.orders` in the frozen five-column shape, a
+  dedicated capture role really exists in `pg_roles` and can read
+  `public.orders`, and `has_schema_privilege(role,'_control','USAGE')` is
+  false. A stub cannot make a row appear or revoke its own privilege. Re-attacked
+  with the same three stubs: **still red.** Re-sealed Tier 1, re-bound
+  (epoch `…@e30674524075`). The other 8 specs now correctly **BLOCK** — each
+  must be sharpened at its own bind time, when the layer it tests exists.
+  **Also found:** the `--stamp` success line hardcoded `hmac-sha256-v1` and
+  printed the version in the keyid slot, so every operator since WP1 was told
+  their v2-sealed spec was v1 — the one line whose entire job is to report what
+  just happened. Fixed to report what was written.
+  **Folder audit:** `tests/e2e-test-engine` is healthy (its designed-RED eval is
+  still red) and is **now in CI, asserted in both directions** — a fixture whose
+  red eval quietly turns green has stopped being a fixture. `docs/` is clean.
+  Proof: 12/12 skills · register 120 · runtime-contract 35 · portability 35 ·
+  hmac 32 · task-spec 27 · pass-gates 42 · json-envelope 12 · install 7 ·
+  e2e fixture 2 · shellcheck 0 · skill-docs lint clean.
 - **2026-07-25 · THE ROOT BECOMES THE PRODUCT** — the repo root is the install
   surface, so it was audited as one. Four things were wrong, and two of them
   broke the install for everyone who is not us.

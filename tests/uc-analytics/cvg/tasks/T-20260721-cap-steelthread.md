@@ -20,11 +20,11 @@ parent: ../sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
 execution_backend: claude
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T06:07:42Z
-signed_off_sig: hmac-sha256-v2:1f197c76:bb86d61a9beee9c45406d799679a7ff2a8561b2be5b103f92fd44cf4e1ba87ca
+signed_off_at: 2026-07-25T07:53:07Z
 tracker_ref: linear:CVG-21
 projection:
   milestone: Capture
+signed_off_sig: hmac-sha256-v2:1f197c76:949d34a9cfc993260145c82a98b3c49fc4dcf14e7463f0833af1889fa026dad6
 ---
 
 # Capture steel thread — one domain (orders) end-to-end off the WAL
@@ -66,9 +66,49 @@ schema is fenced (ADR-0001) — never read.
 ## Success Criteria
 
 ```bash
-eval_1() { test -f cvg/capture/probe_commit_to_answer.py && grep -qEi 'assert|fresh|visible' cvg/capture/probe_commit_to_answer.py; }
-eval_2() { test -f cvg/capture/principal.sql && grep -qiE 'capture.?principal|create role|create user' cvg/capture/principal.sql; }
-eval_3() { test -f cvg/capture/pipelines/orders.py && ! grep -q '_control' cvg/capture/pipelines/orders.py; }
+# Every check asserts DATABASE STATE, never file shape. A stub file cannot make
+# a row appear in raw.orders, cannot create a Postgres role, and cannot revoke
+# its own USAGE on a fenced schema. `docker compose up` must be running.
+PG="docker exec uc-analytics-postgres psql -U postgres -d ecommerce -tAc"
+
+# B-1 (terminal, the coherent done-condition): the probe runs end-to-end AND a
+# change-record actually lands. The probe's own exit code is not trusted alone —
+# raw.orders must grow across the run, in the frozen change-record shape.
+eval_1() {
+  test -f cvg/capture/probe_commit_to_answer.py || return 1
+  before=$($PG "select count(*) from raw.orders" 2>/dev/null)
+  : "${before:=0}"
+  python3 cvg/capture/probe_commit_to_answer.py >/dev/null 2>&1 || return 1
+  after=$($PG "select count(*) from raw.orders" 2>/dev/null)
+  : "${after:=0}"
+  [ "$after" -gt "$before" ] || return 1
+  shape=$($PG "select count(*) from information_schema.columns
+               where table_schema='raw' and table_name='orders'
+                 and column_name in ('order_id','_lsn','_op','_captured_at','_source_committed_at')" 2>/dev/null)
+  : "${shape:=0}"
+  [ "$shape" -eq 5 ]
+}
+
+# B-2: the capture read runs as a DEDICATED principal that really exists in the
+# cluster and really can read what it captures.
+eval_2() {
+  test -f cvg/capture/principal.sql || return 1
+  role=$($PG "select rolname from pg_roles where rolname like '%capture%' and rolname <> 'postgres' limit 1" 2>/dev/null)
+  [ -n "$role" ] || return 1
+  granted=$($PG "select has_table_privilege('$role','public.orders','SELECT')" 2>/dev/null)
+  [ "$granted" = "t" ]
+}
+
+# B-3: the _control fence holds in the cluster, not merely in the source. A
+# grep-only check passes on an empty file; a revoked privilege does not.
+eval_3() {
+  test -f cvg/capture/pipelines/orders.py || return 1
+  grep -q '_control' cvg/capture/pipelines/orders.py && return 1
+  role=$($PG "select rolname from pg_roles where rolname like '%capture%' and rolname <> 'postgres' limit 1" 2>/dev/null)
+  [ -n "$role" ] || return 1
+  fenced=$($PG "select has_schema_privilege('$role','_control','USAGE')" 2>/dev/null)
+  [ "$fenced" = "f" ]
+}
 ```
 
 ## Validation Card
@@ -76,21 +116,21 @@ eval_3() { test -f cvg/capture/pipelines/orders.py && ! grep -q '_control' cvg/c
 ```yaml
 success_criteria:
   - id: eval_1
-    description: the end-to-end probe asserts a fresh source commit is visible (B-1, the coherent done-condition)
+    description: the probe runs and a change-record lands in raw.orders in the frozen shape (B-1, the coherent done-condition)
     runnable: bash
     check_type: deterministic
     verifies: [B-1]
     terminal: true
     expected_duration_sec: 60
   - id: eval_2
-    description: the capture read runs as the dedicated principal (B-2)
+    description: a dedicated capture role exists in the cluster and can read public.orders (B-2)
     runnable: bash
     check_type: deterministic
     verifies: [B-2]
     terminal: false
     expected_duration_sec: 5
   - id: eval_3
-    description: the pipeline never reads the _control fence (B-3)
+    description: the _control fence is revoked for the capture role, not merely absent from the source (B-3)
     runnable: bash
     check_type: deterministic
     verifies: [B-3]

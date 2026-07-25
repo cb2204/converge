@@ -838,6 +838,34 @@ if [[ ${#INVERTED_GREP_HITS[@]} -gt 0 ]]; then
   done
 fi
 
+# Check 16b: existence-only evals (the stub loophole)
+#
+# An eval that only asserts a file EXISTS — plus greps for a keyword in it —
+# cannot tell a real implementation from a three-line stub. `test -f x.py &&
+# grep -q assert x.py` is satisfied by `echo "# assert" > x.py`. The loop then
+# goes green, the receipt says pass, and nothing was built.
+#
+# This is the reward-hacking failure mode that matters most, because unlike an
+# inverted grep it is not a mistake — it is what an eval degrades INTO when the
+# author cannot run the real thing yet.
+#
+# Detection: the eval block contains a file-existence test, and contains NO
+# command that executes anything the task produced. Emitted as a WARNING here
+# (a supervised task may legitimately be file-shaped — an ADR, a doc, a config)
+# and escalated to a BLOCK by safe-to-delegate.sh, which is the gate that
+# actually claims a task is safe to run unsupervised.
+#
+# Opt out per spec with: # task-spec:allow-existence-only
+re_existence_test='test[[:space:]]+-[fde][[:space:]]|\[[[:space:]]+-[fde][[:space:]]'
+re_executes='python3?[[:space:]]|pytest|psql|sqlite3|docker[[:space:]]|curl[[:space:]]|node[[:space:]]|npm[[:space:]]|go[[:space:]]+(test|run)|cargo[[:space:]]|make[[:space:]]|bash[[:space:]]+[^-]|sh[[:space:]]+[^-]|dbt[[:space:]]|\./'
+EXISTENCE_ONLY=false
+if [[ -n "${SC_BASH:-}" ]] && ! grep -q 'task-spec:allow-existence-only' "$FILE" 2>/dev/null; then
+  if [[ "$SC_BASH" =~ $re_existence_test ]] && [[ ! "$SC_BASH" =~ $re_executes ]]; then
+    EXISTENCE_ONLY=true
+    WARNINGS+=("existence-only evals: every check asserts a file EXISTS but nothing RUNS what the task produced — a stub file satisfies this spec. Make at least one eval execute the artifact, or annotate the spec with '# task-spec:allow-existence-only' if the deliverable really is a document.")
+  fi
+fi
+
 # Check 17: sign-off envelope on signed_off (structural floor + B2 HMAC, v2.2)
 #
 # STRUCTURAL FLOOR (unchanged from v2.1.1): signed_off: true REQUIRES both

@@ -4,7 +4,7 @@
 
 - **Spec (canonical):** `cvg/tasks/T-20260721-cap-steelthread.md`
 - **Contract:** `cvg/execution/T-20260721-cap-steelthread/execution-profile.yaml`
-- **Epoch:** `T-20260721-cap-steelthread@980d4a040125`
+- **Epoch:** `T-20260721-cap-steelthread@e30674524075`
 - **Project conventions:** `CLAUDE.md` (read it once; it is the router)
 
 ## Goal

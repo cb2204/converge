@@ -94,6 +94,19 @@ jobs:
           bash skills/idea-to-brd/tests/run-tests.sh
           bash skills/brd-docs-to-tech-req/tests/run-tests.sh
 
+      - name: e2e-test-engine — the machine fixture, incl. its designed-RED eval
+        # A fixture whose red eval quietly turns green has stopped being a
+        # fixture. Both directions are asserted.
+        run: |
+          cd tests/e2e-test-engine
+          bash seed.sh
+          bash evals/smoke.sh
+          if bash evals/red.sh 2>/dev/null; then
+            echo "evals/red.sh passed — it is supposed to be RED until gold is built"
+            exit 1
+          fi
+          echo "smoke green, red still red — the fixture is honest"
+
       - name: the product must not depend on the proving ground
         # skills/ and bin/ ship; tests/uc-analytics is a fixture. If the arrow
         # ever points that way again, the install breaks for everyone who does

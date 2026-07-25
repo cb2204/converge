@@ -579,6 +579,66 @@ fi
 rm -f "$gate_ok" "$gate_broken"
 
 # ---------------------------------------------------------------------------
+# Existence-only evals cannot be delegated blind
+# ---------------------------------------------------------------------------
+# `test -f x.py && grep -q assert x.py` is satisfied by `echo "# assert" > x.py`.
+# An unsupervised loop would settle green on a stub, write a pass receipt, and
+# report success having built nothing. The validator warns; the autonomy gate
+# blocks; --supervised downgrades it, because then a human reads the diff.
+STUBBABLE="tasks/T-20990201-stubbable.md"
+cp "$FIXTURES_DIR/T-20260602-golden.md" "$STUBBABLE"
+# the golden fixture declares README.md in touches_paths
+[ -f README.md ] || printf '# readme\n' > README.md
+python3 - "$STUBBABLE" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+s = re.sub(r'^id:.*$', 'id: T-20990201-stubbable', s, count=1, flags=re.M)
+s = s.replace("! grep -q 'NEVERMATCH' README.md",
+              "test -f README.md && grep -q 'readme' README.md")
+open(p, 'w').write(s)
+PYEOF
+
+v_out="$(bash "$SCRIPT_DIR/validate-task-spec.sh" "$STUBBABLE" 2>&1 || true)"
+if echo "$v_out" | grep -q 'existence-only evals'; then
+  pass "the validator warns on existence-only evals"
+else
+  fail "existence-only evals passed the validator unnoticed"
+fi
+
+bash "$SCRIPT_DIR/safe-to-delegate.sh" "$STUBBABLE" >/dev/null 2>&1 && eo_rc=0 || eo_rc=$?
+if [[ $eo_rc -ne 0 ]]; then
+  pass "the autonomy gate BLOCKS a spec a stub would satisfy"
+else
+  fail "a stubbable spec was cleared for blind delegation"
+fi
+
+bash "$SCRIPT_DIR/safe-to-delegate.sh" --supervised "$STUBBABLE" >/dev/null 2>&1 && sup_rc=0 || sup_rc=$?
+if [[ $sup_rc -eq 0 ]]; then
+  pass "--supervised downgrades it (a human is reading the diff)"
+else
+  fail "--supervised did not relax the existence-only block"
+fi
+
+# An eval that RUNS something is not existence-only, even if it also stats a file.
+REAL="tasks/T-20990202-real.md"
+sed 's/^id:.*/id: T-20990202-real/' "$STUBBABLE" > "$REAL"
+python3 - "$REAL" <<'PYEOF'
+import sys
+p = sys.argv[1]; s = open(p).read()
+s = s.replace("test -f README.md && grep -q 'readme' README.md",
+              "test -f README.md && python3 -c \"import sys; sys.exit(0)\"")
+open(p, 'w').write(s)
+PYEOF
+real_out="$(bash "$SCRIPT_DIR/validate-task-spec.sh" "$REAL" 2>&1 || true)"
+if ! echo "$real_out" | grep -q 'existence-only evals'; then
+  pass "an eval that executes the artifact is not flagged"
+else
+  fail "false positive: an executing eval was called existence-only"
+fi
+rm -f "$STUBBABLE" "$REAL"
+
+# ---------------------------------------------------------------------------
 # The index belongs to the workspace, never to the git root
 # ---------------------------------------------------------------------------
 # A nested workspace (proving ground, monorepo package, sub-project) must not

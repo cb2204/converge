@@ -9,6 +9,8 @@
 #   - structurally valid (validate-task-spec.sh)
 #   - eval bodies are shellcheck-clean (no syntax / unquoted-var bugs)
 #   - eval bodies EXECUTE without bash errors (broken-logic guard)
+#   - the evals can tell real work from a STUB (existence-only evals block
+#     blind delegation; --supervised downgrades that to a note)
 #
 # For a not-yet-built task the evals are EXPECTED to fail (the work isn't done).
 # That is fine — a delegate-safe spec fails for the RIGHT reason (assertion not
@@ -18,6 +20,7 @@
 #   bash safe-to-delegate.sh <path/to/T-*.md>
 #   bash safe-to-delegate.sh --skip-touches-paths <path>   # greenfield create tasks
 #   bash safe-to-delegate.sh --require-tier1 <path>         # demand crypto trust
+#   bash safe-to-delegate.sh --supervised <path>            # a human reads the diff
 #
 # Machine-readable contract (for automated dispatchers):
 #   On a clean DELEGATE verdict for a signed-off spec, the gate emits exactly
@@ -54,6 +57,9 @@ FILE=""
 STAMP=false
 STAMP_BY="${USER:-operator}"
 REQUIRE_TIER1=false
+# A human will read the diff. Relaxes only the checks whose whole purpose is to
+# substitute for a reviewer — never the structural or crypto gates.
+SUPERVISED=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-touches-paths|--skip-id-filename|--skip-depends-on|--skip-exit-coverage)
@@ -64,6 +70,8 @@ while [[ $# -gt 0 ]]; do
       STAMP=true; STAMP_BY="${2:-operator}"; shift 2 ;;
     --require-tier1)
       REQUIRE_TIER1=true; shift ;;
+    --supervised)
+      SUPERVISED=true; shift ;;
     --help|-h)
       grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)
@@ -123,6 +131,24 @@ else
     notes+=("validator warnings present — review but not blocking")
   else
     echo "   ${GREEN}PASS${RESET} — structurally valid, shellcheck clean"
+  fi
+fi
+
+# --- Gate 1b: existence-only evals are disqualifying for BLIND delegation ---
+# The validator warns; this gate blocks. That split is the whole architecture:
+# `validate` lints a spec, `safe-to-delegate` decides whether a machine may run
+# it with nobody watching. A spec whose every check is "the file exists" cannot
+# distinguish real work from a stub, so an unsupervised loop would settle green
+# on three empty files. Supervised work may proceed — a human sees the diff.
+if echo "$v_out" | grep -q 'existence-only evals'; then
+  if [[ "$SUPERVISED" == true ]]; then
+    echo "   ${YELLOW}NOTE${RESET} — existence-only evals, allowed because --supervised (a human reads the diff)"
+    notes+=("existence-only evals — a stub would satisfy this spec; supervision is doing the real verification")
+  else
+    echo "   ${RED}BLOCK${RESET} — existence-only evals: a stub file satisfies every check."
+    echo "     Make at least one eval EXECUTE what the task produces, or pass --supervised,"
+    echo "     or annotate the spec with '# task-spec:allow-existence-only' if it really is a document."
+    blockers=$((blockers + 1))
   fi
 fi
 
@@ -217,8 +243,13 @@ if [[ $blockers -eq 0 ]]; then
           echo "   ${RED}BLOCK${RESET} — could not write signed_off_sig into frontmatter; spec stamped but UNSEALED." >&2
           exit 1
         fi
-        keyid_disp="${sig#hmac-sha256-v1:}"; keyid_disp="${keyid_disp%%:*}"
-        echo "   ${GREEN}sealed${RESET}  signed_off_sig: hmac-sha256-v1 (keyid ${keyid_disp}) — Tier 1 crypto trust"
+        # Report the envelope version that was ACTUALLY written. Hardcoding v1
+        # here outlived the v2 envelope and told every operator their spec was
+        # sealed v1 while the file said v2 — the one line whose whole job is to
+        # state what just happened.
+        sig_ver="${sig%%:*}"                      # hmac-sha256-v2
+        keyid_disp="${sig#"$sig_ver":}"; keyid_disp="${keyid_disp%%:*}"
+        echo "   ${GREEN}sealed${RESET}  signed_off_sig: ${sig_ver} (keyid ${keyid_disp}) — Tier 1 crypto trust"
       else
         echo "   ${YELLOW}note:${RESET} key present but no sha256 provider (openssl/shasum/sha256sum) — structural-only (Tier 2), supervised dispatch only"
       fi
