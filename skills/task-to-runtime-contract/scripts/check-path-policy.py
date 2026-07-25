@@ -7,7 +7,9 @@ import argparse
 import subprocess
 from pathlib import Path
 
+from _gate_policy import GatePolicyError, load_gate
 from _runtime_contract import (
+    strip_dot_slash,
     ContractError,
     do_not_touch,
     load_profile,
@@ -137,7 +139,39 @@ def main() -> int:
                 except ContractError:
                     outside.append(candidate)
             else:
-                normalized.append(candidate.lstrip("./"))
+                normalized.append(strip_dot_slash(candidate))
+        # ---- FENCE 1: the repo gate. Checked FIRST and independently. --------
+        # The contract answers "may this task write here?". The gate answers
+        # "may ANY task ever write here?". A spec cannot grant what the repo
+        # forbids, so the gate is evaluated before the scope and its verdict is
+        # not overridable by re-signing — it is not part of the signed payload.
+        try:
+            gate = load_gate(repo, Path.cwd())
+        except GatePolicyError as exc:
+            # A gate that cannot be parsed is a FAILURE, never a skipped
+            # control. A fence you can disable with a typo is not a fence.
+            print(f"Gate policy unreadable: {exc}")
+            print("CHECK_PATH_POLICY=FAIL")
+            return 1
+
+        if gate.active:
+            forbidden_hits = gate.violations(normalized)
+            if forbidden_hits:
+                print(f"Repo gate ({gate.source}) forbids these paths — no spec may widen this:")
+                for path, rule in forbidden_hits:
+                    print(f"  - {path}  (denylist rule: {rule})")
+                print("CHECK_PATH_POLICY=FAIL")
+                return 1
+            if gate.exceeds_blast_radius(len(normalized)):
+                print(
+                    f"Repo gate ({gate.source}): {len(normalized)} changed paths exceeds "
+                    f"max_files={gate.max_files}. Every path may be in scope and the blast "
+                    f"radius is still too large for one unattended change."
+                )
+                print("CHECK_PATH_POLICY=FAIL")
+                return 1
+
+        # ---- FENCE 2: the task's own declared scope --------------------------
         violations = outside + [
             path for path in normalized if not path_allowed(path, allowed, forbidden)
         ]
@@ -147,7 +181,8 @@ def main() -> int:
                 print(f"  - {path}")
             print("CHECK_PATH_POLICY=FAIL")
             return 1
-        print(f"Path policy ready: {len(normalized)} path(s) inside Task-Spec scope.")
+        _fence = f" · repo gate {gate.source.parent.parent.name}/.cvg/gate.yaml" if gate.active else ""
+        print(f"Path policy ready: {len(normalized)} path(s) inside Task-Spec scope{_fence}.")
         print("CHECK_PATH_POLICY=PASS")
         return 0
     except ContractError as exc:

@@ -899,6 +899,37 @@ references survive in the READMEs). What is actually left:
   Re-proven after the pass: skills **12/12** · task-spec 30 · hmac 32 ·
   portability 35 · runtime-contract 37 · register 122 · json-envelope 12 ·
   install 7 · loop-kernel 11 · pass-gates 42 · shellcheck 0.
+- **2026-07-25 · TWO FENCES, ISOLATION, AND A HONEST CEILING** — scanned
+  `cobusgreyling/loop-engineering` (MIT, 585 files, 12-tool CLI suite) and took
+  the four things worth taking. Its readiness *score* was deliberately NOT
+  adopted: reading `auditor.ts`, it scores file presence — a setup-maturity
+  signal, not correctness.
+  **`.cvg/gate.yaml` — the fence a spec cannot widen.** Until now the ONLY
+  constraint on writes was the per-task `fs.write` scope, and the guard's job is
+  to enforce what the spec declared — so a spec scoping writes to `auth/` was an
+  instruction, not a violation. The gate is a second, standing, per-repo fence:
+  denylist beats contract, it is outside the signed payload, and `max_files`
+  caps blast radius independently of paths. Unparseable = FAIL, never skipped.
+  `cvg gate [--path P]` inspects it. **cvg 0.21.0.**
+  **A pre-existing security bug fell out of building it:** `lstrip("./")`
+  strips every leading dot, so `.env` was normalised to `env` and
+  `.github/workflows/x` to `github/workflows/x`. **Every dotfile path has been
+  compared under the wrong name by the shipped guard** — quietly exempting
+  exactly the files most worth guarding. Fixed at all four sites
+  (`_runtime_contract.path_matches`, the guard's normaliser, the gate matcher).
+  **`--isolation worktree`** — the run gets its own checkout; a non-green
+  landing discards it wholesale. Building it surfaced the macOS
+  `/var`→`/private/var` trap: `git rev-parse --show-toplevel` returns the
+  physical path while `$PWD` is symlinked, so prefix-stripping silently failed
+  and produced `/worktree/private/var/...`. Now computed with realpath.
+  **`--estimate`** reports the CEILING rather than a prediction — engines often
+  report no usage (the codex run ended `TOKENS_USED=0`), so an estimate would be
+  invented. When no `budget_tokens` exists it says the axis is unenforceable.
+  **`cvg/STATE.md`** — append-only, one row per landing, the file a human
+  glances at instead of tailing a log.
+  loop-kernel 18 → **25**. Gauntlet green: skills 12/12 · runtime-contract 37 ·
+  register 122 · task-spec 30 · hmac 32 · portability 35 · json-envelope 12 ·
+  install 7 · pass-gates 42 · shellcheck 0.
 - **2026-07-25 · PASS 8 BECOMES A LOOP (research-grounded)** — a scan of the
   loop-engineering literature (Exa · Tavily · Firecrawl · Context7) produced the
   design in `skills/task-loop/references/loop-spec.md`, and the audit it implied

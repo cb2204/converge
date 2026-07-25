@@ -171,6 +171,112 @@ else
 fi
 rm -rf "$W"
 
+# ----------------------------------------------------- worktree isolation
+# In-place, a failed attempt leaves wreckage the NEXT attempt inherits. A
+# worktree makes the cost of a bad run exactly zero and keeps an unattended
+# agent out of the tree the human is reading.
+W="$(new_ws)"
+# A worktree is a checkout of COMMITTED state — uncommitted work in the main
+# tree is invisible to it. Commit the red-making change or the isolated run
+# starts green and reports a NO_OP that means nothing.
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m red >/dev/null 2>&1
+run_kernel "$W" --agent tstnoop --isolation worktree --max-iterations 1
+if grep -q 'isolation: worktree' <<<"$RK_OUT"; then
+  ok "the run happens in an isolated worktree, not the live tree"
+else
+  bad "--isolation worktree did not take effect"
+fi
+# EXHAUSTED keeps the worktree: a handoff note is useless without the work.
+if grep -q 'worktree KEPT' <<<"$RK_OUT"; then
+  ok "a landing with work to inspect KEEPS its worktree (resumable)"
+else
+  bad "the worktree was discarded even though there was work to keep"
+fi
+rm -rf "$W"
+
+# A run the agent could not even start must leave NOTHING behind.
+W="$(new_ws)"
+_wt_before="$(git -C "$W" worktree list | wc -l | tr -d ' ')"
+run_kernel "$W" --agent doesnotexist --isolation worktree
+_wt_after="$(git -C "$W" worktree list | wc -l | tr -d ' ')"
+if [ "$_wt_before" = "$_wt_after" ]; then
+  ok "a failed run leaves no orphaned worktree behind"
+else
+  bad "an orphaned worktree survived a failed run"
+fi
+rm -rf "$W"
+
+# ------------------------------------------- the fence a spec cannot widen
+# The contract answers "may THIS task write here?"; the gate answers "may ANY
+# task ever write here?". Before the gate, a spec that scoped fs.write to
+# auth/ was not a violation — it was an instruction, and everything downstream
+# worked perfectly to let an agent edit the auth code.
+GW="$(new_ws)"
+mkdir -p "$GW/.cvg" "$GW/auth"
+printf 'version: 1\ndenylist:\n  - "auth/**"\n  - ".env"\nmax_files: 2\n' > "$GW/.cvg/gate.yaml"
+# A contract that explicitly authorizes the forbidden path.
+python3 - "$GW/cvg/execution/T-20260602-golden/execution-profile.yaml" <<'PYEOF'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+for g in d.get("authority", {}).get("grants", []):
+    if g.get("capability") in ("fs.write", "vcs.commit"):
+        g["scope"] = ["auth/**", "README.md"]
+json.dump(d, open(p, "w"), indent=2)
+PYEOF
+printf 'secret\n' > "$GW/auth/login.py"
+GATE_OUT="$( (cd "$GW" && python3 "$SRC/skills/task-to-runtime-contract/scripts/check-path-policy.py" \
+  --profile cvg/execution/T-20260602-golden/execution-profile.yaml --repo "$GW" 2>&1) || true )"
+if grep -q 'CHECK_PATH_POLICY=FAIL' <<<"$GATE_OUT" && grep -q 'no spec may widen' <<<"$GATE_OUT"; then
+  ok "the repo gate refuses a path the CONTRACT authorized"
+else
+  bad "a spec widened the repo fence: $(tail -2 <<<"$GATE_OUT" | head -1)"
+fi
+
+# Blast radius is orthogonal to paths: all-legal, still too many.
+for i in 1 2 3 4; do printf 'x\n' > "$GW/f$i.md"; done
+python3 - "$GW/cvg/execution/T-20260602-golden/execution-profile.yaml" <<'PYEOF'
+import json, sys
+d = json.load(open(sys.argv[1]))
+for g in d.get("authority", {}).get("grants", []):
+    if g.get("capability") in ("fs.write", "vcs.commit"):
+        g["scope"] = ["**"]
+json.dump(d, open(sys.argv[1], "w"), indent=2)
+PYEOF
+rm -f "$GW/auth/login.py"
+BR_OUT="$( (cd "$GW" && python3 "$SRC/skills/task-to-runtime-contract/scripts/check-path-policy.py" \
+  --profile cvg/execution/T-20260602-golden/execution-profile.yaml --repo "$GW" 2>&1) || true )"
+if grep -q 'exceeds max_files' <<<"$BR_OUT"; then
+  ok "blast radius is capped even when every path is in scope"
+else
+  bad "max_files did not fire"
+fi
+
+# A gate that cannot be parsed must FAIL, never be skipped.
+printf 'version: 1\nnonsense-key: yes\n' > "$GW/.cvg/gate.yaml"
+BAD_OUT="$( (cd "$GW" && python3 "$SRC/skills/task-to-runtime-contract/scripts/check-path-policy.py" \
+  --profile cvg/execution/T-20260602-golden/execution-profile.yaml --repo "$GW" 2>&1) || true )"
+if grep -q 'Gate policy unreadable' <<<"$BAD_OUT"; then
+  ok "an unparseable gate FAILS closed — not silently skipped"
+else
+  bad "a broken gate was treated as no gate"
+fi
+
+# Dotfiles must not be mangled. lstrip("./") turned ".env" into "env" and
+# quietly exempted exactly the files most worth guarding.
+if python3 -c "
+import sys; sys.path.insert(0, '$SRC/skills/task-to-runtime-contract/scripts')
+from _gate_policy import parse_gate
+g = parse_gate('version: 1\ndenylist:\n  - \".env\"\n  - \".github/workflows/**\"\n')
+assert g.forbids('.env'), '.env not matched'
+assert g.forbids('.github/workflows/ci.yml'), 'workflow not matched'
+" 2>/dev/null; then
+  ok "dotfile paths are matched, not silently renamed"
+else
+  bad "dotfile paths are still being mangled"
+fi
+rm -rf "$GW"
+
 # ------------------------------------------------ engines must not inherit stdin
 # An engine handed an open-but-never-closing stdin can finish its work and then
 # BLOCK waiting for an EOF that never arrives. The watchdog eventually kills it,

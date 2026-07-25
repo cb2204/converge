@@ -116,6 +116,14 @@ jobs:
           fi
           echo "smoke green, red still red — the fixture is honest"
 
+      - name: the repo write fence is parseable and active
+        # A gate that stops parsing is a fence that silently disappears.
+        run: |
+          python3 skills/task-to-runtime-contract/scripts/check-gate.py --repo . | tail -3
+          python3 skills/task-to-runtime-contract/scripts/check-gate.py --repo . \
+            --path auth/x.py >/dev/null && { echo "gate failed to refuse auth/"; exit 1; } || true
+          echo "gate refuses what it must"
+
       - name: the product must not depend on the proving ground
         # skills/ and bin/ ship; tests/uc-analytics is a fixture. If the arrow
         # ever points that way again, the install breaks for everyone who does

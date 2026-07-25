@@ -176,9 +176,22 @@ def do_not_touch(body: str) -> list[str]:
     return sorted(set(paths))
 
 
+def strip_dot_slash(value: str) -> str:
+    """Remove a leading './' — and ONLY that.
+
+    `"".lstrip("./")` removes every leading '.' and '/' character, so ".env"
+    became "env" and ".github/workflows/x" became "github/workflows/x". Every
+    dotfile path was therefore compared under the wrong name, which quietly
+    exempted exactly the files most worth guarding.
+    """
+    while value.startswith("./"):
+        value = value[2:]
+    return value
+
+
 def path_matches(candidate: str, rule: str) -> bool:
-    candidate = candidate.lstrip("./")
-    rule = rule.strip().lstrip("./")
+    candidate = strip_dot_slash(candidate)
+    rule = strip_dot_slash(rule.strip())
     if not candidate or not rule:
         return False
     if any(ch in rule for ch in "*?["):

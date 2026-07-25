@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.20.0"
+CVG_VERSION="0.21.0"
 
 # Resolve THIS script through any symlink chain before locating its companions.
 # The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
@@ -649,7 +649,13 @@ cmd_help() {
   printf '                           LOCAL_SETTLED | NO_OP | BLOCKED | STALLED | EXHAUSTED |\n'
   printf '                           CANCELLED | ERROR. An error is never a success.\n'
   printf '  loop --gate-only         verdict only — no agent, no attempts\n'
+  printf '  gate [--path P]          the repo write fence no Task-Spec can widen —\n'
+  printf '                           denylist + blast-radius cap (CHECK_GATE token)\n'
   printf '  loop --resume            continue from the durable checkpoint\n'
+  printf '  loop --estimate          the CEILING this run can spend, before you authorize it\n'
+  printf '  loop --isolation worktree\n'
+  printf '                           run in an isolated git worktree — a bad run costs\n'
+  printf '                           nothing and never touches the tree you are reading\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks validate <spec>    structural lint + six-tier sizing (XS/S/M/L leaf\n'
@@ -728,7 +734,9 @@ is_mutating() {
     # here would be dead code — consult the parsed flag. The loop kernel owns
     # its own dry-run because it reports the resolved budgets, which is the part
     # worth reading before letting a run go unattended.
-    loop)       [ "$CVG_DRY_RUN" -eq 1 ] && return 1; return 0 ;;
+    loop)       [ "$CVG_DRY_RUN" -eq 1 ] && return 1
+                for a in "$@"; do [ "$a" = "--estimate" ] && return 1; done
+                return 0 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
@@ -1172,6 +1180,12 @@ case "$CMD" in
     LANER="$CVG_HOME_DIR/skills/task-spec/scripts/classify-lane.py"
     [ -f "$LANER" ] || { ui_err "task-spec skill is incomplete under $CVG_HOME_DIR/skills"; printf 'LANE=USAGE_ERROR\n'; exit 2; }
     exec python3 "$LANER" "$@"
+    ;;
+  gate)
+    # The repo write fence — the one a Task-Spec cannot widen. Read-only.
+    GATER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/check-gate.py"
+    [ -f "$GATER" ] || { ui_err "task-to-runtime-contract skill is incomplete under $CVG_HOME_DIR/skills"; printf 'CHECK_GATE=ERROR\n'; exit 2; }
+    exec python3 "$GATER" --repo "$PWD" "$@"
     ;;
   loop)
     # Pass 8 · Loop. One assigned task, a bounded RED/GREEN cycle, and one

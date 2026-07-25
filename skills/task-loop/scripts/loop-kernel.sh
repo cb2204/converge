@@ -33,6 +33,7 @@
 #        [--max-iterations N] [--max-seconds N] [--max-tokens N]
 #        [--allow-external-writes] [--dry-run] [--resume]
 #        [--base BRANCH] [--contract PATH] [--legacy-no-contract]
+#        [--isolation worktree|inplace]
 #
 # The last three are not the loop's own controls — they belong to the eval runner
 # and the settler, and are forwarded verbatim so the kernel can sit in front of
@@ -58,6 +59,8 @@ ISSUE=""; TASKS_DIR=""; AGENT="claude"; NO_AGENT=false
 MAX_ITER=""; MAX_SECONDS=""; MAX_TOKENS=""
 ALLOW_EXTERNAL=false; DRY_RUN=false; RESUME=false
 BASE=""; CONTRACT=""; LEGACY_NO_CONTRACT=false
+ISOLATION="inplace"
+ESTIMATE=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -82,6 +85,9 @@ while [ $# -gt 0 ]; do
     --contract)       [ $# -ge 2 ] || { err "--contract requires a value"; exit 2; }; CONTRACT="$2"; shift 2 ;;
     --contract=*)     CONTRACT="${1#--contract=}"; shift ;;
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
+    --isolation)      [ $# -ge 2 ] || { err "--isolation requires worktree|inplace"; exit 2; }; ISOLATION="$2"; shift 2 ;;
+    --isolation=*)    ISOLATION="${1#--isolation=}"; shift ;;
+    --estimate)       ESTIMATE=true; shift ;;
     -h|--help)        grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)                err "unknown argument '$1'"; exit 2 ;;
   esac
@@ -157,6 +163,69 @@ tighter() {  # tighter <spec> <flag>  -> the smaller positive value
 BUDGET_ITER="$(tighter "$SPEC_ITER" "$MAX_ITER")"
 BUDGET_TOKENS="$(tighter "${SPEC_TOKENS:-}" "$MAX_TOKENS")"
 BUDGET_SECONDS="$(tighter "$((SPEC_MINUTES * 60))" "$MAX_SECONDS")"
+
+# --------------------------------------------------------------------------
+# Isolation — where the attempts actually happen
+#
+# In-place, a failed attempt leaves its wreckage in your working tree and the
+# NEXT attempt inherits it. That is not a fresh start; it is a fresh context
+# reading a dirty desk, and it is one reason a second attempt can be worse than
+# the first.
+#
+# A worktree gives the run its own checkout of the same repository. Work is
+# discarded wholesale on any non-green landing, so the cost of a bad run is
+# exactly zero, and nothing an unattended agent does can touch the tree you are
+# reading. One worktree per RUN, which is one per fix — matching the granularity
+# the pattern is usually described at.
+# --------------------------------------------------------------------------
+ORIGINAL_WORKSPACE="$WORKSPACE_ROOT"
+WORKTREE_DIR=""
+if [ "$ISOLATION" = "worktree" ]; then
+  if ! git -C "$GIT_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    err "--isolation worktree needs a git repository"; printf 'TASK_LOOP=ERROR\n'; exit 4
+  fi
+  WORKTREE_DIR="$(mktemp -d -t "cvg-wt-$TASK_ID.XXXXXX")"
+  rm -rf "$WORKTREE_DIR"
+  WT_BRANCH="loop/$TASK_ID-$$"
+  if ! git -C "$GIT_ROOT" worktree add --quiet -b "$WT_BRANCH" "$WORKTREE_DIR" >/dev/null 2>&1; then
+    err "could not create a worktree at $WORKTREE_DIR"; printf 'TASK_LOOP=ERROR\n'; exit 4
+  fi
+  # Re-point every workspace-relative path at the isolated checkout.
+  #
+  # Prefix-stripping is NOT safe here: on macOS `git rev-parse --show-toplevel`
+  # returns the PHYSICAL path (/private/var/...) while $PWD is the symlinked one
+  # (/var/...), so `${path#$prefix}` silently fails to match and the "relative"
+  # remainder is still absolute — which then gets appended to the worktree and
+  # produces /worktree/private/var/... Compute the relation exactly instead.
+  rel_to() {  # rel_to <path> <base> — realpath-based, so symlinks cannot lie
+    python3 -c 'import os,sys; print(os.path.relpath(os.path.realpath(sys.argv[1]), os.path.realpath(sys.argv[2])))' "$1" "$2"
+  }
+  _rel_ws="$(rel_to "$ORIGINAL_WORKSPACE" "$GIT_ROOT")"
+  _rel_tasks="$(rel_to "$RESOLVED_TASKS_DIR" "$ORIGINAL_WORKSPACE")"
+  _rel_spec="$(rel_to "$TASK_FILE" "$ORIGINAL_WORKSPACE")"
+  case "$_rel_ws" in .) WORKSPACE_ROOT="$WORKTREE_DIR" ;; *) WORKSPACE_ROOT="$WORKTREE_DIR/$_rel_ws" ;; esac
+  RESOLVED_TASKS_DIR="$WORKSPACE_ROOT/$_rel_tasks"
+  TASK_FILE="$WORKSPACE_ROOT/$_rel_spec"
+  [ -f "$TASK_FILE" ] || {
+    err "the spec is not present in the worktree ($TASK_FILE) — commit it before using --isolation worktree"
+    printf 'TASK_LOOP=ERROR\n'; exit 4
+  }
+  printf 'isolation: worktree %s (branch %s)\n' "$WORKTREE_DIR" "$WT_BRANCH"
+fi
+
+# Discard the isolated checkout unless the run earned a keep. Registered on EXIT
+# so a crash cannot leave orphaned worktrees accumulating on disk.
+KEEP_WORKTREE=false
+cleanup_worktree() {
+  [ -n "$WORKTREE_DIR" ] || return 0
+  if [ "$KEEP_WORKTREE" = true ]; then
+    printf 'worktree KEPT for inspection: %s (branch %s)\n' "$WORKTREE_DIR" "$WT_BRANCH"
+    return 0
+  fi
+  git -C "$GIT_ROOT" worktree remove --force "$WORKTREE_DIR" >/dev/null 2>&1 || rm -rf "$WORKTREE_DIR"
+  git -C "$GIT_ROOT" branch -D "$WT_BRANCH" >/dev/null 2>&1 || true
+}
+trap cleanup_worktree EXIT
 
 # --------------------------------------------------------------------------
 # Is the loop authorized to WRITE to the tracker?
@@ -238,12 +307,20 @@ elapsed() { echo $(( $(date -u +%s) - STARTED_AT )); }
 land() {  # land <STATE> <exit-code> <why>
   _state="$1"; _rc="$2"; _why="${3:-}"
   save_state
+  # Only a landing that produced something worth keeping keeps its worktree.
+  # EXHAUSTED and STALLED keep it too: the handoff note is useless without the
+  # work it describes, and --resume needs somewhere to resume into.
+  case "$_state" in
+    SETTLED|LOCAL_SETTLED|EXHAUSTED|STALLED) KEEP_WORKTREE=true ;;
+    *) : ;;
+  esac
   printf '\n────────────────────────────────────────────────────────\n'
   printf 'iterations %s/%s · elapsed %ss/%ss' "$ITER" "$BUDGET_ITER" "$(elapsed)" "$BUDGET_SECONDS"
   [ -n "$BUDGET_TOKENS" ] && printf ' · tokens %s/%s' "$TOKENS_USED" "$BUDGET_TOKENS"
   printf '\n'
   [ -n "$_why" ] && printf '%s\n' "$_why"
   [ -f "$HANDOFF" ] && printf 'handoff: %s\n' "${HANDOFF#"$WORKSPACE_ROOT"/}"
+  write_state_md "$_state" "$_why"
   printf 'TASK_LOOP=%s\n' "$_state"
   # Narrate the outcome to the tracker. Fail-soft: a tracker that is down must
   # never change the verdict the evals produced.
@@ -271,6 +348,35 @@ write_handoff() {  # the planned landing — state and next steps, on disk
     printf '3. If the gap is upstream (a wrong ADR, a wrong plan, a wrong spec),\n'
     printf '   fix the pass that owns it rather than this task.\n'
   } > "$HANDOFF"
+}
+
+# --------------------------------------------------------------------------
+# cvg/STATE.md — the one file a human glances at.
+#
+# state.env is for the machine and receipts are per-run evidence. Neither
+# answers "what have the loops been doing?" at a glance, which is what an owner
+# who is not tailing a terminal actually wants. Append-only: a log you can
+# rewrite is a log you cannot trust.
+# --------------------------------------------------------------------------
+write_state_md() {
+  _sm_state="$1"; _sm_why="${2:-}"
+  _sm_file="$ORIGINAL_WORKSPACE/cvg/STATE.md"
+  mkdir -p "$(dirname "$_sm_file")" 2>/dev/null || return 0
+  if [ ! -f "$_sm_file" ]; then
+    {
+      printf '# Loop state\n\n'
+      printf 'Append-only. Written by `cvg loop` on every landing.\n'
+      printf 'An error or an exhausted budget is never recorded as success.\n\n'
+      printf '| when (UTC) | task | engine | state | iterations | note |\n'
+      printf '|---|---|---|---|---|---|\n'
+    } > "$_sm_file"
+  fi
+  printf '| %s | `%s` | %s | **%s** | %s/%s | %s |\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$TASK_ID" \
+    "$([ "$NO_AGENT" = true ] && echo none || echo "$AGENT")" \
+    "$_sm_state" "$ITER" "$BUDGET_ITER" \
+    "$(printf '%s' "${_sm_why:-—}" | tr '|' '/' | cut -c1-90)" >> "$_sm_file"
+  return 0
 }
 
 # --------------------------------------------------------------------------
@@ -322,6 +428,36 @@ else
   printf 'engine: %s\n' "$AGENT"
 fi
 printf '────────────────────────────────────────────────────────\n'
+
+# --------------------------------------------------------------------------
+# --estimate — the CEILING, not a prediction.
+#
+# We deliberately do not guess what a run will cost. Engines frequently report
+# no usage at all (the last codex run finished with TOKENS_USED=0), so any
+# "estimate" would be a number we invented. What IS knowable is the bound: the
+# most this run can consume before its own brakes stop it. That is the number
+# worth reading before authorising something unattended.
+# --------------------------------------------------------------------------
+if [ "$ESTIMATE" = true ]; then
+  _eng_cap="${ENGINE_TIMEOUT:-900}"
+  printf 'CEILING for this run — the most it can spend before the brakes stop it:\n'
+  printf '  attempts        : up to %s\n' "$BUDGET_ITER"
+  printf '  per attempt     : up to %ss of engine wall-clock\n' "$_eng_cap"
+  printf '  whole run       : hard stop at %ss, whichever comes first\n' "$BUDGET_SECONDS"
+  if [ -n "$BUDGET_TOKENS" ]; then
+    printf '  tokens          : hard stop at %s\n' "$BUDGET_TOKENS"
+  else
+    printf '  tokens          : NO ceiling declared — the spec sets no budget_tokens,\n'
+    printf '                    and engines often report no usage, so this axis is\n'
+    printf '                    not enforceable on this run. Bound it with\n'
+    printf '                    --max-tokens, or rely on the two above.\n'
+  fi
+  printf '  worst case      : %s attempt(s) x %ss = %ss of engine time\n' \
+    "$BUDGET_ITER" "$_eng_cap" "$((BUDGET_ITER * _eng_cap))"
+  printf '  stagnation exit : after %s identical failures, usually far sooner\n' "$SPEC_CB"
+  printf 'ESTIMATE=CEILING\n'
+  exit 0
+fi
 
 if [ "$DRY_RUN" = true ]; then
   printf 'DRY-RUN: would loop up to %s attempts with %s, verifying after each.\n' "$BUDGET_ITER" "$AGENT"

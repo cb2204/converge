@@ -170,3 +170,46 @@ five-level ladder, named terminal states, and the anti-pattern catalogue.
 ³ arXiv:2607.01641 — 68 infinite-agent-loop defects across 47 of 6,549 repos.
 ⁴ Linear, *Developing the Agent Interaction* and *Agent Best Practices* —
 `AgentSession`, `AgentActivity`, signals, delegate-vs-assignee.
+
+---
+
+## Two fences, not one (added after reviewing loop-engineering)
+
+The capability envelope answers *"may this task write here?"*. That is per-task
+and **authored** — so a spec declaring `touches_paths: [auth/]` is not a
+violation, it is an instruction, and everything downstream works perfectly to
+let an agent edit the auth code.
+
+`.cvg/gate.yaml` answers a different question: *"may ANY task ever write here?"*
+It is per-repo and **standing**, it is not part of the signed payload, and
+**denylist beats contract, always** — re-signing a spec cannot buy access to
+anything it lists. `max_files` adds a blast-radius cap that is orthogonal to
+paths: twelve legal files changed unattended is a different event from two.
+
+An unparseable gate is a FAILURE, never a skipped control. A fence you can
+disable with a typo is not a fence.
+
+## Isolation
+
+`--isolation worktree` gives the run its own checkout. Work is discarded
+wholesale on a non-green landing, so a bad run costs exactly zero and nothing an
+unattended agent does reaches the tree a human is reading. Landings that leave
+something worth inspecting (`SETTLED`, `LOCAL_SETTLED`, `EXHAUSTED`, `STALLED`)
+keep theirs, because a handoff note is useless without the work it describes.
+
+**A worktree sees committed state only.** Uncommitted work in the main tree is
+invisible to it — correct git semantics, and a sharp edge worth knowing before
+you wonder why an isolated run started green.
+
+## Cost: a ceiling, not a prediction
+
+`--estimate` reports what a run *can* spend before its own brakes stop it. It
+deliberately does not predict: engines frequently report no usage at all — the
+first real codex run finished with `TOKENS_USED=0` — so any estimate would be a
+number we invented. When no `budget_tokens` is declared the output says the
+token axis is unenforceable on that run rather than implying a limit exists.
+
+Credit: `gate.yaml`, the worktree convention and pre-run cost reporting are
+adapted from the loop-engineering project (MIT). Its readiness *score* is
+deliberately not adopted — it measures file presence, which is a setup-maturity
+signal rather than a correctness one.
