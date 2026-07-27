@@ -345,9 +345,12 @@ write_handoff() {  # the planned landing — state and next steps, on disk
   {
     printf '# Handoff — %s\n\n' "$TASK_ID"
     printf '**Why the loop stopped:** %s\n\n' "$_reason"
-    printf '- iterations: %s / %s\n' "$ITER" "$BUDGET_ITER"
-    printf '- elapsed: %ss / %ss\n' "$(elapsed)" "$BUDGET_SECONDS"
-    [ -n "$BUDGET_TOKENS" ] && printf '- tokens: %s / %s\n' "$TOKENS_USED" "$BUDGET_TOKENS"
+    # `printf '- ...'` makes bash read the FORMAT as an option and emit
+    # "invalid option" — which is how the handoff note lost the very numbers it
+    # exists to report. Put the leading dash in the ARGUMENT, never the format.
+    printf '%s\n' "- iterations: $ITER / $BUDGET_ITER"
+    printf '%s\n' "- elapsed: $(elapsed)s / ${BUDGET_SECONDS}s"
+    [ -n "$BUDGET_TOKENS" ] && printf '%s\n' "- tokens: $TOKENS_USED / $BUDGET_TOKENS"
     printf '\n## Last failure\n\n```\n'
     if [ -f "$ATTEMPTS_DIR/$(printf '%03d' "$ITER").log" ]; then
       tail -40 "$ATTEMPTS_DIR/$(printf '%03d' "$ITER").log"

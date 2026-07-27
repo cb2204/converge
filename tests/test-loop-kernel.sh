@@ -104,6 +104,14 @@ if [ -f "$W/cvg/loop/T-20260602-golden/HANDOFF.md" ]; then
 else
   bad "no handoff note: exhaustion was a crash, not a landing"
 fi
+# A handoff that lost its numbers is a handoff nobody can act on. `printf '- x'`
+# makes bash read the FORMAT as an option, which silently emptied these lines.
+if grep -q '^- iterations:' "$W/cvg/loop/T-20260602-golden/HANDOFF.md" 2>/dev/null \
+  && grep -q '^- elapsed:' "$W/cvg/loop/T-20260602-golden/HANDOFF.md" 2>/dev/null; then
+  ok "the handoff actually carries the numbers it exists to report"
+else
+  bad "the handoff note is missing its iteration/elapsed lines"
+fi
 # The checkpoint must be durable, or a restart silently redoes the work.
 if grep -q '^ITER=2$' "$W/cvg/loop/T-20260602-golden/state.env" 2>/dev/null; then
   ok "the loop's position is checkpointed on disk (resumable)"

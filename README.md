@@ -101,13 +101,17 @@ flowchart TB
     P7B["7B · Task brief — AGENTS.task.md (identifiers, not content)"]
     P8["8 · Loop ↺ — task-loop · attempt→verify, bounded<br/>one named terminal state · green-eval PR"]
     VER{"tier-2 verify — different family + holdout · fails closed"}
+    DONE(["settlement evidence · human PR review"])
+    HOLD["blocked · obtain a verifier or accept the risk explicitly"]
     P5 --> P6 --> P7 --> P7B --> P8 --> VER
+    P5 -.->|"repo-local queue · skip Register"| P7
   end
-  LANE{"cvg lane — FAST | NORMAL | FULL<br/>routes, never waives"} -.-> P5
+  LANE["cvg lane — FAST | NORMAL | FULL<br/>routes, never waives"] -.-> P5
   P7B -.->|"adapters"| H[["claude · codex · kimi swarm · cloud"]]
   H -.-> P8
   VER -->|refuted| P8
-  VER -->|upheld| P8
+  VER -->|upheld| DONE
+  VER -->|unavailable on high blast radius| HOLD
 ```
 
 **The invariant** — *every pass lowers altitude, binds an engine (by flag), ends
@@ -147,7 +151,7 @@ bash ~/converge/install.sh --help          # all the flags
 
 ```bash
 cvg version
-# → cvg 0.20.0 (task-spec 3.6.0)
+# → cvg 0.21.0 (task-spec 3.6.0)
 
 python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
 # → Skill is valid!
@@ -288,13 +292,19 @@ and a machine-checkable **gate**. Passes 0–4 are human-led; 5–8 are machine-
 |:--:|------|-------|----------|------------|
 | **0** | Capture *(optional)* | `idea-to-brd` | idea | BRD · `CHECK_BRD` |
 | **1** | Intent | `brd-docs-to-tech-req` | intent | tech-spec · `CHECK_TECH_SPEC` |
-| **2** | Structure | `tech-req-to-adrs` | system | `docs/adrs/*` · `CHECK_ADR` |
-| **3** | Decompose | `reqs-to-swimlane-plans` | plan | `sketch/*.plan` · `CHECK_PLAN` |
+| **2** | Structure | `tech-req-to-adrs` | system | `cvg/docs/adrs/*` + `CONTEXT.md` · `CHECK_ADR` |
+| **3** | Decompose | `reqs-to-swimlane-plans` | plan | `cvg/sketch/swimlane-*/` · `CHECK_PLAN` |
 | **4** | **Consensus — THE BARRIER** | `sketch-plans-adversarial-review` | plan (hardened) | sharpened plans + objection log · `CHECK_CONSENSUS` · **last human sign-off** |
-| **5** | Tasking | `task-spec` | atomic unit | `cvg/tasks/T-*.md` · `DELEGATE` (HMAC-sealed) |
+| **5** | Tasking | `task-spec` | atomic unit | `cvg/tasks/T-*.md` · `TIER=1` for unattended execution (HMAC-sealed) |
 | **6** | Register *(opt-in)* | `task-specs-to-issues` | board | 1 spec = 1 issue · `CHECK_REGISTER` |
 | **7** | Bind *(7A contract + 7B brief)* | `task-to-runtime-contract` | runtime contract | profile + guards + task brief · `CHECK_RUNTIME_CONTRACT` |
-| **8** | The Loop *(+ tier-2 verify)* | `cvg loop` · `cvg verify` | runtime | branch → **attempt ↺ verify** → independent refutation → one named terminal state |
+| **8** | The Loop *(+ tier-2 verify)* | `task-loop` | runtime | `cvg loop` → `TASK_LOOP=<state>`; `cvg verify` → `CHECK_VERIFY=<verdict>` |
+
+**Pass ownership versus code placement.** `task-loop` is the primary Pass 8
+skill. The separate `cvg verify` command is also a Pass 8 runtime surface, but
+its implementation lives in `task-to-runtime-contract` because it reads the
+bound spec, diff, and held-out criteria. That placement does not turn it into
+another pass or renumber Bind.
 
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
 dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
@@ -598,7 +608,7 @@ converge/
 
 ## 🧾 Status
 
-**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.20.0** ·
+**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.21.0** ·
 Anthropic validator passing on all 12 skills · extracted from a production
 **postgres → duckdb → dbt → MCP** run.
 

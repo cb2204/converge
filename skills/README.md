@@ -9,22 +9,65 @@ the official validator (checked with
 and every engine or tracker is bound by a **flag, never a name**.
 
 The method has **two phases with one barrier between them** — Consensus (Pass 4)
-is the last human sign-off before the machine takes over.
+is the last human sign-off before the machine takes over. Read this diagram from
+top to bottom: every box names the pass, its implementation skill, its core
+transformation, and the proof required to leave it.
 
-```text
-PHASE 1 · DESIGN — human-led · make intent crystal-clear
-  idea ─▶ 0 Capture (optional) ─▶ 1 Intent ─▶ 2 Structure ─▶ 3 Decompose ─▶ 4 Consensus
-                                                                                │
-                                                        ⟵ THE BARRIER (last human sign-off)
-                                                                                ▼
-PHASE 2 · BUILD — machine-led · the dark factory
-  5 Tasking ─▶ 6 Register (opt-in) ─▶ 7A Contract ─▶ 7B Brief ─▶ 8 Loop ─▶ tier-2 verify ─▶ green ↺
-                                                                   │  ▲
-                                                    attempt ─▶ verify ─┘  bounded · fresh context
-                                                                          per attempt · one named
-                                                                          terminal state
+```mermaid
+flowchart TB
+  START(["Idea, request, or existing BRD"])
+  BARRIER{{"THE BARRIER<br/>owner signs off the hardened plans"}}
+  STOP["Explicit handoff<br/>BLOCKED · STALLED · EXHAUSTED · CANCELLED · ERROR"]
+  DONE(["Settlement evidence<br/>green change ready for human PR review"])
 
-  cvg lane routes work to FAST (5,7,8) · NORMAL (1,2,5,7,8) · FULL (0-8) — never waiving a gate.
+  subgraph DESIGN["PHASE 1 · DESIGN — human-led · make intent precise"]
+    direction TB
+    P0["0 · CAPTURE · optional<br/>idea-to-brd<br/>frontier questions + do-nothing test<br/>OUT: BRD or no-go · GATE: CHECK_BRD"]
+    NOGO(["Durable no-go record<br/>the idea stops honestly"])
+    P1["1 · INTENT<br/>brd-docs-to-tech-req<br/>understand → interrogate → crystallize<br/>OUT: falsifiable tech-spec · GATE: CHECK_TECH_SPEC"]
+    P2["2 · STRUCTURE<br/>tech-req-to-adrs<br/>ground the spec against the real system<br/>OUT: ADRs + CONTEXT glossary · GATE: CHECK_ADR"]
+    P3["3 · DECOMPOSE<br/>reqs-to-swimlane-plans<br/>seam → swimlane → leg<br/>OUT: swimlane tree · GATE: CHECK_PLAN"]
+    P4["4 · CONSENSUS<br/>sketch-plans-adversarial-review<br/>cross-family refutation + objection resolution<br/>OUT: hardened plans + log · GATE: CHECK_CONSENSUS"]
+  end
+
+  subgraph BUILD["PHASE 2 · BUILD — machine-led · turn agreement into evidence"]
+    direction TB
+    P5["5 · TASKING<br/>task-spec<br/>leg → atomic task + runnable evals<br/>OUT: sealed Task-Spec DAG · GATE: TIER=1"]
+    P6["6 · REGISTER · opt-in<br/>task-specs-to-issues<br/>idempotent 1:1 tracker projection<br/>OUT: issues + blocked-by graph · GATE: CHECK_REGISTER"]
+    P7["7 · BIND<br/>task-to-runtime-contract<br/>7A enforceable contract + 7B worker brief<br/>OUT: profile + guards + adapters · GATE: CHECK_RUNTIME_CONTRACT"]
+    P8["8 · THE LOOP<br/>task-loop<br/>fresh attempt → tier-1 eval → learn → repeat<br/>OUT: one named TASK_LOOP state"]
+    T1{"Task's sealed eval is green<br/>and path policy holds?"}
+    T2{"Tier-2 independent refutation<br/>different family + holdout"}
+  end
+
+  START --> P0
+  START -. "usable BRD: skip optional Capture" .-> P1
+  P0 -->|"BRD"| P1
+  P0 -->|"do-nothing wins"| NOGO
+  P1 --> P2 --> P3 --> P4 --> BARRIER --> P5
+  P5 --> P6 --> P7 --> P8 --> T1
+  P5 -. "repo-local queue: skip opt-in Register" .-> P7
+  T1 -->|"RED · budget remains"| P8
+  T1 -->|"RED · stop condition"| STOP
+  T1 -->|"GREEN"| T2
+  T2 -->|"REFUTED"| P8
+  T2 -->|"UPHELD or recorded low-risk UNAVAILABLE"| DONE
+  T2 -->|"unavailable + high risk"| STOP
+
+  LANE["ROUTER · cvg lane · not a pass<br/>FAST · NORMAL · FULL<br/>chooses a route; never waives a gate"] -.-> P5
+
+  classDef design fill:#e8f1ff,stroke:#2864b4,color:#10243e,stroke-width:1.5px;
+  classDef build fill:#f1eaff,stroke:#6d45a8,color:#241438,stroke-width:1.5px;
+  classDef proof fill:#fff4d6,stroke:#a66a00,color:#3d2800,stroke-width:1.5px;
+  classDef terminal fill:#e7f7ec,stroke:#287a43,color:#12351e,stroke-width:1.5px;
+  classDef stop fill:#ffe9e7,stroke:#b53a30,color:#441512,stroke-width:1.5px;
+  class P0,P1,P2,P3,P4 design;
+  class P5,P6,P7,P8 build;
+  class BARRIER,T1,T2,LANE proof;
+  class DONE,NOGO terminal;
+  class STOP stop;
+  style DESIGN fill:#f8fbff,stroke:#8baed8,stroke-width:1px;
+  style BUILD fill:#fcf9ff,stroke:#a68ac7,stroke-width:1px;
 ```
 
 **Where the passes look for your work.** Every pass discovers the **`cvg/`
@@ -34,20 +77,33 @@ not necessarily the git root (`<repo>/projects/demo/cvg/` is a supported layout)
 so everything resolves relative to the workspace: the specs, the execution
 profiles, and the directory a spec's own evals run in.
 
-| # | Skill | One line |
-|:--:|-------|----------|
-| 0 | [`idea-to-brd`](idea-to-brd/) | raw idea → BRD in the owner's voice · *optional on-ramp* |
-| 1 | [`brd-docs-to-tech-req`](brd-docs-to-tech-req/) | fuzzy BRD → verifiable tech-spec |
-| 2 | [`tech-req-to-adrs`](tech-req-to-adrs/) | ground the spec against the real repo → ADRs |
-| 3 | [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | cut the work along its natural seams → swimlane plans |
-| 4 | [`sketch-plans-adversarial-review`](sketch-plans-adversarial-review/) | a *different* model attacks the plans · **THE BARRIER** |
-| 5 | [`task-spec`](task-spec/) | atomic, self-verifying units · **the cornerstone** · also ships `cvg lane` |
-| 6 | [`task-specs-to-issues`](task-specs-to-issues/) | one spec = one tracked issue · *opt-in* · the board is state |
-| 7 | [`task-to-runtime-contract`](task-to-runtime-contract/) | **7A** hash-bound runtime contract + **7B** the task brief · also ships `cvg verify` (tier-2) |
-| 8 | [`task-loop`](task-loop/) | one issue → green-eval PR · the execution loop |
-| util | [`pass-to-lesson`](pass-to-lesson/) | after any pass, teach the owner what was built and why · *optional* |
-| util | [`skill-creator`](skill-creator/) | author, evaluate, and validate skills |
-| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | technology-agent/KB scaffolder — retained for migration only |
+## The nine pass contracts at a glance
+
+The pass names and primary skill mapping are canonical. The implementation
+column calls out the mechanism that gives each pass its strongest guarantee;
+the gate proves a narrower, machine-checkable claim and never replaces semantic
+judgment.
+
+| # | Pass / skill | Core implementation | Durable result / proof |
+|:--:|--------------|---------------------|------------------------|
+| 0 | **Capture** · [`idea-to-brd`](idea-to-brd/) · *optional* | Frontier interview rounds separate facts from owner decisions; the do-nothing test provides a real no-go exit. | Owner-voice BRD or durable no-go · `CHECK_BRD` |
+| 1 | **Intent** · [`brd-docs-to-tech-req`](brd-docs-to-tech-req/) | Trace BRD outcomes into falsifiable requirements, measurable acceptance, and the few decisions that materially change the build. | Verifiable tech-spec · `CHECK_TECH_SPEC` |
+| 2 | **Structure** · [`tech-req-to-adrs`](tech-req-to-adrs/) | Inspect the live system, record only hard-to-reverse grounding decisions, and pin one domain vocabulary; no implementation plan leaks in. | `cvg/docs/adrs/*` + `CONTEXT.md` · `CHECK_ADR` |
+| 3 | **Decompose** · [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | Cut natural one-way seams, designate a steel thread, and split each lane into independently provable legs while staying above task/code altitude. | `cvg/sketch/swimlane-*/` tree · `CHECK_PLAN` |
+| 4 | **Consensus** · [`sketch-plans-adversarial-review`](sketch-plans-adversarial-review/) | A different model family tries to refute every plan; every objection is fixed or explicitly accepted with an owner and provenance. | Hardened plans + stamped objection log · `CHECK_CONSENSUS` + owner sign-off |
+| 5 | **Tasking** · [`task-spec`](task-spec/) | Turn accepted legs into atomic, vendor-neutral units whose runnable evals travel with the work; PRE-gate and HMAC seal prevent silent goalpost edits. | Signed Task-Spec DAG under `cvg/tasks/` · `TIER=1` for unattended execution |
+| 6 | **Register** · [`task-specs-to-issues`](task-specs-to-issues/) · *opt-in* | Idempotently project one signed spec to one issue and mirror every `depends_on` edge as `blocked-by`; the spec remains canonical. | Tracker shadow + backlinks · `CHECK_REGISTER` parity |
+| 7 | **Bind** · [`task-to-runtime-contract`](task-to-runtime-contract/) | Bind one signed revision to least-privilege paths, hash-pinned evidence, honest runtime controls, adapters, and a minimal identifier-only worker brief. | `execution-profile.yaml` + guards + `AGENTS.task.md` · `CHECK_RUNTIME_CONTRACT` |
+| 8 | **The Loop** · [`task-loop`](task-loop/) | Run each attempt in fresh context, enforce iteration/time/token ceilings plus stagnation, persist checkpoints, and land in exactly one named state. | Green-eval PR/local commit or explicit handoff · `TASK_LOOP=<state>` + tier-2 `CHECK_VERIFY=<verdict>` |
+| util | [`pass-to-lesson`](pass-to-lesson/) | After any closed pass, teach the owner what was built, why it is shaped that way, and what would break without it. | Durable lesson + teach-ready `GATE: PASS` · *optional* |
+| util | [`skill-creator`](skill-creator/) | Author, evaluate, package, and structurally validate agent skills. | Validated skill package |
+| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | Preserve the cross-tool emitter used by the newer runtime harness; standing-fleet scaffolding is no longer canonical. | Migration support only |
+
+`cvg verify` belongs to the **Pass 8 runtime story** even though its script is
+packaged under `task-to-runtime-contract`: it consumes the bound spec and diff,
+then asks a different-family judge to attack held-out criteria before settlement.
+The CLI exposes Loop and tier-2 verification separately so neither can silently
+manufacture the other's verdict.
 
 **Install into a consuming repo** (symlink tracks upstream; copy pins a version):
 
