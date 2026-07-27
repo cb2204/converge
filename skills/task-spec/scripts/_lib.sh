@@ -555,15 +555,25 @@ ts_resolve_signing_key() {
   else
     local anchor_dir git_dir
     if [[ -d "$anchor" ]]; then anchor_dir="$anchor"; else anchor_dir="$(dirname "$anchor")"; fi
-    git_dir="$(cd "$anchor_dir" 2>/dev/null && git rev-parse --git-dir 2>/dev/null || true)"
-    if [[ -n "$git_dir" ]]; then
+    # --git-common-dir FIRST, then --git-dir.
+    #
+    # Inside a linked worktree `--git-dir` resolves to <main>/.git/worktrees/<n>,
+    # which has no info/ of its own — so the signing key was invisible and the
+    # spec silently degraded from Tier 1 to Tier 2 ("no key"), which then read as
+    # trust-tier DRIFT against a profile bound at Tier 1 and failed the contract.
+    # `--git-common-dir` is the shared .git where the key actually lives, and it
+    # returns the same path in a normal clone, so this is strictly more correct.
+    for _gd_flag in --git-common-dir --git-dir; do
+      git_dir="$(cd "$anchor_dir" 2>/dev/null && git rev-parse "$_gd_flag" 2>/dev/null || true)"
+      [[ -n "$git_dir" ]] || continue
       if [[ "$git_dir" != /* ]]; then
         git_dir="$(cd "$anchor_dir" 2>/dev/null && cd "$git_dir" 2>/dev/null && pwd || true)"
       fi
       if [[ -n "$git_dir" && -d "$git_dir" && -f "$git_dir/info/taskspec-signing-key" ]]; then
         key="$(cat "$git_dir/info/taskspec-signing-key")"
+        break
       fi
-    fi
+    done
   fi
   key="${key#"${key%%[![:space:]]*}"}"
   key="${key%"${key##*[![:space:]]}"}"

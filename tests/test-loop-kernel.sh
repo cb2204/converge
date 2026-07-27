@@ -175,6 +175,29 @@ else
 fi
 rm -rf "$W"
 
+# --------------------------------- the signing key must survive a worktree
+# Inside a linked worktree `git rev-parse --git-dir` is <main>/.git/worktrees/<n>,
+# which has no info/ of its own. The signing key was therefore invisible, the
+# spec silently degraded Tier 1 -> Tier 2 ("no key"), and that read as trust-tier
+# DRIFT against a profile bound at Tier 1 — so every worktree run died on a
+# contract error that had nothing to do with the task. Now that worktree is the
+# DEFAULT, this is the difference between the loop working and not.
+W="$(new_ws)"
+mkdir -p "$W/.git/info"
+cp "$KEY" "$W/.git/info/taskspec-signing-key"
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m keyed >/dev/null 2>&1
+WT="$(mktemp -d -t cvg-keywt.XXXXXX)"; rm -rf "$WT"
+git -C "$W" worktree add --quiet -b probe/key "$WT" >/dev/null 2>&1
+TIER_OUT="$( (cd "$WT" && env -u TASKSPEC_SIGNING_KEY \
+  bash "$SRC/skills/task-spec/scripts/validate-task-spec.sh" cvg/tasks/T-20260602-golden.md 2>&1) || true )"
+if grep -q 'Tier 1' <<<"$TIER_OUT"; then
+  ok "the signing key resolves inside a worktree (Tier 1 survives isolation)"
+else
+  bad "a worktree cannot see the signing key: $(head -1 <<<"$TIER_OUT")"
+fi
+git -C "$W" worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"
+rm -rf "$W"
+
 # ------------------------------------------------- isolation is the DEFAULT
 # An unattended agent must not be able to touch the tree a human is reading,
 # and that has to be true when nobody passes a flag.
