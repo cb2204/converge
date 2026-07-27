@@ -323,7 +323,12 @@ land() {  # land <STATE> <exit-code> <why>
   # EXHAUSTED and STALLED keep it too: the handoff note is useless without the
   # work it describes, and --resume needs somewhere to resume into.
   case "$_state" in
-    SETTLED|LOCAL_SETTLED|EXHAUSTED|STALLED) KEEP_WORKTREE=true ;;
+    # BLOCKED belongs here too, and its absence cost a diagnosis: a run that
+    # went GREEN and then had settlement refused is exactly when you most need
+    # the evidence, and discarding it leaves only the verdict with no way to
+    # ask why. Only NO_OP, CANCELLED and ERROR — none of which produced work —
+    # are safe to throw away.
+    SETTLED|LOCAL_SETTLED|EXHAUSTED|STALLED|BLOCKED) KEEP_WORKTREE=true ;;
     *) : ;;
   esac
   printf '\n────────────────────────────────────────────────────────\n'
