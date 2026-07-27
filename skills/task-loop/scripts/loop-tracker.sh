@@ -76,8 +76,16 @@ TRACKER="${TRACKER_REF%%:*}"               # e.g. linear
 ISSUE_KEY="${TRACKER_REF#*:}"              # e.g. CVG-21
 [ -n "$ISSUE_KEY" ] || exit 0
 
-# Without a key we simply do not speak. We never prompt for one, never read one
-# from disk, and never log the fact that one was absent as a failure.
+# Resolve the key once: environment, then the OS secret store, then a 0600 file
+# outside the repo. Never the repository. Reading never prompts — an unattended
+# loop must not block on a password dialog — so an absent key simply means the
+# run stays local, which is not a failure.
+if [ -z "${LINEAR_API_KEY:-}" ]; then
+  _keytool="$SCRIPT_DIR/../../task-specs-to-issues/scripts/tracker-key.sh"
+  if [ -f "$_keytool" ]; then
+    LINEAR_API_KEY="$(bash "$_keytool" get linear 2>/dev/null || true)"
+  fi
+fi
 [ -n "${LINEAR_API_KEY:-}" ] || exit 0
 [ "$TRACKER" = "linear" ] || exit 0        # other adapters: accept-and-discard
 

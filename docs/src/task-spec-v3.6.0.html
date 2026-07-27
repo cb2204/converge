@@ -180,9 +180,11 @@ eval_1 &amp;&amp; eval_2 &amp;&amp; eval_3
     <div class="card"><div class="k">Traceability</div><h4>Both directions</h4>
       <p>B-1 is covered by <code>eval_1</code> + <code>eval_2</code>; B-2 by <code>eval_3</code>. Every behavior has an eval and
       every eval names a behavior — an untraced behavior FAILS the Definition of Done.</p></div>
-    <div class="card"><div class="k">The circuit breaker</div><h4>Stop patching</h4>
+    <div class="card"><div class="k">The circuit breaker</div><h4>Stop patching — now enforced</h4>
       <p><code>circuit_breaker_no_progress: 3</code> ends the "try the same thing louder" failure mode; on terminal
-      failure the task <b>parks with context</b> rather than looping or silently dying.</p></div>
+      failure the task <b>parks with context</b> rather than looping or silently dying. Since cvg 0.20.0 the
+      Pass 8 loop kernel <b>enforces</b> these fields — a stalled run lands <code>STALLED</code>, an exhausted
+      budget lands <code>EXHAUSTED</code> with a handoff — where before they were declared and nothing ran them.</p></div>
   </div>
 </section>
 
@@ -550,7 +552,9 @@ flowchart LR
   <p>Task-Spec is <b>Pass 5 · Tasking</b> — the first pass below the barrier, and the cornerstone of the whole
   method. Pass 4's hardened plans decompose into these units; <b>Pass 6 Register</b> (opt-in) projects each
   signed spec onto one tracker issue; <b>Pass 7 Bind</b> binds a signed spec's exact hash to its runtime and
-  emits the harness; <b>Pass 8 The Loop</b> drives one issue to a green-eval PR. Every one of those passes
+  emits the harness; <b>Pass 8 The Loop</b> drives one issue through a bounded attempt↺verify cycle — the
+  kernel enforces this spec's own <code>budget_iterations</code> and circuit breaker, and lands in one named
+  terminal state — to a green-eval PR. Every one of those passes
   depends on the property this format provides: <em>the definition of done travels inside the file.</em></p>
 
   <div class="callout warn">

@@ -33,7 +33,7 @@
 #        [--max-iterations N] [--max-seconds N] [--max-tokens N]
 #        [--allow-external-writes] [--dry-run] [--resume]
 #        [--base BRANCH] [--contract PATH] [--legacy-no-contract]
-#        [--isolation worktree|inplace]
+#        [--isolation worktree|inplace]   (worktree is the DEFAULT)
 #
 # The last three are not the loop's own controls — they belong to the eval runner
 # and the settler, and are forwarded verbatim so the kernel can sit in front of
@@ -59,7 +59,10 @@ ISSUE=""; TASKS_DIR=""; AGENT="claude"; NO_AGENT=false
 MAX_ITER=""; MAX_SECONDS=""; MAX_TOKENS=""
 ALLOW_EXTERNAL=false; DRY_RUN=false; RESUME=false
 BASE=""; CONTRACT=""; LEGACY_NO_CONTRACT=false
-ISOLATION="inplace"
+# Isolation is the DEFAULT. An unattended agent should not be able to touch the
+# tree a human is reading, and a failed attempt should cost nothing to discard.
+# `--isolation inplace` opts out when you want to watch files land live.
+ISOLATION="worktree"
 ESTIMATE=false
 
 while [ $# -gt 0 ]; do
@@ -211,6 +214,15 @@ if [ "$ISOLATION" = "worktree" ]; then
     printf 'TASK_LOOP=ERROR\n'; exit 4
   }
   printf 'isolation: worktree %s (branch %s)\n' "$WORKTREE_DIR" "$WT_BRANCH"
+  # A worktree is a checkout of COMMITTED state. Uncommitted work in the main
+  # tree is invisible to it — correct git semantics, and a genuinely confusing
+  # way to start green if nobody says so out loud.
+  _dirty="$(git -C "$GIT_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+  if [ "${_dirty:-0}" -gt 0 ]; then
+    printf 'NOTE: %s uncommitted change(s) in the main tree are NOT visible to the\n' "$_dirty"
+    printf '      worktree — it checks out committed state. Commit them first, or\n'
+    printf '      pass --isolation inplace to run against what you can see.\n'
+  fi
 fi
 
 # Discard the isolated checkout unless the run earned a keep. Registered on EXIT

@@ -698,6 +698,10 @@ cmd_help() {
   printf '  setup people [--list] [--map KEY=VAL]\n'
   printf '                           discover tracker members + map execution_backend/agent\n'
   printf '                           to a person (assignee/subscribers); choices, never keys\n'
+  printf '  setup key [linear|github|jira]\n'
+  printf '                           store the tracker API key ONCE, outside the repo —\n'
+  printf '                           OS keychain first, 0600 file as fallback. Never in\n'
+  printf '                           .cvg/, never in git (TRACKER_KEY token)\n'
   printf '  setup harness            scaffold the project router (AGENTS.md, ~50 lines,\n'
   printf '                           routing only — never generated doctrine)\n'
   printf '  setup projection [--enable|--disable] [--project N] [--initiative N]\n'
@@ -738,7 +742,7 @@ is_mutating() {
                 for a in "$@"; do [ "$a" = "--estimate" ] && return 1; done
                 return 0 ;;
     register)   for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
-    setup)      case "${1:-}" in tracker|repo|people|projection) return 0 ;; *) return 1 ;; esac ;;
+    setup)      case "${1:-}" in tracker|repo|people|projection|key) return 0 ;; *) return 1 ;; esac ;;
     *)          return 1 ;;
   esac
 }
@@ -1327,6 +1331,15 @@ case "$CMD" in
       tracker)    cvg_setup_tracker "$@" ;;
       repo)       cvg_setup_repo "$@" ;;
       people)     cvg_setup_people "$@" ;;
+      key)
+        # Store a tracker key ONCE, outside the repo. cvg still records only
+        # choices in .cvg/ — the secret goes to the OS keychain (or a 0600 file
+        # in ~/.config), never to the repository and never through .cvg/config.
+        KEYTOOL="$CVG_HOME_DIR/skills/task-specs-to-issues/scripts/tracker-key.sh"
+        [ -f "$KEYTOOL" ] || { ui_err "task-specs-to-issues skill is incomplete"; printf 'TRACKER_KEY=ERROR\n'; exit 2; }
+        _kt_tracker="${1:-$(cvg_config_get tracker)}"; : "${_kt_tracker:=linear}"
+        exec bash "$KEYTOOL" set "$_kt_tracker"
+        ;;
       projection) cvg_setup_projection "$@" ;;
       harness)
         # Scaffold the project ROUTER only (~50 lines). cvg never generates

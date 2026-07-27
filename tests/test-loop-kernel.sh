@@ -58,7 +58,11 @@ stub_engine() {  # stub_engine <_unused> <name> <body>
 # fail for reasons that have nothing to do with the loop.
 
 run_kernel() {  # run_kernel <ws> <args...>  -> output; sets RK_RC
+  # Rows that are not ABOUT isolation run in-place, so they assert loop
+  # behaviour rather than git-worktree behaviour. The default itself is pinned
+  # by its own row below.
   _w="$1"; shift
+  case " $* " in *" --isolation "*) : ;; *) set -- "$@" --isolation inplace ;; esac
   RK_OUT="$( (cd "$_w" && TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" \
     CVG_ENGINES_DIR="$STUBS" bash "$KERNEL" --issue T-20260602-golden "$@" 2>&1) )"
   RK_RC=$?
@@ -168,6 +172,20 @@ if grep -q '^TASK_LOOP=ERROR$' <<<"$RK_OUT" && [ "$RK_RC" -eq 4 ]; then
   ok "a missing engine is an ERROR, never a silent pass"
 else
   bad "a missing engine did not fail closed"
+fi
+rm -rf "$W"
+
+# ------------------------------------------------- isolation is the DEFAULT
+# An unattended agent must not be able to touch the tree a human is reading,
+# and that has to be true when nobody passes a flag.
+W="$(new_ws)"
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m red >/dev/null 2>&1
+DEF_OUT="$( (cd "$W" && TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" CVG_ENGINES_DIR="$STUBS" \
+  bash "$KERNEL" --issue T-20260602-golden --agent tstnoop --max-iterations 1 2>&1) )"
+if grep -q 'isolation: worktree' <<<"$DEF_OUT"; then
+  ok "isolation defaults to worktree — safety is not opt-in"
+else
+  bad "the default is still in-place"
 fi
 rm -rf "$W"
 
@@ -309,8 +327,10 @@ done
 # while the loop is paused inside the engine.
 W="$(new_ws)"
 stub_engine "" tstslow 'sleep 30; echo "slow"; exit 0'
+# in-place: this row is about the CHECKPOINT, not about isolation, and a
+# worktree would put state.env somewhere this assertion is not looking.
 ( cd "$W" && TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" CVG_ENGINES_DIR="$STUBS" \
-  bash "$KERNEL" --issue T-20260602-golden --agent tstslow >/dev/null 2>&1 ) &
+  bash "$KERNEL" --issue T-20260602-golden --agent tstslow --isolation inplace >/dev/null 2>&1 ) &
 _kpid=$!
 sleep 8   # long enough to be inside the engine call, nowhere near its return
 if grep -q '^ITER=1$' "$W/cvg/loop/T-20260602-golden/state.env" 2>/dev/null; then

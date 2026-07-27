@@ -817,7 +817,7 @@ references survive in the READMEs). What is actually left:
 | # | What | Where | Fix |
 |:--:|---|---|---|
 | 1 | **Nothing is pushed — so CI has never executed** | branch is **9 commits** ahead of `origin/feat/e2e` | `git push` and read the first real gauntlet run. The workflow is written, covers the loop kernel, and is unproven. Everything green here was proven on one macOS host. |
-| 2 | **The blueprint PDF lags the method** | `docs/src/converge-method-v6.html` still says **v0.16.0** in three places and describes Pass 8 before the kernel existed (no terminal states, no budgets-actually-enforced, no `cvg/` workspace) | Edit the HTML, then re-render: `bash docs/src/render.sh` (needs Chrome). Deliberately NOT half-done: editing the source without re-rendering would leave the HTML and the shipped PDF disagreeing, which is worse than a PDF that is honestly one version behind. |
+| 2 | ~~The blueprint PDF lags the method~~ | **RESOLVED 2026-07-25** — both HTML sources updated to 0.20.0 and re-rendered (`converge-method-v6.pdf` 29 → **31 pages**; `task-spec-v3.6.0.pdf` re-rendered): two new pages after Pass 8 (the loop kernel with the terminal-state figure; tier-2 verify with the verification ladder), Fig 7 redrawn as the kernel, evidence ledger and colophon current, `cvg/` workspace + `execution/` + `loop/` folders documented. | — |
 | 3 | **Stub-engine test artifacts in the proving ground** | `tests/uc-analytics/cvg/receipts/T-20260721-cap-steelthread{,.attempt-1c35c4849ef2}.json` | These came from kernel test runs, not from a real beat. Delete them, or keep them knowingly — `cvg/loop/` scratch is now gitignored, receipts are not (they are evidence by design). |
 | 4 | **The stagnation detector's load-independence is not pinned by a test** | `loop-kernel.sh` `fingerprint()` strips the `(Ns)` duration; only the *flakiness* of the circuit-breaker row ever caught the bug | Add a deterministic row: copy the golden fixture, inject an alternating `sleep 1` into the eval body **before** stamping (the suite stamps its own copy, so the seal stays valid), then assert `STALLED` at ≤4 attempts. Pre-fix that case lands `EXHAUSTED` instead, because an alternating fingerprint never scores two strikes in a row — which makes it a clean discriminator. |
 | 5 | **The tracker bridge is written but never exercised live** | `skills/task-loop/scripts/loop-tracker.sh` (217 lines: claim → attempt → terminal, Linear `AgentSession`/`AgentActivity`, every call fail-soft) | It is invoked only when present and never allowed to change a verdict, which is correct — but "narrates to the board" is unproven until one loop runs against the live board. Prove it on the R8 run. |
@@ -828,6 +828,37 @@ references survive in the READMEs). What is actually left:
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-25 · THE BLUEPRINT PDFs CATCH UP — v6 re-rendered at 0.20.0** — the
+  last documentation surface still describing the pre-kernel world. Both HTML
+  sources updated and re-rendered through the Chrome pipeline
+  (`docs/src/render.sh`), so source and shipped PDF agree.
+  **`converge-method-v6.pdf` 29 → 31 pages.** Two new pages sit directly after
+  Pass 8: **"The loop kernel — a loop specification made executable"** (the five
+  elements trigger/goal/verification/stopping/memory as a table, the
+  eight-terminal-state figure where only the three green states exit zero, the
+  three-budgets / fresh-context / stagnation cards) and **"Tier-2 verification —
+  graded by a model that didn't write it"** (the five-level verification ladder
+  with Converge's placement — level 1–2 for the gate, level 4 only as a hardened
+  secondary — and the diff+intent+holdout → different-family-judge figure,
+  failing closed). **Fig 7 was redrawn as the kernel** — brakes checked BEFORE
+  spending, fresh process per attempt, learn-with-fingerprint, policy-gated
+  settlement, one named terminal state — and flipped from a tall TB layout that
+  overflowed the page to LR. The whole-method table, spine figure, TOC, CLI page
+  (now showing `loop`/`verify`/`lane`/`ready` and their full token contracts),
+  architecture figure, worked example (attempt 2 adds the COALESCE; a third
+  identical failure would land `STALLED`), knowledge home (+ `execution/` and
+  `loop/` rows, workspace-not-git-root rule), evidence ledger (Register CLOSED
+  LIVE · Bind CLOSED 37/37 · Loop KERNEL PROVEN 14/14 · cvg 0.20.0), the
+  three-properties callout (all ✅, the judge honestly qualified), and the
+  colophon all match the repo. Folios renumbered **by physical section** (a
+  naive sequential pass broke against the mid-document part-cover that holds a
+  page but no folio). **`task-spec-v3.6.0.pdf`**: the circuit-breaker card and
+  the where-this-sits paragraph now say the retry policy is *enforced* by the
+  Pass 8 kernel, not merely declared. Two render traps hit and fixed: global
+  `b,strong{color:navy}` made bold text invisible on the navy cover (the fine
+  print read "Pass 8 became an ___"), and the engines-adapter callout silently
+  overflowed its page — moved to Pass 8's page, which had the room. All 31 + 14
+  pages visually verified.
 - **2026-07-25 · THE DOCS CATCH UP TO THE LOOP — and the manifest was lying to
   agents** — a surface nobody can read is not shipped, so every document was walked
   against the actual CLI. **`bin/README.md` was missing six shipped commands**
