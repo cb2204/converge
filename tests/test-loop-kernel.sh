@@ -183,6 +183,38 @@ else
 fi
 rm -rf "$W"
 
+# ------------------------------- evals must run in the WORKSPACE, not git root
+# A spec's relative paths are written against its own workspace. When the runner
+# cd'd to the git root instead, every `test -f` failed in 0s without reaching the
+# work — a RED indistinguishable from a real failure except by the suspiciously
+# round duration. It cost a full engine run to find, because the fix had been
+# applied to the inline fallback and NOT to the delegated path that actually runs.
+# Build the nested workspace from scratch: copying a BOUND workspace would
+# carry an execution profile whose paths point at the old root, which fails for
+# a reason that has nothing to do with the working directory.
+NEST="$(mktemp -d -t cvg-evalcwd.XXXXXX)"
+git -C "$NEST" init --quiet
+git -C "$NEST" config user.email cwd@test.local
+git -C "$NEST" config user.name "cwd test"
+mkdir -p "$NEST/projects/demo/cvg/tasks"
+cp "$FIXTURE" "$NEST/projects/demo/cvg/tasks/T-20260602-golden.md"
+printf '# readme\n' > "$NEST/projects/demo/README.md"
+printf '# root readme\n' > "$NEST/README.md"
+(
+  cd "$NEST/projects/demo"
+  TASKSPEC_SIGNING_KEY="$KEY" bash "$SAFE" --stamp --stamp-by cwd cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" "$CVG" bind --task cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+) || true
+git -C "$NEST" add -A >/dev/null 2>&1; git -C "$NEST" commit --quiet -m base >/dev/null 2>&1
+CWD_OUT="$( (cd "$NEST/projects/demo" && env -u TASKSPEC_WORKSPACE_ROOT TASKSPEC_SIGNING_KEY="$KEY" \
+  bash "$SRC/skills/task-loop/scripts/run-issue-eval.sh" --issue T-20260602-golden 2>&1) || true )"
+if grep -q '^GREEN$' <<<"$CWD_OUT"; then
+  ok "evals run in the WORKSPACE, so a nested project verifies its own files"
+else
+  bad "evals ran in the wrong directory: $(grep -E '^\[(pass|fail)\]' <<<"$CWD_OUT" | head -1)"
+fi
+rm -rf "$NEST"
+
 # --------------------------------- the signing key must survive a worktree
 # Inside a linked worktree `git rev-parse --git-dir` is <main>/.git/worktrees/<n>,
 # which has no info/ of its own. The signing key was therefore invisible, the

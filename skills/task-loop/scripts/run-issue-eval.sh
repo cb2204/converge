@@ -363,7 +363,12 @@ if [ -f "$RUNNER" ]; then
   # heredoc-safe way and runs each under `set -euo pipefail`. Its exit code IS
   # the Exit Check verdict, which is exactly our GREEN/RED gate.
   set +e
-  EVAL_OUT="$(bash "$RUNNER" "$TASK_FILE" 2>&1)"
+  # State the workspace explicitly. This script computes WORKSPACE_ROOT
+  # correctly and then USED to throw it away at the delegation boundary — the
+  # runner re-derived the git root and ran every eval in the wrong directory,
+  # so they failed in 0s without touching the work. Inferring it twice, in two
+  # places, is how the two halves drifted apart; passing it removes the guess.
+  EVAL_OUT="$(TASKSPEC_WORKSPACE_ROOT="$WORKSPACE_ROOT" bash "$RUNNER" "$TASK_FILE" 2>&1)"
   EVAL_RC=$?
   set -e
 else

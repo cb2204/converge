@@ -73,6 +73,30 @@ fi
 
 # Resolve git root
 GIT_ROOT=$(cd "$(dirname "$FILE")" && git rev-parse --show-toplevel 2>/dev/null || echo "")
+
+# WHERE THE EVALS ACTUALLY RUN
+#
+# A spec's relative paths ("cvg/capture/orders.py") are written against its own
+# WORKSPACE, not against whatever repository happens to contain it. For a
+# workspace nested at tests/uc-analytics — or any run inside a git worktree —
+# the git root is the wrong directory, and every `test -f` fails in 0s without
+# ever reaching the work. That RED is indistinguishable from a real failure
+# except by the suspiciously round duration.
+#
+# TASKSPEC_WORKSPACE_ROOT lets the caller state the workspace explicitly.
+# Otherwise infer it: a spec at <ws>/tasks/ or <ws>/cvg/tasks/ means <ws>.
+EVAL_CWD=""
+if [ -n "${TASKSPEC_WORKSPACE_ROOT:-}" ] && [ -d "${TASKSPEC_WORKSPACE_ROOT}" ]; then
+  EVAL_CWD="$(cd "$TASKSPEC_WORKSPACE_ROOT" && pwd)"
+else
+  _spec_dir="$(cd "$(dirname "$FILE")" && pwd)"
+  if [ "$(basename "$_spec_dir")" = "tasks" ]; then
+    _cand="$(dirname "$_spec_dir")"
+    [ "$(basename "$_cand")" = "cvg" ] && _cand="$(dirname "$_cand")"
+    [ -d "$_cand" ] && EVAL_CWD="$_cand"
+  fi
+fi
+[ -n "$EVAL_CWD" ] || EVAL_CWD="$GIT_ROOT"
 if [[ -z "$GIT_ROOT" ]]; then
   if [[ "$CI_MODE" == true ]]; then
     echo '{"eval":"_runner","status":"fail","message":"not inside a git repository"}'
@@ -201,8 +225,9 @@ eval_script="$tmp_dir/evals.sh"
   echo '#!/usr/bin/env bash'
   echo 'set -euo pipefail'
   printf 'GIT_ROOT="%s"\n' "$GIT_ROOT"
-  echo 'export GIT_ROOT'
-  printf 'cd "%s" || exit 1\n' "$GIT_ROOT"
+  printf 'WORKSPACE_ROOT="%s"\n' "$EVAL_CWD"
+  echo 'export GIT_ROOT WORKSPACE_ROOT'
+  printf 'cd "%s" || exit 1\n' "$EVAL_CWD"
   echo "$sc_bash"
 } > "$eval_script"
 
@@ -217,7 +242,8 @@ json_escape() {
     str="${str//\"/\\\"}"
     str="${str//
 /\\n}"
-    str="${str///}"
+    str="${str//
+/}"
     str="${str//	/\\t}"
     printf '"%s"' "$str"
   fi
@@ -270,8 +296,9 @@ ec_script="$tmp_dir/exit_check.sh"
   echo '#!/usr/bin/env bash'
   echo 'set -euo pipefail'
   printf 'GIT_ROOT="%s"\n' "$GIT_ROOT"
-  echo 'export GIT_ROOT'
-  printf 'cd "%s" || exit 1\n' "$GIT_ROOT"
+  printf 'WORKSPACE_ROOT="%s"\n' "$EVAL_CWD"
+  echo 'export GIT_ROOT WORKSPACE_ROOT'
+  printf 'cd "%s" || exit 1\n' "$EVAL_CWD"
   echo "$sc_bash"
   echo "$ec_bash"
 } > "$ec_script"
