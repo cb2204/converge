@@ -556,6 +556,42 @@ LEFT="$(grep -nE '^\s*_linear_gql \\$' -A3 "$SKILL_DIR"/scripts/adapters/linear.
 LEFT="${LEFT//[^0-9]/}"; LEFT="${LEFT:-0}"
 rc_is "no fail-soft site still calls _linear_gql directly" "$LEFT" "0"
 
+echo; echo "[W] a task that FINISHED must not break the board it is already on"
+# `cvg transition <id> done` MOVES the spec into tasks/done/. Both sides of Pass 6
+# globbed tasks/*.md only, so the first completed task made its dependents' edges
+# look dangling. verify was fixed first; the WRITE path still refused the entire
+# board with "blocked-by target not found" — so the reconcile that the loop asks
+# for immediately after a task lands was impossible. Drive the real sequence.
+D="$WORK/w/tasks"; S="$WORK/w/store"; build_diamond "$D"
+TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs >/dev/null 2>&1
+mkdir -p "$D/done" && mv "$D/T-$DATE-reg-root.md" "$D/done/"
+
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs 2>&1)"; RC=$?
+rc_is  "re-register after a task landed exits 0"        "$RC" "0"
+hasnt  "the landed dependency is not called dangling"   "$OUT" "blocked-by target not found"
+hasnt  "a CHAIN is not misdiagnosed as a cycle"         "$OUT" "dependency cycle"
+has    "the landed spec is reported, not silently lost" "$OUT" "landed (done/, already registered — not re-upserted): 1"
+has    "only the 4 ACTIVE specs are upserted"           "$OUT" "created 0, updated 4"
+has    "REGISTER=OK after a landing"                    "$OUT" "REGISTER=OK"
+hasnt  "the landed spec is never re-upserted"           "$OUT" "upsert T-$DATE-reg-root ->"
+# The board must be untouched by the omission: same 5 issues, same 5 links. A
+# landed spec still OWNS its issue — dropping or duplicating it is the failure.
+if [[ "$(rows "$S/issues.tsv")" == "5" ]]; then ok "board still holds 5 issues (landed one kept)"; else bad "issues.tsv rows=$(rows "$S/issues.tsv") (want 5)"; fi
+if has_link "$S" "T-$DATE-reg-mid" "T-$DATE-reg-root"; then ok "the blocked-by edge onto the landed spec survives"; else bad "edge mid->root lost after landing"; fi
+# The frontier must MOVE: an edge to a landed spec is satisfied, not blocking.
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --dry-run 2>&1)"
+has "the frontier advances to the unblocked dependent" "$OUT" "ready set (no blocker): T-$DATE-reg-mid"
+# And the read-side gate agrees with the write side on the same tree.
+OUT="$(TSI_FAKE_STORE="$S" bash "$VERIFY" --tracker fake --tasks-dir "$D" 2>&1)"; RC=$?
+rc_is "verify still green on a board with a landed spec" "$RC" "0"
+has   "parity counts the landed spec as KNOWN"           "$OUT" "no orphan, no missing, no dup"
+# An id that is neither active nor landed is STILL a hard stop — the fix widened
+# the set of resolvable targets, it did not disable the check.
+make_spec "$D" "T-$DATE-reg-ghost" true "[T-$DATE-reg-nowhere]"
+OUT="$(TSI_FAKE_STORE="$S" bash "$REGISTER" --tracker fake --tasks-dir "$D" --no-stamp-refs 2>&1)"; RC=$?
+rc_nonzero "a genuinely unknown dependency still refuses the board" "$RC"
+has        "and it says why"                                        "$OUT" "neither active nor landed"
+
 # -----------------------------------------------------------------------------
 # Pass 6 must find the cvg/ workspace, like every other pass
 # -----------------------------------------------------------------------------

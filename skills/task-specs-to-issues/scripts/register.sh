@@ -7,6 +7,10 @@
 # blocked-by link) in BUILD ORDER. Idempotent by construction — the adapter keys
 # on the spec id.
 #
+# It also reads tasks/done/T-*.md, but only to KNOW those ids: a landed spec still
+# owns its issue, so it satisfies a dependent's blocked-by edge and it peels first
+# in the topological order — while never being re-upserted as new work.
+#
 # Usage:
 #   register.sh [--tracker github|linear|jira] [--tasks-dir DIR] [--dry-run]
 #               [--no-stamp-refs]
@@ -113,8 +117,42 @@ for f in "$TASKS_DIR"/T-*.md; do
   done
 done
 
+# ----- Step 1a: LANDED — specs that finished, and still own their board issue -----
+#
+# `cvg transition <id> done` MOVES a spec into tasks/done/. This driver only ever
+# globbed tasks/*.md, so a completed spec vanished from every set it reasons over
+# and the WRITE path failed exactly the way the verify path did before a6ddefa:
+# its dependents' depends_on edges looked dangling, and register refused the whole
+# board with "blocked-by target not found". Reconciling the board after a task
+# landed — the very next act the loop asks for — was impossible.
+#
+# Same distinction, same reason: a landed spec is KNOWN (it exists, it is signed,
+# it owns an issue) but is NOT in the register SET. It is never re-upserted, both
+# because it is not new work and because upsert seeds state from the DAG — pushing
+# a finished issue back to Todo would be a regression written by the tool whose job
+# is to mirror the specs. Its blocked-by links were set while it was active.
+LANDED="$WORK/landed.txt"; : > "$LANDED"
+if [[ -d "$TASKS_DIR/done" ]]; then
+  for f in "$TASKS_DIR"/done/T-*.md; do
+    [[ -e "$f" ]] || continue
+    id="$(tsi_id "$f")"
+    [[ -n "$id" ]] || continue
+    echo "$id" >> "$ALLIDS"
+    [[ "$(tsi_signed_off "$f")" == "true" ]] || continue
+    [[ "$(tsi_registerable "$f")" == "true" ]] || continue
+    echo "$id" >> "$LANDED"
+  done
+fi
+sort -u -o "$LANDED" "$LANDED"
+LANDED_COUNT="$(awk 'END{print NR+0}' "$LANDED")"
+
+# KNOWN = the register set ∪ what already landed. "Does this id exist at all?"
+KNOWN="$WORK/known.txt"
+{ awk -F'\t' '{print $1}' "$SIGNED"; cat "$LANDED"; } | sort -u > "$KNOWN"
+
 SIGNED_COUNT="$(awk 'END{print NR}' "$SIGNED")"
 echo "signed-off specs: $SIGNED_COUNT"
+[[ "$LANDED_COUNT" -gt 0 ]] && echo "landed (done/, already registered — not re-upserted): $LANDED_COUNT"
 if [[ -n "$SKIPPED" ]]; then
   echo "skipped (un-gated, signed_off!=true): $SKIPPED"
 fi
@@ -128,17 +166,19 @@ if [[ "$SIGNED_COUNT" -eq 0 ]]; then
 fi
 
 # ----- Step 1b: validate edges reference registerable ids -----
-# Every depends_on target must be a signed-off spec (else the blocked-by link
-# has no issue to point at). A dep on an un-gated / unknown id is a hard stop.
+# Every depends_on target must be a KNOWN spec — active or landed — else the
+# blocked-by link has no issue to point at. Resolving against SIGNED alone made
+# finishing a dependency into a hard stop. A dep on an un-gated / unknown id
+# still is one.
 MISSING=""
 while IFS=$'\t' read -r from dep; do
   [[ -n "$dep" ]] || continue
-  if ! awk -F'\t' -v d="$dep" '$1==d{f=1} END{exit f?0:1}' "$SIGNED"; then
+  if ! grep -qxF "$dep" "$KNOWN"; then
     MISSING="${MISSING}${MISSING:+ }${from}->${dep}"
   fi
 done < "$EDGES"
 if [[ -n "$MISSING" ]]; then
-  echo "ERROR: blocked-by target not found (dependency is un-gated or unknown):" >&2
+  echo "ERROR: blocked-by target not found (dependency is neither active nor landed):" >&2
   echo "  $MISSING" >&2
   echo "  either sign off + register the dependency, or fix the stale depends_on." >&2
   echo "REGISTER=FAIL"
@@ -150,8 +190,13 @@ fi
 # edge (a -> b) means b must come BEFORE a, so b has an out-edge to a in build
 # terms. We compute in-degree over dependency edges and peel roots (no deps).
 # Held entirely in scratch files → bash-3.2-safe, no associative arrays.
-NODES="$WORK/nodes.txt"          # all signed ids
-awk -F'\t' '{print $1}' "$SIGNED" | sort -u > "$NODES"
+# Seed from KNOWN, not SIGNED: a landed node has no unmet dependency, so it peels
+# first and lets its dependents follow. Seeding from SIGNED alone leaves every
+# dependent of a finished task permanently blocked, and Kahn reports that deadlock
+# as a "cycle" — a chain misdiagnosed as a loop, which is the worse failure because
+# it points the reader at the specs instead of at the gate.
+NODES="$WORK/nodes.txt"          # every known id (active + landed)
+cp "$KNOWN" "$NODES"
 
 REMAIN="$WORK/remain.txt"        # ids not yet emitted
 REMEDGES="$WORK/remedges.tsv"    # edges (from depends_on to) still live
@@ -192,8 +237,17 @@ while [[ -s "$REMAIN" ]]; do
   mv "$REMEDGES.next" "$REMEDGES"
 done
 
+# The peel ran over KNOWN so the topology is right; the WRITE set is only the
+# active specs. UPSERT_ORDER preserves build order and drops what already landed.
+UPSERT_ORDER="$WORK/upsert_order.txt"
+if [[ -s "$LANDED" ]]; then
+  grep -vxF -f "$LANDED" "$ORDER" > "$UPSERT_ORDER" || : > "$UPSERT_ORDER"
+else
+  cp "$ORDER" "$UPSERT_ORDER"
+fi
+
 echo "build order (deps first):"
-awk '{printf "  %d. %s\n", NR, $0}' "$ORDER"
+awk '{printf "  %d. %s\n", NR, $0}' "$UPSERT_ORDER"
 echo "----------------------------------------------------------------"
 
 # ----- Step 3+4: drive the adapter (or PRINT the plan on --dry-run) -----
@@ -212,7 +266,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     if [[ "$STAMP_REFS" -eq 1 ]]; then
       echo "    └─ would stamp receipt: tracker_ref: $TRACKER:<issue> into $file"
     fi
-  done < "$ORDER"
+  done < "$UPSERT_ORDER"
   echo
   echo "[link] depends_on -> blocked-by (from -> to):"
   if [[ -s "$EDGES" ]]; then
@@ -221,21 +275,27 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
       awk -F'\t' -v x="$id" '$1==x{print $2}' "$EDGES" | while read -r dep; do
         [[ -n "$dep" ]] && echo "  $ADAPTER link --from $id --to $dep   # $id blocked-by $dep"
       done
-    done < "$ORDER"
+    done < "$UPSERT_ORDER"
   else
     echo "  (none — no depends_on edges among signed-off specs)"
   fi
   echo
   EDGE_COUNT="$(awk 'END{print NR+0}' "$EDGES")"
   echo "PLAN: upsert $SIGNED_COUNT issue(s), set $EDGE_COUNT blocked-by link(s)."
-  # Ready set = signed-off ids that never appear as a FROM in EDGES (no blocker).
+  # Ready set = active ids with no UNMET blocker. An edge to a landed spec is
+  # satisfied, not blocking — otherwise the frontier freezes the moment its
+  # predecessor finishes, which is the one time it must move.
   READY=""
   while read -r id; do
     [[ -n "$id" ]] || continue
-    if ! awk -F'\t' -v x="$id" '$1==x{f=1} END{exit f?0:1}' "$EDGES"; then
-      READY="${READY}${READY:+ }$id"
-    fi
-  done < "$ORDER"
+    unmet=0
+    awk -F'\t' -v x="$id" '$1==x{print $2}' "$EDGES" > "$WORK/deps.txt"
+    while read -r dep; do
+      [[ -n "$dep" ]] || continue
+      grep -qxF "$dep" "$LANDED" || unmet=1
+    done < "$WORK/deps.txt"
+    [[ "$unmet" -eq 0 ]] && READY="${READY}${READY:+ }$id"
+  done < "$UPSERT_ORDER"
   echo "ready set (no blocker): ${READY:-(none)}"
   echo
   echo "VERDICT: DRY-RUN OK (offline plan is consistent). Re-run without --dry-run to write."
@@ -430,7 +490,7 @@ while read -r id; do
       echo "     WARN: could not stamp tracker_ref into $file (board unaffected; see adapter.log)" >&2
     fi
   fi
-done < "$ORDER"
+done < "$UPSERT_ORDER"
 
 # Count created vs updated from the adapter log (adapters emit "created"/"updated").
 # NB: `grep -c` prints "0" AND exits 1 on no match, so a `|| echo 0` fallback would
@@ -463,6 +523,7 @@ fi
 echo
 echo "----------------------------------------------------------------"
 echo "REGISTERED: $SIGNED_COUNT issue(s) (created $CREATED, updated $UPDATED), $LINKS blocked-by link(s)."
+[[ "$LANDED_COUNT" -gt 0 ]] && echo "left alone (landed, still on the board): $LANDED_COUNT"
 [[ "$STAMP_REFS" -eq 1 ]] && echo "stamped $STAMPED tracker_ref receipt(s) back into the specs."
 [[ -n "$SKIPPED" ]] && echo "skipped (un-gated): $SKIPPED"
 [[ -n "$OPTED_OUT" ]] && echo "skipped (register: false): $OPTED_OUT"
