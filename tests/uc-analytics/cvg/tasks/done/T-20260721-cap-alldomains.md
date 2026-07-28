@@ -1,7 +1,7 @@
 ---
 id: T-20260721-cap-alldomains
 title: "Capture — land all four domains into raw.*"
-status: ready
+status: done
 format_version: 3
 profile: lite
 effort: M
@@ -25,6 +25,9 @@ tracker_ref: linear:CVG-22
 projection:
   milestone: Capture
 signed_off_sig: hmac-sha256-v2:1f197c76:ff6e3abe632a84977cf4f37d9a163df0b6b8be01a83c7fca5b9d02df9fed79a0
+accepted: true
+accepted_by: luanmorenomaciel
+accepted_at: 2026-07-28T19:59:50Z
 ---
 
 # Capture — land all four domains into raw.*
