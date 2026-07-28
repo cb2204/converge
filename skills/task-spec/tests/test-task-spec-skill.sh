@@ -728,6 +728,91 @@ fi
 rm -rf "$NEST"
 
 # ---------------------------------------------------------------------------
+# The backlog's WRITE SURFACE is touches_paths + creates_paths
+# ---------------------------------------------------------------------------
+# The overlap check looked at touches_paths alone. Every greenfield task declares
+# its writes in creates_paths, so on a backlog of nine such specs the check had
+# nothing to inspect and exited 0 in silence — while the property it exists to
+# protect (no two tasks write the same file) went unverified. That property is
+# what makes a swimlane decomposition safe to dispatch in parallel.
+LINTER="$SCRIPT_DIR/lint-backlog.sh"
+LB="$(mktemp -d -t ts-lintbacklog-XXXXXX)"
+mkdir -p "$LB/tasks"
+_mkspec() {  # _mkspec <name> <created-path>
+  cat > "$LB/tasks/T-20260101-$1.md" <<EOF
+---
+id: T-20260101-$1
+title: "lint probe $1"
+status: ready
+format_version: 3
+effort: S
+agent: any
+depends_on: []
+touches_paths: []
+creates_paths:
+  - $2
+---
+# lint probe $1
+EOF
+}
+
+# Two tasks CREATING one path: both claim authorship, so whichever runs second
+# clobbers the first or fails. That is an error, not a contention warning.
+_mkspec collide-a cvg/capture/shared.py
+_mkspec collide-b cvg/capture/shared.py
+set +e
+LB_OUT="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1)"; LB_RC=$?
+set -e
+if [[ $LB_RC -ne 0 ]] && grep -q 'creates_paths collision' <<<"$LB_OUT"; then
+  pass "a creates_paths collision is caught (it was invisible before)"
+else
+  fail "two tasks creating the same file linted clean (rc=$LB_RC)"
+fi
+
+# Disjoint surfaces must stay clean AND be reported as a concurrency partition,
+# because that report is what tells a fleet which tasks may run side by side.
+rm -f "$LB/tasks"/*.md
+_mkspec lane-cap cvg/capture/orders.py
+_mkspec lane-srv cvg/serve/api.py
+_mkspec lane-tf  cvg/transform/silver.sql
+set +e
+LB_OUT2="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1)"; LB_RC2=$?
+set -e
+if [[ $LB_RC2 -eq 0 ]] && grep -q 'concurrency partition' <<<"$LB_OUT2" \
+  && grep -q 'cvg/capture' <<<"$LB_OUT2" && grep -q 'cvg/serve' <<<"$LB_OUT2" \
+  && grep -q 'cvg/transform' <<<"$LB_OUT2"; then
+  pass "write-disjoint lanes lint clean and report their concurrency partition"
+else
+  fail "the concurrency partition was not reported (rc=$LB_RC2)"
+fi
+
+# A task spanning two prefixes is the reason a by-lane parallel dispatch would
+# conflict, so it must be named rather than silently folded into both groups.
+cat > "$LB/tasks/T-20260101-spanner.md" <<'EOF'
+---
+id: T-20260101-spanner
+title: "lint probe spanner"
+status: ready
+format_version: 3
+effort: S
+agent: any
+depends_on: []
+touches_paths: []
+creates_paths:
+  - cvg/capture/edge.py
+  - cvg/serve/edge.py
+---
+# lint probe spanner
+EOF
+LB_OUT3="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1 || true)"
+if grep -q 'T-20260101-spanner writes across 2 prefixes' <<<"$LB_OUT3"; then
+  pass "a task that breaks the lane partition is named"
+else
+  fail "a cross-prefix task was not flagged"
+fi
+rm -rf "$LB"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""

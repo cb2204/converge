@@ -8,9 +8,28 @@ One kind of knowledge per folder, one lifecycle each:
 |---|---|---|---|
 | [`brain/`](brain/INDEX.md) | user-generated inputs | raw, append-only, never gated | any time — feed it constantly |
 | [`docs/`](docs/) | consensus artifacts | gated, permanent, never deleted | Pass 0 ✓ (BRD) · 1 (tech-spec) · 2 (adrs/, CONTEXT.md) · lessons/ any pass |
-| [`sketch/`](sketch/) | drafts (swimlane plans) | transient by design — sharpened at Pass 4, superseded at 5A/5B | Pass 3 |
+| [`sketch/`](sketch/) | swimlane plans — **the concurrency plan** | sharpened at Pass 4; the PRDs are superseded as *instructions* at 5B, but the lane partition they define stays load-bearing | Pass 3 |
 | [`tasks/`](tasks/) | sealed execution units | HMAC-stamped, tracked | Pass 5B *(see exception in tasks/README)* |
 | [`receipts/`](receipts/) | evidence — gate verdicts, pass receipts | write-once | every pass close (P-5 SHOW) |
+
+### Why the swimlanes outlive their PRDs
+
+Calling `sketch/` "transient" was wrong, and the backlog proves it. The three
+lanes are **write-disjoint**: `cap → cvg/capture`, `tf → cvg/transform`,
+`srv → cvg/serve`, with zero prefix overlap and zero files claimed by two tasks.
+Of the eight `depends_on` edges, six stay inside a lane and exactly two cross —
+and those two are precisely the published seams (`raw.*` between capture and
+transform, `gold.*` between transform and serve).
+
+That makes the decomposition a **concurrency plan**: three agents can run in
+parallel with no merge conflict *by construction*, joining at two barriers. It is
+also the right scope for shared context — agents in a lane need the same terrain,
+so a context pack belongs per lane, not per task.
+
+`cvg lint` now reports this partition, so it is an invariant an operator and a
+fleet can rely on rather than a convention. A task that writes across two
+prefixes is named, because it is the one thing that would break a by-lane
+dispatch.
 
 ## Current state
 

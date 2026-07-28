@@ -57,6 +57,7 @@ cd "$REPO_ROOT"
 declare -A task_status
 declare -A task_file
 declare -A task_touches
+declare -A task_creates
 declare -A task_depends
 declare -A task_precondition
 
@@ -111,7 +112,20 @@ for f in "${task_files[@]}"; do
   task_file[$id]="$f"
   all_ids+=("$id")
   
+  # The WRITE SURFACE is touches_paths PLUS creates_paths.
+  #
+  # This checked touches_paths alone, and every greenfield task declares its
+  # writes in creates_paths — so on a backlog of nine such specs the overlap
+  # check had literally nothing to look at and exited 0 in silence. The property
+  # it exists to protect is "no two tasks write the same file", and for new files
+  # that is precisely creates_paths. Two tasks both CREATING one path is the
+  # worse case of the two: they do not merely contend, they both claim authorship.
   touches=$(parse_yaml_list "touches_paths" "$fm")
+  creates=$(parse_yaml_list "creates_paths" "$fm")
+  if [[ -n "$creates" ]]; then
+    task_creates[$id]="$creates"
+    touches=$(printf '%s\n%s' "$touches" "$creates" | grep -v '^$' || true)
+  fi
   if [[ -n "$touches" ]]; then
     task_touches[$id]="$touches"
   fi
@@ -189,16 +203,75 @@ for path in "${!path_owners[@]}"; do
     
     active_count=$(echo "$active_owners" | wc -w | tr -d ' ')
     if [[ "$active_count" -gt 1 ]]; then
-      if echo "$path" | grep -qiE "$code_exts"; then
-        echo "ERROR: touches_paths overlap on '$path' between tasks: $active_owners"
+      # Two tasks CREATING the same path is never merely a contention warning:
+      # both claim authorship, so whichever runs second either clobbers the first
+      # or fails. That is an ERROR regardless of file extension.
+      dual_create=0
+      for owner in $active_owners; do
+        oc=${task_creates[$owner]:-}
+        if [[ -n "$oc" ]] && printf '%s\n' "$oc" | grep -Fxq "$path"; then
+          dual_create=$((dual_create + 1))
+        fi
+      done
+      if [[ "$dual_create" -gt 1 ]]; then
+        echo "ERROR: creates_paths collision on '$path' — authored by: $active_owners"
+        echo "       Two tasks cannot both create one file; they cannot run concurrently."
+        ERRORS=$((ERRORS + 1))
+      elif echo "$path" | grep -qiE "$code_exts"; then
+        echo "ERROR: write-surface overlap on '$path' between tasks: $active_owners"
         ERRORS=$((ERRORS + 1))
       else
-        echo "WARNING: touches_paths overlap on '$path' between tasks: $active_owners"
+        echo "WARNING: write-surface overlap on '$path' between tasks: $active_owners"
         WARNINGS=$((WARNINGS + 1))
       fi
     fi
   fi
 done
+
+# ---------------------------------------------------------------------------
+# Check (a2): the concurrency partition — who may run beside whom
+# ---------------------------------------------------------------------------
+# A swimlane decomposition earns its keep by producing WRITE-DISJOINT groups: if
+# no two lanes write the same prefix, their tasks can be dispatched in parallel
+# with no merge conflict BY CONSTRUCTION rather than by hoping. That property was
+# a convention nobody checked. Reporting it turns the design discipline into
+# something an operator (or a fleet manager) can read and rely on.
+#
+# The prefix is depth 2 (`cvg/capture`, `cvg/serve`), which is the granularity a
+# swimlane actually owns. Deeper would report per-directory noise; shallower
+# would collapse every lane into one group.
+declare -A prefix_tasks
+for id in "${all_ids[@]}"; do
+  [[ "${task_status[$id]}" == "parked" ]] && continue
+  surface=${task_touches[$id]:-}
+  [[ -z "$surface" ]] && continue
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    pfx=$(printf '%s' "$path" | awk -F/ 'NF>=2{print $1"/"$2} NF<2{print $1}')
+    case " ${prefix_tasks[$pfx]:-} " in
+      *" $id "*) : ;;
+      *) prefix_tasks[$pfx]="${prefix_tasks[$pfx]:-} $id" ;;
+    esac
+  done <<< "$surface"
+done
+if [[ ${#prefix_tasks[@]} -gt 0 ]]; then
+  echo "concurrency partition (write-disjoint groups — safe to dispatch together):"
+  for pfx in $(printf '%s\n' "${!prefix_tasks[@]}" | sort); do
+    # shellcheck disable=SC2086
+    set -- ${prefix_tasks[$pfx]}
+    echo "  $pfx  ($# task(s)):$(printf ' %s' "$@")"
+  done
+  # A task whose surface spans two prefixes is the one that breaks the partition
+  # — it is the reason a "parallel by lane" dispatch would conflict, so name it.
+  for id in "${all_ids[@]}"; do
+    surface=${task_touches[$id]:-}
+    [[ -z "$surface" ]] && continue
+    spans=$(printf '%s\n' "$surface" | awk -F/ 'NF>=2{print $1"/"$2} NF<2{print $1}' | sort -u | wc -l | tr -d ' ')
+    if [[ "$spans" -gt 1 ]]; then
+      echo "  NOTE: $id writes across $spans prefixes — it cannot ride a single lane."
+    fi
+  done
+fi
 
 # ---------------------------------------------------------------------------
 # Check (b2): depends_on referencing a non-existent task (dangling DAG edge)
