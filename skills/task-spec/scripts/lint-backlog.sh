@@ -17,8 +17,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_lib.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 ts_require_bash4 "$@"
 
@@ -36,7 +37,6 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   exit 0
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Resolve the backlog to an ABSOLUTE path before moving anywhere. The cd below
 # assumes the backlog hangs off the git root; in a nested workspace (a proving
 # ground, a monorepo package) it does not, and a relative TASKSPEC_BACKLOG_DIR

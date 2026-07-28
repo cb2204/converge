@@ -7,8 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_lib.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
+source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
 DEFAULT_DIR="${HOME}/Backups"
