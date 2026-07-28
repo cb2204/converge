@@ -1,7 +1,7 @@
 ---
 id: T-20260721-cap-steelthread
 title: "Capture steel thread — one domain (orders) end-to-end off the WAL"
-status: ready
+status: done
 format_version: 3
 profile: standard
 effort: L
