@@ -268,6 +268,30 @@ else
 fi
 drop_ws "$W"
 
+# ------------------------------------------- evidence lands in the REAL repo
+# The settler writes the receipt relative to ITS workspace, which under isolation
+# is a temp worktree. So a run that genuinely settled wrote `result: pass` into
+# $TMPDIR while the repository kept a STALE receipt — the durable proof of
+# success living in a directory `git worktree prune` deletes, next to a repo
+# asserting the opposite. STATE.md went to the real workspace and the receipt did
+# not: one run, two evidence artifacts, two different roots.
+W="$(new_ws)"
+# The worktree checks out COMMITTED state, so the red marker has to be committed
+# or the isolated run starts green and lands NO_OP.
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m red >/dev/null 2>&1
+run_kernel "$W" --agent tstfix --isolation worktree
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  _rcp="$W/cvg/receipts/T-20260602-golden.json"
+  if [ -f "$_rcp" ] && grep -q '"result": *"pass"' "$_rcp"; then
+    ok "a settled run's receipt lands in the real workspace, not the worktree"
+  else
+    bad "the receipt never left the worktree (repo has $( [ -f "$_rcp" ] && grep -o '"result": *"[a-z]*"' "$_rcp" || echo 'no receipt' ))"
+  fi
+else
+  bad "the isolated run did not settle: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
+drop_ws "$W"
+
 # ------------------------------------------------------ the cost dial (lane)
 # One setting for every task is what made a four-file build cost $7.91: bare
 # `claude -p`, top model, flat 900s. `cvg lane` classified the work and the

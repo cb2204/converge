@@ -425,6 +425,8 @@ save_state() {
 land() {  # land <STATE> <exit-code> <why>
   _state="$1"; _rc="$2"; _why="${3:-}"
   save_state
+  # Before anything else can discard the worktree: carry the evidence home.
+  sync_receipt
   # Only a landing that produced something worth keeping keeps its worktree.
   # EXHAUSTED and STALLED keep it too: the handoff note is useless without the
   # work it describes, and --resume needs somewhere to resume into.
@@ -484,6 +486,38 @@ write_handoff() {  # the planned landing — state and next steps, on disk
 # who is not tailing a terminal actually wants. Append-only: a log you can
 # rewrite is a log you cannot trust.
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# The execution receipt has to land where a human and CI will look.
+#
+# The settler writes it relative to ITS workspace, which under isolation is the
+# temporary worktree. So a run that genuinely settled wrote `result: pass` into
+# $TMPDIR and left the repository holding a STALE receipt saying `blocked` — the
+# durable, machine-readable proof of success living in a directory
+# `git worktree prune` eventually deletes, while the repo asserted the opposite.
+#
+# STATE.md already went to ORIGINAL_WORKSPACE and the receipt did not: two
+# evidence artifacts from one run, landing in two different roots. That is the
+# same defect class as the eval CWD, the settlement base and the untracked diff —
+# components privately deciding which root is authoritative.
+# --------------------------------------------------------------------------
+sync_receipt() {
+  [ -n "$WORKTREE_DIR" ] || return 0                      # in-place: already home
+  [ "$WORKSPACE_ROOT" != "$ORIGINAL_WORKSPACE" ] || return 0
+  _rc_src="$WORKSPACE_ROOT/cvg/receipts/$TASK_ID.json"
+  [ -f "$_rc_src" ] || return 0
+  _rc_dst="$ORIGINAL_WORKSPACE/cvg/receipts/$TASK_ID.json"
+  mkdir -p "$(dirname "$_rc_dst")" 2>/dev/null || return 0
+  cp "$_rc_src" "$_rc_dst" 2>/dev/null || return 0
+  printf 'receipt: %s (copied out of the worktree)\n' "${_rc_dst#"$ORIGINAL_WORKSPACE"/}"
+  # Attempt receipts are per-run evidence too, and the path policy already
+  # exempts them by name, so carrying them out cannot widen any scope.
+  for _rc_att in "$WORKSPACE_ROOT/cvg/receipts/$TASK_ID.attempt-"*.json; do
+    [ -f "$_rc_att" ] || continue
+    cp "$_rc_att" "$ORIGINAL_WORKSPACE/cvg/receipts/" 2>/dev/null || true
+  done
+  return 0
+}
+
 write_state_md() {
   _sm_state="$1"; _sm_why="${2:-}"
   _sm_file="$ORIGINAL_WORKSPACE/cvg/STATE.md"
