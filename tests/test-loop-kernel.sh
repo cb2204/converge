@@ -47,6 +47,24 @@ new_ws() {
   printf '%s\n' "$W"
 }
 
+# Remove a workspace AND any isolated worktree it still owns.
+#
+# Rows that land EXHAUSTED, STALLED or BLOCKED deliberately KEEP their worktree
+# — the handoff note is useless without the work it describes. Deleting only the
+# parent repo therefore orphans that checkout in $TMPDIR: two per suite run,
+# forever, and the suite that asserts "a failed run leaves no orphaned worktree
+# behind" was itself the thing leaking them. `cvg-wt-` is the kernel's own
+# prefix, so it can never match the `cvg-loopws-` workspace being removed.
+drop_ws() {
+  _dw="$1"
+  git -C "$_dw" worktree list --porcelain 2>/dev/null \
+    | awk '/^worktree /{print $2}' | grep '/cvg-wt-' \
+    | while IFS= read -r _wt; do
+        git -C "$_dw" worktree remove --force "$_wt" >/dev/null 2>&1 || rm -rf "$_wt"
+      done
+  rm -rf "$_dw"
+}
+
 # A stub engine directory the kernel can be pointed at via --agent.
 stub_engine() {  # stub_engine <_unused> <name> <body>
   { printf '#!/usr/bin/env bash\nset -uo pipefail\ncase "${1:-}" in --available) exit 0 ;; esac\n'
@@ -89,7 +107,7 @@ if [ "${_att//[^0-9]/}" -le 4 ] 2>/dev/null; then
 else
   bad "it burned $_att attempts before stopping"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- EXHAUSTED
 W="$(new_ws)"
@@ -118,7 +136,7 @@ if grep -q '^ITER=2$' "$W/cvg/loop/T-20260602-golden/state.env" 2>/dev/null; the
 else
   bad "the loop position was not persisted"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- flags tighten only
 W="$(new_ws)"
@@ -129,7 +147,7 @@ if [ "${_att//[^0-9]/}" -le 4 ] 2>/dev/null; then
 else
   bad "--max-iterations 999 overrode the spec budget ($_att attempts)"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- CANCELLED
 W="$(new_ws)"
@@ -140,7 +158,7 @@ if grep -q '^TASK_LOOP=CANCELLED$' <<<"$RK_OUT" && [ "$RK_RC" -eq 3 ]; then
 else
   bad "the kill switch was ignored"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- NO_OP
 W="$(new_ws)"
@@ -151,7 +169,7 @@ if grep -q '^TASK_LOOP=NO_OP$' <<<"$RK_OUT" && [ "$RK_RC" -eq 0 ]; then
 else
   bad "an already-green task did not report NO_OP"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- green path
 W="$(new_ws)"
@@ -161,7 +179,7 @@ if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT" && [ "$RK_RC" -eq
 else
   bad "the green path did not settle: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- gate-only
 W="$(new_ws)"
@@ -171,7 +189,7 @@ if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT"; then
 else
   bad "--no-agent did not report BLOCKED"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------------- unknown engine
 W="$(new_ws)"
@@ -181,7 +199,7 @@ if grep -q '^TASK_LOOP=ERROR$' <<<"$RK_OUT" && [ "$RK_RC" -eq 4 ]; then
 else
   bad "a missing engine did not fail closed"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ------------------------------- evals must run in the WORKSPACE, not git root
 # A spec's relative paths are written against its own workspace. When the runner
@@ -236,7 +254,7 @@ else
   bad "a worktree cannot see the signing key: $(head -1 <<<"$TIER_OUT")"
 fi
 git -C "$W" worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"
-rm -rf "$W"
+drop_ws "$W"
 
 # ------------------------------------------------- isolation is the DEFAULT
 # An unattended agent must not be able to touch the tree a human is reading,
@@ -250,7 +268,7 @@ if grep -q 'isolation: worktree' <<<"$DEF_OUT"; then
 else
   bad "the default is still in-place"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ----------------------------------------------------- worktree isolation
 # In-place, a failed attempt leaves wreckage the NEXT attempt inherits. A
@@ -273,7 +291,7 @@ if grep -q 'worktree KEPT' <<<"$RK_OUT"; then
 else
   bad "the worktree was discarded even though there was work to keep"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # A run the agent could not even start must leave NOTHING behind.
 W="$(new_ws)"
@@ -285,7 +303,7 @@ if [ "$_wt_before" = "$_wt_after" ]; then
 else
   bad "an orphaned worktree survived a failed run"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # ------------------------------------------- the fence a spec cannot widen
 # The contract answers "may THIS task write here?"; the gate answers "may ANY
@@ -403,7 +421,7 @@ else
 fi
 kill "$_kpid" 2>/dev/null; wait "$_kpid" 2>/dev/null
 pkill -f 'sleep 30' 2>/dev/null || true
-rm -rf "$W"
+drop_ws "$W"
 
 # ---------------------------------------------------------- tracker authority
 # Posting to a board is an external write. The envelope grants tracker.write its
@@ -434,7 +452,7 @@ else
   ok_state="$(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
   bad "the tracker rows inspected a loop that never ran (${ok_state:-no terminal state})"
 fi
-rm -rf "$W"
+drop_ws "$W"
 
 # Cleanup belongs AFTER the last row that needs the stubs and the signing key.
 # (Still no `trap ... EXIT`: bash fires an inherited EXIT trap when a `( )`
