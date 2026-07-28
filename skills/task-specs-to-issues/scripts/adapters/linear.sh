@@ -52,8 +52,32 @@ _ln_require_tools() {
 #   POSTs a GraphQL request. QUERY is the query/mutation string; VARIABLES_JSON
 #   is a JSON object (default {}). Echoes the raw response JSON. Fails hard on a
 #   transport error or a GraphQL `errors` array.
+# Resolve the key from the OS secret store when it is not already in the
+# environment.
+#
+# `cvg setup key linear` exists so you set the key ONCE instead of every session,
+# and it stores into the macOS Keychain (or secret-tool, or a 0600 file). But this
+# adapter only ever read $LINEAR_API_KEY, so a stored key was invisible to it:
+# `tracker-key.sh status linear` reported TRACKER_KEY=OK from the Keychain while
+# every board call died with "LINEAR_API_KEY unset". The resolver was written, and
+# its only real consumer was never wired to it — so `cvg register` and its live
+# parity gate could not run without a manual export, which is exactly the friction
+# the key store was built to remove.
+#
+# Environment still WINS (CI, and anyone who prefers explicit); this is a fallback.
+_linear_resolve_key() {
+  [[ -n "${LINEAR_API_KEY:-}" ]] && return 0
+  local resolver="${TSI_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/tracker-key.sh"
+  [[ -f "$resolver" ]] || return 0
+  local v
+  v="$(bash "$resolver" get linear 2>/dev/null || true)"
+  [[ -n "$v" ]] && export LINEAR_API_KEY="$v"
+  return 0
+}
+
 _linear_gql() {
   local query="$1"
+  _linear_resolve_key
   # NB: do NOT write `${2:-{}}` — bash closes the expansion at the FIRST `}`, so an
   # explicit `{}` comes back as `{}}` (invalid JSON -> jq fails -> empty POST body).
   # That trap silently broke every Linear call until it was caught against the live API.
@@ -269,6 +293,7 @@ _ln_merge_label_ids() {   # _ln_merge_label_ids ISSUE_UUID "name name ..."
 # ---------------------------------------------------------------------------
 ln_teams() {
   _ln_require_tools
+  _linear_resolve_key
   [[ -n "${LINEAR_API_KEY:-}" ]] || tsi_ln_die "LINEAR_API_KEY unset"
   local resp
   resp="$(_linear_gql 'query{ teams{ nodes{ key name id } } }' '{}')"
@@ -282,6 +307,7 @@ ln_teams() {
 # to one of these emails. Read-only; never writes. Empty email prints blank.
 ln_users() {
   _ln_require_tools
+  _linear_resolve_key
   [[ -n "${LINEAR_API_KEY:-}" ]] || tsi_ln_die "LINEAR_API_KEY unset"
   local resp
   resp="$(_linear_gql 'query{ users(filter:{ active:{ eq:true } }){ nodes{ id name email } } }' '{}')"
@@ -293,6 +319,7 @@ ln_users() {
 # ---------------------------------------------------------------------------
 ln_preflight() {
   _ln_require_tools
+  _linear_resolve_key
   if [[ -z "${LINEAR_API_KEY:-}" ]]; then
     echo "preflight failed: LINEAR_API_KEY unset" >&2
     echo "remediation: export LINEAR_API_KEY=lin_api_... (and LINEAR_TEAM_ID), then re-run" >&2
