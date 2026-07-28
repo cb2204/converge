@@ -103,6 +103,14 @@ def main() -> int:
             # path policy: the loop was convicted of the evidence it is required
             # to leave behind. It is exempt from the scope AND never staged,
             # because open-issue-pr.sh stages only the contract's fs.write paths.
+            #
+            # cvg/STATE.md is the same class and was missed. The kernel appends
+            # one row to it on EVERY landing, so it is dirty before the second
+            # run in a workspace ever reaches settlement — and that run is then
+            # refused for a line the loop wrote about the previous run. The
+            # first run in a fresh workspace passes, which is exactly why this
+            # survived: the failure needs a history to appear.
+            framework_paths.add("cvg/STATE.md")
             task_id = str(profile.get("task", {}).get("id", "")).strip()
             loop_prefixes = ["cvg/loop/"]
             if task_id:

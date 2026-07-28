@@ -277,6 +277,30 @@ fi
 git -C "$TMP_REPO" checkout -- README.md
 unlink "$TMP_REPO/outside.txt"
 
+# The loop's landing ledger is FRAMEWORK output, like cvg/loop/ and the receipt.
+# The kernel appends a row to cvg/STATE.md on every landing, so from the SECOND
+# run onward it is always dirty at settlement time — and the run was refused for
+# a line the loop itself wrote about the previous run. A first run in a fresh
+# workspace passes, which is why this needed a history to show up at all.
+# NOTE: cvg/ already holds the execution profile this suite is testing against.
+# Create only the ledger file, and remove only that file.
+mkdir -p "$TMP_REPO/cvg"
+printf '| when | task | state |\n' > "$TMP_REPO/cvg/STATE.md"
+set +e
+LEDGER_OUT="$(
+  cd "$TMP_REPO" &&
+  python3 "$SKILL_DIR/scripts/check-path-policy.py" \
+    --profile "$PROFILE" --base main 2>&1
+)"
+LEDGER_RC=$?
+set -e
+if [ "$LEDGER_RC" -eq 0 ] && grep -q '^CHECK_PATH_POLICY=PASS$' <<<"$LEDGER_OUT"; then
+  ok "the loop's own landing ledger never counts as the task's diff"
+else
+  bad "cvg/STATE.md was convicted as out-of-scope: $LEDGER_OUT"
+fi
+rm -f "$TMP_REPO/cvg/STATE.md"
+
 set +e
 STALE_OUT="$(
   printf '\nTamper.\n' >> "$TMP_REPO/tasks/T-20260602-golden.md"
