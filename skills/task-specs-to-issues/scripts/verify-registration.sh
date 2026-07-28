@@ -88,6 +88,38 @@ for f in "$TASKS_DIR"/T-*.md; do
 done
 sort -u -o "$SIGNED" "$SIGNED"
 SPEC_COUNT="$(awk 'END{print NR+0}' "$SIGNED")"
+
+# ----- LANDED: specs that finished, and still own their board issue -----
+#
+# `cvg transition <id> done` MOVES a spec into tasks/done/. This gate only ever
+# scanned tasks/*.md, so the instant Pass 8 closed its first task the completed
+# spec vanished from every set here and produced three confidently wrong verdicts
+# at once: its dependents' edges looked dangling [A], the graph could not be built
+# so the Kahn peel reported a "cycle" among eight tasks that form a CHAIN [B], and
+# the issue it still legitimately owns looked like a board orphan [D].
+#
+# Finishing work broke the gate that checks the board. It could not have been
+# found before today, because before today nothing had ever finished.
+#
+# A landed spec is KNOWN (it exists, it is signed, it owns an issue) but is NOT in
+# the register SET (it must not be re-created as new work). That distinction is the
+# whole fix: SIGNED stays "active work", KNOWN answers "does this id exist at all".
+LANDED="$WORK/landed.txt"; : > "$LANDED"
+if [[ -d "$TASKS_DIR/done" ]]; then
+  for f in "$TASKS_DIR"/done/T-*.md; do
+    [[ -e "$f" ]] || continue
+    id="$(tsi_id "$f")"
+    [[ -n "$id" ]] || continue
+    [[ "$(tsi_signed_off "$f")" == "true" ]] && echo "$id" >> "$LANDED"
+  done
+fi
+sort -u -o "$LANDED" "$LANDED"
+LANDED_COUNT="$(awk 'END{print NR+0}' "$LANDED")"
+
+KNOWN="$WORK/known.txt"
+cat "$SIGNED" "$LANDED" | sort -u > "$KNOWN"
+KNOWN_COUNT="$(awk 'END{print NR+0}' "$KNOWN")"
+[[ "$LANDED_COUNT" -gt 0 ]] && echo "landed (done/, still registered): $LANDED_COUNT"
 EDGE_COUNT="$(awk 'END{print NR+0}' "$EDGES")"
 echo "spec side: $SPEC_COUNT signed-off, $EDGE_COUNT depends_on edge(s)"
 
@@ -96,8 +128,8 @@ echo "[A] edge integrity (every depends_on target is registerable)"
 DANGLE=0
 while IFS=$'\t' read -r from dep; do
   [[ -n "$dep" ]] || continue
-  if ! grep -qxF "$dep" "$SIGNED"; then
-    fail "edge $from -> $dep targets a non-signed-off id (blocked-by would dangle)"
+  if ! grep -qxF "$dep" "$KNOWN"; then
+    fail "edge $from -> $dep targets an id that is neither active nor landed (blocked-by would dangle)"
     DANGLE=1
   fi
 done < "$EDGES"
@@ -106,7 +138,10 @@ done < "$EDGES"
 # ----- Check B: no cycle in the signed-off subgraph (Kahn peel) -----
 echo "[B] acyclic dependency graph"
 REMAIN="$WORK/remain.txt"; REM="$WORK/remedges.tsv"
-cp "$SIGNED" "$REMAIN"; cp "$EDGES" "$REM"
+# Seed from KNOWN: a landed node has no unmet dependency, so it peels first
+# and lets its dependents follow. Seeding from SIGNED alone left every dependent
+# permanently blocked and reported that deadlock as a "cycle".
+cp "$KNOWN" "$REMAIN"; cp "$EDGES" "$REM"
 CYCLE=0
 while [[ -s "$REMAIN" ]]; do
   ROOTS="$WORK/roots.txt"; : > "$ROOTS"
@@ -143,6 +178,11 @@ done < "$UNGATED"
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[D] board comparison SKIPPED (--dry-run: spec-side gate only)"
 else
+  # The board is compared against KNOWN, not SIGNED. A landed spec still owns the
+  # issue it was registered as, so measuring 1:1 against active-only work reports
+  # every completed task as a board orphan — which is what happened the moment the
+  # first task finished. Parity is about "does an issue have a spec", and a done
+  # spec is still a spec.
   echo "[D] board mirrors the specs (1:1 count · no orphan · no missing · no dup)"
   if ! bash "$ADAPTER" preflight >/dev/null 2>&1; then
     fail "adapter preflight failed — cannot verify the live board"
@@ -166,10 +206,10 @@ else
     BOARD_UNIQ="$WORK/board_uniq.txt"; sort -u "$BOARD_IDS" > "$BOARD_UNIQ"
     BOARD_RAW="$(awk 'END{print NR+0}' "$BOARD_IDS")"
     BOARD_COUNT="$(awk 'END{print NR+0}' "$BOARD_UNIQ")"
-    echo "  spec: $SPEC_COUNT signed-off   board: $BOARD_RAW registered ($BOARD_COUNT distinct)"
+    echo "  spec: $KNOWN_COUNT signed-off   board: $BOARD_RAW registered ($BOARD_COUNT distinct)"
 
-    if [[ "$BOARD_RAW" -eq 0 && "$SPEC_COUNT" -gt 0 ]]; then
-      fail "board carries no registered issue but $SPEC_COUNT spec(s) are signed off — not registered yet? (or adapter lacks list-issues)"
+    if [[ "$BOARD_RAW" -eq 0 && "$KNOWN_COUNT" -gt 0 ]]; then
+      fail "board carries no registered issue but $KNOWN_COUNT spec(s) are signed off — not registered yet? (or adapter lacks list-issues)"
     else
       # (1) double-registration — the same spec id on two board issues.
       if [[ "$BOARD_RAW" -ne "$BOARD_COUNT" ]]; then
@@ -177,10 +217,10 @@ else
         fail "spec id(s) registered to more than one issue (double-registration): $DUPS"
       fi
       # (2) missing — a signed-off spec with no board issue (under-registered).
-      MISSING="$(comm -23 "$SIGNED" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
+      MISSING="$(comm -23 "$KNOWN" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
       [[ -n "$MISSING" ]] && fail "signed-off spec(s) with no board issue: $MISSING"
       # (3) orphan — a board issue whose spec id is not in the signed-off set.
-      ORPHAN="$(comm -13 "$SIGNED" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
+      ORPHAN="$(comm -13 "$KNOWN" "$BOARD_UNIQ" | tr '\n' ' ' | sed 's/ *$//')"
       if [[ -n "$ORPHAN" ]]; then
         fail "board issue(s) with no signed-off spec (orphan): $ORPHAN"
         if [[ "$PRUNE" -eq 1 ]]; then
@@ -190,15 +230,15 @@ else
           done
         fi
       fi
-      [[ -z "$MISSING" && -z "$ORPHAN" && "$BOARD_RAW" -eq "$SPEC_COUNT" ]] \
-        && pass "1:1 — $SPEC_COUNT spec(s) ⇄ $BOARD_RAW issue(s); no orphan, no missing, no dup"
+      [[ -z "$MISSING" && -z "$ORPHAN" && "$BOARD_RAW" -eq "$KNOWN_COUNT" ]] \
+        && pass "1:1 — $KNOWN_COUNT spec(s) ⇄ $BOARD_RAW issue(s); no orphan, no missing, no dup"
     fi
 
     # Secondary signal: the board's ready frontier (roots) is live.
     SPEC_ROOTS="$WORK/spec_roots.txt"; : > "$SPEC_ROOTS"
     while read -r id; do
       awk -F'\t' -v x="$id" '$1==x{f=1} END{exit f?0:1}' "$EDGES" || echo "$id" >> "$SPEC_ROOTS"
-    done < "$SIGNED"
+    done < "$KNOWN"
     sort -u -o "$SPEC_ROOTS" "$SPEC_ROOTS"
     BOARD_READY="$WORK/board_ready.txt"
     bash "$ADAPTER" list-ready > "$BOARD_READY" 2>/dev/null || : > "$BOARD_READY"
