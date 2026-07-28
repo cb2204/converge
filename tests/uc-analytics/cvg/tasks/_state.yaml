@@ -14,12 +14,6 @@ tasks:
   effort: M
   last_validated: 2026-07-25T08:53:10Z
   validator_version: 2
-- id: T-20260721-cap-steelthread
-  path: tasks/T-20260721-cap-steelthread.md
-  status: ready
-  effort: L
-  last_validated: 2026-07-25T08:53:12Z
-  validator_version: 2
 - id: T-20260721-srv-core
   path: tasks/T-20260721-srv-core.md
   status: ready
@@ -55,4 +49,10 @@ tasks:
   status: ready
   effort: M
   last_validated: 2026-07-25T08:53:26Z
+  validator_version: 2
+- id: T-20260721-cap-steelthread
+  path: tasks/T-20260721-cap-steelthread.md
+  status: ready
+  effort: L
+  last_validated: 2026-07-28T13:22:24Z
   validator_version: 2

@@ -20,11 +20,11 @@ parent: ../sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
 execution_backend: claude
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T07:53:07Z
+signed_off_at: 2026-07-28T13:21:43Z
 tracker_ref: linear:CVG-21
 projection:
   milestone: Capture
-signed_off_sig: hmac-sha256-v2:1f197c76:949d34a9cfc993260145c82a98b3c49fc4dcf14e7463f0833af1889fa026dad6
+signed_off_sig: hmac-sha256-v2:1f197c76:98dcffd790f6c813d4e2b775bd651593528e296d4446f2fa1d8c08b90d8d91f7
 ---
 
 # Capture steel thread — one domain (orders) end-to-end off the WAL
@@ -34,7 +34,9 @@ signed_off_sig: hmac-sha256-v2:1f197c76:949d34a9cfc993260145c82a98b3c49fc4dcf14e
 > Postgres WAL into `raw.orders`, and prove a fresh source commit reaches a served
 > answer. **Effort L** — it spans provision → land → probe but resolves to ONE
 > coherent done-condition (the thread runs end-to-end), so it is a single long-horizon
-> leaf, not a decomposition node. Accepted only on `execution_backend: glm`.
+> leaf, not a decomposition node. The engine that may accept it is declared once, in
+> this spec's `execution_backend` frontmatter — naming one here as well is how the two
+> drifted apart and left a dispatch routed on a contradiction.
 
 ## Goal
 

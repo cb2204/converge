@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-cap-steelthread@e30674524075",
+    "epoch": "T-20260721-cap-steelthread@1d72ceb27f0b",
     "grants": [
       {
         "capability": "fs.read",
@@ -291,7 +291,7 @@
     "id": "T-20260721-cap-steelthread",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-cap-steelthread.md",
-      "sha256": "e3067452407543245aae54caec272ba2801cccf97be02d3f6627862f0bd7ed3a"
+      "sha256": "1d72ceb27f0b13811c1d842b0ce86f6f6aace4957e04dd6bc1e2bdb7f3b55b78"
     }
   },
   "topology": {
