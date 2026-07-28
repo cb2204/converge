@@ -137,7 +137,14 @@ has "re-run updates, creates nothing" "$OUT" "created 0, updated 5"
 if [[ "$(rows "$S/issues.tsv")" == "5" ]]; then ok "still 5 issues after re-run (no dupes)"; else bad "issues.tsv rows=$(rows "$S/issues.tsv")"; fi
 if [[ "$(rows "$S/links.tsv")" == "5" ]]; then ok "still 5 links after re-run"; else bad "links.tsv rows=$(rows "$S/links.tsv")"; fi
 # receipt count for the same board must not grow past 5 (one per signed spec)
-NREC="$(grep -lc '^tracker_ref:' "$D"/*.md 2>/dev/null | awk -F: '{s+=$2} END{print s+0}')"
+#
+# `grep -lc` combines two mutually exclusive flags and the platforms disagree:
+# BSD grep (macOS) still prints `file:count`, so summing $2 worked here, while GNU
+# grep (Linux CI) honours -l and prints ONLY filenames — $2 is empty, the sum is
+# 0, and the check failed for a reason unrelated to receipts. The question being
+# asked is "how many specs carry a receipt", which is a count of FILES, so ask it
+# that way with flags that mean one thing on both platforms.
+NREC="$(grep -l '^tracker_ref:' "$D"/*.md 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$NREC" == "5" ]]; then ok "exactly 5 specs carry a receipt (one per signed spec)"; else bad "receipt count=$NREC"; fi
 
 # -----------------------------------------------------------------------------
