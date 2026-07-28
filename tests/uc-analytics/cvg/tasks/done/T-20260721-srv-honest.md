@@ -1,7 +1,7 @@
 ---
 id: T-20260721-srv-honest
 title: "Serve — honest answers (as-of, staleness alert, audit)"
-status: ready
+status: done
 format_version: 3
 profile: lite
 effort: M
@@ -24,6 +24,9 @@ tracker_ref: linear:CVG-28
 projection:
   milestone: Serve
 signed_off_sig: hmac-sha256-v2:1f197c76:216ec5b29cf991d09a0fdd2d3008fe648e3ac2e4d92b535cd7b24c63f7e36f82
+accepted: true
+accepted_by: luanmorenomaciel
+accepted_at: 2026-07-28T22:53:23Z
 ---
 
 # Serve — honest answers (as-of, staleness alert, audit)
