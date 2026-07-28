@@ -1,7 +1,7 @@
 ---
 id: T-20260721-tf-silver
 title: "Transform — silver conform (dedup max-_lsn, UTC)"
-status: ready
+status: done
 format_version: 3
 profile: lite
 effort: M
@@ -24,6 +24,9 @@ tracker_ref: linear:CVG-24
 projection:
   milestone: Transform
 signed_off_sig: hmac-sha256-v2:1f197c76:b1da4760be4bd4f84c555608ed8628604e7c975110b420595df2e5c248a0e505
+accepted: true
+accepted_by: luanmorenomaciel
+accepted_at: 2026-07-28T21:09:05Z
 ---
 
 # Transform — silver conform (dedup max-_lsn, UTC)
