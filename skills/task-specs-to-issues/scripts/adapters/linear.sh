@@ -713,8 +713,16 @@ ln_write_result() {
 
   if [[ "$status" == "pass" ]]; then
     local st
+    # `team(id:)` is a ROOT field and takes String!; only `IssueFilter.team.id.eq`
+    # takes ID!. Both spellings live in this file (382/664 vs 42 in
+    # linear-projection.sh) and this call had the wrong one, so the first live
+    # write-result died with `Variable "$team" of type "ID!" used in position
+    # expecting type "String!"`. It survived every offline suite because the fake
+    # adapter has no schema — and it survived every real run because the loop
+    # settles LOCAL_SETTLED unless --allow-external-writes is passed, so Pass 8's
+    # board-write leg had never once executed against Linear.
     st="$(_linear_gql \
-      'query($team:ID!){ team(id:$team){ states(filter:{ type:{ eq:"completed" } }){ nodes{ id } } } }' \
+      'query($team:String!){ team(id:$team){ states(filter:{ type:{ eq:"completed" } }){ nodes{ id } } } }' \
       "$(jq -n --arg team "$LINEAR_TEAM_ID" '{team:$team}')" \
       | jq -r '.data.team.states.nodes[0].id // empty')"
     if [[ -n "$st" ]]; then
