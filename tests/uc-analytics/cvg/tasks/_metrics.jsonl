@@ -2,3 +2,4 @@
 {"ts":"2026-07-25T08:52:50Z","task":"T-20260721-cap-steelthread","event":"status_change","from":"in-progress","to":"ready"}
 {"ts":"2026-07-28T16:20:01Z","task":"T-20260721-cap-steelthread","event":"status_change","from":"ready","to":"done"}
 {"ts":"2026-07-28T19:42:02Z","task":"T-20260721-cap-alldomains","event":"status_change","from":"ready","to":"done"}
+{"ts":"2026-07-28T20:50:29Z","task":"T-20260721-cap-freshness","event":"status_change","from":"ready","to":"done"}
