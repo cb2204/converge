@@ -1,7 +1,7 @@
 ---
 id: T-20260721-tf-publish
 title: "Transform — publish gold as DuckLake (Q-SET-1 coverage)"
-status: ready
+status: done
 format_version: 3
 profile: lite
 effort: S
@@ -23,6 +23,9 @@ tracker_ref: linear:CVG-26
 projection:
   milestone: Transform
 signed_off_sig: hmac-sha256-v2:1f197c76:9a5272714b37b8794c83bf26eb41877be91aa67275462b88de11d47544b6d474
+accepted: true
+accepted_by: luanmorenomaciel
+accepted_at: 2026-07-28T22:26:07Z
 ---
 
 # Transform — publish gold as DuckLake (Q-SET-1 coverage)

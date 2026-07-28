@@ -1,0 +1,23 @@
+{
+  "evaluation": {
+    "output_sha256": "0f11163d7ef040d6d5af1fc05a716ef8566db5ab053d5954d1e10d11a81fcf67",
+    "path_policy": "pass"
+  },
+  "execution_profile": {
+    "path": "cvg/execution/T-20260721-tf-publish/execution-profile.yaml",
+    "sha256": "f6a7f4a3c85a5fa99e7c320c7190e52860e4dab81b0a906d3cc3fdc04a8c99ca"
+  },
+  "generated_by": "task-loop",
+  "recorded_at": "2026-07-28T22:25:10Z",
+  "result": "pass",
+  "runtime": {
+    "agent": "claude",
+    "branch": "task/tf-publish"
+  },
+  "schema": "cvg.execution-receipt.v1",
+  "task_id": "T-20260721-tf-publish",
+  "task_spec": {
+    "path": "cvg/tasks/T-20260721-tf-publish.md",
+    "sha256": "7d4a6f474c00a54875bce985c68a59ad5f7af383f6f084db328995eed0b723f9"
+  }
+}

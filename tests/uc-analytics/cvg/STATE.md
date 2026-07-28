@@ -18,3 +18,4 @@ An error or an exhausted budget is never recorded as success.
 | 2026-07-28T21:49:44Z | `T-20260721-tf-gold` | claude | **ERROR** | 0/5 | the task could not be resolved or its contract is missing |
 | 2026-07-28T21:58:17Z | `T-20260721-tf-gold` | claude | **ERROR** | 0/5 | the task could not be resolved or its contract is missing |
 | 2026-07-28T22:09:15Z | `T-20260721-tf-gold` | claude | **SETTLED** | 1/5 | — |
+| 2026-07-28T22:25:10Z | `T-20260721-tf-publish` | claude | **SETTLED** | 1/5 | — |
