@@ -159,10 +159,10 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 ---
 
-## §1 · Where we are — 2026-07-25
+## §1 · Where we are — 2026-07-28
 
-**`cvg` v0.20.0 · 12 skills · the descent 0→7 is CLOSED on a real use case, and
-Pass 8 is a real loop for the first time.**
+**`cvg` v0.20.0 · 12 skills · the descent 0→8 is CLOSED on a real use case. Every
+pass has now run end-to-end on real work, and the loop has landed two tasks.**
 
 | Pass | Skill | State |
 |:--:|---|---|
@@ -174,12 +174,12 @@ Pass 8 is a real loop for the first time.**
 | 5 Tasking | `task-spec` | ✅ **closed 2026-07-25** — 9 specs, all Tier 1; evals assert database state or execute the artifact, proven by the maximal stub attack (all 9 red) |
 | 6 Register *(opt-in)* | `task-specs-to-issues` | ✅ **closed live 2026-07-25** — created 0 / updated 9, 8 blocked-by links, 9 `tracker_ref` receipts; live `[D]` parity 9⇄9, ready frontier 1 |
 | 7 Bind | `task-to-runtime-contract` | ✅ **closed 2026-07-25** — 9× `CHECK_RUNTIME_CONTRACT=PASS`, 6 artifacts each, host attested `OK` |
-| 8 The Loop | `task-loop` | ◐ **the kernel exists and is proven** — 11 hermetic checks green (brakes, stagnation, exhaustion, resume, cancel, no-op, honest `--no-agent`); run end-to-end on the frontier task, correctly RED, PR refused, blocked receipt written. **Not yet driven to green.** |
+| 8 The Loop | `task-loop` | ✅ **closed 2026-07-28** — 45 hermetic checks green (brakes, stagnation, exhaustion, resume, cancel, no-op, honest `--no-agent`); driven to GREEN twice on the real backlog (CVG-21, CVG-22), both `TASK_LOOP=LOCAL_SETTLED`, and CVG-22 further `ACCEPTED=1`. **What remains is n>1** — 7 of 9 tasks unbuilt. |
 
 **The descent, gate by gate:** `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS ·
 CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1 ×9 ·
 CHECK_REGISTER=OK (live) · CHECK_RUNTIME_CONTRACT=PASS ×9 ·
-DOCTOR_RUNTIME_CONTRACT=OK`.
+DOCTOR_RUNTIME_CONTRACT=OK · TASK_LOOP=LOCAL_SETTLED ×2 · ACCEPTED=1`.
 
 **Pass 8 stopped being a gate pretending to be a loop.** `cvg loop` now routes to
 `loop-kernel.sh`: attempt → verify → repeat, three-axis budgets checked *before*
@@ -191,10 +191,14 @@ defect class as WP4's unenforced `external_writes`. Engines are now one adapter
 file each (`scripts/engines/`), so the kernel spells no vendor and a hung CLI dies
 at a watchdog cap. Design + sources: `skills/task-loop/references/loop-spec.md`.
 
-**The board is the queue and it is live.** 9 issues, 8 blocked-by links,
+**The board is the queue and it is live.** 9 issues, 7 blocked-by links,
 Initiative → Project → Capture/Transform/Serve milestones, append-only health.
-The ready frontier is exactly **CVG-21** (`cap-steelthread`) — and `cvg ready` now
-*agrees*, having been taught `depends_on`; it previously called all 9 ready.
+CVG-21 and CVG-22 have landed, so the frontier has moved off the chain's head onto
+its one fork: `cvg ready` returns **`cap-freshness` ∥ `tf-silver`**. The BOARD does
+not know that yet — both runs settled `LOCAL_SETTLED` under `external_writes: deny`,
+so no issue was ever authorized to move to Done and `list-ready` still answers
+CVG-22. Mapping is 1:1 and gated; **status is the un-ledgered debt**, and closing it
+is §2 item 3.
 
 **The Manager remains the hole** — nothing dispatches ready issues across the
 fleet, watches PRs, or detects fleet-green. That is **B-1**, and it is still the
@@ -219,48 +223,58 @@ load-bearing gap. It is deliberately *after* the loop closes once by hand.
 Written down because it has to survive a context loss — the same reason the loop
 keeps its state on disk instead of in a conversation.
 
-1. **Crank CVG-22 (`cap-alldomains`)** — the frontier. Everything is staged: cluster
-   healthy, terrain pack built, dial = NORMAL/M → sonnet · medium · 600s · 5 iters,
-   tier 2 off. Watch for a 5th instance of the run-context defect class.
-2. **Reconcile the board** after it lands (`cvg register`) — parity now works.
+1. ~~**Crank CVG-22 (`cap-alldomains`)**~~ — **done 2026-07-28.**
+   `TASK_LOOP=LOCAL_SETTLED`, one iteration, and then `ACCEPTED=1` from
+   `cvg tasks accept` — gate A (evals re-run by us) · B (blast radius) · C (sign-off
+   HMAC intact) all green. Two tasks have now been driven to green by the loop, and
+   this is the **first one proven done rather than asserted done**.
+   *The prediction held:* a 5th and 6th instance of the run-context defect class
+   showed up, both triggered by the same event — **finishing**. See D1 below.
+2. ~~**Reconcile the board** (`cvg register`)~~ — **done 2026-07-28.**
+   `created 0, updated 7`, 7 blocked-by links, 2 landed specs left alone;
+   `CHECK_REGISTER=OK` with 1:1 parity 9⇄9. It did not work on the first try: the
+   write path still refused the whole board with *"blocked-by target not found"*,
+   because a6ddefa had taught only the READ side that a spec in `tasks/done/` is
+   still KNOWN. Fixed in 7127b6c and pinned by test block `[W]` (register 122→136).
 3. **Tracker enforcement** (`tracker_mode=authoritative`): loop preflight REFUSES an
    unreachable board; the fail-soft bridge records a pending-sync debt instead of
    swallowing (`always 0 for write phases` today); `cvg ready` blocks while debt
    exists; `register --check` compares STATUS not just mapping; `--reconcile` drains.
    The REFEREE writes the board, never the sandboxed agent.
+   **This is now the measured next gap, not a theoretical one.** After the reconcile
+   the board's *mapping* is perfect and its *status* is stale: `list-ready` still
+   answers **CVG-22** — the task that just landed — because both completed runs
+   settled `LOCAL_SETTLED` under `external_writes: deny`, so nothing was ever
+   authorized to move an issue to Done. That is the WP4 gate working as designed;
+   the debt it creates is exactly what has no ledger yet. Meanwhile `cvg ready`
+   (repo-local, derived from `depends_on` + spec status) is **right**: the 2-wide
+   fork `cap-freshness` ∥ `tf-silver`. Two frontier answers that disagree is the
+   whole argument for making one of them authoritative.
 4. **D1 · one run-context resolver** — workspace root, base commit, changed-path set
-   incl. untracked, framework exemptions. FOUR instances of this one cause have been
-   patched (eval CWD · settlement base · tier-2 diff · receipt location); a fifth is
-   coming, and the Manager would multiply it across 8 tasks. Do this BEFORE 6.
+   incl. untracked, framework exemptions. **SIX** instances of this one cause are now
+   patched: eval CWD · settlement base · tier-2 diff · receipt location · and the two
+   found today, both sprung by a spec moving into `tasks/done/` (the workspace root
+   resolved to `cvg/tasks`, so a completed task could no longer pass its own evals;
+   and accept's framework-output exemptions were anchored at the repo root, so the
+   ledger row and receipt Pass 8 is *required* to write were reported as a
+   blast-radius breach). da75056 centralises the derivation in `ts_workspace_root`,
+   which is the start of retiring the class — not the end of it. The Manager would
+   multiply the next instance across 8 tasks. Do this BEFORE 6.
 5. **Harvest** — lessons for passes 4,5,6,7,8 (0–3 exist). Then merge to main and
    tag; note v0.1 is already taken, so this is **v0.2**.
 6. **The Manager** — and it is SIMPLER than assumed here: the uc-analytics DAG is a
-   7-deep chain with ONE 2-wide fork (`cap-freshness` ∥ `tf-silver`). It needs
-   unattended sequencing, not fan-out. `cvg lint` now reports the write-disjoint
-   partition, so safety is checkable before dispatch.
+   7-deep chain with ONE 2-wide fork (`cap-freshness` ∥ `tf-silver`) — and that fork
+   is now the live frontier. It needs unattended sequencing, not fan-out. `cvg lint`
+   reports the write-disjoint partition, so safety is checkable before dispatch.
 
 **Also true now:** CI has run for the first time and is **green on ubuntu AND
-macos** (7 host-dependent defects found in 5 runs). The repo write fence
-(`.cvg/gate.yaml`) is finally shipped — it had never been committed, so every clone
-had no standing fence. `CHECK_REGISTER=OK` against the live board. — the loop runs end to end and lands
-   correctly RED on the frontier task; what remains is the work itself
-   (`cap-steelthread`). *This is the single highest-value next act: it closes the
-   loop for the first time.* Two things to expect: `uc-analytics-postgres` must
-   be up (`make up`), because the evals now talk to it; and the profile denies
-   external writes, so a green run settles **locally**
-   (`TASK_LOOP=LOCAL_SETTLED`) — that is the WP4 gate working, and the push/PR
-   leg is a deliberate second run with `--allow-external-writes`.
-5. **Then, and only then, automate it** — B-1 (the Manager) + B-2 (the CI
-   eval-gate). Building the Manager before the loop has ever closed once is
-   automating an unproven path. `cvg ready` is now the honest dispatch surface it
-   will select from.
-6. **Move 4b** — the in-toto/SLSA attestation chain (Plan → Generation →
-   Approval), so the envelope's authority is externally checkable.
-
-> **The one thing CI still cannot tell us:** `.github/workflows/ci.yml` has never
-> executed — the branch is unpushed, so the gauntlet is written and unproven. It
-> now also covers the loop kernel and shellchecks `scripts/engines/`, both of
-> which were outside its globs.
+macos** (7 host-dependent defects found in 5 runs) — the note that once stood here
+saying `.github/workflows/ci.yml` had never executed is retired. The repo write
+fence (`.cvg/gate.yaml`) is finally shipped — it had never been committed, so every
+clone had no standing fence. The offline gauntlet as of this beat:
+task-spec 33 · hmac 38 · portability 35 · runtime-contract 40 · **register 136** ·
+json-envelope 12 · install 7 · loop-kernel 45 · brd 39 · tech-req 24 ·
+shellcheck 0 errors · fixture honest (smoke green, designed-RED still red).
 
 **Housekeeping that should not block the above:** nothing is pushed (branch is
 ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
@@ -379,7 +393,7 @@ their full narrative lives in §10 and in git history.
   envelope with mandatory closure, and `cvg doctor runtime-contract` attesting this
   host `OK`. This **replaces the legacy `stack-to-harness`** workflow (now demoted
   to a migration-only package).
-- [~] **R8 · Pass 8 The Loop** — the verb exists (`cvg loop`, 0.19.0) and now
+- [x] **R8 · Pass 8 The Loop** — the verb exists (`cvg loop`, 0.19.0) and now
   routes to the **kernel** (0.20.0) rather than the settler, so the pass is finally
   a loop: budgets enforced, stagnation detected, fresh process per attempt, named
   terminal states, `tests/test-loop-kernel.sh` **45/45** green with stub engines.
@@ -387,9 +401,22 @@ their full narrative lives in §10 and in git history.
   the nested workspace, went RED for the right reason, refused the PR, wrote a
   blocked receipt. **CLOSED 2026-07-28: `TASK_LOOP=LOCAL_SETTLED` on CVG-21**, `ACCEPTED=1`, one
   iteration, 906s, 37 turns / $1.69 (was 66 turns / $7.91 before the cost dial and
-  the terrain pack). What remains is n>1 — 8 of 9 tasks unbuilt. Requires
-  `uc-analytics-postgres` up, and it will land `LOCAL_SETTLED` because the profile
-  denies external writes. This is where Track M wakes up.
+  the terrain pack). **CVG-22 followed the same day** — LOCAL_SETTLED in one
+  iteration, then the first `cvg tasks accept` verdict of `ACCEPT` earned rather
+  than asserted (evals re-run, blast radius clean, sign-off HMAC intact). What
+  remains is n>1 — 7 of 9 tasks unbuilt. Requires `uc-analytics-postgres` up, and it
+  will land `LOCAL_SETTLED` because the profile denies external writes. This is
+  where Track M wakes up.
+- [~] **R8.b · what FINISHING broke** — the second landing was cheap; making the
+  repo survive it was not. Completion moves a spec into `tasks/done/`, and three
+  gates had each derived their own answer to "where is the workspace" by counting
+  path levels, so all three silently changed answer one level deeper: evals could
+  not resolve their own relative paths, `cvg tasks accept` reported Pass 8's own
+  ledger/receipt writes as a blast-radius breach, and `cvg register`'s WRITE path
+  refused the entire board because a completed dependency looked dangling (the
+  READ path had been taught this in a6ddefa; the writer had not). da75056 +
+  7127b6c, pinned by register `[W]` (122→136). The root cause — one shared
+  run-context resolver — is **D1**, still open.
 
 ---
 
@@ -860,6 +887,39 @@ references survive in the READMEs). What is actually left:
 
 > One line per completed step: date · step · proof · result. Newest first.
 
+- **2026-07-28 · THE SECOND LANDING, AND WHAT FINISHING BROKE** — CVG-22
+  (`cap-alldomains`) driven to green in one iteration (`TASK_LOOP=LOCAL_SETTLED`),
+  then **`ACCEPTED=1`** — the first acceptance verdict Converge has *earned*: gate A
+  re-ran the evals itself, gate B found every changed file inside the declared blast
+  radius, gate C confirmed the sign-off HMAC still verifies so the evals were not
+  weakened to get there. Board reconciled live: `created 0, updated 7`, 7 blocked-by
+  links, 2 landed specs left alone, `CHECK_REGISTER=OK` at 1:1 parity 9⇄9.
+  **The interesting part is the failure mode.** Landing a task is not a no-op on the
+  repo — it MOVES the spec into `tasks/done/`, and three separate gates had each
+  hand-rolled "where is the workspace?" as *count the path levels*. One level deeper
+  they each silently returned a different wrong answer: evals resolved their relative
+  paths against `cvg/tasks` and failed in 0s, so **a completed task could no longer
+  pass its own evals**; accept's framework-output exemptions were anchored at the
+  repo root, so the ledger row, receipt and state index that Pass 8 is *required* to
+  write were reported as a blast-radius breach; and `cvg register`'s WRITE path
+  refused the whole board with "blocked-by target not found", because a6ddefa had
+  taught only the READ path that a done spec is still KNOWN. Half a fix has its own
+  failure mode: the gate said `CHECK_REGISTER=OK` while the writer said
+  `REGISTER=FAIL`. Fixed in da75056 (one `ts_workspace_root`, asking the structural
+  question instead of counting) and 7127b6c (KNOWN = SIGNED ∪ LANDED on the write
+  side too — landed specs satisfy edges, peel first, and are never re-upserted,
+  because upsert seeds state from the DAG and would push a Done issue back to Todo).
+  Pinned by register block `[W]`, which drives the real sequence and fails 7/7
+  against the pre-fix driver. Six recorded symptoms of one root cause now; **D1**
+  (one run-context resolver) is what actually retires the class.
+  **Left honestly open:** the board's *mapping* is perfect and its *status* is stale
+  — `list-ready` still answers CVG-22, because both landings settled
+  `LOCAL_SETTLED` under `external_writes: deny` and nothing was ever authorized to
+  move an issue to Done. `cvg ready` is right (`cap-freshness` ∥ `tf-silver`). Two
+  frontier answers that disagree is precisely the argument for §2 item 3.
+  Proof: register 122→**136** · task-spec 33 · hmac 38 · portability 35 ·
+  runtime-contract 40 · json-envelope 12 · install 7 · loop-kernel 45 · brd 39 ·
+  tech-req 24 · shellcheck 0 errors · fixture honest.
 - **2026-07-25 · THE BLUEPRINT PDFs CATCH UP — v6 re-rendered at 0.20.0** — the
   last documentation surface still describing the pre-kernel world. Both HTML
   sources updated and re-rendered through the Chrome pipeline
