@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-tf-gold@2212187ed757",
+    "epoch": "T-20260721-tf-gold@34ba01db3ae4",
     "grants": [
       {
         "capability": "fs.read",
@@ -286,7 +286,7 @@
     "id": "T-20260721-tf-gold",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-tf-gold.md",
-      "sha256": "2212187ed757afe6a2bee7d90e36db3568281896a4025cebcacfa58588740483"
+      "sha256": "34ba01db3ae479edb222db20534153be0e9baa543e1989c09ce460325f311032"
     }
   },
   "topology": {
