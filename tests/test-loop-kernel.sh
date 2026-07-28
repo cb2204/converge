@@ -268,6 +268,62 @@ else
 fi
 drop_ws "$W"
 
+# ------------------------------------------------------ the cost dial (lane)
+# One setting for every task is what made a four-file build cost $7.91: bare
+# `claude -p`, top model, flat 900s. `cvg lane` classified the work and the
+# verdict reached nothing. These rows pin that it now reaches the engine.
+W="$(new_ws)"
+run_kernel "$W" --agent tstfix --lane FAST --estimate
+if grep -q 'model haiku' <<<"$RK_OUT" && grep -q 'lane FAST' <<<"$RK_OUT"; then
+  ok "the lane picks the model tier — FAST does not draw the top engine"
+else
+  bad "the lane did not reach the model: $(grep -i 'lane\|model' <<<"$RK_OUT" | head -2)"
+fi
+# attempt_seconds = lane base x effort multiplier, so a long-horizon leaf is not
+# guillotined on a cheap lane and a typo fix is not handed 15 minutes.
+if grep -qE 'per attempt *: up to (150|225|300|450)s' <<<"$RK_OUT"; then
+  ok "the per-attempt cap scales with effort, not a flat 900s"
+else
+  bad "the attempt cap ignored the dial: $(grep 'per attempt' <<<"$RK_OUT")"
+fi
+drop_ws "$W"
+
+# A lane may LOWER a ceiling and never RAISE one — the same invariant --max-*
+# already obeys, because a routing hint must never widen an authorization.
+#
+# FULL's table value (15) equals the golden fixture's own budget_iterations, so
+# comparing those two proves nothing either way. Pin it against a TIGHTENED
+# ceiling instead: --max-iterations 2 with the most generous lane must stay 2.
+W="$(new_ws)"
+run_kernel "$W" --agent tstfix --lane FULL --max-iterations 2 --estimate
+_fullit="$(grep -oE 'attempts *: up to [0-9]+' <<<"$RK_OUT" | grep -oE '[0-9]+$')"
+if [ "${_fullit:-999}" -eq 2 ] 2>/dev/null; then
+  ok "the most generous lane cannot widen a tightened ceiling (still 2)"
+else
+  bad "the lane widened a tightened budget to $_fullit"
+fi
+drop_ws "$W"
+
+# FULL earns tier 2 by default, because high blast radius is where a green eval
+# is least sufficient — but the operator still outranks the table.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --lane FULL
+if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT"; then
+  ok "FULL turns tier 2 on without being asked twice"
+else
+  bad "FULL did not enable tier 2"
+fi
+drop_ws "$W"
+
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --lane FULL --no-verify
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  ok "an explicit --no-verify outranks the lane's default"
+else
+  bad "the operator could not decline the lane's verifier"
+fi
+drop_ws "$W"
+
 # ------------------------------------------------- settlement base reference
 # The guard must be asked about the work THIS RUN produced. Cutting the loop
 # branch from a non-default branch used to make `main...HEAD` sweep in every

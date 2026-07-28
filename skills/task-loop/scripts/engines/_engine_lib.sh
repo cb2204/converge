@@ -8,9 +8,17 @@
 #       exit 0 if the engine can actually run on this host. Nothing else.
 #
 #   bash engines/<name>.sh --prompt-file F --workdir D [--timeout SECONDS]
+#                          [--model TIER] [--effort LEVEL]
 #       run ONE attempt with a FRESH context, cwd = workdir. The transcript goes
 #       to stdout. If the engine reports usage, the adapter emits one line
 #       `ENGINE_TOKENS=<n>` so the kernel can debit its token budget.
+#
+#   --model is a FAMILY-NEUTRAL TIER — haiku | sonnet | opus — never a vendor
+#   model id. Translating a tier into whatever this CLI actually calls it is the
+#   adapter's whole job, for the same reason the kernel spells no vendor: the
+#   kernel asks for "the cheap one" and each adapter knows its own spelling. An
+#   adapter that cannot honour a tier ignores it rather than failing; a run that
+#   dies because one engine renamed a model is worse than a run on the default.
 #
 # WHY EACH ATTEMPT IS A NEW PROCESS
 #   A retry inside one session re-reads every prior failure, so cost grows
@@ -60,8 +68,15 @@ to() {
 }
 
 # Parse the uniform adapter arguments into ENG_* variables.
+#
+# SC2034: ENG_MODEL and ENG_EFFORT are set here and read by the ADAPTER that
+# sources this file, never inside it. That is the whole point of the split — the
+# lib owns the contract, the adapter owns the vendor spelling — so "unused" is
+# correct within this file and wrong about the program.
+# shellcheck disable=SC2034
 eng_parse_args() {
   ENG_MODE="run"; ENG_PROMPT=""; ENG_WORKDIR="$PWD"; ENG_TIMEOUT="$ENGINE_TIMEOUT"
+  ENG_MODEL=""; ENG_EFFORT=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --available)     ENG_MODE="available"; shift ;;
@@ -71,6 +86,13 @@ eng_parse_args() {
       --workdir=*)     ENG_WORKDIR="${1#--workdir=}"; shift ;;
       --timeout)       ENG_TIMEOUT="${2:?--timeout requires seconds}"; shift 2 ;;
       --timeout=*)     ENG_TIMEOUT="${1#--timeout=}"; shift ;;
+      --model)         ENG_MODEL="${2:?--model requires a tier}"; shift 2 ;;
+      --model=*)       ENG_MODEL="${1#--model=}"; shift ;;
+      --effort)        ENG_EFFORT="${2:?--effort requires a level}"; shift 2 ;;
+      --effort=*)      ENG_EFFORT="${1#--effort=}"; shift ;;
+      # An UNKNOWN argument still fails loudly — the contract is a contract. But
+      # an unsupported VALUE for a known argument is ignored by the adapter, so
+      # a renamed model tier degrades to the default instead of killing the run.
       *) printf 'ERROR: unknown engine argument %s\n' "$1" >&2; exit 2 ;;
     esac
   done

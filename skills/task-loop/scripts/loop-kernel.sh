@@ -83,6 +83,12 @@ ESTIMATE=false
 # Tier-2 is ON by default. An adversarial verifier you have to remember to run
 # is one nobody runs on the unattended path.
 JUDGE=""; VERIFY=false
+# Whether the OPERATOR spoke about tier 2. Without this the lane's default and an
+# explicit --no-verify are indistinguishable, and a FULL profile would silently
+# re-enable a check the operator just switched off.
+VERIFY_EXPLICIT=false
+# The cost dial. Empty means "let the lane decide"; a value here beats the table.
+LANE=""; MODEL_FLAG=""; EFFORT_FLAG=""; ATTEMPT_SECONDS_FLAG=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -111,10 +117,18 @@ while [ $# -gt 0 ]; do
     --isolation=*)    ISOLATION="${1#--isolation=}"; shift ;;
     # Naming a judge IS asking for tier 2 — requiring --verify alongside it would
     # be a flag that silently does nothing, which is worse than a missing flag.
-    --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; VERIFY=true; shift 2 ;;
-    --judge=*)        JUDGE="${1#--judge=}"; VERIFY=true; shift ;;
-    --verify)         VERIFY=true; shift ;;
-    --no-verify)      VERIFY=false; shift ;;
+    --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; VERIFY=true; VERIFY_EXPLICIT=true; shift 2 ;;
+    --judge=*)        JUDGE="${1#--judge=}"; VERIFY=true; VERIFY_EXPLICIT=true; shift ;;
+    --verify)         VERIFY=true; VERIFY_EXPLICIT=true; shift ;;
+    --no-verify)      VERIFY=false; VERIFY_EXPLICIT=true; shift ;;
+    --lane)           [ $# -ge 2 ] || { err "--lane requires FAST|NORMAL|FULL"; exit 2; }; LANE="$2"; shift 2 ;;
+    --lane=*)         LANE="${1#--lane=}"; shift ;;
+    --model)          [ $# -ge 2 ] || { err "--model requires haiku|sonnet|opus"; exit 2; }; MODEL_FLAG="$2"; shift 2 ;;
+    --model=*)        MODEL_FLAG="${1#--model=}"; shift ;;
+    --effort)         [ $# -ge 2 ] || { err "--effort requires low|medium|high"; exit 2; }; EFFORT_FLAG="$2"; shift 2 ;;
+    --effort=*)       EFFORT_FLAG="${1#--effort=}"; shift ;;
+    --attempt-seconds)   [ $# -ge 2 ] || { err "--attempt-seconds requires a number"; exit 2; }; ATTEMPT_SECONDS_FLAG="$2"; shift 2 ;;
+    --attempt-seconds=*) ATTEMPT_SECONDS_FLAG="${1#--attempt-seconds=}"; shift ;;
     --estimate)       ESTIMATE=true; shift ;;
     -h|--help)        grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)                err "unknown argument '$1'"; exit 2 ;;
@@ -191,6 +205,47 @@ tighter() {  # tighter <spec> <flag>  -> the smaller positive value
 BUDGET_ITER="$(tighter "$SPEC_ITER" "$MAX_ITER")"
 BUDGET_TOKENS="$(tighter "${SPEC_TOKENS:-}" "$MAX_TOKENS")"
 BUDGET_SECONDS="$(tighter "$((SPEC_MINUTES * 60))" "$MAX_SECONDS")"
+
+# --------------------------------------------------------------------------
+# The cost dial — what ONE attempt may spend.
+#
+# There used to be exactly one setting for every task: bare `claude -p`, no
+# model, no effort, flat 900s. So a four-file mechanical build drew the same
+# engine at the same reasoning effort as a greenfield service. Measured on the
+# first real run: 66 turns, 6,873,938 cache-read tokens, $7.91.
+#
+# `cvg lane` already classified work FAST | NORMAL | FULL and the verdict went
+# nowhere — it routed which PASSES ran and never reached what an attempt costs.
+# Now it does. The resolver is deliberately a separate script: the mapping is a
+# policy table that wants to be read and argued with, not grep-able bash.
+#
+# It ROUTES, it never WAIVES. Everything below is a DEFAULT: the spec's declared
+# budgets still pass through tighter(), so a lane can lower a ceiling and never
+# raise one, and an explicit flag still beats the table.
+# --------------------------------------------------------------------------
+SPEC_EFFORT="$(grep -m1 -E '^effort:' "$TASK_FILE" 2>/dev/null | sed 's/.*: *//' | tr -d '" ')"
+: "${SPEC_EFFORT:=M}"
+COST_RESOLVER="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/cost-profile.py"
+COST_LANE=""; COST_MODEL=""; COST_REASONING=""
+COST_ATTEMPT_SECONDS=""; COST_MAX_ITERATIONS=""; COST_VERIFY=""
+if [ -f "$COST_RESOLVER" ]; then
+  COST_ARGS=(--effort "$SPEC_EFFORT")
+  [ -n "$LANE" ] && COST_ARGS+=(--lane "$LANE")
+  COST_OUT="$(python3 "$COST_RESOLVER" "${COST_ARGS[@]}" 2>/dev/null || true)"
+  case "$COST_OUT" in
+    *COST_PROFILE=OK*) eval "$(printf '%s\n' "$COST_OUT" | grep -E '^COST_[A-Z_]+=')" ;;
+    *) printf 'note: cost profile unavailable for effort %s — engine defaults apply\n' "$SPEC_EFFORT" ;;
+  esac
+fi
+# A lane can only TIGHTEN the iteration ceiling, exactly like --max-iterations.
+BUDGET_ITER="$(tighter "$BUDGET_ITER" "${COST_MAX_ITERATIONS:-}")"
+# The per-attempt cap: an explicit --attempt-seconds wins, then the lane, then
+# the historical flat default that the engine lib already carries.
+ATTEMPT_SECONDS="${ATTEMPT_SECONDS_FLAG:-${COST_ATTEMPT_SECONDS:-}}"
+# Tier 2 defaults from the lane (FULL asks for it) unless the operator spoke.
+if [ "$VERIFY_EXPLICIT" != true ] && [ "${COST_VERIFY:-}" = "true" ]; then
+  VERIFY=true
+fi
 
 # --------------------------------------------------------------------------
 # Isolation — where the attempts actually happen
@@ -497,6 +552,21 @@ if [ "$NO_AGENT" = true ]; then
   printf 'engine: none (--no-agent: gate only, no attempts)\n'
 else
   printf 'engine: %s\n' "$AGENT"
+  # The dial, stated out loud. A run whose cost you cannot see before it starts
+  # is a run you cannot authorize, and this is the line that got missed for the
+  # first three: every task drew the top model at a flat 900s and nothing said so.
+  if [ -n "$COST_LANE" ]; then
+    printf 'lane: %s (effort %s) → model %s · reasoning %s · %ss per attempt\n' \
+      "$COST_LANE" "$SPEC_EFFORT" \
+      "${MODEL_FLAG:-$COST_MODEL}" "${EFFORT_FLAG:-$COST_REASONING}" \
+      "${ATTEMPT_SECONDS:-${ENGINE_TIMEOUT:-900}}"
+  fi
+  if [ "$VERIFY" = true ]; then
+    printf 'tier 2: ON%s — one extra engine dispatch on green\n' \
+      "$([ -n "$JUDGE" ] && printf ' (judge %s)' "$JUDGE")"
+  else
+    printf 'tier 2: off (--verify to enable)\n'
+  fi
 fi
 printf '────────────────────────────────────────────────────────\n'
 
@@ -510,8 +580,14 @@ printf '────────────────────────
 # worth reading before authorising something unattended.
 # --------------------------------------------------------------------------
 if [ "$ESTIMATE" = true ]; then
-  _eng_cap="${ENGINE_TIMEOUT:-900}"
+  _eng_cap="${ATTEMPT_SECONDS:-${ENGINE_TIMEOUT:-900}}"
   printf 'CEILING for this run — the most it can spend before the brakes stop it:\n'
+  if [ -n "$COST_LANE" ]; then
+    printf '  dial            : lane %s · effort %s · model %s · reasoning %s\n' \
+      "$COST_LANE" "$SPEC_EFFORT" "${MODEL_FLAG:-$COST_MODEL}" "${EFFORT_FLAG:-$COST_REASONING}"
+    printf '  tier 2          : %s\n' \
+      "$([ "$VERIFY" = true ] && printf 'ON — one extra engine dispatch on green' || printf 'off')"
+  fi
   printf '  attempts        : up to %s\n' "$BUDGET_ITER"
   printf '  per attempt     : up to %ss of engine wall-clock\n' "$_eng_cap"
   printf '  whole run       : hard stop at %ss, whichever comes first\n' "$BUDGET_SECONDS"
@@ -621,7 +697,15 @@ while :; do
   # Reset per attempt: a leaked non-zero from an earlier iteration would report
   # every later attempt as a failed engine call.
   ENGINE_RC=0
-  ENGINE_OUT="$(cd "$WORKSPACE_ROOT" && bash "$ENGINE" --prompt-file "$BRIEF" --workdir "$WORKSPACE_ROOT" 2>&1)" || ENGINE_RC=$?
+  # The kernel spells no vendor and no model id — it forwards a neutral tier and
+  # the adapter translates. An explicit flag beats the lane's default.
+  ENGINE_ARGS=(--prompt-file "$BRIEF" --workdir "$WORKSPACE_ROOT")
+  _eng_model="${MODEL_FLAG:-$COST_MODEL}"
+  _eng_effort="${EFFORT_FLAG:-$COST_REASONING}"
+  [ -n "$_eng_model" ]  && ENGINE_ARGS+=(--model "$_eng_model")
+  [ -n "$_eng_effort" ] && ENGINE_ARGS+=(--effort "$_eng_effort")
+  [ -n "$ATTEMPT_SECONDS" ] && ENGINE_ARGS+=(--timeout "$ATTEMPT_SECONDS")
+  ENGINE_OUT="$(cd "$WORKSPACE_ROOT" && bash "$ENGINE" "${ENGINE_ARGS[@]}" 2>&1)" || ENGINE_RC=$?
   printf '%s\n' "$ENGINE_OUT" > "$LOG"
 
   # Engines report what they spent when they can; absence is not zero, it is

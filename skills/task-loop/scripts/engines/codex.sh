@@ -25,6 +25,21 @@ cd "$ENG_WORKDIR" || exit 4
 # the work, and then BLOCKS forever waiting for an EOF that never arrives. The
 # watchdog eventually kills it at 124 and the whole attempt reads as a timeout,
 # which hides the fact that the model finished minutes earlier.
-to "$ENG_TIMEOUT" "$CMD" exec --sandbox workspace-write "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
+# Neutral tier -> this vendor's model ids. Codex names its own families, so the
+# map is a real translation here rather than a pass-through.
+ENG_ARGS=()
+case "$ENG_MODEL" in
+  haiku)  ENG_ARGS+=(--model gpt-5.4-mini) ;;
+  sonnet) ENG_ARGS+=(--model gpt-5.4) ;;
+  opus)   ENG_ARGS+=(--model gpt-5.4) ;;
+  *)      : ;;   # unknown or unset: ride the CLI default
+esac
+case "$ENG_EFFORT" in
+  low|medium|high) ENG_ARGS+=(-c "model_reasoning_effort=$ENG_EFFORT") ;;
+  *)               : ;;
+esac
+
+to "$ENG_TIMEOUT" "$CMD" exec --sandbox workspace-write \
+  "${ENG_ARGS[@]+"${ENG_ARGS[@]}"}" "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
 
 eng_finish "$RC"

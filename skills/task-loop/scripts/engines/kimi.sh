@@ -15,6 +15,16 @@ CMD="${CVG_KIMI_CMD:-kimi}"
 
 RC=0
 cd "$ENG_WORKDIR" || exit 4
-to "$ENG_TIMEOUT" "$CMD" --output-format text -p "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
+# Kimi exposes one family with a turbo/standard split, so the three tiers
+# collapse onto two. Collapsing is honest; inventing a third id would not be.
+ENG_ARGS=()
+case "$ENG_MODEL" in
+  haiku)         ENG_ARGS+=(--model kimi-k2-turbo-preview) ;;
+  sonnet|opus)   ENG_ARGS+=(--model kimi-k2-0905-preview) ;;
+  *)             : ;;
+esac
+
+to "$ENG_TIMEOUT" "$CMD" --output-format text \
+  "${ENG_ARGS[@]+"${ENG_ARGS[@]}"}" -p "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
 
 eng_finish "$RC"
