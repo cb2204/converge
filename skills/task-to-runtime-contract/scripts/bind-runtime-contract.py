@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -357,6 +358,35 @@ def main() -> int:
             ),
             encoding="utf-8",
         )
+        # 7C — the terrain pack, one per SWIMLANE.
+        #
+        # The brief above holds identifiers by design, and that is right for a
+        # thing that sits beside a sealed contract. But it left the executor to
+        # rediscover the seam shape, the ADR decisions and the vocabulary on
+        # every attempt — 66 turns and $7.91 on the first real run, re-paid in
+        # full each retry because context is deliberately fresh per attempt.
+        #
+        # Best-effort on purpose: a pack is derived and unsealed, carries no
+        # authority, and cannot widen scope. A bind that FAILED because terrain
+        # could not be assembled would be a bind blocked by a convenience.
+        try:
+            pack_script = Path(__file__).with_name("context-pack.py")
+            if pack_script.exists():
+                proc = subprocess.run(
+                    [sys.executable, str(pack_script), "--task", relpath(task, repo),
+                     "--repo", str(repo)],
+                    cwd=repo, text=True, capture_output=True, check=False,
+                )
+                for line in proc.stdout.splitlines():
+                    if line.startswith("Terrain pack:") or line.startswith("CONTEXT_PACK="):
+                        print(line)
+        except Exception as exc:  # noqa: BLE001 — never let terrain assembly fail a bind
+            # Report it. A silent `pass` here hid a NameError in this very block
+            # during development: bind kept printing PASS while quietly producing
+            # no pack, and the only symptom was a missing file nobody was looking
+            # for. Best-effort must still be audible.
+            print(f"note: terrain pack not assembled ({type(exc).__name__}: {exc})")
+
         adapter_dir = output.parent / "adapters"
         adapter_dir.mkdir(parents=True, exist_ok=True)
         for adapter in adapters:
@@ -380,8 +410,11 @@ def main() -> int:
         ]
         if args.supervised:
             command.append("--supervised")
-        import subprocess
-
+        # `import subprocess` used to sit HERE, function-local. Python then treats
+        # the name as local for the whole function, so the module-level import is
+        # shadowed and any EARLIER use in this same function raises
+        # UnboundLocalError. That is exactly what happened when the terrain-pack
+        # call was added above: bind printed PASS and silently produced no pack.
         return subprocess.run(command, cwd=repo, check=False).returncode
     except ContractError as exc:
         print(f"FAIL: {exc}")

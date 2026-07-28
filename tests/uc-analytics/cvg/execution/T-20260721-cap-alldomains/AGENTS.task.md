@@ -4,7 +4,7 @@
 
 - **Spec (canonical):** `cvg/tasks/T-20260721-cap-alldomains.md`
 - **Contract:** `cvg/execution/T-20260721-cap-alldomains/execution-profile.yaml`
-- **Epoch:** `T-20260721-cap-alldomains@ef4a6d16e637`
+- **Epoch:** `T-20260721-cap-alldomains@5e91fa6fcfe7`
 - **Project conventions:** `CLAUDE.md` (read it once; it is the router)
 
 ## Goal

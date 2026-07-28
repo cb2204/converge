@@ -15,14 +15,15 @@ creates_paths:
   - cvg/transform/tests/unique_business_key.sql
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
+parent: ../sketch/swimlane-transform/swimlane-transform-leg-01-dbt-silver.md
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T08:17:52Z
+signed_off_at: 2026-07-28T15:49:33Z
 tracker_ref: linear:CVG-24
 projection:
   milestone: Transform
-signed_off_sig: hmac-sha256-v2:1f197c76:c2c35561f508b4f8ade755ac0152f75872532f341ce0a43375f91b1ef6a97f40
+signed_off_sig: hmac-sha256-v2:1f197c76:b1da4760be4bd4f84c555608ed8628604e7c975110b420595df2e5c248a0e505
 ---
 
 # Transform — silver conform (dedup max-_lsn, UTC)

@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-srv-core@79aa8b4b83d4",
+    "epoch": "T-20260721-srv-core@f5877e16452b",
     "grants": [
       {
         "capability": "fs.read",
@@ -284,7 +284,7 @@
     "id": "T-20260721-srv-core",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-srv-core.md",
-      "sha256": "79aa8b4b83d41f83fb93567fd771a49f8c66ae30f31456826717853338a6a527"
+      "sha256": "f5877e16452bf5db3692f4f47b9e428b95219fa8caa53073a90edc6244b4e210"
     }
   },
   "topology": {

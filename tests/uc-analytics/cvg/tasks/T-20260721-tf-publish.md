@@ -14,14 +14,15 @@ creates_paths:
   - cvg/transform/tests/qset1_coverage.py
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
+parent: ../sketch/swimlane-transform/swimlane-transform-leg-03-ducklake.md
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T08:17:51Z
+signed_off_at: 2026-07-28T15:49:35Z
 tracker_ref: linear:CVG-26
 projection:
   milestone: Transform
-signed_off_sig: hmac-sha256-v2:1f197c76:7b4d456f18d26ee3f41b9ed750e81b3994068215b3e7dfb2b3e9435e7e7c2b41
+signed_off_sig: hmac-sha256-v2:1f197c76:9a5272714b37b8794c83bf26eb41877be91aa67275462b88de11d47544b6d474
 ---
 
 # Transform — publish gold as DuckLake (Q-SET-1 coverage)

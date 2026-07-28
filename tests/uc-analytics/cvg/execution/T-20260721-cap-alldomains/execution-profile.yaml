@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-cap-alldomains@ef4a6d16e637",
+    "epoch": "T-20260721-cap-alldomains@5e91fa6fcfe7",
     "grants": [
       {
         "capability": "fs.read",
@@ -288,7 +288,7 @@
     "id": "T-20260721-cap-alldomains",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-cap-alldomains.md",
-      "sha256": "ef4a6d16e6376491846d7677708358cab408fa2e2d5758b3b297629fb5251593"
+      "sha256": "5e91fa6fcfe79f7be542032778d5bcbd4c81ecceebf414104f6ed31fb9ddd324"
     }
   },
   "topology": {

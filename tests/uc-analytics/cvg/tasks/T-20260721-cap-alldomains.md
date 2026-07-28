@@ -16,14 +16,15 @@ creates_paths:
   - cvg/capture/tests/test_alldomains.py
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
+parent: ../sketch/swimlane-capture/swimlane-capture-leg-02-dlt.md
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T08:17:45Z
+signed_off_at: 2026-07-28T15:49:31Z
 tracker_ref: linear:CVG-22
 projection:
   milestone: Capture
-signed_off_sig: hmac-sha256-v2:1f197c76:0ff6c5c41d476753c3a9e9e9357daf01c1477039a505853f7c67dd01fad8e7a0
+signed_off_sig: hmac-sha256-v2:1f197c76:ff6e3abe632a84977cf4f37d9a163df0b6b8be01a83c7fca5b9d02df9fed79a0
 ---
 
 # Capture — land all four domains into raw.*

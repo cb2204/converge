@@ -5,10 +5,10 @@
   },
   "execution_profile": {
     "path": "cvg/execution/T-20260721-cap-steelthread/execution-profile.yaml",
-    "sha256": "81bb18c446f289f29a7968ee2d3aabbce3fac8fae1a1ce34a79f8fa4ae97dd17"
+    "sha256": "475e79b7e850eaf728dd034c396ea7742668ba119c91372ae6255439f3d9f064"
   },
   "generated_by": "task-loop",
-  "recorded_at": "2026-07-28T13:26:30Z",
+  "recorded_at": "2026-07-25T09:23:29Z",
   "result": "blocked",
   "runtime": {
     "agent": "claude",
@@ -18,6 +18,6 @@
   "task_id": "T-20260721-cap-steelthread",
   "task_spec": {
     "path": "cvg/tasks/T-20260721-cap-steelthread.md",
-    "sha256": "1d72ceb27f0b13811c1d842b0ce86f6f6aace4957e04dd6bc1e2bdb7f3b55b78"
+    "sha256": "e3067452407543245aae54caec272ba2801cccf97be02d3f6627862f0bd7ed3a"
   }
 }

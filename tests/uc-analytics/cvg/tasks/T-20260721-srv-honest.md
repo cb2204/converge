@@ -15,14 +15,15 @@ creates_paths:
   - cvg/serve/tests/test_freshness.py
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
+parent: ../sketch/swimlane-serve/swimlane-serve-leg-02-fastapi.md
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T08:17:47Z
+signed_off_at: 2026-07-28T15:49:36Z
 tracker_ref: linear:CVG-28
 projection:
   milestone: Serve
-signed_off_sig: hmac-sha256-v2:1f197c76:53d9950fffee1c64a300af86876a516b68174894565ab3fcf8cad76fd0586381
+signed_off_sig: hmac-sha256-v2:1f197c76:216ec5b29cf991d09a0fdd2d3008fe648e3ac2e4d92b535cd7b24c63f7e36f82
 ---
 
 # Serve — honest answers (as-of, staleness alert, audit)

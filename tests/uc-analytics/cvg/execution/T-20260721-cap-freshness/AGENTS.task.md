@@ -4,7 +4,7 @@
 
 - **Spec (canonical):** `cvg/tasks/T-20260721-cap-freshness.md`
 - **Contract:** `cvg/execution/T-20260721-cap-freshness/execution-profile.yaml`
-- **Epoch:** `T-20260721-cap-freshness@c84db3464eee`
+- **Epoch:** `T-20260721-cap-freshness@6df8dbb5a643`
 - **Project conventions:** `CLAUDE.md` (read it once; it is the router)
 
 ## Goal

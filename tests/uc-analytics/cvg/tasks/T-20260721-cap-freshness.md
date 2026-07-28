@@ -15,14 +15,15 @@ creates_paths:
   - cvg/capture/dagster/overhead_probe.py
 source_note: "R5.R — Pass 5B tasking of the backbone (Fork B, task-driven)"
 created: 2026-07-21T00:00:00Z
+parent: ../sketch/swimlane-capture/swimlane-capture-leg-03-dagster.md
 execution_backend: any
 signed_off: true
 signed_off_by: luanmorenomaciel
-signed_off_at: 2026-07-25T08:17:46Z
+signed_off_at: 2026-07-28T15:49:32Z
 tracker_ref: linear:CVG-23
 projection:
   milestone: Capture
-signed_off_sig: hmac-sha256-v2:1f197c76:acccb2aa8e748ac470c3cbe6a582093118d44c619af4969321b44760d0027e8a
+signed_off_sig: hmac-sha256-v2:1f197c76:ce9a8fa3a76a5e7d94273f42e83d2fedaa54e7b72de358f78368d8e1f1266d03
 ---
 
 # Capture — freshness + by-principal instrumentation (Dagster)

@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-tf-publish@7ccea7fd6b6b",
+    "epoch": "T-20260721-tf-publish@7d4a6f474c00",
     "grants": [
       {
         "capability": "fs.read",
@@ -284,7 +284,7 @@
     "id": "T-20260721-tf-publish",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-tf-publish.md",
-      "sha256": "7ccea7fd6b6b2626f74180afdf4991e341e5bd760428225c5aa50b125707b3f2"
+      "sha256": "7d4a6f474c00a54875bce985c68a59ad5f7af383f6f084db328995eed0b723f9"
     }
   },
   "topology": {

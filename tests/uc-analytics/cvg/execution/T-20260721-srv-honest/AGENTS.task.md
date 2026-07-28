@@ -4,7 +4,7 @@
 
 - **Spec (canonical):** `cvg/tasks/T-20260721-srv-honest.md`
 - **Contract:** `cvg/execution/T-20260721-srv-honest/execution-profile.yaml`
-- **Epoch:** `T-20260721-srv-honest@fed1a33a5dd9`
+- **Epoch:** `T-20260721-srv-honest@6040cf087d5f`
 - **Project conventions:** `CLAUDE.md` (read it once; it is the router)
 
 ## Goal

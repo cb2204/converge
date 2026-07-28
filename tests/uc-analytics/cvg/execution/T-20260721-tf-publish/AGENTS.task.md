@@ -4,7 +4,7 @@
 
 - **Spec (canonical):** `cvg/tasks/T-20260721-tf-publish.md`
 - **Contract:** `cvg/execution/T-20260721-tf-publish/execution-profile.yaml`
-- **Epoch:** `T-20260721-tf-publish@7ccea7fd6b6b`
+- **Epoch:** `T-20260721-tf-publish@7d4a6f474c00`
 - **Project conventions:** `CLAUDE.md` (read it once; it is the router)
 
 ## Goal

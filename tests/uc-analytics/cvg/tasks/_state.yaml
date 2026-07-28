@@ -6,53 +6,53 @@ tasks:
   path: tasks/T-20260721-cap-alldomains.md
   status: ready
   effort: M
-  last_validated: 2026-07-25T08:53:07Z
+  last_validated: 2026-07-28T15:49:46Z
   validator_version: 2
 - id: T-20260721-cap-freshness
   path: tasks/T-20260721-cap-freshness.md
   status: ready
   effort: M
-  last_validated: 2026-07-25T08:53:10Z
-  validator_version: 2
-- id: T-20260721-srv-core
-  path: tasks/T-20260721-srv-core.md
-  status: ready
-  effort: S
-  last_validated: 2026-07-25T08:53:15Z
-  validator_version: 2
-- id: T-20260721-srv-honest
-  path: tasks/T-20260721-srv-honest.md
-  status: ready
-  effort: M
-  last_validated: 2026-07-25T08:53:17Z
-  validator_version: 2
-- id: T-20260721-srv-mcp
-  path: tasks/T-20260721-srv-mcp.md
-  status: ready
-  effort: M
-  last_validated: 2026-07-25T08:53:19Z
-  validator_version: 2
-- id: T-20260721-tf-gold
-  path: tasks/T-20260721-tf-gold.md
-  status: ready
-  effort: M
-  last_validated: 2026-07-25T08:53:22Z
-  validator_version: 2
-- id: T-20260721-tf-publish
-  path: tasks/T-20260721-tf-publish.md
-  status: ready
-  effort: S
-  last_validated: 2026-07-25T08:53:24Z
-  validator_version: 2
-- id: T-20260721-tf-silver
-  path: tasks/T-20260721-tf-silver.md
-  status: ready
-  effort: M
-  last_validated: 2026-07-25T08:53:26Z
+  last_validated: 2026-07-28T15:49:47Z
   validator_version: 2
 - id: T-20260721-cap-steelthread
   path: tasks/T-20260721-cap-steelthread.md
   status: ready
   effort: L
-  last_validated: 2026-07-28T13:22:24Z
+  last_validated: 2026-07-28T15:49:49Z
+  validator_version: 2
+- id: T-20260721-srv-core
+  path: tasks/T-20260721-srv-core.md
+  status: ready
+  effort: S
+  last_validated: 2026-07-28T15:49:50Z
+  validator_version: 2
+- id: T-20260721-srv-honest
+  path: tasks/T-20260721-srv-honest.md
+  status: ready
+  effort: M
+  last_validated: 2026-07-28T15:49:51Z
+  validator_version: 2
+- id: T-20260721-srv-mcp
+  path: tasks/T-20260721-srv-mcp.md
+  status: ready
+  effort: M
+  last_validated: 2026-07-28T15:49:52Z
+  validator_version: 2
+- id: T-20260721-tf-gold
+  path: tasks/T-20260721-tf-gold.md
+  status: ready
+  effort: M
+  last_validated: 2026-07-28T15:49:53Z
+  validator_version: 2
+- id: T-20260721-tf-publish
+  path: tasks/T-20260721-tf-publish.md
+  status: ready
+  effort: S
+  last_validated: 2026-07-28T15:49:54Z
+  validator_version: 2
+- id: T-20260721-tf-silver
+  path: tasks/T-20260721-tf-silver.md
+  status: ready
+  effort: M
+  last_validated: 2026-07-28T15:49:55Z
   validator_version: 2

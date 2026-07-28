@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-cap-freshness@c84db3464eee",
+    "epoch": "T-20260721-cap-freshness@6df8dbb5a643",
     "grants": [
       {
         "capability": "fs.read",
@@ -286,7 +286,7 @@
     "id": "T-20260721-cap-freshness",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-cap-freshness.md",
-      "sha256": "c84db3464eee6362061e6d6b83bd59adf261d11cdedc83583e54382a0601371d"
+      "sha256": "6df8dbb5a6433fc30d9d4114fab2ac567bcc4a223e66adbd38e922392d6e6d0f"
     }
   },
   "topology": {

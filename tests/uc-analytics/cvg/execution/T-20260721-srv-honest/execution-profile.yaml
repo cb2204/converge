@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-srv-honest@fed1a33a5dd9",
+    "epoch": "T-20260721-srv-honest@6040cf087d5f",
     "grants": [
       {
         "capability": "fs.read",
@@ -286,7 +286,7 @@
     "id": "T-20260721-srv-honest",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-srv-honest.md",
-      "sha256": "fed1a33a5dd9da0992b07c010070bd7801390a9da31f426de90494f81033efb0"
+      "sha256": "6040cf087d5f0386dc37f7a1d64469276555abb7e5d65b68d1b0c0ad023c0ccf"
     }
   },
   "topology": {

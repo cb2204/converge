@@ -622,7 +622,26 @@ if [ "$PRE_RC" -eq 0 ]; then
   land NO_OP 0 "already green on arrival — nothing to do"
 fi
 LAST_FINGERPRINT="$(fingerprint "$PRE_OUT")"
-printf 'preflight: RED (expected — the work is not built yet)\n\n'
+printf 'preflight: RED (expected — the work is not built yet)\n'
+
+# The terrain pack for this task's swimlane, if Bind assembled one. Resolved from
+# the spec's `parent:` the same way context-pack.py does, so the two cannot
+# disagree about which lane a task belongs to.
+PACK_FILE=""
+_pack_parent="$(grep -m1 -E '^parent:' "$TASK_FILE" 2>/dev/null | sed 's/^parent:[[:space:]]*//' | tr -d '"'"'"' ')"
+case "$_pack_parent" in
+  *swimlane-*)
+    _pack_lane="$(printf '%s\n' "$_pack_parent" | tr '/' '\n' | grep -m1 '^swimlane-')"
+    _pack_try="$WORKSPACE_ROOT/cvg/execution/_packs/$_pack_lane.md"
+    [ -f "$_pack_try" ] && PACK_FILE="$_pack_try"
+    ;;
+esac
+if [ -n "$PACK_FILE" ]; then
+  printf 'terrain: %s (%s bytes) inlined into every attempt\n\n' \
+    "${PACK_FILE#"$WORKSPACE_ROOT"/}" "$(wc -c < "$PACK_FILE" | tr -d ' ')"
+else
+  printf 'terrain: no pack for this lane — the agent will rediscover it (run cvg bind)\n\n'
+fi
 
 # Claim the work in the tracker: this is where backlog becomes in-progress.
 tracker --phase claim --agent "$AGENT"
@@ -672,8 +691,27 @@ while :; do
     printf 'Done is the spec Exit Check exiting zero — not your judgement.\n'
     printf 'You may write ONLY inside the contract fs.write scope.\n'
     printf 'You may NOT edit the Task-Spec, its evals, or any test that grades you.\n\n'
+    # The terrain, inlined. Passes 2-4 already settled the seam shape, the
+    # governing decisions and the vocabulary; handing over a POINTER to them
+    # meant rediscovering all of it every attempt, because the context is
+    # deliberately fresh each time. One pack per swimlane, assembled at bind.
+    if [ -n "$PACK_FILE" ] && [ -f "$PACK_FILE" ]; then
+      printf '## Terrain you do not need to rediscover\n\n'
+      cat "$PACK_FILE"
+      printf '\n'
+    fi
     printf '## The failing verification you must fix\n\n```\n'
-    printf '%s\n' "$PRE_OUT" | tail -30
+    # Only the ASSERTIONS, not the runner's preamble. On attempt 1 the raw output
+    # is ~20 lines of contract banner, absolute paths and "do not open a PR"
+    # boilerplate wrapped around three `[fail]` lines — near-zero signal spent
+    # where the terrain should have been. Fall back to the tail only if the
+    # filter matches nothing, so an unexpected runner format still reports.
+    _failing="$(printf '%s\n' "$PRE_OUT" | grep -E '^\s*\[(fail|pass)\]|^\s*Exit Check:|^(RED|GREEN)$' || true)"
+    if [ -n "$_failing" ]; then
+      printf '%s\n' "$_failing"
+    else
+      printf '%s\n' "$PRE_OUT" | tail -30
+    fi
     printf '```\n'
     if [ "$ITER" -gt 1 ] && [ -f "$ATTEMPTS_DIR/$(printf '%03d' $((ITER - 1))).log" ]; then
       printf '\n## What the previous attempt did (do not repeat it)\n\n```\n'

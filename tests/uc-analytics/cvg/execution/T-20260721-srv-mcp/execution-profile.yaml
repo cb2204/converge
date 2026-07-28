@@ -11,7 +11,7 @@
         "epoch_change"
       ]
     },
-    "epoch": "T-20260721-srv-mcp@e4fb1cfde02b",
+    "epoch": "T-20260721-srv-mcp@9daca70bd0b3",
     "grants": [
       {
         "capability": "fs.read",
@@ -286,7 +286,7 @@
     "id": "T-20260721-srv-mcp",
     "spec_ref": {
       "path": "cvg/tasks/T-20260721-srv-mcp.md",
-      "sha256": "e4fb1cfde02bfd03d9db293ed270b151980a3fe1b381b68d6a8d078cc9913d39"
+      "sha256": "9daca70bd0b3159edfbbb8b02acfa70ca047aeba91dfc42a7ef350619708e3da"
     }
   },
   "topology": {
