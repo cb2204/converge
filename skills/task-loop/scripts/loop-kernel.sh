@@ -19,12 +19,17 @@
 #   * Verification is the task's own Exit Check — a level-1 deterministic check
 #     the agent cannot edit, because the eval is HMAC-sealed and sits outside
 #     the contract's fs.write scope.
-#   * A GREEN eval is necessary, not sufficient. Before settling, a DIFFERENT
+#   * A GREEN eval is necessary, not sufficient. With --verify, a DIFFERENT
 #     engine reads the diff, the spec's intent and the holdout — never the
 #     worker's transcript — and is prompted to refute. Tier 1 catches mechanical
 #     wrongness; only tier 2 catches a lookup table that satisfies the assertion.
-#     It ran as a separate command nobody was obliged to invoke, which meant the
-#     unattended path — the only one that matters — never used it.
+#
+#     It is OPT-IN, because it costs a full extra engine dispatch per green run
+#     and a slow judge can spend more than the work did. Making it the default
+#     was a mistake paid for immediately: a judge timed out at 300s and, because
+#     tier 2 fails closed, BLOCKED a task whose three evals had all passed. The
+#     rigor is real and belongs on high blast radius; charging every run for it
+#     is how a control gets switched off wholesale instead of aimed.
 #   * Stopping is a named terminal state. An error or an exhausted budget is
 #     NEVER success.
 #   * Budgets are three-axis (iterations, wall-clock, tokens) and checked BEFORE
@@ -40,7 +45,7 @@
 #        [--allow-external-writes] [--dry-run] [--resume]
 #        [--base BRANCH] [--contract PATH] [--legacy-no-contract]
 #        [--isolation worktree|inplace]   (worktree is the DEFAULT)
-#        [--judge codex|kimi|claude|gemini] [--no-verify]
+#        [--verify] [--judge codex|kimi|claude|gemini]
 #
 # The last three are not the loop's own controls — they belong to the eval runner
 # and the settler, and are forwarded verbatim so the kernel can sit in front of
@@ -77,7 +82,7 @@ ISOLATION="worktree"
 ESTIMATE=false
 # Tier-2 is ON by default. An adversarial verifier you have to remember to run
 # is one nobody runs on the unattended path.
-JUDGE=""; NO_VERIFY=false
+JUDGE=""; VERIFY=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -104,9 +109,12 @@ while [ $# -gt 0 ]; do
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
     --isolation)      [ $# -ge 2 ] || { err "--isolation requires worktree|inplace"; exit 2; }; ISOLATION="$2"; shift 2 ;;
     --isolation=*)    ISOLATION="${1#--isolation=}"; shift ;;
-    --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; shift 2 ;;
-    --judge=*)        JUDGE="${1#--judge=}"; shift ;;
-    --no-verify)      NO_VERIFY=true; shift ;;
+    # Naming a judge IS asking for tier 2 — requiring --verify alongside it would
+    # be a flag that silently does nothing, which is worse than a missing flag.
+    --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; VERIFY=true; shift 2 ;;
+    --judge=*)        JUDGE="${1#--judge=}"; VERIFY=true; shift ;;
+    --verify)         VERIFY=true; shift ;;
+    --no-verify)      VERIFY=false; shift ;;
     --estimate)       ESTIMATE=true; shift ;;
     -h|--help)        grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)                err "unknown argument '$1'"; exit 2 ;;
@@ -678,8 +686,8 @@ SETTLE_BASE="$BASE"
 # independent opinion is UNAVAILABLE, which verify-work.py itself permits only
 # for low blast radius.
 # --------------------------------------------------------------------------
-if [ "$NO_VERIFY" = true ]; then
-  printf '\n── tier 2 ── skipped (--no-verify): settling on the sealed eval alone\n'
+if [ "$VERIFY" != true ]; then
+  printf '\n── tier 2 ── not requested: settling on the sealed eval alone (--verify to enable)\n'
 elif [ ! -f "$VERIFIER" ]; then
   printf '\n── tier 2 ── verifier not found at %s — skipping\n' "$VERIFIER"
 else

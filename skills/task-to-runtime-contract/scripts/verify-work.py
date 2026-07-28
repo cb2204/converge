@@ -96,6 +96,61 @@ def pick_judge(requested: str | None, avoid_family: str) -> tuple[str, str]:
     return "", "none"
 
 
+def work_diff(repo: Path, base: str | None) -> str:
+    """Everything this run produced, whether it has been committed or not.
+
+    `git diff <base>` alone was wrong for the position this check now occupies.
+    Tier 2 runs BEFORE settlement — deliberately, since the whole point is to
+    refuse to settle unverified work — and at that moment the work is still
+    uncommitted. Worse, a `creates_paths` task's entire deliverable is UNTRACKED,
+    and `git diff` does not mention untracked files at all. So on the first real
+    green run the judge was handed an empty diff, reported ERROR, and the kernel
+    (correctly, since it fails closed) blocked a task whose evals had all passed.
+    The verifier was written for the post-hoc `cvg verify` case where the commit
+    already existed; wiring it in front of settlement exposed the assumption.
+
+    Three sources, unioned, mirroring check-path-policy.py's diff_paths():
+      * <base>..worktree — committed and uncommitted changes to tracked files
+      * HEAD..worktree   — in case base is absent or already equals HEAD
+      * each untracked file, rendered against /dev/null so the judge sees the
+        new code as a real unified diff rather than a filename
+    """
+    chunks: list[str] = []
+    tracked = [["git", "diff", base], ["git", "diff", "HEAD"]] if base else [["git", "diff", "HEAD"]]
+    for cmd in tracked:
+        proc = subprocess.run(cmd, cwd=repo, text=True, capture_output=True, check=False)
+        if proc.returncode == 0 and proc.stdout.strip():
+            chunks.append(proc.stdout.rstrip())
+
+    others = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard"],
+        cwd=repo, text=True, capture_output=True, check=False,
+    )
+    for name in sorted(set(line.strip() for line in others.stdout.splitlines() if line.strip())):
+        # Framework bookkeeping is not the task's work and must not be judged as
+        # it — the same exemption the path policy makes, for the same reason.
+        if name.startswith("cvg/loop/") or name == "cvg/STATE.md":
+            continue
+        shown = subprocess.run(
+            ["git", "diff", "--no-index", "--", "/dev/null", name],
+            cwd=repo, text=True, capture_output=True, check=False,
+        )
+        # --no-index exits 1 when the files differ, which is the normal case here.
+        if shown.stdout.strip():
+            chunks.append(shown.stdout.rstrip())
+
+    # De-duplicate: `git diff <base>` and `git diff HEAD` overlap whenever base
+    # IS HEAD, and handing the judge the same hunk twice invites it to read one
+    # change as two.
+    seen: set[str] = set()
+    unique = []
+    for chunk in chunks:
+        if chunk not in seen:
+            seen.add(chunk)
+            unique.append(chunk)
+    return "\n".join(unique).strip()
+
+
 def build_prompt(task_id: str, intent: str, holdout: str, diff: str) -> str:
     """The judge sees the diff, the intent, and the holdout — never the transcript."""
     return f"""You are an adversarial verifier. Your default position is REFUTED.
@@ -192,10 +247,7 @@ def main() -> int:
         result.update({"task": task_id, "blast_radius": radius,
                        "holdout_present": bool(holdout)})
 
-        proc = subprocess.run(
-            ["git", "diff", args.base], cwd=repo, text=True, capture_output=True, check=False
-        )
-        diff = proc.stdout.strip()
+        diff = work_diff(repo, args.base)
         if not diff:
             result.update({"verdict": "ERROR", "reason": "no diff to verify"})
             raise ContractError("there is no change to verify (empty diff)")

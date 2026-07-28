@@ -198,7 +198,7 @@ drop_ws "$W"
 # implementation from a lookup table that satisfies the same assertion, so a
 # refutation from an engine that did not do the work must STOP settlement.
 W="$(new_ws)"
-RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --verify
 if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT" && [ "$RK_RC" -eq 1 ]; then
   ok "tier-2 REFUTED blocks settlement even though the eval went green"
 else
@@ -214,7 +214,7 @@ drop_ws "$W"
 
 # A judge that dies mid-sentence returns no verdict. That is not a pass.
 W="$(new_ws)"
-RK_VERIFIER="$STUBS/verify-broken.sh" run_kernel "$W" --agent tstfix
+RK_VERIFIER="$STUBS/verify-broken.sh" run_kernel "$W" --agent tstfix --verify
 if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT"; then
   ok "tier-2 FAILS CLOSED — an unobtainable verdict never settles"
 else
@@ -225,7 +225,7 @@ drop_ws "$W"
 # UNAVAILABLE is the one verdict that proceeds: verify-work.py itself permits it
 # only for low blast radius, and that judgement belongs to the verifier.
 W="$(new_ws)"
-RK_VERIFIER="$STUBS/verify-unavail.sh" run_kernel "$W" --agent tstfix
+RK_VERIFIER="$STUBS/verify-unavail.sh" run_kernel "$W" --agent tstfix --verify
 if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
   ok "UNAVAILABLE proceeds — absence of a judge is not a refutation"
 else
@@ -233,14 +233,38 @@ else
 fi
 drop_ws "$W"
 
-# The escape hatch must exist and must be explicit.
+# Tier 2 is OPT-IN. A judge that would refute must not even be consulted unless
+# asked for: it costs a full extra engine dispatch, and making it the default
+# meant a judge timing out could block a task whose evals had all passed.
 W="$(new_ws)"
-RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --no-verify
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix
 if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT" \
-  && grep -q 'tier 2 ── skipped' <<<"$RK_OUT"; then
-  ok "--no-verify skips tier 2, and says so out loud"
+  && grep -q 'tier 2 ── not requested' <<<"$RK_OUT"; then
+  ok "tier 2 is OPT-IN — a refuting judge is not consulted without --verify"
 else
-  bad "--no-verify did not bypass the verifier"
+  bad "tier 2 ran (or was silent) without being asked: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
+drop_ws "$W"
+
+# Naming a judge is asking for the check. A --judge that needed --verify beside
+# it would be a flag that silently does nothing.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --judge codex
+if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT"; then
+  ok "--judge implies --verify (a flag that did nothing would be worse)"
+else
+  bad "--judge did not enable tier 2"
+fi
+drop_ws "$W"
+
+# The explicit opt-out still wins, so a profile that turns tier 2 on can be
+# overridden from the command line.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --verify --no-verify
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  ok "--no-verify overrides an earlier --verify (last flag wins)"
+else
+  bad "--no-verify could not turn tier 2 back off"
 fi
 drop_ws "$W"
 

@@ -595,6 +595,50 @@ else
   bad "verification produced an unearned verdict: $VERIFY_OUT"
 fi
 
+# The judge must be shown UNTRACKED work.
+#
+# `git diff` never mentions untracked files, and tier 2 runs BEFORE settlement —
+# deliberately, since the point is to refuse to settle unverified work — so at
+# that moment a creates_paths task's ENTIRE deliverable is untracked. On the
+# first real green run the judge was handed an empty diff, reported ERROR, and
+# (correctly, since it fails closed) blocked a task whose three evals had all
+# passed. The verifier was written for the post-hoc `cvg verify` case where the
+# commit already existed; wiring it in front of settlement exposed that.
+export VW_PATH="$SKILL_DIR/scripts/verify-work.py"
+NEWFILE_DIR="$TMP_REPO/untracked-probe"
+mkdir -p "$NEWFILE_DIR"
+printf 'def real_work():\n    return "not a stub"\n' > "$NEWFILE_DIR/brand_new.py"
+DIFF_SEEN="$(cd "$TMP_REPO" && python3 - <<'PY' 2>&1
+import importlib.util, os, pathlib
+spec = importlib.util.spec_from_file_location("vw", os.environ["VW_PATH"])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(m.work_diff(pathlib.Path("."), None))
+PY
+)"
+if grep -q 'brand_new.py' <<<"$DIFF_SEEN" && grep -q 'not a stub' <<<"$DIFF_SEEN"; then
+  ok "the judge is shown untracked files, not an empty diff"
+else
+  bad "a brand-new file was invisible to tier 2 (the empty-diff bug)"
+fi
+# Framework bookkeeping is not the task's work and must not be judged as it —
+# the same exemption the path policy makes, for the same reason.
+mkdir -p "$TMP_REPO/cvg/loop/T-20260602-golden"
+printf 'attempt noise\n' > "$TMP_REPO/cvg/loop/T-20260602-golden/HANDOFF.md"
+printf '| a | b |\n' > "$TMP_REPO/cvg/STATE.md"
+DIFF_SEEN2="$(cd "$TMP_REPO" && python3 - <<'PY' 2>&1
+import importlib.util, os, pathlib
+spec = importlib.util.spec_from_file_location("vw", os.environ["VW_PATH"])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print(m.work_diff(pathlib.Path("."), None))
+PY
+)"
+if ! grep -q 'HANDOFF.md' <<<"$DIFF_SEEN2" && ! grep -q 'STATE.md' <<<"$DIFF_SEEN2"; then
+  ok "the loop's own bookkeeping is not put in front of the judge"
+else
+  bad "framework output leaked into the diff under judgement"
+fi
+rm -rf "$NEWFILE_DIR" "$TMP_REPO/cvg/loop" "$TMP_REPO/cvg/STATE.md"
+
 # The router scaffold must never clobber a human-authored file.
 printf '# my own router\n' > "$TMP_REPO/AGENTS.md"
 (cd "$TMP_REPO" && python3 "$SKILL_DIR/scripts/scaffold-router.py" --repo "$TMP_REPO" >/dev/null 2>&1) || true
