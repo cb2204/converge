@@ -1,0 +1,37 @@
+# Repo write fence — the one a Task-Spec cannot widen.
+#
+# The contract answers "may THIS task write here?".
+# This file answers "may ANY task ever write here?".
+# Denylist beats contract, always. It is not part of the signed payload, so
+# re-signing a spec cannot buy access to anything listed below.
+#
+# Checked by check-path-policy.py on every settlement, and by `cvg gate`.
+version: 1
+
+denylist:
+  # Credentials and key material — an agent has no business here, ever.
+  - ".env"
+  - ".env.*"
+  - "**/secrets/**"
+  - "**/credentials/**"
+  - "**/*_key*"
+  - "**/*_secret*"
+  - "**/id_rsa*"
+  # The signing key is what makes Tier-1 trust mean anything. A loop that could
+  # reach it could forge its own sign-off.
+  - ".git/info/taskspec-signing-key"
+  # Infrastructure and money — irreversible, or expensive to get wrong.
+  - ".terraform/**"
+  - "**/migrations/**"
+  - "auth/**"
+  - "payments/**"
+  - "billing/**"
+  # The gate may not edit the gate.
+  - ".cvg/gate.yaml"
+  # CI defines what "verified" means. An agent that edits its own verifier is
+  # the specification-gaming failure mode, not a productive one.
+  - ".github/workflows/**"
+
+# Blast radius, orthogonal to paths: twelve in-scope files changed by an
+# unattended agent is a different event from two, even when every path is legal.
+max_files: 12

@@ -40,7 +40,11 @@ jobs:
       - name: shellcheck
         run: |
           if ! command -v shellcheck >/dev/null 2>&1; then
-            sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+            if [ "$RUNNER_OS" = "macOS" ]; then
+              brew install shellcheck
+            else
+              sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+            fi
           fi
           # Every nested script directory must be listed explicitly — a glob that
           # stops at scripts/*.sh silently exempts the newest code from the gate,
@@ -52,7 +56,6 @@ jobs:
             skills/*/scripts/adapters/*.sh \
             skills/*/scripts/engines/*.sh \
             tests/*.sh
-        if: runner.os == 'Linux'
 
       - name: every skill is valid
         # Print WHY, not just which. Discarding the validator's output made all

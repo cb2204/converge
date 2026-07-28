@@ -736,6 +736,31 @@ rm -rf "$NEST"
 # protect (no two tasks write the same file) went unverified. That property is
 # what makes a swimlane decomposition safe to dispatch in parallel.
 LINTER="$SCRIPT_DIR/lint-backlog.sh"
+
+# lint-backlog.sh needs bash 4 (associative arrays); ts_require_bash4 re-execs
+# under one if it can find it and exits 3 if it cannot. On a stock-macOS host —
+# bash 3.2 only, which is this repo's portability FLOOR — `cvg lint` therefore
+# cannot run at all, and these three rows would fail for the host's bash rather
+# than for the behaviour they test. That is exactly what happened on CI's
+# macos-latest leg while passing here, because homebrew bash 5 sits first on this
+# author's PATH.
+#
+# So: find a bash 4 anywhere standard and use it. Only when none exists do we
+# skip, and then LOUDLY — a quiet skip is how a gate stops meaning anything, and
+# the repo's own CI header makes that argument about secret-gated jobs.
+LINT_BASH=""
+for _lb_cand in bash /opt/homebrew/bin/bash /usr/local/bin/bash /bin/bash; do
+  _lb_major="$("$_lb_cand" -c 'echo ${BASH_VERSINFO[0]}' 2>/dev/null || echo 0)"
+  if [ "${_lb_major:-0}" -ge 4 ] 2>/dev/null; then LINT_BASH="$_lb_cand"; break; fi
+done
+
+if [ -z "$LINT_BASH" ]; then
+  echo "  SKIP  backlog write-surface rows — no bash >= 4 on this host, so"
+  echo "        \`cvg lint\` cannot run here at all (see ts_require_bash4)."
+  echo "        This is a real gap in the product, not in the test: lint-backlog.sh"
+  echo "        uses associative arrays against a stated bash 3.2 floor."
+else
+
 LB="$(mktemp -d -t ts-lintbacklog-XXXXXX)"
 mkdir -p "$LB/tasks"
 _mkspec() {  # _mkspec <name> <created-path>
@@ -761,7 +786,7 @@ EOF
 _mkspec collide-a cvg/capture/shared.py
 _mkspec collide-b cvg/capture/shared.py
 set +e
-LB_OUT="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1)"; LB_RC=$?
+LB_OUT="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" "$LINT_BASH" "$LINTER" 2>&1)"; LB_RC=$?
 set -e
 if [[ $LB_RC -ne 0 ]] && grep -q 'creates_paths collision' <<<"$LB_OUT"; then
   pass "a creates_paths collision is caught (it was invisible before)"
@@ -776,7 +801,7 @@ _mkspec lane-cap cvg/capture/orders.py
 _mkspec lane-srv cvg/serve/api.py
 _mkspec lane-tf  cvg/transform/silver.sql
 set +e
-LB_OUT2="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1)"; LB_RC2=$?
+LB_OUT2="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" "$LINT_BASH" "$LINTER" 2>&1)"; LB_RC2=$?
 set -e
 if [[ $LB_RC2 -eq 0 ]] && grep -q 'concurrency partition' <<<"$LB_OUT2" \
   && grep -q 'cvg/capture' <<<"$LB_OUT2" && grep -q 'cvg/serve' <<<"$LB_OUT2" \
@@ -804,13 +829,14 @@ creates_paths:
 ---
 # lint probe spanner
 EOF
-LB_OUT3="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" bash "$LINTER" 2>&1 || true)"
+LB_OUT3="$(TASKSPEC_BACKLOG_DIR="$LB/tasks" "$LINT_BASH" "$LINTER" 2>&1 || true)"
 if grep -q 'T-20260101-spanner writes across 2 prefixes' <<<"$LB_OUT3"; then
   pass "a task that breaks the lane partition is named"
 else
   fail "a cross-prefix task was not flagged"
 fi
 rm -rf "$LB"
+fi   # end: bash >= 4 available
 
 # ---------------------------------------------------------------------------
 # Summary
