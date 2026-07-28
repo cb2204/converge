@@ -1,0 +1,23 @@
+{
+  "evaluation": {
+    "output_sha256": "3c59d1b6c3e0caaaed5d91a1d69d4092c84817bd6220aaddcba4d0470e6fc1eb",
+    "path_policy": "pass"
+  },
+  "execution_profile": {
+    "path": "cvg/execution/T-20260721-tf-gold/execution-profile.yaml",
+    "sha256": "be3e7e4bb6c50239073e69a9df2f6a75b47fd258e471fede9a7cd6c140094014"
+  },
+  "generated_by": "task-loop",
+  "recorded_at": "2026-07-28T22:09:15Z",
+  "result": "pass",
+  "runtime": {
+    "agent": "claude",
+    "branch": "task/tf-gold"
+  },
+  "schema": "cvg.execution-receipt.v1",
+  "task_id": "T-20260721-tf-gold",
+  "task_spec": {
+    "path": "cvg/tasks/T-20260721-tf-gold.md",
+    "sha256": "34ba01db3ae479edb222db20534153be0e9baa543e1989c09ce460325f311032"
+  }
+}
