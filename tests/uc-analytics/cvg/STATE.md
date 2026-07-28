@@ -10,3 +10,4 @@ An error or an exhausted budget is never recorded as success.
 | 2026-07-27T21:17:43Z | `T-20260721-cap-steelthread` | claude | **BLOCKED** | 1/2 | the eval went green but settlement refused — read the guard verdict above |
 | 2026-07-28T13:51:16Z | `T-20260721-cap-steelthread` | claude | **BLOCKED** | 1/15 | tier-2 returned no usable verdict (rc=1) — a verdict that cannot be obtained is never a pa |
 | 2026-07-28T16:09:12Z | `T-20260721-cap-steelthread` | claude | **LOCAL_SETTLED** | 1/5 | — |
+| 2026-07-28T19:11:28Z | `T-20260721-cap-alldomains` | claude | **ERROR** | 1/5 | the verification step itself could not run |

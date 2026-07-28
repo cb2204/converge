@@ -212,7 +212,37 @@ load-bearing gap. It is deliberately *after* the loop closes once by hand.
    call, a stagnation detector, a fresh process per attempt, durable checkpoints,
    eight named terminal states, one adapter per engine. 11 hermetic checks green
    (`tests/test-loop-kernel.sh`, stub engines — no model called, no token spent).
-4. **R8 · drive CVG-21 to GREEN** ⟵ **NOW** — the loop runs end to end and lands
+4. ~~R8 · drive CVG-21 to GREEN~~ — **done 2026-07-28.**
+
+### The ordered plan as of 2026-07-28 (the current beat)
+
+Written down because it has to survive a context loss — the same reason the loop
+keeps its state on disk instead of in a conversation.
+
+1. **Crank CVG-22 (`cap-alldomains`)** — the frontier. Everything is staged: cluster
+   healthy, terrain pack built, dial = NORMAL/M → sonnet · medium · 600s · 5 iters,
+   tier 2 off. Watch for a 5th instance of the run-context defect class.
+2. **Reconcile the board** after it lands (`cvg register`) — parity now works.
+3. **Tracker enforcement** (`tracker_mode=authoritative`): loop preflight REFUSES an
+   unreachable board; the fail-soft bridge records a pending-sync debt instead of
+   swallowing (`always 0 for write phases` today); `cvg ready` blocks while debt
+   exists; `register --check` compares STATUS not just mapping; `--reconcile` drains.
+   The REFEREE writes the board, never the sandboxed agent.
+4. **D1 · one run-context resolver** — workspace root, base commit, changed-path set
+   incl. untracked, framework exemptions. FOUR instances of this one cause have been
+   patched (eval CWD · settlement base · tier-2 diff · receipt location); a fifth is
+   coming, and the Manager would multiply it across 8 tasks. Do this BEFORE 6.
+5. **Harvest** — lessons for passes 4,5,6,7,8 (0–3 exist). Then merge to main and
+   tag; note v0.1 is already taken, so this is **v0.2**.
+6. **The Manager** — and it is SIMPLER than assumed here: the uc-analytics DAG is a
+   7-deep chain with ONE 2-wide fork (`cap-freshness` ∥ `tf-silver`). It needs
+   unattended sequencing, not fan-out. `cvg lint` now reports the write-disjoint
+   partition, so safety is checkable before dispatch.
+
+**Also true now:** CI has run for the first time and is **green on ubuntu AND
+macos** (7 host-dependent defects found in 5 runs). The repo write fence
+(`.cvg/gate.yaml`) is finally shipped — it had never been committed, so every clone
+had no standing fence. `CHECK_REGISTER=OK` against the live board. — the loop runs end to end and lands
    correctly RED on the frontier task; what remains is the work itself
    (`cap-steelthread`). *This is the single highest-value next act: it closes the
    loop for the first time.* Two things to expect: `uc-analytics-postgres` must
@@ -352,10 +382,12 @@ their full narrative lives in §10 and in git history.
 - [~] **R8 · Pass 8 The Loop** — the verb exists (`cvg loop`, 0.19.0) and now
   routes to the **kernel** (0.20.0) rather than the settler, so the pass is finally
   a loop: budgets enforced, stagnation detected, fresh process per attempt, named
-  terminal states, `tests/test-loop-kernel.sh` 11/11 green with stub engines.
+  terminal states, `tests/test-loop-kernel.sh` **45/45** green with stub engines.
   Run end-to-end on `T-20260721-cap-steelthread`: resolved its spec and contract in
   the nested workspace, went RED for the right reason, refused the PR, wrote a
-  blocked receipt. **What remains: drive it to GREEN.** Requires
+  blocked receipt. **CLOSED 2026-07-28: `TASK_LOOP=LOCAL_SETTLED` on CVG-21**, `ACCEPTED=1`, one
+  iteration, 906s, 37 turns / $1.69 (was 66 turns / $7.91 before the cost dial and
+  the terrain pack). What remains is n>1 — 8 of 9 tasks unbuilt. Requires
   `uc-analytics-postgres` up, and it will land `LOCAL_SETTLED` because the profile
   denies external writes. This is where Track M wakes up.
 
