@@ -55,12 +55,20 @@ jobs:
         if: runner.os == 'Linux'
 
       - name: every skill is valid
+        # Print WHY, not just which. Discarding the validator's output made all
+        # twelve skills report a bare "INVALID" on macOS — the real cause was one
+        # ImportError (PyYAML is absent on that image), and the log said nothing
+        # about it. A gate that hides its own reason costs a round-trip to
+        # diagnose and teaches you to distrust it.
         run: |
           fail=0
           for d in skills/*/; do
             [ -f "$d/SKILL.md" ] || continue
-            python3 skills/skill-creator/scripts/quick_validate.py "$d" >/dev/null 2>&1 \
-              || { echo "INVALID: $d"; fail=1; }
+            if ! out="$(python3 skills/skill-creator/scripts/quick_validate.py "$d" 2>&1)"; then
+              echo "INVALID: $d"; echo "$out" | sed 's/^/    /'; fail=1
+            elif [ "$out" != "Skill is valid!" ]; then
+              echo "INVALID: $d"; echo "$out" | sed 's/^/    /'; fail=1
+            fi
           done
           exit $fail
 

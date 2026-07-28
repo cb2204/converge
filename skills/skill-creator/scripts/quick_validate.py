@@ -6,8 +6,58 @@ Quick validation script for skills - minimal version
 import sys
 import os
 import re
-import yaml
 from pathlib import Path
+
+
+class FrontmatterError(ValueError):
+    """The frontmatter could not be read as a flat mapping."""
+
+
+def _scalar(value):
+    """Unquote a plain YAML scalar. Nothing else — no types, no anchors."""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
+def parse_frontmatter(text):
+    """Read SKILL.md frontmatter with the standard library only.
+
+    PyYAML is NOT stdlib. It happens to be preinstalled on GitHub's ubuntu image
+    and on this author's homebrew python, and is ABSENT on macos-latest — so
+    `import yaml` made CI report all twelve skills INVALID on macOS while passing
+    on Linux, and it would break the verification command the README tells users
+    to run (`quick_validate.py <skill>`) for anyone without PyYAML installed.
+    This was the only non-stdlib import in the whole repository, against a stated
+    portability floor of bash 3.2 and stdlib python.
+
+    The grammar actually needed is small: a flat map of scalars, plus an optional
+    nested `metadata:` block and optional folded scalars. That does not justify a
+    dependency, so it is parsed directly. Anything richer than this grammar is an
+    error rather than a silent misread — a validator that quietly misunderstands
+    its input is worse than one that refuses it.
+    """
+    data = {}
+    key = None
+    for raw in text.splitlines():
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        if raw[0] not in " \t":
+            match = re.match(r"^([A-Za-z0-9_-]+):\s*(.*)$", raw)
+            if not match:
+                raise FrontmatterError(f"cannot parse line: {raw!r}")
+            key = match.group(1)
+            value = match.group(2).strip()
+            # An empty value opens either a folded scalar (`>`, `|`) or a nested
+            # block; both are accumulated from the indented lines that follow.
+            data[key] = "" if value in (">", ">-", "|", "|-", "") else _scalar(value)
+        else:
+            if key is None:
+                raise FrontmatterError(f"indented line before any key: {raw!r}")
+            if isinstance(data.get(key), str):
+                extra = raw.strip()
+                data[key] = f"{data[key]} {extra}".strip() if data[key] else extra
+    return data
 
 def validate_skill(skill_path):
     """Basic validation of a skill"""
@@ -32,10 +82,10 @@ def validate_skill(skill_path):
 
     # Parse YAML frontmatter
     try:
-        frontmatter = yaml.safe_load(frontmatter_text)
+        frontmatter = parse_frontmatter(frontmatter_text)
         if not isinstance(frontmatter, dict):
             return False, "Frontmatter must be a YAML dictionary"
-    except yaml.YAMLError as e:
+    except FrontmatterError as e:
         return False, f"Invalid YAML in frontmatter: {e}"
 
     # Define allowed properties

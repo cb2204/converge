@@ -24,7 +24,21 @@ KEY_FILE="$(mktemp -t cvg-runtime-key.XXXXXX)"
 cleanup() { rm -rf "$TMP_REPO"; rm -f "$KEY_FILE"; }
 trap cleanup EXIT
 
+# Pin the fixture's branch NAME, because six checks below pass `--base main`.
+#
+# `git init` names the first branch from the HOST's init.defaultBranch: `main` on
+# a machine configured that way, `master` on a stock runner. So those checks were
+# asserting against a ref that existed only on the author's laptop — on GitHub's
+# ubuntu image `main` does not resolve, the diff errors, settlement is refused,
+# and two WP4 checks fail for a reason that has nothing to do with WP4. The suite
+# was measuring the developer's git config.
+#
+# `symbolic-ref` (not `init -b`, which needs git >= 2.28) works on every version
+# and before the first commit, which is the portability floor this repo claims.
+pin_branch() { git -C "$1" symbolic-ref HEAD refs/heads/main; }
+
 git -C "$TMP_REPO" init --quiet
+pin_branch "$TMP_REPO"
 git -C "$TMP_REPO" config user.email runtime-contract@test.local
 git -C "$TMP_REPO" config user.name "runtime contract test"
 mkdir -p "$TMP_REPO/tasks" "$TMP_REPO/cvg/knowledge/failures" "$TMP_REPO/cvg/knowledge/references"
@@ -665,6 +679,7 @@ fi
 # directory — it could not find its own task.
 NEST_REPO="$(mktemp -d -t cvg-nestloop.XXXXXX)"
 git -C "$NEST_REPO" init --quiet
+pin_branch "$NEST_REPO"
 git -C "$NEST_REPO" config user.email nest@test.local
 git -C "$NEST_REPO" config user.name "nest test"
 WS="$NEST_REPO/projects/demo"
@@ -701,6 +716,7 @@ rm -rf "$NEST_REPO"
 
 WP4_REPO="$(mktemp -d -t cvg-wp4.XXXXXX)"
 git -C "$WP4_REPO" init --quiet
+pin_branch "$WP4_REPO"
 git -C "$WP4_REPO" config user.email wp4@test.local
 git -C "$WP4_REPO" config user.name "wp4 test"
 mkdir -p "$WP4_REPO/tasks"
