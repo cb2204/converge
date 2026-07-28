@@ -1,0 +1,44 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: orders
+        description: >
+          Landing table for the orders domain — one row per captured change
+          event (insert/update/delete), keyed by (order_id, _lsn).
+
+models:
+  - name: orders
+    description: >
+      Silver-conformed orders: one row per business key (order_id), deduped
+      to the max-_lsn change event. A max-_lsn delete tombstone removes the
+      key from silver. Timestamps are UTC (timestamptz) — no naive columns.
+    columns:
+      - name: order_id
+        description: Business key — unique per the silver grain.
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - not_null
+      - name: ordered_at
+        description: UTC event time (timestamptz) — the order placement time axis.
+        tests:
+          - not_null
+      - name: _lsn
+        description: Capture LSN of the winning event for this business key.
+        tests:
+          - not_null
+      - name: _op
+        description: Change op of the winning event; never 'delete' in silver.
+        tests:
+          - not_null
