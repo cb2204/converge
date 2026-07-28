@@ -17,7 +17,8 @@
 # any network or history mutation.
 #
 # Usage:
-#   bash open-issue-pr.sh --issue <id|slug|path> [--dry-run] [--base BRANCH]
+#   bash open-issue-pr.sh --issue <id|slug|path> [--dry-run] [--base COMMIT]
+#                         [--pr-base BRANCH]
 #                         [--agent claude|codex|kimi] [--tasks-dir DIR]
 #                         [--contract PROFILE] [--legacy-no-contract]
 #
@@ -42,7 +43,11 @@ err() {
 # ----- Args -----
 ISSUE=""
 DRY_RUN=false
+# BASE is the DIFF reference (a commit — "what did this run change?").
+# PR_BASE is the MERGE target (a branch — "where should this land?").
+# They are not interchangeable; see the note at the GREEN PATH guard.
 BASE=""
+PR_BASE=""
 AGENT="claude"
 TASKS_DIR=""
 CONTRACT=""
@@ -56,6 +61,8 @@ while [ $# -gt 0 ]; do
     --dry-run|-n) DRY_RUN=true; shift ;;
     --base)      [ $# -ge 2 ] || err "--base requires a value"; BASE="$2"; shift 2 ;;
     --base=*)    BASE="${1#--base=}"; shift ;;
+    --pr-base)   [ $# -ge 2 ] || err "--pr-base requires a value"; PR_BASE="$2"; shift 2 ;;
+    --pr-base=*) PR_BASE="${1#--pr-base=}"; shift ;;
     --agent)     [ $# -ge 2 ] || err "--agent requires a value"; AGENT="$2"; shift 2 ;;
     --agent=*)   AGENT="${1#--agent=}"; shift ;;
     --tasks-dir) [ $# -ge 2 ] || err "--tasks-dir requires a value"; TASKS_DIR="$2"; shift 2 ;;
@@ -327,8 +334,26 @@ echo "GREEN — issue '$ISSUE' ($TASK_ID) converged. Opening a PR."
 echo "======================================================================"
 
 # --- guard: never work off main directly; ensure the task branch ---
+#
+# `--base` and the PR's base are TWO DIFFERENT QUESTIONS and must not share one
+# value. The path guard above asks "what did this run change?" and needs an EXACT
+# COMMIT, which is why the kernel passes the sha it forked from. `gh pr create
+# --base` asks "which branch should this merge into?" and a sha is not a legal
+# answer — GitHub rejects it with `Base ref must be a branch`, and confusingly
+# also `No commits between <sha> and <branch>` even when the branch is one commit
+# ahead. Reusing $BASE for both meant the FIRST live PR attempt failed on work
+# that was green, committed and already pushed.
+#
+# So the PR base is resolved independently: --pr-base wins (the kernel passes the
+# branch it forked from), then the repo's default branch, then whatever branch we
+# are on — and a value that is not a branch is refused rather than sent.
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
-DEFAULT_BASE="$BASE"
+DEFAULT_BASE="$PR_BASE"
+if [ -z "$DEFAULT_BASE" ] && [ -n "$BASE" ] \
+   && git show-ref --verify --quiet "refs/heads/$BASE" 2>/dev/null; then
+  # An explicit --base that genuinely names a branch is still a fine PR target.
+  DEFAULT_BASE="$BASE"
+fi
 if [ -z "$DEFAULT_BASE" ]; then
   # Prefer the repo's real default branch; fall back to main/master/current.
   DEFAULT_BASE="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"

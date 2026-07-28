@@ -272,6 +272,13 @@ fi
 # green, correct, in-scope run refused settlement, and the guard was right about
 # the diff it was shown and wrong about which diff to ask for.
 LOOP_BASE_COMMIT="$(git -C "$GIT_ROOT" rev-parse HEAD 2>/dev/null || echo "")"
+# ...and the BRANCH that commit sits on, captured here for the same reason: this
+# is the last moment we are standing on it, before the worktree is cut. The diff
+# question wants the commit; the "where does this PR land?" question wants the
+# branch, and answering the second with the first is what made the first live PR
+# attempt fail (`Base ref must be a branch`) on work that was already pushed.
+LOOP_BASE_BRANCH="$(git -C "$GIT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+[ "$LOOP_BASE_BRANCH" = "HEAD" ] && LOOP_BASE_BRANCH=""   # detached: no branch to name
 
 ORIGINAL_WORKSPACE="$WORKSPACE_ROOT"
 WORKTREE_DIR=""
@@ -877,6 +884,7 @@ printf '\n── settlement ──\n'
 SETTLE_ARGS=(--issue "$TASK_FILE" --tasks-dir "$RESOLVED_TASKS_DIR" --agent "$AGENT")
 [ "$ALLOW_EXTERNAL" = true ] && SETTLE_ARGS+=(--allow-external-writes)
 [ -n "$SETTLE_BASE" ] && SETTLE_ARGS+=(--base "$SETTLE_BASE")
+[ -n "$LOOP_BASE_BRANCH" ] && SETTLE_ARGS+=(--pr-base "$LOOP_BASE_BRANCH")
 [ -n "$CONTRACT" ] && SETTLE_ARGS+=(--contract "$CONTRACT")
 [ "$LEGACY_NO_CONTRACT" = true ] && SETTLE_ARGS+=(--legacy-no-contract)
 SETTLE_RC=0
