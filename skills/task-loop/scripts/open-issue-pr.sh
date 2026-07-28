@@ -164,17 +164,28 @@ case "$CONTRACT" in /*) : ;; *) CONTRACT="$WORKSPACE_ROOT/$CONTRACT" ;; esac
 if [ "$EVAL_RC" -eq 0 ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
   PATH_GUARD="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-path-policy.py"
   PATH_ARGS=(--profile "$CONTRACT" --repo "$WORKSPACE_ROOT")
+  # Which reference does "what this run changed" mean?
+  #
+  # Guessing the default branch here was a real defect, not a rough edge.
+  # `<base>...HEAD` is merge-base-relative, so on a branch cut from a FEATURE
+  # branch the merge-base with `main` sits at the point that feature branch
+  # diverged — and every commit on it lands in the diff. The first real run put
+  # 135 workspace paths in front of a guard authorized for 4, and settlement was
+  # refused on work that was entirely in scope.
+  #
+  # So: an explicit --base wins (the loop kernel always passes the exact commit
+  # it forked from). Failing that, the branch's own upstream. Failing THAT we
+  # compare nothing but the uncommitted work and say so out loud — a narrower
+  # comparison is honest, whereas a wrong-but-wide one manufactures violations.
   POLICY_BASE="$BASE"
   if [ -z "$POLICY_BASE" ]; then
-    POLICY_BASE="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##' || true)"
-    if [ -z "$POLICY_BASE" ] && git show-ref --verify --quiet refs/heads/main; then
-      POLICY_BASE="main"
-    fi
-    if [ -z "$POLICY_BASE" ] && git show-ref --verify --quiet refs/heads/master; then
-      POLICY_BASE="master"
-    fi
+    POLICY_BASE="$(git rev-parse --quiet --verify '@{upstream}' 2>/dev/null || true)"
   fi
-  [ -n "$POLICY_BASE" ] && PATH_ARGS+=(--base "$POLICY_BASE")
+  if [ -n "$POLICY_BASE" ]; then
+    PATH_ARGS+=(--base "$POLICY_BASE")
+  else
+    echo "note: no --base and no upstream — the guard compares uncommitted work only."
+  fi
   set +e
   PATH_OUT="$(python3 "$PATH_GUARD" "${PATH_ARGS[@]}" 2>&1)"
   PATH_RC=$?

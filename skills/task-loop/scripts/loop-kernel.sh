@@ -11,7 +11,7 @@
 # the design and its sources.
 #
 # THE SHAPE
-#   attempt -> verify -> (green ? settle : learn) -> repeat, bounded
+#   attempt -> verify -> (green ? tier-2 -> settle : learn) -> repeat, bounded
 #
 #   * Each attempt spawns a FRESH agent process. State lives on disk, never in a
 #     conversation, because every retry otherwise re-reads all prior failures
@@ -19,6 +19,12 @@
 #   * Verification is the task's own Exit Check — a level-1 deterministic check
 #     the agent cannot edit, because the eval is HMAC-sealed and sits outside
 #     the contract's fs.write scope.
+#   * A GREEN eval is necessary, not sufficient. Before settling, a DIFFERENT
+#     engine reads the diff, the spec's intent and the holdout — never the
+#     worker's transcript — and is prompted to refute. Tier 1 catches mechanical
+#     wrongness; only tier 2 catches a lookup table that satisfies the assertion.
+#     It ran as a separate command nobody was obliged to invoke, which meant the
+#     unattended path — the only one that matters — never used it.
 #   * Stopping is a named terminal state. An error or an exhausted budget is
 #     NEVER success.
 #   * Budgets are three-axis (iterations, wall-clock, tokens) and checked BEFORE
@@ -34,6 +40,7 @@
 #        [--allow-external-writes] [--dry-run] [--resume]
 #        [--base BRANCH] [--contract PATH] [--legacy-no-contract]
 #        [--isolation worktree|inplace]   (worktree is the DEFAULT)
+#        [--judge codex|kimi|claude|gemini] [--no-verify]
 #
 # The last three are not the loop's own controls — they belong to the eval runner
 # and the settler, and are forwarded verbatim so the kernel can sit in front of
@@ -52,6 +59,10 @@ SETTLER="$SCRIPT_DIR/open-issue-pr.sh"
 # pass while the product is broken, and can break the product while it passes.
 ENGINES_DIR="${CVG_ENGINES_DIR:-$SCRIPT_DIR/engines}"
 TRACKER_BRIDGE="$SCRIPT_DIR/loop-tracker.sh"
+# Same reasoning as CVG_ENGINES_DIR: a hermetic suite must be able to supply a
+# deterministic verdict without calling a real judge, and without editing the
+# shipped verifier it is testing.
+VERIFIER="${CVG_VERIFIER:-$SCRIPT_DIR/../../task-to-runtime-contract/scripts/verify-work.py}"
 
 err() { printf 'ERROR: %s\n' "$*" >&2; }
 
@@ -64,6 +75,9 @@ BASE=""; CONTRACT=""; LEGACY_NO_CONTRACT=false
 # `--isolation inplace` opts out when you want to watch files land live.
 ISOLATION="worktree"
 ESTIMATE=false
+# Tier-2 is ON by default. An adversarial verifier you have to remember to run
+# is one nobody runs on the unattended path.
+JUDGE=""; NO_VERIFY=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -90,6 +104,9 @@ while [ $# -gt 0 ]; do
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
     --isolation)      [ $# -ge 2 ] || { err "--isolation requires worktree|inplace"; exit 2; }; ISOLATION="$2"; shift 2 ;;
     --isolation=*)    ISOLATION="${1#--isolation=}"; shift ;;
+    --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; shift 2 ;;
+    --judge=*)        JUDGE="${1#--judge=}"; shift ;;
+    --no-verify)      NO_VERIFY=true; shift ;;
     --estimate)       ESTIMATE=true; shift ;;
     -h|--help)        grep '^#' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)                err "unknown argument '$1'"; exit 2 ;;
@@ -181,6 +198,18 @@ BUDGET_SECONDS="$(tighter "$((SPEC_MINUTES * 60))" "$MAX_SECONDS")"
 # reading. One worktree per RUN, which is one per fix — matching the granularity
 # the pattern is usually described at.
 # --------------------------------------------------------------------------
+# The exact commit this run forks from, captured BEFORE the worktree exists,
+# because that is the moment the fork happens.
+#
+# The settlement guard must compare the work against THIS. It used to fall back
+# to `main`, and `main...HEAD` is merge-base-relative: a loop branch cut from a
+# feature branch shares its merge-base with `main` at the point that FEATURE
+# branch diverged, so the diff swept in every commit on it. On the first real
+# run that was 135 workspace paths judged against an fs.write scope of 4 — a
+# green, correct, in-scope run refused settlement, and the guard was right about
+# the diff it was shown and wrong about which diff to ask for.
+LOOP_BASE_COMMIT="$(git -C "$GIT_ROOT" rev-parse HEAD 2>/dev/null || echo "")"
+
 ORIGINAL_WORKSPACE="$WORKSPACE_ROOT"
 WORKTREE_DIR=""
 if [ "$ISOLATION" = "worktree" ]; then
@@ -293,12 +322,25 @@ STOP_FILE="$LOOP_DIR/STOP"
 mkdir -p "$ATTEMPTS_DIR"
 
 ITER=0; STRIKES=0; TOKENS_USED=0; LAST_FINGERPRINT=""; STARTED_AT=""
+# Wall-clock is ACCUMULATED WORKING TIME, not wall time since the first attempt.
+#
+# Persisting a start timestamp and resuming against it means the clock runs while
+# the loop is not: pick a run up the next morning and `now - STARTED_AT` is ~20
+# hours against a 90-minute budget, so it lands EXHAUSTED before making a single
+# attempt — reporting a spent budget on a run that spent nothing. The budget is
+# meant to bound what the loop DOES, so only time inside a session counts.
+ELAPSED_PRIOR=0
 if [ "$RESUME" = true ] && [ -f "$STATE_FILE" ]; then
   # shellcheck disable=SC1090
   . "$STATE_FILE"
   printf 'resuming at iteration %s (strikes %s)\n' "$ITER" "$STRIKES"
 fi
-[ -n "$STARTED_AT" ] || STARTED_AT="$(date -u +%s)"
+# SESSION_START is always now and is deliberately NOT restored from state.
+SESSION_START="$(date -u +%s)"
+[ -n "$STARTED_AT" ] || STARTED_AT="$SESSION_START"
+case "$ELAPSED_PRIOR" in ''|*[!0-9]*) ELAPSED_PRIOR=0 ;; esac
+
+elapsed() { echo $(( ELAPSED_PRIOR + $(date -u +%s) - SESSION_START )); }
 
 save_state() {
   {
@@ -306,11 +348,12 @@ save_state() {
     printf 'STRIKES=%s\n' "$STRIKES"
     printf 'TOKENS_USED=%s\n' "$TOKENS_USED"
     printf 'STARTED_AT=%s\n' "$STARTED_AT"
+    # The running total, so the NEXT session resumes the budget rather than the
+    # clock. Written every checkpoint; the in-memory ELAPSED_PRIOR never moves.
+    printf 'ELAPSED_PRIOR=%s\n' "$(elapsed)"
     printf 'LAST_FINGERPRINT=%s\n' "$LAST_FINGERPRINT"
   } > "$STATE_FILE"
 }
-
-elapsed() { echo $(( $(date -u +%s) - STARTED_AT )); }
 
 # --------------------------------------------------------------------------
 # Terminal states. Exactly one is reached, it is always named, and an error
@@ -614,13 +657,62 @@ while :; do
   fi
 done
 
+# The reference every downstream comparison is made against. An explicit --base
+# wins; otherwise it is the commit this run forked from, which is exact rather
+# than guessed.
+SETTLE_BASE="$BASE"
+[ -n "$SETTLE_BASE" ] || SETTLE_BASE="$LOOP_BASE_COMMIT"
+
 # --------------------------------------------------------------------------
-# Green. Settlement is a separate effect with its own policy gate (WP4).
+# Tier 2 — graded by an engine that did not do the work.
+#
+# The eval is authored by the same intelligence that implements against it and
+# then grades itself. That catches mechanical wrongness and nothing else: a
+# hardcoded lookup table satisfies the assertion, and the letter of the eval can
+# be met while its intent is skirted. So a different-FAMILY judge reads the
+# diff, the stated intent and the holdout — never the worker's transcript — and
+# is prompted to REFUTE.
+#
+# It fails CLOSED. A refutation, a malformed verdict, a timeout or a judge that
+# will not start all stop settlement. The only verdict that proceeds without an
+# independent opinion is UNAVAILABLE, which verify-work.py itself permits only
+# for low blast radius.
+# --------------------------------------------------------------------------
+if [ "$NO_VERIFY" = true ]; then
+  printf '\n── tier 2 ── skipped (--no-verify): settling on the sealed eval alone\n'
+elif [ ! -f "$VERIFIER" ]; then
+  printf '\n── tier 2 ── verifier not found at %s — skipping\n' "$VERIFIER"
+else
+  printf '\n── tier 2 · adversarial verification ──\n'
+  VERIFY_CMD=(--task "$TASK_FILE" --repo "$WORKSPACE_ROOT")
+  [ -n "$SETTLE_BASE" ] && VERIFY_CMD+=(--base "$SETTLE_BASE")
+  [ -n "$JUDGE" ] && VERIFY_CMD+=(--judge "$JUDGE")
+  V_RC=0
+  case "$VERIFIER" in
+    *.py) V_OUT="$(cd "$WORKSPACE_ROOT" && python3 "$VERIFIER" "${VERIFY_CMD[@]}" 2>&1)" || V_RC=$? ;;
+    *)    V_OUT="$(cd "$WORKSPACE_ROOT" && bash "$VERIFIER" "${VERIFY_CMD[@]}" 2>&1)" || V_RC=$? ;;
+  esac
+  printf '%s\n' "$V_OUT"
+  case "$V_OUT" in
+    *CHECK_VERIFY=UPHELD*)      : ;;
+    *CHECK_VERIFY=UNAVAILABLE*) : ;;
+    *CHECK_VERIFY=REFUTED*)
+      write_handoff "tier-2 refuted the work — the eval is green but the diff does not satisfy the intent"
+      land BLOCKED 1 "tier-2 REFUTED: a green eval is necessary, not sufficient. Read the findings above." ;;
+    *)
+      write_handoff "tier-2 verification could not produce a verdict"
+      land BLOCKED 1 "tier-2 returned no usable verdict (rc=$V_RC) — a verdict that cannot be obtained is never a pass." ;;
+  esac
+fi
+
+# --------------------------------------------------------------------------
+# Green, and independently upheld. Settlement is a separate effect with its own
+# policy gate (WP4).
 # --------------------------------------------------------------------------
 printf '\n── settlement ──\n'
 SETTLE_ARGS=(--issue "$TASK_FILE" --tasks-dir "$RESOLVED_TASKS_DIR" --agent "$AGENT")
 [ "$ALLOW_EXTERNAL" = true ] && SETTLE_ARGS+=(--allow-external-writes)
-[ -n "$BASE" ] && SETTLE_ARGS+=(--base "$BASE")
+[ -n "$SETTLE_BASE" ] && SETTLE_ARGS+=(--base "$SETTLE_BASE")
 [ -n "$CONTRACT" ] && SETTLE_ARGS+=(--contract "$CONTRACT")
 [ "$LEGACY_NO_CONTRACT" = true ] && SETTLE_ARGS+=(--legacy-no-contract)
 SETTLE_RC=0

@@ -82,9 +82,21 @@ run_kernel() {  # run_kernel <ws> <args...>  -> output; sets RK_RC
   _w="$1"; shift
   case " $* " in *" --isolation "*) : ;; *) set -- "$@" --isolation inplace ;; esac
   RK_OUT="$( (cd "$_w" && TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" \
-    CVG_ENGINES_DIR="$STUBS" bash "$KERNEL" --issue T-20260602-golden "$@" 2>&1) )"
+    CVG_ENGINES_DIR="$STUBS" CVG_VERIFIER="${RK_VERIFIER:-$STUBS/verify-uphold.sh}" \
+    bash "$KERNEL" --issue T-20260602-golden "$@" 2>&1) )"
   RK_RC=$?
 }
+
+# Stub JUDGES. Tier-2 dispatches a real engine and takes minutes; a hermetic
+# suite must be able to pin the kernel's REACTION to each verdict without that.
+stub_verifier() {  # stub_verifier <name> <body>
+  { printf '#!/usr/bin/env bash\nset -uo pipefail\n'; printf '%s\n' "$2"; } > "$STUBS/$1.sh"
+}
+stub_verifier verify-uphold 'echo "CHECK_VERIFY=UPHELD"; exit 0'
+stub_verifier verify-refute 'echo "  - hardcoded lookup table satisfies the assertion"; echo "CHECK_VERIFY=REFUTED"; exit 1'
+stub_verifier verify-unavail 'echo "CHECK_VERIFY=UNAVAILABLE"; exit 0'
+# Neither a verdict nor a token — the shape of a judge that died mid-sentence.
+stub_verifier verify-broken 'echo "judge exploded"; exit 1'
 
 # An engine that always succeeds and never fixes anything — the shape of a loop
 # that would otherwise burn its whole budget.
@@ -178,6 +190,101 @@ if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT" && [ "$RK_RC" -eq
   ok "an effective engine reaches a real green and settles"
 else
   bad "the green path did not settle: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
+drop_ws "$W"
+
+# ------------------------------------------------------ tier 2 · the gate
+# A green eval is necessary, not sufficient. Tier 1 cannot tell a real
+# implementation from a lookup table that satisfies the same assertion, so a
+# refutation from an engine that did not do the work must STOP settlement.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix
+if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT" && [ "$RK_RC" -eq 1 ]; then
+  ok "tier-2 REFUTED blocks settlement even though the eval went green"
+else
+  bad "a refuted diff still settled: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
+# The refusal has to be legible, or the operator cannot act on it.
+if grep -q 'lookup table' <<<"$RK_OUT"; then
+  ok "the judge's findings reach the operator, not just the verdict"
+else
+  bad "tier-2 findings were swallowed"
+fi
+drop_ws "$W"
+
+# A judge that dies mid-sentence returns no verdict. That is not a pass.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-broken.sh" run_kernel "$W" --agent tstfix
+if grep -q '^TASK_LOOP=BLOCKED$' <<<"$RK_OUT"; then
+  ok "tier-2 FAILS CLOSED — an unobtainable verdict never settles"
+else
+  bad "a broken judge was treated as approval"
+fi
+drop_ws "$W"
+
+# UNAVAILABLE is the one verdict that proceeds: verify-work.py itself permits it
+# only for low blast radius, and that judgement belongs to the verifier.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-unavail.sh" run_kernel "$W" --agent tstfix
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  ok "UNAVAILABLE proceeds — absence of a judge is not a refutation"
+else
+  bad "UNAVAILABLE was treated as a block"
+fi
+drop_ws "$W"
+
+# The escape hatch must exist and must be explicit.
+W="$(new_ws)"
+RK_VERIFIER="$STUBS/verify-refute.sh" run_kernel "$W" --agent tstfix --no-verify
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT" \
+  && grep -q 'tier 2 ── skipped' <<<"$RK_OUT"; then
+  ok "--no-verify skips tier 2, and says so out loud"
+else
+  bad "--no-verify did not bypass the verifier"
+fi
+drop_ws "$W"
+
+# ------------------------------------------------- settlement base reference
+# The guard must be asked about the work THIS RUN produced. Cutting the loop
+# branch from a non-default branch used to make `main...HEAD` sweep in every
+# commit on it — 135 paths judged against a scope of 4 — and settlement was
+# refused on work that was entirely in scope.
+W="$(new_ws)"
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m red >/dev/null 2>&1
+git -C "$W" checkout --quiet -b feature/somewhere-else 2>/dev/null
+printf 'unrelated\n' > "$W/UNRELATED.md"
+git -C "$W" add -A >/dev/null 2>&1
+git -C "$W" commit --quiet -m "work that predates the loop" >/dev/null 2>&1
+run_kernel "$W" --agent tstfix --isolation worktree
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT" && [ "$RK_RC" -eq 0 ]; then
+  ok "a loop branch cut from a FEATURE branch still settles (base is the fork point)"
+else
+  bad "settlement refused on in-scope work: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
+# Prove the mechanism, not just the outcome: pre-existing commits on the feature
+# branch must never appear in the guard's diff.
+if ! grep -q 'UNRELATED.md' <<<"$RK_OUT"; then
+  ok "commits that predate the run are not attributed to it"
+else
+  bad "the guard was shown work the loop did not do"
+fi
+drop_ws "$W"
+
+# ------------------------------------------------- resume · the wall clock
+# The budget bounds what the loop DOES. Persisting a start timestamp made it
+# bound wall time instead: pick a run up the next morning and `now - STARTED_AT`
+# already exceeds any budget, so it lands EXHAUSTED without making one attempt —
+# a spent budget reported on a run that spent nothing.
+W="$(new_ws)"
+run_kernel "$W" --agent tstnoop --max-iterations 1
+_st="$W/cvg/loop/T-20260602-golden/state.env"
+# Backdate the run to 1970 — the state a long pause leaves behind.
+sed -i.bak 's/^STARTED_AT=.*/STARTED_AT=1/; s/^ELAPSED_PRIOR=.*/ELAPSED_PRIOR=3/' "$_st" && rm -f "$_st.bak"
+run_kernel "$W" --agent tstfix --resume --max-iterations 5
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  ok "--resume continues the BUDGET, not the clock (a long pause is not a spend)"
+else
+  bad "resume after a pause was killed by wall-clock: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
 fi
 drop_ws "$W"
 
