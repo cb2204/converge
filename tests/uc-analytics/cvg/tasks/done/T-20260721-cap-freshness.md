@@ -1,7 +1,7 @@
 ---
 id: T-20260721-cap-freshness
 title: "Capture — freshness + by-principal instrumentation (Dagster)"
-status: ready
+status: done
 format_version: 3
 profile: lite
 effort: M
@@ -24,6 +24,9 @@ tracker_ref: linear:CVG-23
 projection:
   milestone: Capture
 signed_off_sig: hmac-sha256-v2:1f197c76:ce9a8fa3a76a5e7d94273f42e83d2fedaa54e7b72de358f78368d8e1f1266d03
+accepted: true
+accepted_by: luanmorenomaciel
+accepted_at: 2026-07-28T20:50:23Z
 ---
 
 # Capture — freshness + by-principal instrumentation (Dagster)
