@@ -59,3 +59,12 @@ tmp/
 # Local tool scratch — never part of the method
 .ruff_cache/
 .sc/
+
+# graphify — local developer tooling, not part of the shipped method. The
+# knowledge graph is a derived artifact, and `.claude/settings.json` pins an
+# absolute path to this machine's graphify binary, so neither travels.
+# NOTE: CLAUDE.md here is entirely graphify-generated. Delete that line below
+# the day you author a real project CLAUDE.md, or it will be silently ignored.
+graphify-out/
+.claude/
+CLAUDE.md
