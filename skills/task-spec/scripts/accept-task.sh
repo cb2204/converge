@@ -188,8 +188,25 @@ if [[ "$CHECK_BLAST" == true ]]; then
       # file is unambiguous and is expected to change as the executor stamps it).
       [[ "$f" == "$self_rel" ]] && continue
       [[ "$(basename "$f")" == "$spec_base" ]] && continue
+      # FRAMEWORK OUTPUT is not the task's work.
+      #
+      # These patterns were anchored at the repo root (`tasks/_state.yaml`), but in
+      # the cvg/ layout the real path is nested — `<project>/cvg/tasks/_state.yaml`
+      # — so they never matched. And the loop's own outputs were not listed at
+      # all. So `cvg tasks accept` REJECTED a task whose work was demonstrably
+      # done, naming the ledger row, the receipt and the index that Pass 8 is
+      # REQUIRED to write as a "blast-radius breach".
+      #
+      # check-path-policy.py already exempts exactly this set at settlement. Having
+      # a second gate invent its own answer is the same root cause as the workspace
+      # derivations above; until one resolver owns it, the two lists must agree.
       case "$f" in
-        tasks/_state.yaml|tasks/_metrics.jsonl) continue ;;
+        */tasks/_state.yaml|tasks/_state.yaml) continue ;;
+        */tasks/_metrics.jsonl|tasks/_metrics.jsonl) continue ;;
+        */cvg/STATE.md|cvg/STATE.md) continue ;;
+        */cvg/receipts/*|cvg/receipts/*) continue ;;
+        */cvg/loop/*|cvg/loop/*) continue ;;
+        */cvg/execution/_packs/*|cvg/execution/_packs/*) continue ;;
         .gitignore) continue ;;
       esac
       # Skip tooling exhaust + gitignored paths: a build artifact (e.g. a Python

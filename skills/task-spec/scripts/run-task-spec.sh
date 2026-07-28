@@ -90,12 +90,11 @@ EVAL_CWD=""
 if [ -n "${TASKSPEC_WORKSPACE_ROOT:-}" ] && [ -d "${TASKSPEC_WORKSPACE_ROOT}" ]; then
   EVAL_CWD="$(cd "$TASKSPEC_WORKSPACE_ROOT" && pwd)"
 else
-  _spec_dir="$(cd "$(dirname "$FILE")" && pwd)"
-  if [ "$(basename "$_spec_dir")" = "tasks" ]; then
-    _cand="$(dirname "$_spec_dir")"
-    [ "$(basename "$_cand")" = "cvg" ] && _cand="$(dirname "$_cand")"
-    [ -d "$_cand" ] && EVAL_CWD="$_cand"
-  fi
+  # Shared resolver (ts_workspace_root in _lib.sh) — see the note there. The
+  # previous inference required the spec's directory to be named exactly `tasks`,
+  # so a spec in tasks/done/ skipped it entirely and fell through to GIT_ROOT.
+  _cand="$(ts_workspace_root "$(dirname "$FILE")" 2>/dev/null || true)"
+  [ -n "$_cand" ] && [ -d "$_cand" ] && EVAL_CWD="$_cand"
 fi
 [ -n "$EVAL_CWD" ] || EVAL_CWD="$GIT_ROOT"
 if [[ -z "$GIT_ROOT" ]]; then

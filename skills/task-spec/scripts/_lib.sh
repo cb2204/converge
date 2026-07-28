@@ -835,3 +835,46 @@ ts_require_bash4() {
   echo "task-spec: requires bash 4+; on macOS run: brew install bash, then re-run this script with that bash" >&2
   exit 3
 }
+
+# ts_workspace_root <path-inside-the-workspace>
+#
+# THE ONE definition of "where does this workspace begin". A spec's relative paths
+# (`cvg/capture/pipelines/x.py`) resolve against its WORKSPACE, never against
+# whatever repository happens to contain it.
+#
+# The rule: the workspace is the parent of the `cvg` component. Asking that
+# structural question is what makes it correct for tasks/, tasks/done/,
+# tasks/archive/ and any future nesting. Two separate hand-rolled versions of this
+# both counted path LEVELS instead, and both broke the moment a spec finished and
+# moved into tasks/done/: one silently resolved the workspace to `cvg/tasks`, the
+# other skipped its inference entirely and fell back to the git root. In both cases
+# every eval failed in 0s, so a COMPLETED task could no longer pass its own evals.
+#
+# That is one root cause with six recorded symptoms (eval CWD, settlement base,
+# tier-2 diff, receipt location, and these two). Centralising the derivation is the
+# start of retiring the class rather than patching it a seventh time.
+ts_workspace_root() {
+  _tswr_d="$1"
+  [ -d "$_tswr_d" ] || _tswr_d="$(dirname "$_tswr_d")"
+  _tswr_d="$(cd "$_tswr_d" 2>/dev/null && pwd)" || return 1
+  _tswr_p="$_tswr_d"
+  while [ -n "$_tswr_p" ] && [ "$_tswr_p" != "/" ]; do
+    if [ "$(basename "$_tswr_p")" = "cvg" ]; then
+      dirname "$_tswr_p"; return 0
+    fi
+    _tswr_next="$(dirname "$_tswr_p")"
+    [ "$_tswr_next" = "$_tswr_p" ] && break
+    _tswr_p="$_tswr_next"
+  done
+  # Flat layout (<ws>/tasks with no cvg/ ancestor): walk up past tasks/done etc.
+  _tswr_p="$_tswr_d"
+  while [ -n "$_tswr_p" ] && [ "$_tswr_p" != "/" ]; do
+    case "$(basename "$_tswr_p")" in
+      tasks) dirname "$_tswr_p"; return 0 ;;
+    esac
+    _tswr_next="$(dirname "$_tswr_p")"
+    [ "$_tswr_next" = "$_tswr_p" ] && break
+    _tswr_p="$_tswr_next"
+  done
+  printf '%s' "$_tswr_d"
+}

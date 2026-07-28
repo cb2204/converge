@@ -121,13 +121,38 @@ esac
 # eval's relative paths can sensibly be resolved against — a spec that creates
 # `cvg/capture/orders.py` means relative to its own workspace, not to whatever
 # repo happens to contain it.
-WORKSPACE_ROOT="$(dirname "$TASKS_DIR")"
-# In the cvg/ layout the specs sit at <workspace>/cvg/tasks, so the parent of
-# the tasks dir is `cvg` — one level short of the workspace an eval's relative
-# paths are written against.
-if [ "$(basename "$WORKSPACE_ROOT")" = "cvg" ]; then
-  WORKSPACE_ROOT="$(dirname "$WORKSPACE_ROOT")"
-fi
+# THE WORKSPACE IS THE ANCESTOR THAT CONTAINS `cvg/`.
+#
+# This used to be "the parent of the tasks dir, and strip one more level if it is
+# named cvg". That is only correct while specs live at exactly <ws>/cvg/tasks. A
+# spec that FINISHES moves to <ws>/cvg/tasks/done, and then the parent is
+# `cvg/tasks`, whose basename is not `cvg`, so nothing was stripped and the
+# workspace resolved to `<ws>/cvg/tasks`. Every eval's relative path
+# (`cvg/capture/pipelines/x.py`) then missed and the Exit Check failed in 0s —
+# so a completed task could no longer pass its own evals, and `cvg tasks accept`
+# rejected work that was demonstrably done.
+#
+# Walking up to the `cvg` component instead is correct for tasks/, tasks/done/,
+# tasks/archive/ and any future nesting, because it asks the structural question
+# ("where does the workspace begin?") rather than counting levels.
+#
+# This is the sixth symptom of one root cause: every gate deriving its own answer
+# to "where is the workspace / what did this run change". The durable fix is a
+# single shared resolver; this makes the most-used derivation correct first.
+_resolve_workspace_root() {  # _resolve_workspace_root <tasks-dir>
+  _rw_d="$1"
+  while [ "$_rw_d" != "/" ] && [ -n "$_rw_d" ] && [ "$_rw_d" != "." ]; do
+    if [ "$(basename "$_rw_d")" = "cvg" ]; then
+      dirname "$_rw_d"; return 0
+    fi
+    _rw_next="$(dirname "$_rw_d")"
+    [ "$_rw_next" = "$_rw_d" ] && break
+    _rw_d="$_rw_next"
+  done
+  # Flat layout (tasks/ with no cvg/ ancestor): the parent is the workspace.
+  dirname "$1"
+}
+WORKSPACE_ROOT="$(_resolve_workspace_root "$TASKS_DIR")"
 
 # ----- Resolve --issue to a task-spec file -----
 # Portable, bash-3.2-safe: no arrays required for the happy paths.
