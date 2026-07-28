@@ -2,7 +2,7 @@
 name: pass-to-lesson
 description: Converge teaching companion — optional after ANY pass. Turns a just-closed pass's artifacts (BRD, tech-spec, ADRs, plans, specs, task-specs, harness, PRs) into a durable lesson at docs/lessons/lesson-*.md plus a spoken-style walkthrough, so the owner understands what the autonomous chain built — every component, the decision it encodes, what breaks downstream without it, and the roads not taken. Use when someone says "teach me what was built", "explain this pass", "walk me through the tech-spec/ADRs/plans", "debrief the pass", "what did you just do and why", or "start the lesson". Runs Locate / Read / Teach / Quiz and gates on every emitted artifact appearing in the walkthrough, every decision naming a rejected alternative, every term of art defined at first use, and the lesson ending in check-yourself questions. Explains decisions, never reopens them. Do NOT use to run a pass (each pass has its own skill) or to review/attack artifacts (that is Pass 4, sketch-plans-adversarial-review).
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
   compatibility: "Converge chain · teaching companion (optional, after any pass gate). Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -145,19 +145,22 @@ only the misses, then re-test — never re-lecture, never leave a miss open.
 
 Ask the owner to explain back, in their own words: (a) the TL;DR, and (b) the single most load-bearing decision and why its alternative lost. Correct gently and concretely — point at the artifact line, not at the lesson. One round is usually enough; stop when the restatement would survive a client asking "why is it built this way?". What the owner *couldn't* restate marks the lesson section to sharpen — fix the file before closing.
 
-Then run the gate checker and walk the checklist:
+Then run the gate checker (v0.3.0) and walk the checklist:
 
 ```bash
-bash .claude/skills/pass-to-lesson/scripts/check-lesson.sh docs/lessons/lesson-<pass-slug>-<topic>.md
+bash .claude/skills/pass-to-lesson/scripts/check-lesson.sh docs/lessons/lesson-<pass-slug>-<topic>.md \
+  --immutable <every-artifact-the-lesson-teaches>   # optional; enforces "teaching changes nothing"
 ```
 
-- [ ] **Every emitted artifact appears** in the component walkthrough (inventory vs. Section 3 — no silent skips).
-- [ ] **Every decision names a rejected alternative** and why it lost.
-- [ ] **Every term of art is defined** at first use and collected under Vocabulary.
-- [ ] The lesson **ends with 3–5 check-yourself questions**.
-- [ ] **Nothing in the taught artifacts changed** — `git status` is clean apart from the lesson file.
-- [ ] (`--quiz on`) The owner **restated the TL;DR and the top decision** in their own words.
-- [ ] **Every mode on the `modes:` line is honored** — each emitter mode's section is present and well-formed (`--adept` → all five ADEPT labels per block; `--review` → ≥3 flashcards + the dated schedule; `--map` → nodes + revealed edges); `check-lesson.sh` verifies the emitter modes it can see and warns on a `modes:` mode it can't confirm.
+The checker's **last line is always exactly one machine token** — `CHECK_LESSON=PASS` (exit 0), `CHECK_LESSON=FAIL` (exit 1), `CHECK_LESSON=USAGE_ERROR` (exit 2) — printed after the human `GATE:` summary line, so both a person and `bin/cvg` can read the verdict. It fails CLOSED on everything it can see: all seven sections present by exact template name (a `## Notes on why this pass exists` decoy does not count); every `### <component>` walkthrough block carrying *what breaks downstream*; the decisions table non-empty; 3–5 check-yourself questions; well-formed emitter-mode sections; and, with `--immutable`, a clean `git status --porcelain` across the taught artifacts (modified or untracked-but-referenced fails; outside a git repo it warns and skips). What it cannot see stays human, marked below:
+
+- [ ] *(human)* **Every emitted artifact appears** in the component walkthrough (inventory vs. Section 3 — no silent skips). The script can't see the pass's real inventory from the lesson file alone.
+- [ ] *(human)* **Every decision names a rejected alternative** and why it lost. The script proves the table has at least one row; that each row names a *real* alternative is this check.
+- [ ] *(human)* **Every term of art is defined** at first use and collected under Vocabulary.
+- [ ] *(script)* The lesson **ends with 3–5 check-yourself questions**.
+- [ ] *(script, with `--immutable`)* **Nothing in the taught artifacts changed** — `git status` is clean apart from the lesson file.
+- [ ] *(human, `--quiz on`)* The owner **restated the TL;DR and the top decision** in their own words.
+- [ ] *(script)* **Every mode on the `modes:` line is honored** — each emitter mode's section is present and well-formed (`--adept` → all five ADEPT labels per `### <component>` block; `--review` → ≥3 flashcards + all four `day 1 · 3 · 7 · 21` checkpoints; `--map` → nodes + revealed edges); `check-lesson.sh` verifies the emitter modes it can see and warns on a `modes:` mode it can't confirm.
 
 ## Examples
 
@@ -197,4 +200,4 @@ The pass closed overnight in an autonomous run; the owner reads later. Actions: 
 ## References
 
 - `references/lesson-template.md` — the lesson skeleton (TL;DR · Why this pass exists · Component walkthrough · Decisions and roads not taken · Vocabulary · What to watch · Check yourself) with per-section guidance.
-- `scripts/check-lesson.sh` — the gate (sections present, decisions carry alternatives, check-yourself questions counted, vocabulary present).
+- `scripts/check-lesson.sh` — the gate (v0.3.0): exact-name section presence, *what breaks downstream* per `### <component>` block, a non-empty decisions table (whether each alternative is real stays a human criterion), 3–5 check-yourself questions counted, well-formed emitter-mode sections (ADEPT labels per block, all four review days), and optional `--immutable` enforcement that taught artifacts stay untouched. Last line is always `CHECK_LESSON=PASS|FAIL|USAGE_ERROR`.

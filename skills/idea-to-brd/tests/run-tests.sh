@@ -89,6 +89,26 @@ run_case nogo-valid              --no-go "$FIX/nogo-valid.md"   -- 0 '^CHECK_BRD
 run_case nogo-invalid            --no-go "$FIX/nogo-invalid.md" -- 1 'reopen' ''
 run_case nogo-invalid-token      --no-go "$FIX/nogo-invalid.md" -- 1 '^CHECK_BRD=NOGO_INVALID$' ''
 
+# --- v0.4.0: exact headings, real scope entries, calendar-real dates --------
+run_case section-prefix-evasion  "$FIX/brd-section-evasion.md" -- 1 'FAIL  section missing: Problem' 'hand off to Pass 1'
+run_case scope-contentfree-in    "$FIX/brd-scope-none.md"      -- 1 'FAIL  Scope: In has no entries' ''
+run_case calendar-date-blocked   "$FIX/brd-bad-date2.md"       -- 1 'FAIL  Sign-off: no valid ISO date' 'hand off to Pass 1'
+
+# --- v0.4.0: per-line provenance — one tag no longer launders the rest ------
+run_case provenance-perline-evasion "$FIX/brd-provenance-evasion.md" -- 1 'FAIL  Problem: .*no provenance tag on the line' 'carry no provenance tag'
+run_case provenance-perline-draft --draft "$FIX/brd-provenance-evasion.md" -- 0 'WARN  Problem: .*no provenance tag on the line' 'hand off to Pass 1'
+run_case provenance-perline-pass "$FIX/brd-provenance-pass.md" -- 0 '^CHECK_BRD=PASS$' ''
+
+# --- v0.4.0: hygiene WARNs surface but stay advisory (never fail) -----------
+run_case warn-donothing-evidence "$FIX/brd-canonical.md"       -- 0 'WARN  no do-nothing-test evidence' ''
+run_case warn-exec-summary-long  "$FIX/brd-provenance-pass.md" -- 0 'WARN  Executive summary runs' ''
+run_case warn-no-decider         "$FIX/brd-provenance-pass.md" -- 0 'WARN  no decider named' ''
+
+# --- v0.4.0: the no-go gate fails closed per structural element -------------
+run_case nogo-template-shape     --no-go "$FIX/nogo-template-shape.md" -- 0 '^CHECK_BRD=NOGO_OK$' ''
+run_case nogo-bad-date           --no-go "$FIX/nogo-bad-date.md" -- 1 'FAIL  no-go: no valid ISO date' 'CHECK_BRD=NOGO_OK'
+run_case nogo-missing-owner      --no-go "$FIX/nogo-missing-owner.md" -- 1 'FAIL  no-go: no named owner' ''
+
 # --- PDF policy: text in, or no gate verdict at all -------------------------
 PDF_TMP="${TMPDIR:-/tmp}/check-brd-test-$$.pdf"
 : > "$PDF_TMP"

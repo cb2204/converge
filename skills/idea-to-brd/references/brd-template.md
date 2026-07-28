@@ -109,12 +109,13 @@ sign.
 ## The no-go record (the other exit)
 
 When the do-nothing test shows tolerable inaction, write
-`docs/no-go-<slug>.md` instead of a BRD:
+`cvg/docs/no-go-<slug>.md` instead of a BRD:
 
 ```markdown
 # NO-GO — <idea title>
 
-**Date:** <capture date>
+**Date:** <capture date — a real calendar date, YYYY-MM-DD>
+**Owner:** <who made the no-go call — named, so the park has an asker>
 **The idea:** <two lines, in the owner's words>
 **Why it didn't clear:** <the do-nothing answer, verbatim>
 **What would reopen it:** <the condition or number that, if it changed,
@@ -122,5 +123,7 @@ makes this worth revisiting>
 ```
 
 Parked, not deleted — a searchable memory that prevents re-litigating the
-same idea from scratch. A no-go record has no handoff and no gate script;
-its only job is to exist and be findable.
+same idea from scratch. A no-go record has no handoff, but it DOES have a
+gate: `scripts/check-brd.sh --no-go` fails closed on a record missing its
+marker, a calendar-real date, the why, the reopen condition, or the owner.
+Its only job is to exist and be findable.

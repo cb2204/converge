@@ -6,20 +6,34 @@
 # spec restates the problem, that requirements read as falsifiable, that
 # success metrics are expressed current -> target, that the source data is
 # named, and that open assumptions carry owners. It also WARNS on any
-# technology/stack leak (dbt, duckdb, postgres, MCP, FastAPI, a schema, ...)
-# because Pass 1 must stay above the stack — the engine is decided in Pass 3.
+# technology/stack leak — terms loaded from references/leak-terms.txt in
+# per-domain buckets (data, web/frontend, infra/devops, ml/agents), matched
+# word-boundaried so 'spark' does not fire on 'sparkline' — because Pass 1
+# must stay above the stack: the engine is decided in Pass 3.
 #
 # Usage:
-#   bash check-tech-spec.sh docs/tech-spec-analytical-engine.md    # canonical
-#   bash check-tech-spec.sh --draft docs/tech-spec-*.md            # validation only
+#   bash check-tech-spec.sh cvg/docs/tech-spec-analytical-engine.md # canonical
+#   bash check-tech-spec.sh --draft cvg/docs/tech-spec-*.md         # validation only
 #   bash check-tech-spec.sh --version
 #
-# Exit contract (v0.4.0): draft validation and Pass 2 handoff authorization
+# Exit contract (v0.5.0): draft validation and Pass 2 handoff authorization
 # are DIFFERENT verdicts. Canonical (default) adds the sign-off check —
 # fence-stripped Sign-off section, 'canonical' on the verdict line itself
-# (pending/draft there never authorizes), valid ISO date — and is the ONLY
-# mode whose verdict hands to Pass 2. --draft runs the structural checks and
+# (pending/draft there never authorizes), and a calendar-valid ISO date ON
+# the verdict line or the line immediately following it (python3 datetime
+# when available; regex-only + warning otherwise) — and is the ONLY mode
+# whose verdict hands to Pass 2. --draft runs the structural checks and
 # NEVER authorizes.
+#
+# v0.5.0 hardening (PLAN.md P-9):
+#   * Check 7 fails CLOSED on blocker gaps: a blocker whose resolution is
+#     missing, blank, or any open/none/null/tbd/pending/awaiting sentinel
+#     (quoted or not) is unresolved. Only an affirmatively substantive
+#     resolution lets a blocker through.
+#   * Leak terms live in references/leak-terms.txt (fail-soft if missing),
+#     matched with word boundaries; warnings name the domain bucket.
+#   * Warn-only: requirement bullets without a stable R-n/W-n id, and any
+#     R-n/W-n whose own line(s) carry no number, unit, or comparator.
 #
 # Agent contract: the LAST line is always a stable machine token —
 #   CHECK_TECH_SPEC=PASS | FAIL | DRAFT_OK | DRAFT_INCOMPLETE | USAGE_ERROR
@@ -36,7 +50,7 @@
 
 set -euo pipefail
 
-CHECK_TECH_SPEC_VERSION="0.4.0"
+CHECK_TECH_SPEC_VERSION="0.5.0"
 
 # A valid ISO date: month 01-12, day 01-31 (2026-13-45 is not a date).
 ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
@@ -118,6 +132,10 @@ esac
 # original around for line-accurate leak reporting.
 BODY_LC="$(tr '[:upper:]' '[:lower:]' < "$SPEC")"
 
+# Fence-stripped copy of the spec: an example inside ``` proves nothing, so
+# structural extraction (requirement bullets, the Sign-off block) runs on this.
+SO_STRIPPED="$(awk '/^[[:space:]]*```/ { fence = !fence; next } !fence { print }' "$SPEC")"
+
 # has_any <pattern...> — return 0 if ANY extended-regex matches the body.
 # Runs case-insensitively against the lower-cased body. Patterns are passed
 # with `-e` so a pattern that starts with '<' or '>' (a comparator) is never
@@ -192,6 +210,58 @@ if [[ "$NWISH" -gt 0 && "$NNUM" -eq 0 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Check 3b — Stable requirement ids (warn-only, P-9 item 5)
+# Every requirement bullet carries R-n (requirement) or W-n (wish/wont) so
+# evals, ADRs, and gap records can cite it. Fenced examples don't count —
+# extraction runs on the fence-stripped body.
+# Check 3c — Per-requirement falsifiability (warn-only, audit finding)
+# The global heuristic above passes on ONE measurable line anywhere; here
+# each R-n/W-n must carry a number, unit, or comparator on its own line(s)
+# (bullet + its continuation lines). Both checks are advisory: the human
+# gate owns the verdict, the script owns the reminder.
+# ---------------------------------------------------------------------------
+REQ_SCAN="$(printf '%s\n' "$SO_STRIPPED" | awk '
+  /^##[^#]/ { inside = (tolower($0) ~ /requirement/) ? 1 : 0; next }
+  inside { print }
+' | awk '
+  function flush() {
+    if (!open) return
+    open = 0
+    id = ""
+    if (match(buf, /[RrWw]-[0-9]+/)) id = toupper(substr(buf, RSTART, RLENGTH))
+    # Strip id tokens (incl. cross-references) before the measurability
+    # test — the digits inside an id are not a threshold.
+    tl = tolower(buf)
+    gsub(/[rw]-[0-9]+/, "", tl)
+    has_meas = (tl ~ /[0-9]/ || tl ~ /(<=|>=|within|at least|at most|no more than|no less than|fewer than|greater than|less than|up to)/)
+    if (id == "") noid++
+    else if (!has_meas) print "UNMEAS " id
+  }
+  /^[[:space:]]*[-*][[:space:]]/ { flush(); open = 1; buf = $0; next }
+  /^[[:space:]]*$/              { flush(); next }
+  { if (open) buf = buf " " $0 }
+  END { flush(); print "NOID " noid + 0 }
+')"
+
+NREQ_NOID=0
+UNMEAS_IDS=""
+while IFS=' ' read -r tag rest; do
+  case "$tag" in
+    NOID)   NREQ_NOID="${rest:-0}" ;;
+    UNMEAS) UNMEAS_IDS="$UNMEAS_IDS ${rest:-}" ;;
+  esac
+done <<EOF
+$REQ_SCAN
+EOF
+
+if [[ "$NREQ_NOID" -gt 0 ]]; then
+  warn "$NREQ_NOID requirement bullet(s) lack a stable R-n/W-n id — give every requirement an R-n and every wish/wont a W-n so evals, ADRs, and gap records can cite them"
+fi
+for rid in $UNMEAS_IDS; do
+  warn "requirement $rid has no number, unit, or comparator on its own line(s) — make it measurable or move it to open assumptions (see references/falsifiable-requirements.md)"
+done
+
+# ---------------------------------------------------------------------------
 # Check 4 — Success metrics expressed as current -> target
 # ---------------------------------------------------------------------------
 HAS_METRICS=0
@@ -240,16 +310,32 @@ fi
 # ---------------------------------------------------------------------------
 # Check 7 — No unresolved BLOCKER gaps (the gap register has teeth)
 # Convention (SKILL.md Step 2): a gap record carries `severity:` and
-# `resolution:`; unresolved is written `resolution: (open)`. A blocker left
-# open FAILS the gate — the spec cannot descend carrying a fatal unknown.
-# awk keeps severity/resolution paired per record (records start at "- id:").
+# `resolution:`. v0.5.0 FAILS CLOSED (P-9 item 2): within a record whose
+# severity is blocker (quoted or not), a resolution that is missing, blank,
+# or any open/none/null/tbd/pending/awaiting sentinel — quoted or not — is
+# UNRESOLVED and fails the gate. Only an affirmatively substantive
+# resolution lets a blocker through: what the script cannot read as
+# resolved, it treats as open. awk keeps severity/resolution paired per
+# record (records start at "- id:").
 # ---------------------------------------------------------------------------
 NBLOCKER_OPEN=$(awk '
+  function flush() {
+    if (inblk && (!hasres || bad)) n++
+    inblk = 0; hasres = 0; bad = 0
+  }
   { line = tolower($0) }
-  line ~ /-[[:space:]]*id:/                                   { inblk = 0 }
-  line ~ /severity:[[:space:]]*blocker/                       { inblk = 1 }
-  inblk && line ~ /resolution:[[:space:]]*(\(open\)|\(none\)|null|tbd)/ { n++; inblk = 0 }
-  END { print n + 0 }
+  line ~ /-[[:space:]]*id:/ { flush() }
+  line ~ /severity:[[:space:]]*["'"'"']?blocker/ { inblk = 1 }
+  inblk && line ~ /resolution:/ {
+    hasres = 1
+    val = line
+    sub(/^[^:]*resolution:[[:space:]]*/, "", val)
+    sub(/[[:space:]]+#.*$/, "", val)
+    gsub(/["'"'"'()]/, "", val)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
+    if (val == "" || val ~ /^(open|none|null|n\/a|tbd|tba|pending|awaiting.*|to be (decided|determined|confirmed)|\.\.\.)$/) bad = 1
+  }
+  END { flush(); print n + 0 }
 ' "$SPEC")
 
 if [[ "$NBLOCKER_OPEN" -gt 0 ]]; then
@@ -276,8 +362,9 @@ fi
 # anchored to the VERDICT LINE itself — 'canonical' in guidance prose never
 # authorizes, and a verdict carrying pending/draft never authorizes. Hard in
 # canonical mode; advisory in --draft. Mirrors check-brd.sh v0.3.1.
+# v0.5.0: the ISO date must BIND to the verdict — on the verdict line or the
+# line immediately following it, not anywhere near the Sign-off section.
 # ---------------------------------------------------------------------------
-SO_STRIPPED="$(awk '/^[[:space:]]*```/ { fence = !fence; next } !fence { print }' "$SPEC")"
 SO_BODY="$(printf '%s\n' "$SO_STRIPPED" | awk '
   /^##[^#]/ {
     inside = (tolower($0) ~ /sign-off/) ? 1 : 0
@@ -287,16 +374,35 @@ SO_BODY="$(printf '%s\n' "$SO_STRIPPED" | awk '
 ')"
 HAS_SO_SECTION=0
 printf '%s\n' "$SO_STRIPPED" | grep -qiE '^## +.*sign-off' && HAS_SO_SECTION=1
-VERDICT_LINE="$(printf '%s\n' "$SO_BODY" | grep -iE 'verdict' | head -1 || true)"
+VERDICT_BLOCK="$(printf '%s\n' "$SO_BODY" | grep -iE -A 1 'verdict' | head -2 || true)"
+VERDICT_LINE="$(printf '%s\n' "$VERDICT_BLOCK" | head -1)"
 VERDICT_CANONICAL=0
 if printf '%s\n' "$VERDICT_LINE" | grep -qiE '\bcanonical\b'; then
   if ! printf '%s\n' "$VERDICT_LINE" | grep -qiE '\b(pending|draft)\b'; then
     VERDICT_CANONICAL=1
   fi
 fi
-DATE_LINES="$(printf '%s\n' "$SO_BODY" | grep -iE '(date|signed)' || true)"
+# The date must bind to the verdict: a calendar-valid ISO date on the verdict
+# line itself or the line immediately following it. A date anywhere else in
+# the document anchors nothing. Calendar validity comes from python3
+# datetime when available (2026-02-30 is not a date); without python3 the
+# regex shape alone decides, and the degraded check is called out.
 HAS_SO_DATE=0
-printf '%s\n' "$DATE_LINES" | grep -qE "$ISO_RE" && HAS_SO_DATE=1
+DATE_MATCH="$(printf '%s\n' "$VERDICT_BLOCK" | grep -oE "$ISO_RE" | head -1 || true)"
+if [[ -n "$DATE_MATCH" ]]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if python3 -c 'import datetime, sys
+try:
+    datetime.date.fromisoformat(sys.argv[1])
+except ValueError:
+    sys.exit(1)' "$DATE_MATCH" >/dev/null 2>&1; then
+      HAS_SO_DATE=1
+    fi
+  else
+    HAS_SO_DATE=1
+    warn "python3 not found — ISO date matched by regex shape only (calendar validity unchecked)"
+  fi
+fi
 
 if [[ "$MODE" == "canonical" ]]; then
   if [[ $HAS_SO_SECTION -eq 0 ]]; then
@@ -308,9 +414,9 @@ if [[ "$MODE" == "canonical" ]]; then
       err "Sign-off: owner verdict 'canonical' missing — a draft cannot pass the canonical gate (validate work-in-progress with --draft)"
     fi
     if [[ $HAS_SO_DATE -eq 1 ]]; then
-      ok "Sign-off: dated (valid ISO YYYY-MM-DD)"
+      ok "Sign-off: dated (calendar-valid ISO YYYY-MM-DD bound to the verdict)"
     else
-      err "Sign-off: no valid ISO date (YYYY-MM-DD) on a Date/Signed line — an undated sign-off cannot anchor the descent"
+      err "Sign-off: no valid ISO date (YYYY-MM-DD) on the verdict line or the line immediately following it — an undated verdict cannot anchor the descent"
     fi
   fi
 else
@@ -323,25 +429,33 @@ fi
 
 # ---------------------------------------------------------------------------
 # Leak scan — WARN on premature technology / stack (Pass 1 stays above it).
-# We scan word-boundaried, case-insensitively, and report the first hit line
-# per term against the ORIGINAL body so the author can find it.
+# v0.5.0 (P-9 item 1): terms live in references/leak-terms.txt, one
+# `term<TAB>domain` per line across four buckets (data, web/frontend,
+# infra/devops, ml/agents), matched case-insensitively with WORD BOUNDARIES
+# (grep -wE) — 'spark' no longer fires on 'sparkline' or 'Dana Sparks',
+# while React/Kubernetes/Terraform/LangChain are now covered. Fail-soft: a
+# missing terms file skips the scan with a warning, never a crash. The
+# first hit line per term is reported against the ORIGINAL body so the
+# author can find it; the warning names the domain bucket.
 # ---------------------------------------------------------------------------
-# Terms are extended-regex fragments matched with word boundaries where useful.
-LEAK_TERMS="dbt duckdb postgres postgresql fastapi mcp airflow snowflake spark \
-kafka redshift bigquery star[- ]schema snowflake[- ]schema create[[:space:]]+table \
-[.]sql\b schema\.sql sqlmesh dagster prefect parquet iceberg pandas polars"
+LEAK_TERMS_FILE="$(cd "$(dirname "$0")" && pwd)/../references/leak-terms.txt"
 
 LEAKS_FOUND=0
-for term in $LEAK_TERMS; do
-  # Case-insensitive match against the original file for accurate line numbers.
-  hit="$(grep -nEi -e "$term" "$SPEC" 2>/dev/null | head -1 || true)"
-  if [[ -n "$hit" ]]; then
-    warn "possible stack leak ('$term') — Pass 1 stays above the stack; defer to Pass 3: $hit"
-    LEAKS_FOUND=$((LEAKS_FOUND + 1))
+if [[ -f "$LEAK_TERMS_FILE" ]]; then
+  while IFS=$'\t' read -r term domain || [[ -n "$term" ]]; do
+    case "$term" in ''|\#*) continue ;; esac
+    # Case-insensitive word-boundary match; -n for line-accurate reporting.
+    hit="$(grep -nEi -w -e "$term" "$SPEC" 2>/dev/null | head -1 || true)"
+    if [[ -n "$hit" ]]; then
+      warn "possible stack leak [${domain:-unbucketed}] ('$term') — Pass 1 stays above the stack; defer to Pass 3: $hit"
+      LEAKS_FOUND=$((LEAKS_FOUND + 1))
+    fi
+  done < "$LEAK_TERMS_FILE"
+  if [[ $LEAKS_FOUND -eq 0 ]]; then
+    ok "No premature technology named (stays above the stack)"
   fi
-done
-if [[ $LEAKS_FOUND -eq 0 ]]; then
-  ok "No premature technology named (stays above the stack)"
+else
+  warn "leak-term list not found ($LEAK_TERMS_FILE) — stack-leak scan skipped; verify by hand that no technology is named (Pass 3 owns the stack)"
 fi
 
 # ---------------------------------------------------------------------------

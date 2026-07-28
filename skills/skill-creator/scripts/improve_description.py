@@ -4,12 +4,17 @@
 Takes eval results (from run_eval.py) and generates an improved description
 by calling `claude -p` as a subprocess (same auth pattern as run_eval.py —
 uses the session's Claude Code auth, no separate ANTHROPIC_API_KEY needed).
+
+The Claude CLI command can be overridden with the SKILL_CREATOR_CLAUDE_CMD
+environment variable (split shell-style, so it may include arguments). This
+exists so tests can inject a fake CLI; production use should leave it unset.
 """
 
 import argparse
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -23,7 +28,8 @@ def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
     Prompt goes over stdin (not argv) because it embeds the full SKILL.md
     body and can easily exceed comfortable argv length.
     """
-    cmd = ["claude", "-p", "--output-format", "text"]
+    cmd = shlex.split(os.environ.get("SKILL_CREATOR_CLAUDE_CMD", "claude"))
+    cmd.extend(["-p", "--output-format", "text"])
     if model:
         cmd.extend(["--model", model])
 
@@ -144,7 +150,15 @@ Please respond with only the new description text in <new_description> tags, not
     text = _call_claude(prompt, model)
 
     match = re.search(r"<new_description>(.*?)</new_description>", text, re.DOTALL)
-    description = match.group(1).strip().strip('"') if match else text.strip().strip('"')
+    if not match:
+        # Fail closed: using the raw response as the description would
+        # silently write model chatter into the skill's frontmatter.
+        raise RuntimeError(
+            "Claude response did not contain <new_description> tags; "
+            "refusing to fall back to the raw response as the new description "
+            f"(got {len(text)} chars)."
+        )
+    description = match.group(1).strip().strip('"')
 
     transcript: dict = {
         "iteration": iteration,
@@ -173,7 +187,13 @@ Please respond with only the new description text in <new_description> tags, not
         )
         shorten_text = _call_claude(shorten_prompt, model)
         match = re.search(r"<new_description>(.*?)</new_description>", shorten_text, re.DOTALL)
-        shortened = match.group(1).strip().strip('"') if match else shorten_text.strip().strip('"')
+        if not match:
+            raise RuntimeError(
+                "Shorten-retry response did not contain <new_description> tags; "
+                "refusing to fall back to the raw response as the new description "
+                f"(got {len(shorten_text)} chars)."
+            )
+        shortened = match.group(1).strip().strip('"')
 
         transcript["rewrite_prompt"] = shorten_prompt
         transcript["rewrite_response"] = shorten_text
@@ -217,14 +237,18 @@ def main():
         print(f"Current: {current_description}", file=sys.stderr)
         print(f"Score: {eval_results['summary']['passed']}/{eval_results['summary']['total']}", file=sys.stderr)
 
-    new_description = improve_description(
-        skill_name=name,
-        skill_content=content,
-        current_description=current_description,
-        eval_results=eval_results,
-        history=history,
-        model=args.model,
-    )
+    try:
+        new_description = improve_description(
+            skill_name=name,
+            skill_content=content,
+            current_description=current_description,
+            eval_results=eval_results,
+            history=history,
+            model=args.model,
+        )
+    except RuntimeError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if args.verbose:
         print(f"Improved: {new_description}", file=sys.stderr)

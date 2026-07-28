@@ -55,8 +55,14 @@ temp/legs-e2e/
 # ignored, but the repo WRITE FENCE is shipped policy: gate.yaml answers "may ANY
 # task ever write here?" and a fence that does not travel protects one laptop.
 # CI asserts it is parseable and active, and reported CHECK_GATE=ABSENT until now.
-.cvg/*
-!.cvg/gate.yaml
+# Any .cvg at any depth is machine-local — EXCEPT the repo-root write fence.
+# `.cvg/*` alone was anchored to the root, which un-ignored the fixture's own
+# tests/uc-analytics/.cvg/. Ignore everywhere, re-admit the root directory so
+# git will descend into it, then publish only gate.yaml from it.
+**/.cvg/
+!/.cvg/
+/.cvg/*
+!/.cvg/gate.yaml
 
 # scratch render output (deck PDFs, intermediates)
 tmp/

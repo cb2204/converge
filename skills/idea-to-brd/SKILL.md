@@ -1,8 +1,8 @@
 ---
 name: idea-to-brd
-description: Converge Pass 0 (Capture) — optional, like Register (Pass 6). Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a BRD exists (enter at Pass 1) or to write a tech-spec (that IS Pass 1).
+description: Converge Pass 0 (Capture) — optional, like Register (Pass 6). Turns a raw idea with no client brief — a founder thought, an internal itch, a voice-note transcript — into a BRD (cvg/docs/brd-*.md or .pdf) written in the owner's voice, so Pass 1 can consume it unchanged — or into a no-go record when the pain doesn't justify a build. Use when someone says "I have an idea", "capture this idea", "write the brief", "grill me about this idea", or "start Converge pass 0". Runs Scope-check / Grill (frontier rounds — every unblocked question at once with defaults, one reply per round; facts looked up, do-nothing cost probed, pre-mortem run) / Draft / Self-review and gates on the pain carrying a provenance-tagged number, at least one KPI in the owner's terms, in/out scope each non-empty, and every open question owned. Produces the brief, NEVER the spec — no requirements, no solution shape, no technology. Do NOT use when a BRD exists (enter at Pass 1) or to write a tech-spec (that IS Pass 1).
 metadata:
-  version: "0.6.0"
+  version: "0.7.0"
   compatibility: "Converge chain Pass 0 · Capture (optional). Runs before Pass 1 (brd-docs-to-tech-req) when no BRD exists. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe)."
 ---
 
@@ -13,7 +13,7 @@ metadata:
 > **Converge Pass:** 0 of 8 — Capture. **Optional**, like Register (Pass 6): client work with a real brief enters at Pass 1 directly; take this pass only when no BRD exists.
 > **Engine/flags:** conversational capture (default: the current session). Output format via `--out-format`. No tracker.
 
-Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has landed (`docs/brd-*.pdf|md`) — but internal projects, founder ideas, and "I have this thing in my head" moments have no client BRD. Without this pass, the temptation is to write the tech-spec directly and skip the brief, which blurs the exact boundary Pass 1 protects (*brief-in, spec-out — never blur them*). Pass 0 produces the missing brief: the pain, the goals, the owner's own numbers — and stops there.
+Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has landed (`cvg/docs/brd-*.pdf|md`) — but internal projects, founder ideas, and "I have this thing in my head" moments have no client BRD. Without this pass, the temptation is to write the tech-spec directly and skip the brief, which blurs the exact boundary Pass 1 protects (*brief-in, spec-out — never blur them*). Pass 0 produces the missing brief: the pain, the goals, the owner's own numbers — and stops there.
 
 ## Important
 
@@ -30,14 +30,14 @@ Pass 0 is the on-ramp for non-client work. Pass 1's contract assumes a brief has
 | | Artifact |
 |------|----------|
 | **IN** | A raw idea with no BRD — a conversation, a voice-note transcript, a whiteboard photo, a half-page of notes. The owner is in the room (or reachable). |
-| **OUT** | A BRD at `docs/brd-<slug>.md` (or `.pdf`) in the owner's voice — the same artifact shape a client engagement would hand Pass 1. **Or**, when the pain doesn't clear the bar: a no-go record at `docs/no-go-<slug>.md` (the idea, the date, why it didn't clear, what would reopen it). |
-| **GATE** | *(BRD exit)* The pain is stated with a provenance-tagged number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears (altitude is advisory — the checker WARNs, the human judges voice). *(No-go exit)* The record states why and what would reopen it — a parked idea, not a deleted one. |
+| **OUT** | A BRD at `cvg/docs/brd-<slug>.md` (or `.pdf`) in the owner's voice — the same artifact shape a client engagement would hand Pass 1. Artifacts land in the `cvg/` workspace first, then the bare directory; an explicit path always wins (bare `docs/` is the legacy fallback). **Or**, when the pain doesn't clear the bar: a no-go record at `cvg/docs/no-go-<slug>.md` (the idea, the date, the owner of the call, why it didn't clear, what would reopen it). |
+| **GATE** | *(BRD exit)* The pain is stated with a provenance-tagged number (cost, count, or frequency); at least one KPI is named in the owner's terms; scope in/out each has at least one entry; every open question has a named owner; no requirement, solution shape, or technology appears (altitude is advisory — the checker WARNs, the human judges voice). *(No-go exit)* The record states why (the do-nothing answer), what would reopen it, its parking date, and the owner of the call — a parked idea, not a deleted one. |
 
 ## Flags
 
 | Flag | Default | Effect |
 |------|---------|--------|
-| `--out-format md\|pdf` | `md` | BRD format. `md` is the default (Pass 1 reads it directly); `pdf` when the brief is itself a consensus object others sign. |
+| `--out-format md\|pdf` | `md` | BRD format. `md` is the default (Pass 1 reads it directly); `pdf` when the brief is itself a consensus object others sign. The gate runs on the markdown source (the PDF is a rendering of it) — gate the `.md`, render the `.pdf`. |
 | `--questions batch\|one` | `batch` | Interrogation mode. `batch` (canonical) = frontier rounds: each round asks every question whose prerequisites are settled, numbered, each with a recommended default — one reply answers the whole round (voice/dictation-friendly). `one` = strict one-question-at-a-time, for owners who prefer turns. |
 
 No `--engine` beyond the session and no tracker — Pass 0 emits one document.
@@ -48,7 +48,7 @@ No `--engine` beyond the session and no tracker — Pass 0 emits one document.
 
 Before asking anything, assess the idea's shape. If it describes multiple independent systems ("a platform with chat, billing, and analytics"), flag the decomposition **first** — don't burn questions refining details of an idea that is really four ideas. Help the owner pick the first slice; each slice gets its own BRD → Pass 1 cycle.
 
-Then explore what the environment already knows: prior BRDs and tech-specs under `docs/`, related repos, earlier notes. Every fact found here is a question you don't ask.
+Then explore what the environment already knows: prior BRDs and tech-specs under `cvg/docs/` (the `cvg/` workspace first, then the bare `docs/` fallback), related repos, earlier notes. Every fact found here is a question you don't ask.
 
 ### Step 2 — Grill (the stakeholder's questions, in frontier rounds)
 
@@ -77,16 +77,16 @@ With `--questions one`, walk the same tree one question per turn. Either mode: w
 
 If the do-nothing test (branch 2) shows tolerable inaction — no real cost, no
 real urgency, success indistinguishable from today — do **not** draft a BRD.
-Write `docs/no-go-<slug>.md` instead: the idea in two lines, the date, why it
-didn't clear the bar (the do-nothing answer, verbatim), and **what would
-reopen it** (the condition or number that, if it changed, makes this worth
-revisiting). Parked, not deleted — a no-go record is a searchable memory that
-prevents re-litigating the same idea from scratch. Then stop; there is no
-handoff from a no-go.
+Write `cvg/docs/no-go-<slug>.md` instead: the idea in two lines, the date,
+the owner of the call, why it didn't clear the bar (the do-nothing answer,
+verbatim), and **what would reopen it** (the condition or number that, if it
+changed, makes this worth revisiting). Parked, not deleted — a no-go record
+is a searchable memory that prevents re-litigating the same idea from
+scratch. Then stop; there is no handoff from a no-go.
 
 ### Step 3 — Draft (write the BRD in the owner's voice)
 
-Write `docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Executive summary (written LAST — one breath, ≤ 60 words) · Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source · Sign-off (present from the first draft, verdict `_pending_` — only the owner flips it to `canonical`, and Pass 1 must not consume an unsigned brief). Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
+Write `cvg/docs/brd-<slug>.md` from [references/brd-template.md](references/brd-template.md): Executive summary (written LAST — one breath, ≤ 60 words) · Problem · Goals & KPIs · Scope (in/out) · Definition of success · Stakeholders · Risks · Constraints · Open questions · Source · Sign-off (present from the first draft, verdict `_pending_` — only the owner flips it to `canonical`, and Pass 1 must not consume an unsigned brief). Every line traces to a locked answer or a Step 1 finding. Keep the owner's vocabulary — the BRD is *theirs*; Pass 1 does the translation to engineering language, not you.
 
 Three drafting rules from the grill carry into the document:
 
@@ -104,23 +104,29 @@ Re-read the draft with fresh eyes and fix inline (no re-review loop):
 4. **Altitude** — any requirement, solution shape, or technology that leaked in? Strip it or demote it to a recorded preference.
 
 Then run the gate checker and walk the checklist. The checker has an exit
-contract (v0.3.1): **draft validation and handoff authorization are
+contract (v0.4.0): **draft validation and handoff authorization are
 different verdicts.** Authorization is anchored to the verdict line itself —
 the word `canonical` in guidance prose or a fenced example proves nothing
-(all checks run with fenced code blocks stripped), the sign-off date must be
-a real ISO date, and open questions not in the record shape fail closed.
+(all checks run with fenced code blocks stripped), section headings match
+the template exactly (`## Problematic` is not `## Problem`), the sign-off
+date must be a calendar-real ISO date (2026-02-31 is not a date), scope
+entries must say something (`- none` is not an entry), every numbered
+Problem line carries its provenance tag on that line, and open questions
+not in the record shape fail closed.
 
 ```bash
 # while writing — structural validation only, NEVER authorizes handoff:
-bash .claude/skills/idea-to-brd/scripts/check-brd.sh --draft docs/brd-<slug>.md
+bash .claude/skills/idea-to-brd/scripts/check-brd.sh --draft cvg/docs/brd-<slug>.md
 
 # the handoff gate (default) — passes ONLY a canonical brief: owner verdict
-# 'canonical' + ISO date, real Scope In/Out entries, nonblank owners,
-# provenance tags, every (guessed) number linked to an open question:
-bash .claude/skills/idea-to-brd/scripts/check-brd.sh docs/brd-<slug>.md
+# 'canonical' + calendar-real ISO date, real Scope In/Out entries, nonblank
+# owners, every numbered Problem line provenance-tagged on its line, every
+# (guessed) number linked to an open question:
+bash .claude/skills/idea-to-brd/scripts/check-brd.sh cvg/docs/brd-<slug>.md
 
-# the no-go exit has a validator too (marker, date, why, what-would-reopen):
-bash .claude/skills/idea-to-brd/scripts/check-brd.sh --no-go docs/no-go-<slug>.md
+# the no-go exit has a validator too (marker, calendar-real date, why,
+# what-would-reopen, named owner):
+bash .claude/skills/idea-to-brd/scripts/check-brd.sh --no-go cvg/docs/no-go-<slug>.md
 ```
 
 The checker reads `.md` only — a `.pdf` brief is a consensus object; convert
@@ -129,7 +135,10 @@ the last output line is always a stable token — including usage errors
 (exit 2):
 `CHECK_BRD=PASS|FAIL|DRAFT_OK|DRAFT_INCOMPLETE|NOGO_OK|NOGO_INVALID|USAGE_ERROR`.
 Owner-voice and altitude judgments stay warnings in every mode — the human
-judges voice. The regression suite lives at `tests/run-tests.sh`
+judges voice. Hygiene is likewise advisory, never a failure: the checker
+WARNs when no do-nothing answer appears in the body, when the executive
+summary runs past 60 words, or when Stakeholders names no decider. The
+regression suite lives at `tests/run-tests.sh`
 (table-driven; every negative fixture must fail for its intended reason).
 
 - [ ] The **pain carries a number** — cost, count, or frequency, in the Problem section — and **every number carries a provenance tag**; every `(guessed)` one has a matching open question to verify it.
@@ -146,16 +155,16 @@ judges voice. The regression suite lives at `tests/run-tests.sh`
 ## Examples
 
 **Example 1 — the canonical trigger.**
-User: *"I have an idea — grill me and write the brief."* Actions: scope-check (one idea, no prior art under `docs/`) → grill the branches in frontier rounds — round one asks the pain, the do-nothing test, and the goal in one numbered block with defaults; the owner answers in one voice reply; two more rounds close the tree → draft `docs/brd-cost-dashboard.md` in the owner's voice → self-review, strip a leaked "use DuckDB" into a recorded preference → `check-brd.sh` green. Result: a BRD Pass 1 consumes exactly as it would a client's.
+User: *"I have an idea — grill me and write the brief."* Actions: scope-check (one idea, no prior art under `cvg/docs/`) → grill the branches in frontier rounds — round one asks the pain, the do-nothing test, and the goal in one numbered block with defaults; the owner answers in one voice reply; two more rounds close the tree → draft `cvg/docs/brd-cost-dashboard.md` in the owner's voice → self-review, strip a leaked "use DuckDB" into a recorded preference → `check-brd.sh` green. Result: a BRD Pass 1 consumes exactly as it would a client's.
 
 **Example 2 — the idea is really four ideas.**
 User describes a platform with ingestion, chat, billing, and analytics. Actions: stop at Step 1 — flag the decomposition, help pick the first slice (ingestion), capture only that BRD; the other three become one-line stubs in a parking list. Result: one gated BRD, not a four-headed brief no pass can consume.
 
 **Example 3 — a BRD already exists (negative).**
-User: *"Capture this idea"* but `docs/brd-analytical-backbone.pdf` covers it. Actions: point at the existing brief and route to Pass 1 (`brd-docs-to-tech-req`); Pass 0 does not duplicate a landed brief. Result: no second BRD; the chain enters at the right pass.
+User: *"Capture this idea"* but `cvg/docs/brd-analytical-backbone.pdf` covers it. Actions: point at the existing brief and route to Pass 1 (`brd-docs-to-tech-req`); Pass 0 does not duplicate a landed brief. Result: no second BRD; the chain enters at the right pass.
 
 **Example 4 — the no-go exit.**
-User: *"I want an internal tool that auto-formats our meeting notes."* The grill reaches the do-nothing test: *"what happens if we build nothing?"* — honest answer: "nothing, really; formatting takes two minutes and nobody has complained." Actions: stop the grill; write `docs/no-go-meeting-notes-formatter.md` — the idea, the date, the do-nothing answer verbatim, and the reopen condition ("revisit if note volume grows past ~20/week or someone downstream actually consumes them"). Result: idea killed for the price of four questions — the cheapest kill in the descent — and parked where it can be found instead of re-pitched from scratch.
+User: *"I want an internal tool that auto-formats our meeting notes."* The grill reaches the do-nothing test: *"what happens if we build nothing?"* — honest answer: "nothing, really; formatting takes two minutes and nobody has complained." Actions: stop the grill; write `cvg/docs/no-go-meeting-notes-formatter.md` — the idea, the date, the owner of the call, the do-nothing answer verbatim, and the reopen condition ("revisit if note volume grows past ~20/week or someone downstream actually consumes them"). Result: idea killed for the price of four questions — the cheapest kill in the descent — and parked where it can be found instead of re-pitched from scratch.
 
 ## Troubleshooting
 

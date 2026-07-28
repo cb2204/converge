@@ -85,8 +85,9 @@ softened requirement that no eval can decide is not.
 
 For each requirement, confirm:
 
+- [ ] It carries a **stable id** (`R-n` for requirements, `W-n` for wishes/wonts) that evals, ADRs, and gap records can cite.
 - [ ] It names a **measured quantity**, not an adjective.
-- [ ] It has a **numeric threshold with a unit and a comparator**.
+- [ ] It has a **numeric threshold with a unit and a comparator** — on its own line(s), not just somewhere in the spec.
 - [ ] It states the **input/condition** it holds under.
 - [ ] Success metrics read **current → target**, each traced to a **BRD KPI**.
 - [ ] It names **no technology, schema, engine, or framework**.
@@ -95,9 +96,12 @@ For each requirement, confirm:
 The bundled verifier checks the mechanical parts of this:
 
 ```bash
-bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh docs/tech-spec-analytical-engine.md
+bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh cvg/docs/tech-spec-analytical-engine.md
 ```
 
 It PASSES only when the required sections are present, requirements carry
-measurable thresholds, and metrics read current → target — and it WARNS on any
-stack term that leaked in.
+measurable thresholds, and metrics read current → target — and it WARNS on
+any stack term that leaked in (per-domain buckets from
+[leak-terms.txt](leak-terms.txt)), on requirement bullets without a stable
+`R-n`/`W-n` id, and on any `R-n`/`W-n` whose own line(s) carry no number,
+unit, or comparator.

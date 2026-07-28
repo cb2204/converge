@@ -83,6 +83,23 @@ rm -f "$PDF_TMP"
 # outside itself for a golden is a skill that breaks when the use case moves.
 run_case golden-signed-spec      "$FIX/golden-signed-tech-spec.md" -- 0 '^CHECK_TECH_SPEC=PASS$' ''
 
+# --- leak scan: per-domain buckets, word boundaries (P-9 item 1) ------------
+run_case leak-infra-warns        "$FIX/spec-leak-infra.md"      -- 0 'stack leak \[infra/devops\]' 'CHECK_TECH_SPEC=FAIL'
+run_case leak-word-boundary      "$FIX/spec-leak-sparkline.md"  -- 0 '^CHECK_TECH_SPEC=PASS$' 'possible stack leak'
+
+# --- check 7 fails CLOSED on evasive blocker resolutions (P-9 item 2) -------
+run_case blocker-quoted-open-fails "$FIX/spec-blocker-quoted-open.md" -- 1 'BLOCKER' 'hand to Pass 2'
+run_case blocker-pending-fails   "$FIX/spec-blocker-pending.md" -- 1 'BLOCKER' 'hand to Pass 2'
+run_case blocker-blank-fails     "$FIX/spec-blocker-blank.md"   -- 1 'BLOCKER' 'hand to Pass 2'
+run_case blocker-resolved-passes "$FIX/spec-blocker-resolved.md" -- 0 '^CHECK_TECH_SPEC=PASS$' ''
+
+# --- stable ids + per-requirement falsifiability, both warn-only ------------
+run_case req-ids-warn            "$FIX/spec-no-req-ids.md"      -- 0 'lack a stable R-n/W-n id' 'CHECK_TECH_SPEC=FAIL'
+run_case unmeasurable-req-warns  "$FIX/spec-unmeasurable-req.md" -- 0 'requirement R-3 has no number' 'CHECK_TECH_SPEC=FAIL'
+
+# --- the ISO date must bind to the verdict line, not float nearby ------------
+run_case date-far-from-verdict-fails "$FIX/spec-date-elsewhere.md" -- 1 'no valid ISO date' 'hand to Pass 2'
+
 echo "────────────────────────────────────────────"
 echo "rows: $TOTAL  failed: $FAILED"
 [ "$FAILED" -eq 0 ]

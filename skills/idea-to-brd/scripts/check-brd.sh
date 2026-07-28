@@ -5,25 +5,38 @@
 #   canonical (default)  The handoff gate. Structure AND authorization: the
 #                        owner's sign-off must say 'canonical' on the verdict
 #                        line itself (a verdict carrying 'pending'/'draft'
-#                        never authorizes) with a VALID ISO date on a
-#                        Date/Signed line, scope In/Out must carry real
-#                        entries, every open question a nonblank owner in the
-#                        record shape, numbers provenance-tagged, (guessed)
-#                        numbers linked to an open question.
+#                        never authorizes) with a VALID calendar-real ISO
+#                        date on a Date/Signed line, scope In/Out must carry
+#                        real entries (a bullet saying "none"/"n/a" is not an
+#                        entry), every open question a nonblank owner in the
+#                        record shape, every numbered Problem line
+#                        provenance-tagged on its line, (guessed) numbers
+#                        linked to an open question.
 #                        ONLY this mode may print the Pass 1 handoff verdict.
 #   --draft              Validation while writing. Same structural checks;
 #                        ownership/provenance/sign-off items downgrade to
 #                        warnings. NEVER authorizes handoff, no matter how
 #                        complete the brief.
 #   --no-go <file>       Validates a no-go record (the pass's other honest
-#                        exit): a no-go marker, an ISO date, why it didn't
-#                        clear, and what would reopen it.
+#                        exit): a no-go marker, a calendar-real ISO date,
+#                        the do-nothing reasoning (why), what would reopen
+#                        it, and a named owner for the call.
 #
 # All checks run on the file with fenced code blocks stripped — an example
 # inside ``` fences can neither satisfy nor trip a check (v0.3.1).
 #
+# Section headings match EXACTLY (v0.4.0): '## Problematic' does not satisfy
+# '## Problem' — the heading must be the template's name followed by
+# whitespace (e.g. '## Goals & KPIs') or end of line, case-insensitive.
+#
+# ISO dates are calendar-real (v0.4.0): the regex screens shape and month/day
+# ranges, python3 datetime proves the date exists (2026-02-31 is not a date).
+# Without python3 the gate falls back to the regex and WARNs — never silent.
+#
 # Semantic judgment (owner voice, altitude leaks) stays WARN in every mode —
-# the human judges voice; this script mechanizes only the provable.
+# the human judges voice; this script mechanizes only the provable. Hygiene
+# items (do-nothing evidence, a >60-word executive summary, an unnamed
+# decider) are likewise WARN-only in every mode (v0.4.0).
 #
 # Agent contract: the LAST line is always a stable machine token —
 #   CHECK_BRD=PASS | FAIL | DRAFT_OK | DRAFT_INCOMPLETE | NOGO_OK
@@ -38,9 +51,10 @@
 
 set -euo pipefail
 
-CHECK_BRD_VERSION="0.3.1"
+CHECK_BRD_VERSION="0.4.0"
 
-# A valid ISO date: month 01-12, day 01-31 (2026-13-45 is not a date).
+# A valid ISO date SHAPE: month 01-12, day 01-31 (2026-13-45 is not a date).
+# First screen only — iso_dates_real() proves the day exists in its month.
 ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
 
 usage_error() {
@@ -116,11 +130,44 @@ own() {
   fi
 }
 
+# iso_dates_real — reads stdin, exits 0 iff at least one ISO-shaped date on
+# it is a REAL calendar date (v0.4.0). The regex screens shape and month/day
+# ranges; python3's datetime settles February 31sts and leap years. Without
+# python3 the gate falls back to the regex result and WARNs — never silent.
+iso_dates_real() {
+  CANDS="$(grep -oE "$ISO_RE" | sort -u || true)"
+  if [ -z "$CANDS" ]; then
+    return 1
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s\n' "$CANDS" | python3 -c '
+import sys
+from datetime import date
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    try:
+        date.fromisoformat(line)
+        sys.exit(0)
+    except ValueError:
+        pass
+sys.exit(1)
+'
+    return $?
+  fi
+  warn "python3 not found — ISO date checked by regex only (calendar-real check skipped)"
+  return 0
+}
+
 # --- extract a section body: lines after "## <name>" until the next "## " ---
+# The heading match is EXACT (v0.4.0): the template's section name followed
+# by whitespace or end of line — '## Problematic' opens no section.
 section() {
   printf '%s\n' "$BODY" | awk -v want="$1" '
+    BEGIN { re = "^## +" tolower(want) "([[:space:]]|$)" }
     /^##[^#]/ {
-      inside = (tolower($0) ~ tolower(want)) ? 1 : 0
+      inside = (tolower($0) ~ re) ? 1 : 0
       next
     }
     inside { print }
@@ -136,20 +183,25 @@ if [ "$MODE" = "nogo" ]; then
   else
     fail "no-go: no 'no-go' marker found — say what this record is"
   fi
-  if printf '%s\n' "$BODY" | grep -qE "$ISO_RE"; then
+  if printf '%s\n' "$BODY" | iso_dates_real; then
     pass "no-go: dated (valid ISO YYYY-MM-DD)"
   else
     fail "no-go: no valid ISO date — a parked idea needs its parking date"
   fi
   if printf '%s\n' "$BODY" | grep -qiE '(^|[[:space:]#*-])why([^a-z]|$)'; then
-    pass "no-go: states why it didn't clear"
+    pass "no-go: states why it didn't clear (the do-nothing reasoning)"
   else
-    fail "no-go: no 'why' — record why the pain didn't justify a build"
+    fail "no-go: no 'why' — record the do-nothing answer: why the pain didn't justify a build"
   fi
   if printf '%s\n' "$BODY" | grep -qiE 'reopen'; then
     pass "no-go: states what would reopen it"
   else
     fail "no-go: nothing would reopen it? — a no-go is parked, not deleted; name the reopen condition"
+  fi
+  if printf '%s\n' "$BODY" | grep -qiE '(^|[[:space:]#*-])owner[*]*:[*]*[[:space:]]*[^[:space:]]'; then
+    pass "no-go: named owner — someone owns the call to park it"
+  else
+    fail "no-go: no named owner — record who made the no-go call (owner: <name>)"
   fi
   echo
   if [ "$FAIL" -eq 0 ]; then
@@ -167,9 +219,12 @@ fi
 # BRD modes (canonical | draft)
 # ===========================================================================
 
-# 1 — required sections (structural: hard in every mode)
+# 1 — required sections (structural: hard in every mode). Headings match
+#     EXACTLY (v0.4.0): the name, then whitespace or end of line — so
+#     '## Problematic' cannot stand in for '## Problem', while the
+#     template's own '## Goals & KPIs' still satisfies 'Goals'.
 for SEC in "Executive summary" "Problem" "Goals" "Scope" "Definition of success" "Stakeholders" "Risks" "Constraints" "Open questions" "Source" "Sign-off"; do
-  if printf '%s\n' "$BODY" | grep -qiE "^## +.*${SEC}"; then
+  if printf '%s\n' "$BODY" | grep -qiE "^## +${SEC}([[:space:]]|$)"; then
     pass "section present: $SEC"
   else
     fail "section missing: $SEC"
@@ -194,9 +249,23 @@ fi
 SCOPE_BODY="$(section "Scope")"
 
 scope_entries() {
-  # count non-empty entry lines inside the In or Out zone, including
-  # same-line content after the marker ("**In:** everything" counts as 1)
+  # count REAL entry lines inside the In or Out zone, including same-line
+  # content after the marker ("**In:** everything" counts as 1). A bullet
+  # whose text is empty or a content-free token — "nothing", "none", "n/a"
+  # (trailing periods tolerated) — after stripping list markers and bold is
+  # NOT an entry (v0.4.0): an empty In is not a scope decision.
   printf '%s\n' "$SCOPE_BODY" | awk -v which="$1" '
+    function real_entry(s,   t, l) {
+      t = s
+      gsub(/\*\*/, "", t)
+      sub(/^[[:space:]]*[-*+][[:space:]]+/, "", t)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", t)
+      if (t == "") return 0
+      l = tolower(t)
+      sub(/[.]+$/, "", l)
+      if (l == "nothing" || l == "none" || l == "n/a") return 0
+      return 1
+    }
     BEGIN { zone = 0; n = 0 }
     {
       low = tolower($0)
@@ -206,11 +275,11 @@ scope_entries() {
           line = $0
           sub(/.*\*\*[A-Za-z]+:?\*\*/, "", line)
           sub(/^[A-Za-z]+:/, "", line)
-          if (line ~ /[^[:space:]]/) n++
+          if (real_entry(line)) n++
         }
         next
       }
-      if (zone && $0 ~ /[^[:space:]]/) n++
+      if (zone && real_entry($0)) n++
     }
     END { print n }'
 }
@@ -269,6 +338,17 @@ if printf '%s\n' "$PG_BODY" | grep -qE '[0-9]'; then
     own "numbers in Problem/Goals carry no provenance tag — tag each (measured), (estimated), or (guessed)"
   fi
 fi
+
+# 6b — per-line provenance in Problem (v0.4.0): one tag anywhere no longer
+#      launders untagged numbers on neighboring lines — every Problem line
+#      carrying a digit must carry a tag ON THAT LINE. (Goals stays on the
+#      combined floor above: the golden's KPI targets are legitimately
+#      untagged — a goal states ambition; the Problem states fact.)
+PROBLEM_UNTAGGED="$(section "Problem" | grep -E '[0-9]' | grep -cvE '\((measured|estimated|guessed)\)' || true)"
+if [ "$PROBLEM_UNTAGGED" -gt 0 ]; then
+  own "Problem: $PROBLEM_UNTAGGED line(s) carry a number with no provenance tag on the line — tag each number (measured), (estimated), or (guessed)"
+fi
+
 if printf '%s\n' "$BODY" | grep -qE '\(guessed\)'; then
   if [ "$Q_COUNT" -ge 1 ]; then
     pass "(guessed) number(s) are linked: open question(s) exist to verify them"
@@ -295,10 +375,10 @@ if [ "$MODE" = "canonical" ]; then
   else
     fail "Sign-off: owner verdict 'canonical' missing — a draft cannot pass the canonical gate (validate work-in-progress with --draft)"
   fi
-  if printf '%s\n' "$DATE_LINES" | grep -qE "$ISO_RE"; then
-    pass "Sign-off: dated (ISO YYYY-MM-DD)"
+  if printf '%s\n' "$DATE_LINES" | iso_dates_real; then
+    pass "Sign-off: dated (calendar-real ISO YYYY-MM-DD)"
   else
-    fail "Sign-off: no valid ISO date (YYYY-MM-DD) on a Date/Signed line — an undated sign-off cannot anchor the descent"
+    fail "Sign-off: no valid ISO date (real calendar date, YYYY-MM-DD) on a Date/Signed line — an undated sign-off cannot anchor the descent"
   fi
 else
   if [ "$VERDICT_CANONICAL" -eq 1 ]; then
@@ -311,6 +391,20 @@ fi
 # 8 — altitude warnings (advisory in EVERY mode; the human judges voice)
 if printf '%s\n' "$BODY" | grep -qiE '\b(the system shall|must implement|architecture|schema|database|endpoint|framework)\b'; then
   warn "possible solution-shape leak (requirement/tech language found) — keep the BRD in the owner's voice"
+fi
+
+# 9 — hygiene warnings (advisory in EVERY mode — they never fail the gate):
+#     the do-nothing test leaves evidence, the summary fits in one breath,
+#     and a decider is named when stakeholders could disagree (v0.4.0).
+if ! printf '%s\n' "$BODY" | grep -qiE 'do-nothing|build nothing|do nothing'; then
+  warn "no do-nothing-test evidence in the body — record what building nothing costs (the answer that justifies this BRD over a no-go)"
+fi
+ES_WORDS="$(section "Executive summary" | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /[[:alnum:]]/) n++ } END { print n + 0 }')"
+if [ "$ES_WORDS" -gt 60 ]; then
+  warn "Executive summary runs $ES_WORDS words (> 60) — one breath; if it can't fit, revisit the scope-check"
+fi
+if ! section "Stakeholders" | grep -qiE 'decider'; then
+  warn "no decider named in Stakeholders — when more than one stakeholder is named, name the tie-breaker"
 fi
 
 # ===========================================================================
