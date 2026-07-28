@@ -1,0 +1,23 @@
+{
+  "evaluation": {
+    "output_sha256": "7ad27a037bd17bacb51dfc3b9aa62239697810cec01122dbf98acc4d5be69064",
+    "path_policy": "pass"
+  },
+  "execution_profile": {
+    "path": "cvg/execution/T-20260721-srv-mcp/execution-profile.yaml",
+    "sha256": "0747d86e189d0f9c28d0fb003f6a2f1d8d79593392ef54bbd7a52690ada6498b"
+  },
+  "generated_by": "task-loop",
+  "recorded_at": "2026-07-28T23:03:42Z",
+  "result": "pass",
+  "runtime": {
+    "agent": "claude",
+    "branch": "task/srv-mcp"
+  },
+  "schema": "cvg.execution-receipt.v1",
+  "task_id": "T-20260721-srv-mcp",
+  "task_spec": {
+    "path": "cvg/tasks/T-20260721-srv-mcp.md",
+    "sha256": "9daca70bd0b3159edfbbb8b02acfa70ca047aeba91dfc42a7ef350619708e3da"
+  }
+}

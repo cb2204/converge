@@ -21,3 +21,4 @@ An error or an exhausted budget is never recorded as success.
 | 2026-07-28T22:25:10Z | `T-20260721-tf-publish` | claude | **SETTLED** | 1/5 | — |
 | 2026-07-28T22:34:02Z | `T-20260721-srv-core` | claude | **SETTLED** | 1/5 | — |
 | 2026-07-28T22:45:36Z | `T-20260721-srv-honest` | claude | **SETTLED** | 1/5 | — |
+| 2026-07-28T23:03:42Z | `T-20260721-srv-mcp` | claude | **SETTLED** | 1/5 | — |
