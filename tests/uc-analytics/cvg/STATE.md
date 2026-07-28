@@ -14,3 +14,4 @@ An error or an exhausted budget is never recorded as success.
 | 2026-07-28T19:35:14Z | `T-20260721-cap-alldomains` | claude | **LOCAL_SETTLED** | 1/5 | — |
 | 2026-07-28T20:42:01Z | `T-20260721-cap-freshness` | claude | **BLOCKED** | 1/5 | the eval went green but settlement refused — read the guard verdict above |
 | 2026-07-28T21:01:05Z | `T-20260721-tf-silver` | claude | **SETTLED** | 1/5 | — |
+| 2026-07-28T21:40:32Z | `T-20260721-tf-gold` | claude | **EXHAUSTED** | 3/5 | wall-clock budget exhausted |
