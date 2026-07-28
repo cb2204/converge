@@ -101,6 +101,30 @@ notes=()
 echo "${BOLD}safe-to-delegate: $FILE${RESET}"
 echo "────────────────────────────────────────────────────────"
 
+# --- Re-sealing: retire the superseded signature BEFORE validation ---
+# A signed spec must be amendable. Every doc says the remedy for an edited spec
+# is "re-run safe-to-delegate.sh --stamp to re-seal", and that remedy was
+# UNREACHABLE: the validator raises the HMAC mismatch as a blocker in Gate 1,
+# and the --stamp branch only runs when blockers == 0. So the one legitimate way
+# to amend a sealed spec dead-ended in the error telling you to use it, and the
+# only way through was to hand-strip the sig — exactly what the docs forbid.
+#
+# `--stamp` IS the act of signing off: it declares that the body as it stands
+# now is the thing being signed. So the previous signature is superseded by
+# definition and is retired here, before anything reads it. This grants no
+# authority — the fresh MAC still requires the signing key, and without one the
+# spec lands at Tier 2 (supervised only) just as it would on a first stamp.
+if [[ "$STAMP" == true ]] && grep -q '^signed_off_sig:' "$FILE"; then
+  _ss_tmp="$(mktemp -t cvg-reseal.XXXXXX)"
+  if grep -v '^signed_off_sig:' "$FILE" > "$_ss_tmp" && mv "$_ss_tmp" "$FILE"; then
+    echo "   ${YELLOW}re-sealing${RESET} — the previous signature is superseded by this stamp"
+  else
+    rm -f "$_ss_tmp"
+    echo "   ${RED}BLOCK${RESET} — could not retire the previous signature; spec NOT stamped." >&2
+    exit 1
+  fi
+fi
+
 # --- Gate 0: leaf-only — a NODE (XL/XXL) is NEVER delegated ---
 # The dark-factory invariant: a worker runs LEAVES. An XL/XXL node is a
 # decomposition directive; delegating it would run the node instead of its

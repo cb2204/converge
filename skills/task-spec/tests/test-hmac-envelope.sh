@@ -548,6 +548,86 @@ echo "── Scenario 10: envelope v2 seals the authorization fields ──"
   probe 's/^status: .*$/status: in-progress/m'                        allowed "status-change-allowed"
 }
 
+# ---------------------------------------------------------------------------
+# Scenario 11 — a sealed spec must be AMENDABLE.
+#
+# Every error message and every doc says the remedy for an edited spec is
+# "re-run safe-to-delegate.sh --stamp to re-seal". That remedy was unreachable:
+# the validator raises the HMAC mismatch as a blocker, and the --stamp branch
+# only ran when blockers == 0. So the sole legitimate way to amend a signed spec
+# dead-ended in the error instructing you to use it, and the only way through
+# was to hand-strip the signature — which the docs explicitly forbid. The prose
+# is the contract; this pins it.
+# ---------------------------------------------------------------------------
+echo "── Scenario 11: re-stamp re-seals an amended spec ──"
+{
+  ID="T-20260603-reseal-after-edit"
+  REPO=$(make_repo "T-20260603-stamp-then-verify.md" "$ID")
+  KEYFILE=$(mktemp); head -c 32 /dev/urandom | xxd -p | tr -d '\n' > "$KEYFILE"
+  (
+    cd "$REPO"
+    export TASKSPEC_SIGNING_KEY="$KEYFILE"
+    # The id must match the filename, and the payload includes it.
+    perl -0pi -e "s/^id: .*\$/id: $ID/m" "tasks/$ID.md"
+    bash "$SAFE" --stamp --stamp-by hmac-test "tasks/$ID.md" >/dev/null 2>&1 || true
+    SIG_BEFORE=$(grep -m1 '^signed_off_sig:' "tasks/$ID.md" || true)
+
+    # Amend the BODY — the thing the seal covers.
+    printf '\n<!-- an amendment the owner genuinely intends -->\n' >> "tasks/$ID.md"
+    set +e
+    broke=$(bash "$VALIDATE" "tasks/$ID.md" 2>&1); broke_rc=$?
+    set -e
+    if [[ $broke_rc -ne 0 ]] && echo "$broke" | grep -q "modified after stamping"; then
+      echo "PASS edit-breaks-seal"
+    else
+      echo "FAIL an edited body did not break the seal (rc=$broke_rc)"
+    fi
+
+    # The documented remedy must now WORK, with no hand-editing.
+    set +e
+    re_out=$(bash "$SAFE" --stamp --stamp-by hmac-test "tasks/$ID.md" 2>&1); re_rc=$?
+    set -e
+    if [[ $re_rc -eq 0 ]] && echo "$re_out" | grep -q "TIER=1"; then
+      echo "PASS restamp-reaches-tier1"
+    else
+      echo "FAIL the documented remedy is still unreachable (rc=$re_rc): $(echo "$re_out" | tail -3)"
+    fi
+    if echo "$re_out" | grep -q "re-sealing"; then
+      echo "PASS restamp-says-so"
+    else
+      echo "FAIL re-sealing was silent — retiring a signature must be legible"
+    fi
+    # A NEW signature, not the old one replayed.
+    SIG_AFTER=$(grep -m1 '^signed_off_sig:' "tasks/$ID.md" || true)
+    if [[ -n "$SIG_AFTER" && "$SIG_AFTER" != "$SIG_BEFORE" ]]; then
+      echo "PASS signature-is-fresh"
+    else
+      echo "FAIL the signature did not change over an amended body"
+    fi
+    # Exactly one sig line — stripping must not duplicate the field.
+    if [[ "$(grep -c '^signed_off_sig:' "tasks/$ID.md")" -eq 1 ]]; then
+      echo "PASS single-sig-field"
+    else
+      echo "FAIL the envelope carries more than one signature line"
+    fi
+    set +e
+    v_out=$(bash "$VALIDATE" "tasks/$ID.md" 2>&1); v_rc=$?
+    set -e
+    if [[ $v_rc -eq 0 ]] && echo "$v_out" | grep -q "Tier 1"; then
+      echo "PASS reseal-verifies"
+    else
+      echo "FAIL the re-sealed spec does not verify (rc=$v_rc)"
+    fi
+  ) > "$REPO/out.txt" 2>&1
+  while IFS= read -r line; do
+    case "$line" in
+      PASS\ *) pass "S11 ${line#PASS }" ;;
+      FAIL\ *) fail "S11 ${line#FAIL }" ;;
+    esac
+  done < "$REPO/out.txt"
+  rm -rf "$REPO" "$KEYFILE"
+}
+
 echo ""
 echo "========================================"
 printf "Results: %d passed, %d failed\n" "$PASS" "$FAIL"
