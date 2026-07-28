@@ -142,7 +142,15 @@ fi
 # --- Gate 1: structural + shellcheck validation ---
 echo "1. Structural validation + shellcheck-evals ..."
 set +e
-v_out=$(bash "$VALIDATE" --shellcheck-evals "${PASS_THROUGH[@]}" "$FILE" 2>&1)
+# "${ARR[@]+"${ARR[@]}"}" — not the bare "${ARR[@]}".
+#
+# Under `set -u`, bash 3.2 treats expanding an EMPTY array as an unbound variable
+# and dies. bash 4.4+ fixed it, so with no pass-through flags this gate ran fine
+# on Linux and aborted on stock macOS — reporting "blocked a valid spec", which
+# reads like a spec defect and is really the gate failing to start. This repo
+# declares bash 3.2 as its floor, and the same idiom is already used in the Pass 8
+# engine adapters for exactly this reason.
+v_out=$(bash "$VALIDATE" --shellcheck-evals ${PASS_THROUGH[@]+"${PASS_THROUGH[@]}"} "$FILE" 2>&1)
 v_rc=$?
 set -e
 if [[ $v_rc -ne 0 ]]; then

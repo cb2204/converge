@@ -79,7 +79,7 @@ GIT_ROOT=$(cd "$(dirname "$FILE")" && git rev-parse --show-toplevel 2>/dev/null 
 #
 # A spec's relative paths ("cvg/capture/orders.py") are written against its own
 # WORKSPACE, not against whatever repository happens to contain it. For a
-# workspace nested at tests/uc-analytics — or any run inside a git worktree —
+# workspace nested inside a larger repo — or any run inside a git worktree —
 # the git root is the wrong directory, and every `test -f` fails in 0s without
 # ever reaching the work. That RED is indistinguishable from a real failure
 # except by the suspiciously round duration.
