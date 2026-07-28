@@ -606,7 +606,19 @@ if [[ "$CHECK_DEPENDS_ON" == true && -n "$FRONTMATTER" ]]; then
   for dep in $DEPS; do
     found=false
     dep_status=""
-    for dir in "$FILE_DIR" "$GIT_ROOT/tasks" "$GIT_ROOT/tasks/queue" "$GIT_ROOT/tasks/archive" "$GIT_ROOT/tasks/feature" "$GIT_ROOT/tasks/done" "$GIT_ROOT/tasks/parked"; do
+    # The lifecycle sub-directories must be resolved RELATIVE TO THE SPEC, not
+    # only under $GIT_ROOT/tasks. In the cvg/ layout a spec lives at
+    # <project>/cvg/tasks/, so its done/ sibling is "$FILE_DIR/done" while
+    # "$GIT_ROOT/tasks/done" does not exist — the error message claimed to have
+    # searched done/ and never had. The first task to FINISH therefore made every
+    # dependent spec unvalidatable, and re-sealing an amended one impossible.
+    #
+    # Same root cause as the workspace-root and register-KNOWN fixes: a path
+    # derived from an assumed layout instead of from the file in hand. GIT_ROOT
+    # entries are kept so the flat layout keeps working.
+    for dir in "$FILE_DIR" \
+               "$FILE_DIR/queue" "$FILE_DIR/archive" "$FILE_DIR/feature" "$FILE_DIR/done" "$FILE_DIR/parked" \
+               "$GIT_ROOT/tasks" "$GIT_ROOT/tasks/queue" "$GIT_ROOT/tasks/archive" "$GIT_ROOT/tasks/feature" "$GIT_ROOT/tasks/done" "$GIT_ROOT/tasks/parked"; do
       if [[ -f "$dir/${dep}.md" ]]; then
         found=true
         dep_status=$(grep '^status:' "$dir/${dep}.md" 2>/dev/null | head -1 | awk '{print $2}' || true)
