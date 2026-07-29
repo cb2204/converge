@@ -135,10 +135,10 @@
         "resolution": {
           "controls": {
             "fs.write": {
-              "enforcement_kind": "prevent",
+              "enforcement_kind": "detect",
               "gate_relevant": true,
-              "mechanism": "PreToolUse hook permissionDecision=deny + permissions.deny Edit(...)",
-              "status": "handled"
+              "mechanism": "portable whole-repo postflight; emitted PreToolUse fragment prevents Edit/Write/NotebookEdit only when a dispatcher installs it, while Bash remains broader",
+              "status": "mapped"
             },
             "net.egress": {
               "enforcement_kind": "prevent",
@@ -159,7 +159,9 @@
               "status": "mapped"
             }
           },
-          "detect_only": [],
+          "detect_only": [
+            "fs.write"
+          ],
           "fails_closed": false,
           "runtime": "claude",
           "unenforced_required": []
@@ -171,10 +173,10 @@
         "resolution": {
           "controls": {
             "fs.write": {
-              "enforcement_kind": "prevent",
+              "enforcement_kind": "detect",
               "gate_relevant": true,
-              "mechanism": "Landlock writable-roots (workspace-write), on by default",
-              "status": "handled"
+              "mechanism": "workspace sandbox prevents writes outside writable roots; Task-Spec subpaths are enforced by the portable whole-repo postflight",
+              "status": "mapped"
             },
             "net.egress": {
               "enforcement_kind": "prevent",
@@ -195,7 +197,9 @@
               "status": "handled"
             }
           },
-          "detect_only": [],
+          "detect_only": [
+            "fs.write"
+          ],
           "fails_closed": false,
           "runtime": "codex",
           "unenforced_required": []
@@ -245,11 +249,16 @@
     "candidate_guard": "skills/task-to-runtime-contract/scripts/check-path-policy.py",
     "path_policy_source": "task_spec",
     "portable_postflight_required": true,
-    "primary_runtime": "generic",
+    "primary_runtime": "kimi",
     "receipt_writer": "skills/task-to-runtime-contract/scripts/write-execution-receipt.py",
     "required_controls": [
       "fs.write"
     ],
+    "runtime_selection": {
+      "inferred_runtime": "kimi",
+      "inferred_source": "task_spec.execution_backend",
+      "source": "task_spec.execution_backend"
+    },
     "task_brief": "cvg/execution/T-20260729-obs-fence/AGENTS.task.md",
     "tool_input_guard": "skills/task-to-runtime-contract/scripts/guard-tool-input.py",
     "unenforced_waivers": []

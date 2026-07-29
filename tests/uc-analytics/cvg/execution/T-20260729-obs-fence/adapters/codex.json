@@ -3,8 +3,9 @@
   "candidate_guard_command": "python3 skills/task-to-runtime-contract/scripts/check-path-policy.py --profile \"cvg/execution/T-20260729-obs-fence/execution-profile.yaml\" --candidate \"$CVG_CANDIDATE_PATH\"",
   "execution_profile": "cvg/execution/T-20260729-obs-fence/execution-profile.yaml",
   "native_control": {
-    "prewrite": "workspace sandbox plus scoped instructions",
-    "supports_prewrite_prevention": true
+    "prewrite": "workspace sandbox bounds writes to the workspace, not to Task-Spec paths",
+    "prewrite_prevention_status": "workspace-only; task scope is postflight-detected",
+    "supports_prewrite_prevention": false
   },
   "postflight_command": "python3 skills/task-to-runtime-contract/scripts/check-path-policy.py --profile \"cvg/execution/T-20260729-obs-fence/execution-profile.yaml\" --base \"$CVG_BASE_REF\"",
   "schema": "cvg.runtime-adapter.v1",
