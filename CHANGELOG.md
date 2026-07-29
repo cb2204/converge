@@ -22,6 +22,27 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Fail-soft is not the same as silent.** The Pass 8 tracker call discarded the
+  bridge's output *and* its status, so a run printed "the board will follow this
+  run" and nothing in its own log could confirm or deny it. That is how the
+  broken Linear board-write fixed in 0.1.0 survived weeks unnoticed: every log
+  looked identical to a working one, and the only way to find out was to go and
+  look at the board. The call is still fail-soft — the evals decide the verdict,
+  never the board — but now **accounted**: output lands in
+  `cvg/loop/<task>/tracker.log`, and a `TRACKER=OK|FAILED|SKIPPED` token prints
+  beside `TASK_LOOP=`. An unverifiable claim in a log is worse than no claim.
+
+### Added
+- A **differential** row in `tests/test-loop-kernel.sh`: a run whose tracker
+  bridge fails must land on exactly the state and exit code of one whose bridge
+  succeeds. Stated as a comparison rather than a hardcoded state, because a
+  constant would pass just as happily if the board were the thing dictating it.
+
+---
+
 ## [0.1.0] — 2026-07-29
 
 The first release where the number means the same thing everywhere.
