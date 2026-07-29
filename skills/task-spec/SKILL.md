@@ -13,7 +13,7 @@ description: |
   expand into child specs. Tasks all the way down — no route out to a separate
   spec-driven paradigm.
 metadata:
-  version: "3.6.0"
+  version: "0.1.0"
 ---
 
 # task-spec — Cornerstone CAW for Task-Spec v3

@@ -38,7 +38,7 @@ bash .claude/skills/task-spec/scripts/validate-task-spec.sh tasks/T-<your-spec>.
 bash .claude/skills/task-spec/scripts/safe-to-delegate.sh --stamp tasks/T-<your-spec>.md
 ```
 
-**A spec is ready to dispatch when, and only when, `safe-to-delegate.sh --stamp` returns `VERDICT: DELEGATE` and writes `signed_off: true` to the frontmatter.** Hand-stamping is rejected by the sign-off envelope check; the only path to the autonomy contract is the gate. As of v2.2 the envelope is a key-optional HMAC-SHA256 seal — `--stamp` writes `signed_off_sig` over a canonical payload, and `validate-task-spec.sh` Check 17 recomputes and compares (three-tier degrade when no key/crypto is present). See [CHANGELOG.md](CHANGELOG.md) and [references/concepts/signed-off.md](references/concepts/signed-off.md).
+**A spec is ready to dispatch when, and only when, `safe-to-delegate.sh --stamp` returns `VERDICT: DELEGATE` and writes `signed_off: true` to the frontmatter.** Hand-stamping is rejected by the sign-off envelope check; the only path to the autonomy contract is the gate. As of v2.2 the envelope is a key-optional HMAC-SHA256 seal — `--stamp` writes `signed_off_sig` over a canonical payload, and `validate-task-spec.sh` Check 17 recomputes and compares (three-tier degrade when no key/crypto is present). See [CHANGELOG.md](../../CHANGELOG.md) and [references/concepts/signed-off.md](references/concepts/signed-off.md).
 
 **Your first 10 minutes:** follow [runbooks/first-spec-walkthrough.md](runbooks/first-spec-walkthrough.md) — a complete copy-paste walkthrough from install through stamped spec in a tempdir.
 
@@ -349,13 +349,13 @@ What people try that doesn't work:
 - Skill name: `task-spec` (the format IS the name; OpenAPI Spec / TypeSpec convention)
 - Agent name: `task-architect` (the judgment layer)
 - File pattern: `T-YYYYMMDD-<kebab-slug>.md`
-- Format version: v3 (current release **v3.6.0**; see CHANGELOG.md for version history; future format changes will be additive)
+- Spec FORMAT version: v3 (a data contract, versioned independently of the Converge release; see the root CHANGELOG.md for version history; future format changes will be additive)
 
 ---
 
 ## Roadmap
 
-The format ships at **v3.6.0** today; see [CHANGELOG.md](CHANGELOG.md) for what shipped in each release, and the deep-dive PDF at [`../../docs/task-spec-v3.6.0.pdf`](../../docs/task-spec-v3.6.0.pdf). The v3.6.0 release freed the `L` tier from a single named backend (it now checks membership in `TS_LONG_HORIZON_BACKENDS`, overridable per fleet); v3.5.0 added the vendor-neutral `tracker_ref` receipt; v3.4.0 collapsed the fork into the six-tier sizing engine (XS/S/M/L leaves, XL/XXL decomposition nodes) and removed the `XL → SDD` escape; v3.3.0 added the decomposition-shape guidance; v3.2.0 added size-aware routing. The v3.1.0 release added the `--gold-sanity` and `requires:` acceptance gates, the canonical A2A v1.0 `TaskState` dispatcher (`ts_a2a_state_v1`), `depends_on` DAG cycle detection, a decomposition runbook + concept, the published JSON Schema (Draft 2020-12), and the generic `backend_metadata` field (replacing `codex_metadata`/`kimi_metadata`). The v3.0.0 release added effort-scaled profiles, the Behavior zone with behavior↔eval traceability, the `accept-task.sh` post-execution acceptance gate, conformance levels L0/L1/L2, and the open-string `execution_backend`; v2.2 added the key-optional HMAC sign-off envelope (`signed_off_sig`) and v2.2.1 fixed the eval-runner stdin-hang. Format changes that have shipped (budget_iterations, precondition, execution_backend, signed_off, signed_off_sig, creates_paths, profile, behavior, accepted, requires, baseline_ref, backend_metadata) are documented in [references/concepts/task-spec-v1.md](references/concepts/task-spec-v1.md) (filename retained for link stability — the document covers the current v3 format).
+The format ships at **v3** today (the package ships at the version in the root `VERSION` file); see [CHANGELOG.md](../../CHANGELOG.md) for what shipped in each release, and the deep-dive PDF at [`../../docs/task-spec-v3.6.0.pdf`](../../docs/task-spec-v3.6.0.pdf). The v3.6.0 release freed the `L` tier from a single named backend (it now checks membership in `TS_LONG_HORIZON_BACKENDS`, overridable per fleet); v3.5.0 added the vendor-neutral `tracker_ref` receipt; v3.4.0 collapsed the fork into the six-tier sizing engine (XS/S/M/L leaves, XL/XXL decomposition nodes) and removed the `XL → SDD` escape; v3.3.0 added the decomposition-shape guidance; v3.2.0 added size-aware routing. The v3.1.0 release added the `--gold-sanity` and `requires:` acceptance gates, the canonical A2A v1.0 `TaskState` dispatcher (`ts_a2a_state_v1`), `depends_on` DAG cycle detection, a decomposition runbook + concept, the published JSON Schema (Draft 2020-12), and the generic `backend_metadata` field (replacing `codex_metadata`/`kimi_metadata`). The v3.0.0 release added effort-scaled profiles, the Behavior zone with behavior↔eval traceability, the `accept-task.sh` post-execution acceptance gate, conformance levels L0/L1/L2, and the open-string `execution_backend`; v2.2 added the key-optional HMAC sign-off envelope (`signed_off_sig`) and v2.2.1 fixed the eval-runner stdin-hang. Format changes that have shipped (budget_iterations, precondition, execution_backend, signed_off, signed_off_sig, creates_paths, profile, behavior, accepted, requires, baseline_ref, backend_metadata) are documented in [references/concepts/task-spec-v1.md](references/concepts/task-spec-v1.md) (filename retained for link stability — the document covers the current v3 format).
 
 ---
 
@@ -364,7 +364,7 @@ The format ships at **v3.6.0** today; see [CHANGELOG.md](CHANGELOG.md) for what 
 - New concept? Add to `references/concepts/` (≤150 lines)
 - New pattern? Add to `references/patterns/` (≤200 lines)
 - New runbook? Add to `runbooks/` (operational playbooks)
-- Format change? Bump version in `scripts/_lib.sh` + `SKILL.md` + `CHANGELOG.md`; provide migration script if breaking
+- Format change? Bump the root `VERSION`, run `tests/test-version-unity.sh --sync`, and add a root `CHANGELOG.md` entry; provide migration script if breaking
 - Bug in scripts? PR with test case in `scripts/test-*.sh`
 
 ---

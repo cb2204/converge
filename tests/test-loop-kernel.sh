@@ -663,6 +663,66 @@ else
   ok_state="$(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
   bad "the tracker rows inspected a loop that never ran (${ok_state:-no terminal state})"
 fi
+# An unauthorized run must SAY it skipped, not stay silent about it.
+if grep -q '^TRACKER=SKIPPED' <<<"$RK_OUT"; then
+  ok "an unauthorized run reports TRACKER=SKIPPED rather than nothing"
+else
+  bad "no TRACKER= token on an unauthorized run: 'the board will follow' stays unfalsifiable"
+fi
+drop_ws "$W"
+
+# ------------------------------------------------- tracker accounting (L5)
+# Fail-soft is not the same as silent. The board write was broken for weeks and
+# every run's log looked identical to a working one, because the bridge's output
+# AND status were both discarded. These rows pin the accounting: the token must
+# distinguish success from failure, and a FAILED board must still not change the
+# verdict the evals produced.
+TBRIDGE_OK="$STUBS/tracker-ok.sh"
+TBRIDGE_BAD="$STUBS/tracker-bad.sh"
+printf '#!/usr/bin/env bash\necho "stub tracker: called with $*"\nexit 0\n' > "$TBRIDGE_OK"
+printf '#!/usr/bin/env bash\necho "stub tracker: simulated board outage" >&2\nexit 1\n' > "$TBRIDGE_BAD"
+chmod +x "$TBRIDGE_OK" "$TBRIDGE_BAD"
+
+W="$(new_ws)"
+CVG_TRACKER_BRIDGE="$TBRIDGE_OK" run_kernel "$W" --agent tstnoop --allow-external-writes
+RK_OK_RC="$RK_RC"
+RK_OK_STATE="$(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+RK_OK_TRIES="$(grep -c '── attempt ' <<<"$RK_OUT")"
+if grep -qE '^TRACKER=OK' <<<"$RK_OUT"; then
+  ok "an authorized run whose bridge succeeds reports TRACKER=OK"
+else
+  bad "TRACKER=OK missing on a healthy authorized run: $(grep -E '^TRACKER=' <<<"$RK_OUT" | tail -1)"
+fi
+drop_ws "$W"
+
+W="$(new_ws)"
+CVG_TRACKER_BRIDGE="$TBRIDGE_BAD" run_kernel "$W" --agent tstnoop --allow-external-writes
+RK_BAD_RC="$RK_RC"
+RK_BAD_STATE="$(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+if grep -qE '^TRACKER=FAILED' <<<"$RK_OUT"; then
+  ok "a bridge that fails is reported as TRACKER=FAILED, not swallowed"
+else
+  bad "a failing tracker bridge went unreported: $(grep -E '^TRACKER=' <<<"$RK_OUT" | tail -1)"
+fi
+# THE LOAD-BEARING ROW. The whole point of fail-soft is that the evals decide the
+# verdict. If reporting the failure ever started influencing the exit code, the
+# board would have gained a veto over the work — the defect this design forbids.
+#
+# Stated as a DIFFERENTIAL, not as a constant. Asserting one hardcoded state
+# would pass just as happily if the tracker were dictating it; comparing the
+# healthy-bridge run against the failing-bridge run is what actually pins "the
+# board changed nothing". The baseline is checked too, for the reason the row
+# above this block records: a loop that never ran lands identically either way,
+# so the comparison alone is satisfiable by two equally broken runs.
+if [ "$RK_OK_STATE" = "TASK_LOOP=STALLED" ] && [ "$RK_OK_RC" -eq 1 ] && [ "$RK_OK_TRIES" -gt 0 ]; then
+  if [ "$RK_BAD_STATE" = "$RK_OK_STATE" ] && [ "$RK_BAD_RC" -eq "$RK_OK_RC" ]; then
+    ok "…and the failing board landed EXACTLY where the healthy one did ($RK_OK_STATE, rc=$RK_OK_RC)"
+  else
+    bad "a tracker failure leaked into the verdict (healthy: $RK_OK_STATE/$RK_OK_RC, failing: $RK_BAD_STATE/$RK_BAD_RC)"
+  fi
+else
+  bad "the baseline run never really looped (${RK_OK_STATE:-no terminal state}, rc=$RK_OK_RC, attempts=$RK_OK_TRIES)"
+fi
 drop_ws "$W"
 
 # Cleanup belongs AFTER the last row that needs the stubs and the signing key.

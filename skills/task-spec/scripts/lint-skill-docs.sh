@@ -99,11 +99,19 @@ done
 # Check 3: plugin.json + marketplace.json present (distribution surface)
 # ---------------------------------------------------------------------------
 CHECKS=$((CHECKS + 1))
-for f in plugin.json marketplace.json CHANGELOG.md; do
+for f in plugin.json marketplace.json; do
   if [[ ! -f "$SKILL_DIR/$f" ]]; then
     err "required distribution file missing: $f"
   fi
 done
+# The changelog is a PACKAGE artifact, not a per-skill one — Converge ships as one
+# unit at one version, so one changelog covers it (promoted out of this skill on
+# 2026-07-29). Checked at the root when the root is reachable; a standalone install
+# of just this skill has no root to check, and that is not an error.
+_ts_root="$(cd "$SKILL_DIR/../.." 2>/dev/null && pwd || true)"
+if [[ -n "$_ts_root" && -d "$_ts_root/.git" && ! -f "$_ts_root/CHANGELOG.md" ]]; then
+  err "required distribution file missing: CHANGELOG.md (expected at the repo root)"
+fi
 
 # ---------------------------------------------------------------------------
 # Check 4: every top-level script supports --version

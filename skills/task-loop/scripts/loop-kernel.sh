@@ -63,7 +63,11 @@ SETTLER="$SCRIPT_DIR/open-issue-pr.sh"
 # shipped adapter directory. A suite that mutates the product it is testing can
 # pass while the product is broken, and can break the product while it passes.
 ENGINES_DIR="${CVG_ENGINES_DIR:-$SCRIPT_DIR/engines}"
-TRACKER_BRIDGE="$SCRIPT_DIR/loop-tracker.sh"
+# CVG_TRACKER_BRIDGE, same reasoning again: the TRACKER= accounting below can only
+# be proven by a bridge whose success and failure are chosen by the test. Driving
+# the real Linear bridge would need creds and a network, which is precisely what a
+# hermetic suite must not need.
+TRACKER_BRIDGE="${CVG_TRACKER_BRIDGE:-$SCRIPT_DIR/loop-tracker.sh}"
 # Same reasoning as CVG_ENGINES_DIR: a hermetic suite must be able to supply a
 # deterministic verdict without calling a real judge, and without editing the
 # shipped verifier it is testing.
@@ -373,10 +377,45 @@ fi
 
 # tracker <phase> [args...] — narrate ONLY when authorized, and never let a
 # tracker failure change the verdict the evals produced.
+#
+# FAIL-SOFT IS NOT THE SAME AS SILENT.
+# This used to be `( ... ) >/dev/null 2>&1 || true` — output and status both
+# discarded. The run printed "tracker: authorized — the board will follow this
+# run" and then nothing in its own output could confirm or deny that it had. On
+# 2026-07-29 the board write was broken for weeks (a GraphQL type error) and the
+# logs of every run looked identical to a run where it worked; the only way to
+# find out was to go and look at Linear. A fail-soft call that reports nothing
+# cannot be verified, and an unverifiable claim in a log is worse than no claim.
+#
+# So: still fail-soft (the verdict is the evals', never the board's), but now
+# ACCOUNTED. Output goes to cvg/loop/<task>/tracker.log and the outcome is
+# summarised in one token beside TASK_LOOP:
+#   TRACKER=OK       every attempted call succeeded
+#   TRACKER=FAILED   at least one call failed — the board may be behind
+#   TRACKER=SKIPPED  not authorized, or no bridge present (the normal
+#                    LOCAL_SETTLED case: nothing left the machine, so the board
+#                    must not claim the work shipped)
+TRACKER_STATE=SKIPPED
+TRACKER_CALLS=0
+TRACKER_FAILS=0
 tracker() {
   [ "$TRACKER_WRITE" = true ] || return 0
   [ -f "$TRACKER_BRIDGE" ] || return 0
-  ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" "$@" ) >/dev/null 2>&1 || true
+  # LOOP_DIR is defined just below; guard so an early call cannot break on it.
+  _tlog="${LOOP_DIR:-${TMPDIR:-/tmp}}/tracker.log"
+  mkdir -p "$(dirname "$_tlog")" 2>/dev/null || true
+  TRACKER_CALLS=$((TRACKER_CALLS + 1))
+  {
+    printf '\n=== %s :: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"
+  } >> "$_tlog" 2>/dev/null || true
+  if ( bash "$TRACKER_BRIDGE" --task "$TASK_FILE" "$@" ) >> "$_tlog" 2>&1; then
+    [ "$TRACKER_STATE" = FAILED ] || TRACKER_STATE=OK
+  else
+    TRACKER_FAILS=$((TRACKER_FAILS + 1))
+    TRACKER_STATE=FAILED
+    printf 'tracker: call failed (phase %s) — board may be behind; see %s\n' \
+      "${2:-?}" "${_tlog#"${WORKSPACE_ROOT:-}"/}" >&2
+  fi
   return 0
 }
 
@@ -457,6 +496,11 @@ land() {  # land <STATE> <exit-code> <why>
   # Narrate the outcome to the tracker. Fail-soft: a tracker that is down must
   # never change the verdict the evals produced.
   tracker --phase terminal --state "$_state" --note "$_why"
+  # ...but SAY what happened. This token is informational and deliberately does
+  # not affect $_rc: the evals decide the verdict, not the board.
+  printf 'TRACKER=%s' "$TRACKER_STATE"
+  [ "$TRACKER_CALLS" -gt 0 ] && printf ' (%s call(s), %s failed)' "$TRACKER_CALLS" "$TRACKER_FAILS"
+  printf '\n'
   exit "$_rc"
 }
 

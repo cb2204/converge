@@ -1020,13 +1020,55 @@ if [[ "$abs_file" != /* ]]; then
   abs_file="$(cd "$(dirname "$FILE")" 2>/dev/null && pwd)/$(basename "$FILE")"
 fi
 
-STATE_DIR="$(dirname "$abs_file")"
-# Paths stay relative to the workspace (the parent of `tasks/`) so the index
-# reads the same whether or not the workspace is itself a git repo.
-if [[ "$(basename "$STATE_DIR")" == "tasks" ]]; then
+# The index belongs to the BACKLOG ROOT, which is not always the spec's own
+# directory. A finished spec is moved into a status bucket — `done/`, `parked/`,
+# `queue/` (transition-status.sh) — and a plain `dirname` then wrote a SECOND,
+# one-task `_state.yaml` inside that bucket: a shadow board holding 1 of 9 tasks
+# while the real index went stale, and anchored differently from it besides
+# (basename `done` misses the `tasks` test below, so its paths came out
+# repo-relative instead of workspace-relative). rebuild-state.sh has always
+# scanned buckets recursively and written ONE index at the backlog root; this is
+# the writer catching up to the reader.
+spec_dir="$(dirname "$abs_file")"
+BACKLOG_ABS=""
+if [[ -n "${TASKSPEC_BACKLOG_DIR:-}" && -d "$TASKSPEC_BACKLOG_DIR" ]]; then
+  BACKLOG_ABS="$(cd "$TASKSPEC_BACKLOG_DIR" && pwd)"
+fi
+# STATE_DIR and ANCHOR are chosen in the SAME branch on purpose. They were
+# independent tests once, and the pair could then be sourced from two different
+# roots: a nested workspace resolved its index locally while the anchor came
+# from an unrelated outer `cvg/tasks`, and every path in it fell out absolute.
+# Whoever picks the index must also pick what its paths are relative to.
+if [[ -n "$BACKLOG_ABS" && ( "$spec_dir" == "$BACKLOG_ABS" || "$spec_dir" == "$BACKLOG_ABS"/* ) ]]; then
+  # The configured backlog owns this spec — authoritative, and honors an
+  # overridden TASKSPEC_BACKLOG_DIR whose basename is not `tasks`.
+  STATE_DIR="$BACKLOG_ABS"
+  # Anchor at the WORKSPACE ROOT: the directory a relative TASKSPEC_BACKLOG_DIR
+  # is read from. "Parent of `tasks/`" is right only for the bare layout; under
+  # `cvg/tasks` it names `cvg/` and yields `tasks/done/T-x.md` where
+  # rebuild-state.sh writes `cvg/tasks/done/T-x.md`. That disagreement used to
+  # be invisible because the two writers wrote to DIFFERENT files; sharing one
+  # index, it would mix two path styles in the same list. Stripping the
+  # configured suffix reproduces rebuild-state.sh's `find` anchor at any depth.
+  if [[ "$TASKSPEC_BACKLOG_DIR" != /* && "$BACKLOG_ABS" != "${BACKLOG_ABS%/"$TASKSPEC_BACKLOG_DIR"}" ]]; then
+    ANCHOR="${BACKLOG_ABS%/"$TASKSPEC_BACKLOG_DIR"}"
+  else
+    ANCHOR="$(dirname "$STATE_DIR")"
+  fi
+elif [[ "$(basename "$(dirname "$spec_dir")")" == "tasks" ]]; then
+  # A bucket under a `tasks/` dir we could not resolve through the env var —
+  # validating by absolute path from outside the workspace, say.
+  STATE_DIR="$(dirname "$spec_dir")"
   ANCHOR="$(dirname "$STATE_DIR")"
 else
-  ANCHOR="${GIT_ROOT:-$STATE_DIR}"
+  # Paths stay relative to the workspace so the index reads the same whether or
+  # not the workspace is itself a git repo.
+  STATE_DIR="$spec_dir"
+  if [[ "$(basename "$STATE_DIR")" == "tasks" ]]; then
+    ANCHOR="$(dirname "$STATE_DIR")"
+  else
+    ANCHOR="${GIT_ROOT:-$STATE_DIR}"
+  fi
 fi
 STATE_FILE="$STATE_DIR/_state.yaml"
 VALIDATOR_VERSION="2"

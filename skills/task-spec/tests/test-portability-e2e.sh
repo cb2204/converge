@@ -127,7 +127,9 @@ else
 fi
 
 INSTALLED="$TMP/.claude/skills/task-spec"
-for f in SKILL.md CHANGELOG.md plugin.json marketplace.json scripts/_lib.sh; do
+# CHANGELOG.md is deliberately absent: it is a PACKAGE artifact at the repo root,
+# not part of a skill's install payload (promoted 2026-07-29).
+for f in SKILL.md plugin.json marketplace.json scripts/_lib.sh; do
   if [[ -e "$INSTALLED/$f" ]]; then
     pass "installed: $f"
   else

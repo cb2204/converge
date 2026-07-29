@@ -109,10 +109,47 @@ jobs:
         # the result cannot drift with a vendor CLI's behaviour.
         run: bash tests/test-loop-kernel.sh
 
-      - name: pass gates
+      - name: one package, one version
+        run: bash tests/test-version-unity.sh
+
+      - name: pass gates (0-4 · the design half)
+        # Every pass gate that HAS a suite runs here. Pass 3 and Pass 4 owned
+        # working suites that CI never invoked, so they could have rotted silently
+        # for weeks — and Pass 4 is THE BARRIER, the last human sign-off. A test
+        # that exists but never runs is worse than a missing one: it reads as
+        # coverage on the tin.
         run: |
           bash skills/idea-to-brd/tests/run-tests.sh
           bash skills/brd-docs-to-tech-req/tests/run-tests.sh
+          bash skills/tech-req-to-adrs/tests/run-tests.sh
+          bash skills/reqs-to-swimlane-plans/tests/run-tests.sh
+          bash skills/sketch-plans-adversarial-review/tests/run-tests.sh
+
+      - name: task-spec — the rest of the engine's own suites
+        run: |
+          bash skills/task-spec/tests/test-effort-sizing.sh
+          bash skills/task-spec/tests/test-extractor-fuzz.sh
+          bash skills/task-spec/tests/test-portability-e2e.sh
+          bash skills/task-spec/tests/test-v3-closed-loop-e2e.sh
+
+      - name: companions (teaching · legacy safety · skill-creator)
+        run: |
+          bash skills/pass-to-lesson/tests/run-tests.sh
+          bash skills/agents-kbs-tech-stack/tests/test-safety-contracts.sh
+          bash skills/skill-creator/tests/test-skill-creator.sh
+
+      - name: task-spec doc consistency
+        # A LINT, not a suite — so the coverage gate below cannot see it. It is
+        # wired by hand because it earned it: it caught plugin.json and
+        # marketplace.json still claiming 3.6.0 after the version unification,
+        # which every suite in the package had missed.
+        run: bash skills/task-spec/scripts/lint-skill-docs.sh
+
+      - name: every suite in the package is wired into this workflow
+        # The gate that keeps this list honest. Without it the next suite someone
+        # adds is invisible to CI by default, which is exactly how the four above
+        # came to be unrun.
+        run: bash tests/test-ci-covers-every-suite.sh
 
       - name: e2e-test-engine — the machine fixture, incl. its designed-RED eval
         # A fixture whose red eval quietly turns green has stopped being a

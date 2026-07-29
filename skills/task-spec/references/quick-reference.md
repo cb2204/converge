@@ -130,7 +130,7 @@ eval_4() { pytest -q tests/path; }           # tests     (30s)
 The format ships at v3 today (HMAC sign-off envelope, effort-scaled profiles, the
 Behavior zone + traceability, conformance levels, `accept-task.sh`, `requires:`
 acceptance gate, `backend_metadata`). For what shipped in each release, see
-[CHANGELOG.md](../CHANGELOG.md).
+[CHANGELOG.md](../../../CHANGELOG.md).
 
 ---
 

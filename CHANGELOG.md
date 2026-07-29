@@ -1,18 +1,122 @@
 # Changelog
 
-All notable changes to the **task-spec** skill are documented here. Format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version numbers follow
-[Semantic Versioning](https://semver.org/) where MAJOR is the spec format version,
-MINOR is additive format/feature changes, and PATCH is bug fixes / doc clarifications.
+All notable changes to **Converge** are documented here — the CLI (`bin/cvg`), the
+twelve skills, and the task-spec engine, which ship as ONE unit at ONE version.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-The canonical version string lives in `scripts/_lib.sh` (`TASKSPEC_VERSION`) and is
-duplicated in `SKILL.md` frontmatter under `metadata.version`, `plugin.json`, and
-`marketplace.json`. The doc-consistency lint (`scripts/lint-skill-docs.sh`) asserts all
-four match. As of v3.1.1 the SKILL.md version lives under `metadata:` (an indented
-`version:` key), not at the frontmatter top level, per the Anthropic Skill spec — which
-permits only `name`, `description`, `license`, `allowed-tools`, `metadata`, and
-`compatibility` as top-level keys. The lint accepts the `metadata.version` location and
-falls back to a legacy top-level `version:` for older specs.
+The version lives in the root `VERSION` file and nowhere else authoritative.
+Every declaration in the package must equal it, and
+`tests/test-version-unity.sh` fails the build if one drifts; bump `VERSION`, then
+run that gate with `--sync`. Release versions unify; **schema/format versions
+deliberately do not** (`format_version: 3`, `VALIDATOR_VERSION`,
+`agent_contract.version`, `hmac-sha256-v2`) — those describe data contracts whose
+whole purpose is to change independently of a release.
+
+## A note on the numbering below
+
+Entries from **3.6.0 and earlier describe the `task-spec` skill alone**, when it
+versioned itself independently — this file began life as
+`skills/task-spec/CHANGELOG.md`. That history is kept verbatim because it is the
+real lineage of the engine now at the centre of Pass 5; only the numbering
+convention changed. From **0.1.0 onward, one entry covers the whole package.**
+
+---
+
+## [Unreleased]
+
+### Fixed
+- **A finished spec was starting a second board.** `validate-task-spec.sh` wrote
+  `_state.yaml` as a plain sibling of the spec, but `transition-status.sh` moves a
+  finished spec down into a status bucket (`done/`, `parked/`, `queue/`). So
+  validating anything already moved built a SHADOW index *inside the bucket* —
+  holding that one task — while the real index beside it went stale and unread.
+  Found as an untracked `cvg/tasks/done/_state.yaml` on the proving ground
+  carrying 1 of 9 tasks. `rebuild-state.sh` has always scanned buckets
+  recursively into ONE index at the backlog root; this is the writer catching up
+  to the reader. A **fifth** symptom of the 0.1.0 root cause below — nothing had
+  ever moved a spec into `tasks/done/` before the first task finished.
+- **…and the two index writers disagreed on what paths are relative to.** The
+  validator anchored at the parent of `tasks/`, which is right only for the bare
+  layout; under `cvg/tasks` it names `cvg/` and emits `tasks/done/T-x.md` where
+  `rebuild-state.sh` emits `cvg/tasks/done/T-x.md`. Harmless only for as long as
+  the two wrote to *different files* — the moment the shadow board was fixed they
+  shared one, and a validate after a rebuild would have mixed two path styles in
+  a single list. `STATE_DIR` and `ANCHOR` are now chosen in the same branch, so
+  they cannot be sourced from two different roots (which is how a nested
+  workspace briefly resolved its index locally but its anchor from an unrelated
+  outer backlog, and emitted absolute paths).
+- **Fail-soft is not the same as silent.** The Pass 8 tracker call discarded the
+  bridge's output *and* its status, so a run printed "the board will follow this
+  run" and nothing in its own log could confirm or deny it. That is how the
+  broken Linear board-write fixed in 0.1.0 survived weeks unnoticed: every log
+  looked identical to a working one, and the only way to find out was to go and
+  look at the board. The call is still fail-soft — the evals decide the verdict,
+  never the board — but now **accounted**: output lands in
+  `cvg/loop/<task>/tracker.log`, and a `TRACKER=OK|FAILED|SKIPPED` token prints
+  beside `TASK_LOOP=`. An unverifiable claim in a log is worse than no claim.
+
+### Added
+- Regression rows for each of the above, every one proven to fail against the
+  pre-fix code: the shadow board, the anchor agreement between the two index
+  writers, and — the load-bearing one — a **differential** in
+  `tests/test-loop-kernel.sh` showing a run whose tracker bridge fails lands on
+  exactly the state and exit code of one whose bridge succeeds. Stated as a
+  comparison rather than a hardcoded state, because a constant would pass just
+  as happily if the board were the thing dictating it.
+
+---
+
+## [0.1.0] — 2026-07-29
+
+The first release where the number means the same thing everywhere.
+
+### Added
+- **One version for the whole package.** Root `VERSION` is the single source of
+  truth; all twelve skills declare `metadata.version`, and `bin/cvg`, the
+  task-spec engine, the Pass 0 / Pass 1 gates and both JSON manifests agree with
+  it. `tests/test-version-unity.sh` gates it and is proven to fail on drift.
+- **Pass 2 finally has a suite** (`skills/tech-req-to-adrs/tests/run-tests.sh`,
+  38 rows). It was the only pass in the chain with none, so `CHECK_ADR` had never
+  been shown capable of refusing a bad ADR set. The suite carries counter-tests:
+  advisories must stay advisory, and modal design language legitimate in
+  *Consequences* must not be flagged the way it is in *Decision*.
+- **Every suite in the package now runs in CI** — nine existed that the workflow
+  never invoked, including Pass 4, THE BARRIER. `tests/test-ci-covers-every-suite.sh`
+  keeps that list honest by failing with the exact path when a suite is unwired.
+- **One changelog to rule them all** — this file, promoted from
+  `skills/task-spec/CHANGELOG.md`.
+
+### Changed
+- Per-skill licence claims removed; the root `LICENSE` (MIT) governs the unit.
+  `task-specs-to-issues` had claimed Apache-2.0 inside an MIT repository.
+- `compatibility` is nested under `metadata` in every skill (it was top-level in
+  one).
+
+### Fixed
+- **Nine symptoms of one root cause**: gates deriving their own answer to "where
+  is the workspace / what changed / where do lifecycle directories live". The
+  first task to ever FINISH broke four of them at once, because nothing had
+  previously moved a spec into `tasks/done/`. `ts_workspace_root` centralises the
+  derivation; the remaining call sites are tracked as **D1**.
+- **Pass 8's outward legs had never executed.** Every run before this release
+  settled locally, so the Linear board-write (`ID!` where `team(id:)` takes
+  `String!`) and the PR leg (a commit sha handed to `gh pr create --base`, which
+  requires a branch) were shipped and unproven. Both fixed and exercised live.
+- `plugin.json` / `marketplace.json` were left at `3.6.0` by the first pass of the
+  version unification — caught by `lint-skill-docs.sh`, and the unity gate now
+  enumerates JSON manifests too.
+
+### Proven
+Backlog swept 9/9 on the `uc-analytics` proving ground: `TASK_LOOP=LOCAL_SETTLED`
+×2 then `SETTLED` ×7 through merged PRs, the last four green on the first
+iteration, board parity `CHECK_REGISTER=OK` at 9⇄9 with an empty ready frontier.
+
+### Known gaps at 0.1.0
+- **Tier 2 graded nothing.** All ten dispatches ran with `--verify` off, and no
+  spec carries a `## Holdout` block, so the independent-judge property is
+  implemented and unexercised.
+- `task-spec/SKILL.md` is 566 lines against skill-creator's own 500-line rule.
+- Lessons exist for passes 0–3 only.
 
 ---
 

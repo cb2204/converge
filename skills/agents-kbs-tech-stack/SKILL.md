@@ -5,6 +5,8 @@ description: |
   KB fleet. Do not bootstrap new Converge projects with this skill; use
   task-to-runtime-contract. Invoke only to audit, repair, or intentionally add
   coverage to a repository that already owns this legacy scaffold.
+metadata:
+  version: "0.1.0"
 ---
 
 # agents-kbs-tech-stack — Build Tech-Stack Agent Layers
