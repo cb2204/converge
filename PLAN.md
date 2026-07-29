@@ -159,10 +159,11 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 ---
 
-## §1 · Where we are — 2026-07-28
+## §1 · Where we are — 2026-07-29
 
-**`cvg` v0.20.0 · 12 skills · the descent 0→8 is CLOSED on a real use case. Every
-pass has now run end-to-end on real work, and the loop has landed two tasks.**
+**`cvg` v0.21.0 · 12 skills · the descent 0→8 is CLOSED on a real use case — and
+the backlog is EMPTY. 9 of 9 tasks settled (2026-07-28 evening sweep, PRs #2–#8),
+including the first fully unattended landing.**
 
 | Pass | Skill | State |
 |:--:|---|---|
@@ -174,12 +175,13 @@ pass has now run end-to-end on real work, and the loop has landed two tasks.**
 | 5 Tasking | `task-spec` | ✅ **closed 2026-07-25** — 9 specs, all Tier 1; evals assert database state or execute the artifact, proven by the maximal stub attack (all 9 red) |
 | 6 Register *(opt-in)* | `task-specs-to-issues` | ✅ **closed live 2026-07-25** — created 0 / updated 9, 8 blocked-by links, 9 `tracker_ref` receipts; live `[D]` parity 9⇄9, ready frontier 1 |
 | 7 Bind | `task-to-runtime-contract` | ✅ **closed 2026-07-25** — 9× `CHECK_RUNTIME_CONTRACT=PASS`, 6 artifacts each, host attested `OK` |
-| 8 The Loop | `task-loop` | ✅ **closed 2026-07-28** — 45 hermetic checks green (brakes, stagnation, exhaustion, resume, cancel, no-op, honest `--no-agent`); driven to GREEN twice on the real backlog (CVG-21, CVG-22), both `TASK_LOOP=LOCAL_SETTLED`, and CVG-22 further `ACCEPTED=1`. **What remains is n>1** — 7 of 9 tasks unbuilt. |
+| 8 The Loop | `task-loop` | ✅ **closed 2026-07-28** — 45 hermetic checks green (brakes, stagnation, exhaustion, resume, cancel, no-op, honest `--no-agent`); driven to GREEN on the **entire** real backlog — `LOCAL_SETTLED` ×2 (CVG-21, CVG-22; CVG-22 `ACCEPTED=1`) then `SETTLED` ×7 through merged PRs (#2–#8), with `tf-silver` the **first fully unattended landing** and the last four settling in one iteration each. **n>1 is done; what remains is unattended sequencing (the Manager).** |
 
 **The descent, gate by gate:** `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS ·
 CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1 ×9 ·
 CHECK_REGISTER=OK (live) · CHECK_RUNTIME_CONTRACT=PASS ×9 ·
-DOCTOR_RUNTIME_CONTRACT=OK · TASK_LOOP=LOCAL_SETTLED ×2 · ACCEPTED=1`.
+DOCTOR_RUNTIME_CONTRACT=OK · TASK_LOOP=LOCAL_SETTLED ×2 + SETTLED ×7 ·
+ACCEPTED=1 · backlog 9⁄9 done`.
 
 **Pass 8 stopped being a gate pretending to be a loop.** `cvg loop` now routes to
 `loop-kernel.sh`: attempt → verify → repeat, three-axis budgets checked *before*
@@ -191,14 +193,15 @@ defect class as WP4's unenforced `external_writes`. Engines are now one adapter
 file each (`scripts/engines/`), so the kernel spells no vendor and a hung CLI dies
 at a watchdog cap. Design + sources: `skills/task-loop/references/loop-spec.md`.
 
-**The board is the queue and it is live.** 9 issues, 7 blocked-by links,
-Initiative → Project → Capture/Transform/Serve milestones, append-only health.
-CVG-21 and CVG-22 have landed, so the frontier has moved off the chain's head onto
-its one fork: `cvg ready` returns **`cap-freshness` ∥ `tf-silver`**. The BOARD does
-not know that yet — both runs settled `LOCAL_SETTLED` under `external_writes: deny`,
-so no issue was ever authorized to move to Done and `list-ready` still answers
-CVG-22. Mapping is 1:1 and gated; **status is the un-ledgered debt**, and closing it
-is §2 item 3.
+**The board is the queue, it is live, and the queue is drained.** 9 issues, 7
+blocked-by links, Initiative → Project → Capture/Transform/Serve milestones,
+append-only health. The board-write leg ran against a real board for the first
+time during the sweep (cd5fbbf — it had never once executed) and the seven
+`SETTLED` landings went through it. The first act of the new beat is to *prove*
+that: one `register --check` against the live board, expecting parity 9⇄9 and an
+empty ready frontier. Status-as-a-gate (`tracker_mode=authoritative`, the
+pending-sync ledger) is still unbuilt — it stops being optional the moment the
+Manager multiplies status debt across a fleet.
 
 **The Manager remains the hole** — nothing dispatches ready issues across the
 fleet, watches PRs, or detects fleet-green. That is **B-1**, and it is still the
@@ -267,6 +270,67 @@ keeps its state on disk instead of in a conversation.
    is now the live frontier. It needs unattended sequencing, not fan-out. `cvg lint`
    reports the write-disjoint partition, so safety is checkable before dispatch.
 
+### The ordered plan as of 2026-07-29 (the beat after the sweep)
+
+**What changed since the list above was written:** the evening of 2026-07-28
+swept the ENTIRE backlog. `cap-freshness` landed through the first real PR (#2),
+`tf-silver` produced the **first fully unattended landing**, and `tf-gold` →
+`srv-mcp` followed — 9 of 9 settled, the last four in one iteration each
+(325412b). Three more defect classes surfaced and were fixed in flight: the PR
+base was handed a commit sha where a BRANCH belongs (ec3d4c4); the Linear
+board-write leg had never once run against a real board (cd5fbbf); and an eval
+amendment left a stale epoch that landed two ERRORs before the re-mint
+(7fe4783, 1229fc9). The branch is pushed and clean. Items 3–6 above are not
+retired — they are re-ordered below with what the sweep taught.
+
+1. ~~**Prove the board**~~ — **done 2026-07-29.** `register --check` against the
+   live board: `[A] ok · [B] ok · [C] ok · [D] 1:1 — 9 spec(s) ⇄ 9 issue(s), no
+   orphan, no missing, no dup · ready frontier: board ready 0 · CHECK_REGISTER=OK`.
+   The seven `SETTLED` landings closed their own issues through `loop-tracker.sh`,
+   which retires §9 item 5 (the bridge was written 2026-07-27 and unexercised).
+   Two notes worth keeping: `LOCAL_SETTLED` deliberately does **not** close an
+   issue — nothing left the machine, so the board must not claim the work shipped,
+   which is exactly why CVG-21/22 sat open until closed by hand — and the kernel's
+   `tracker()` swallows the bridge's stdout *and* stderr, so "the board will follow
+   this run" is unfalsifiable from the log. A fail-soft call that reports nothing
+   cannot be verified; it needs a `TRACKER=OK|SKIPPED|FAILED` token.
+2. **Tier 2 graded NOTHING** — all ten dispatches of the sweep ran `tier 2: off`.
+   The holdout verifier is one of the three properties that make this a dark
+   factory rather than agentic coding, and it did not grade a single one of the
+   nine landings. Every green is therefore self-reported: authored, implemented
+   and graded by one family. `cvg verify` exists and is proven on its own suite —
+   what is missing is having *used* it. Re-verify a representative sample
+   (`srv-mcp` and `tf-gold`, the highest blast radius and the amended one) with
+   `--verify --judge codex` before any claim of end-to-end sign-off. This is a
+   prerequisite for item 4, not a nice-to-have: B-2 makes it a gate, and gating a
+   check that has never returned a verdict on real work is automating a guess.
+3. **Harvest** — lessons for passes 4–8 (0–3 exist). The sweep is the material:
+   the run-context class (×6 patched, `ts_workspace_root` is the start of
+   retiring it), the stale-epoch ERROR pair, the PR-base defect, the write leg
+   that had never run. What the method *learned* is worth more than what it
+   built, and it is not yet written down.
+4. **Merge to main and tag v0.2** — the first release where every claim in the
+   readme has a receipt behind it. Update readme §Status first (the loop closed
+   n=9, not n=1; the descent line gains `TASK_LOOP=SETTLED ×7`).
+5. **The Manager (B-1)** — now genuinely unblocked: the loop has closed nine
+   times, once fully unattended, so automating it no longer automates an
+   unproven path. Start with `cvg run --once` (the stateless tick over
+   `cvg ready`), then `--max-parallel`. Tracker enforcement
+   (`tracker_mode=authoritative` + the pending-sync ledger) and D1's tail (grep
+   the call sites still deriving workspace context outside `ts_workspace_root`)
+   ride along — both BEFORE the fleet multiplies their failure modes.
+6. **B-2 · the CI eval-gate** — server-side re-verification: a PR claiming GREEN
+   whose eval fails in the container is refused. With B-1 this makes "fleet
+   green, closed by evals" true without a human in the loop.
+7. **The graph beat (NEW)** — `cvg graph` as the decision-lineage view the field
+   now calls a *context graph*: `derived_from:` lineage headers + a no-orphan
+   check added to every pass gate; `cvg graph why|at` derived-not-stored with
+   bi-temporal fields (valid_from / superseded_by — Graphiti's model, not its
+   runtime); an OTLP exporter *derived from receipts* (never dual-written) so
+   any OTel backend can watch the factory. This is B-3/B-4 with the 2026
+   framing — the moat extension, and it comes after the factory runs unattended,
+   not before.
+
 **Also true now:** CI has run for the first time and is **green on ubuntu AND
 macos** (7 host-dependent defects found in 5 runs) — the note that once stood here
 saying `.github/workflows/ci.yml` had never executed is retired. The repo write
@@ -276,8 +340,9 @@ task-spec 33 · hmac 38 · portability 35 · runtime-contract 40 · **register 1
 json-envelope 12 · install 7 · loop-kernel 45 · brd 39 · tech-req 24 ·
 shellcheck 0 errors · fixture honest (smoke green, designed-RED still red).
 
-**Housekeeping that should not block the above:** nothing is pushed (branch is
-ahead of `origin/feat/e2e`); see §9 for the full cleaning list.
+**Housekeeping that should not block the above:** the branch is pushed and even
+with `origin/feat/e2e` (the sweep retired the old "nothing is pushed" note); see
+§9 for the full cleaning list.
 
 ---
 
