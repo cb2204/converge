@@ -25,6 +25,26 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 ## [Unreleased]
 
 ### Fixed
+- **A finished spec was starting a second board.** `validate-task-spec.sh` wrote
+  `_state.yaml` as a plain sibling of the spec, but `transition-status.sh` moves a
+  finished spec down into a status bucket (`done/`, `parked/`, `queue/`). So
+  validating anything already moved built a SHADOW index *inside the bucket* —
+  holding that one task — while the real index beside it went stale and unread.
+  Found as an untracked `cvg/tasks/done/_state.yaml` on the proving ground
+  carrying 1 of 9 tasks. `rebuild-state.sh` has always scanned buckets
+  recursively into ONE index at the backlog root; this is the writer catching up
+  to the reader. A **fifth** symptom of the 0.1.0 root cause below — nothing had
+  ever moved a spec into `tasks/done/` before the first task finished.
+- **…and the two index writers disagreed on what paths are relative to.** The
+  validator anchored at the parent of `tasks/`, which is right only for the bare
+  layout; under `cvg/tasks` it names `cvg/` and emits `tasks/done/T-x.md` where
+  `rebuild-state.sh` emits `cvg/tasks/done/T-x.md`. Harmless only for as long as
+  the two wrote to *different files* — the moment the shadow board was fixed they
+  shared one, and a validate after a rebuild would have mixed two path styles in
+  a single list. `STATE_DIR` and `ANCHOR` are now chosen in the same branch, so
+  they cannot be sourced from two different roots (which is how a nested
+  workspace briefly resolved its index locally but its anchor from an unrelated
+  outer backlog, and emitted absolute paths).
 - **Fail-soft is not the same as silent.** The Pass 8 tracker call discarded the
   bridge's output *and* its status, so a run printed "the board will follow this
   run" and nothing in its own log could confirm or deny it. That is how the
@@ -36,10 +56,13 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
   beside `TASK_LOOP=`. An unverifiable claim in a log is worse than no claim.
 
 ### Added
-- A **differential** row in `tests/test-loop-kernel.sh`: a run whose tracker
-  bridge fails must land on exactly the state and exit code of one whose bridge
-  succeeds. Stated as a comparison rather than a hardcoded state, because a
-  constant would pass just as happily if the board were the thing dictating it.
+- Regression rows for each of the above, every one proven to fail against the
+  pre-fix code: the shadow board, the anchor agreement between the two index
+  writers, and — the load-bearing one — a **differential** in
+  `tests/test-loop-kernel.sh` showing a run whose tracker bridge fails lands on
+  exactly the state and exit code of one whose bridge succeeds. Stated as a
+  comparison rather than a hardcoded state, because a constant would pass just
+  as happily if the board were the thing dictating it.
 
 ---
 

@@ -728,6 +728,53 @@ fi
 rm -rf "$NEST"
 
 # ---------------------------------------------------------------------------
+# ONE board per backlog — a finished spec does not start a second one
+# ---------------------------------------------------------------------------
+# transition-status.sh moves a spec into a status bucket (done/, parked/,
+# queue/) and rebuild-state.sh has always scanned those buckets recursively into
+# ONE index at the backlog root. The validator instead wrote `_state.yaml` as a
+# plain sibling of the spec, so validating anything already moved to done/ built
+# a SHADOW board inside the bucket — holding that one task, while the real index
+# beside it went stale and unnoticed. Found as an untracked
+# `cvg/tasks/done/_state.yaml` carrying 1 of 9 tasks.
+BUCKET="$(mktemp -d -t cvg-bucket.XXXXXX)"
+git -C "$BUCKET" init --quiet
+git -C "$BUCKET" config user.email bucket@test.local
+git -C "$BUCKET" config user.name "bucket test"
+mkdir -p "$BUCKET/tasks/done"
+cp "$FIXTURES_DIR/T-20260602-golden.md" "$BUCKET/tasks/done/T-20260602-golden.md"
+printf '# readme\n' > "$BUCKET/README.md"
+bash "$SCRIPT_DIR/validate-task-spec.sh" "$BUCKET/tasks/done/T-20260602-golden.md" >/dev/null 2>&1 || true
+if [ ! -e "$BUCKET/tasks/done/_state.yaml" ] && [ -f "$BUCKET/tasks/_state.yaml" ]; then
+  pass "a spec in done/ indexes at the backlog root, not into a shadow board"
+else
+  fail "validating a done/ spec forked a second _state.yaml inside the bucket"
+fi
+# The bucket must survive in the path, or the index cannot find the file again.
+if grep -q 'path: tasks/done/T-20260602-golden.md' "$BUCKET/tasks/_state.yaml" 2>/dev/null; then
+  pass "…and the indexed path keeps the bucket (tasks/done/T-…)"
+else
+  fail "bucketed path lost or mis-anchored: $(grep '  path:' "$BUCKET/tasks/_state.yaml" 2>/dev/null | head -1 || true)"
+fi
+# THE ROW THAT MATTERS. Two writers now share one file, so they must agree on
+# what paths are relative to — otherwise a validate after a rebuild silently
+# mixes two path styles in the same list and every consumer has to guess.
+( cd "$BUCKET" && bash "$SCRIPT_DIR/validate-task-spec.sh" tasks/done/T-20260602-golden.md ) >/dev/null 2>&1 || true
+# `|| true` on every read: the suite runs under `set -e`, and a regression that
+# stops writing this file would otherwise KILL the run on a failed grep instead
+# of printing the red row that names the problem. A test that crashes tells you
+# less than one that fails.
+BUCKET_V="$(grep '  path:' "$BUCKET/tasks/_state.yaml" 2>/dev/null | sort -u || true)"
+( cd "$BUCKET" && bash "$SCRIPT_DIR/rebuild-state.sh" ) >/dev/null 2>&1 || true
+BUCKET_R="$(grep '  path:' "$BUCKET/tasks/_state.yaml" 2>/dev/null | sort -u || true)"
+if [ -n "$BUCKET_V" ] && [ "$BUCKET_V" = "$BUCKET_R" ]; then
+  pass "validate-task-spec and rebuild-state anchor paths identically"
+else
+  fail "the two index writers disagree (validate: ${BUCKET_V:-none} / rebuild: ${BUCKET_R:-none})"
+fi
+rm -rf "$BUCKET"
+
+# ---------------------------------------------------------------------------
 # The backlog's WRITE SURFACE is touches_paths + creates_paths
 # ---------------------------------------------------------------------------
 # The overlap check looked at touches_paths alone. Every greenfield task declares
