@@ -161,7 +161,7 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 ## §1 · Where we are — 2026-07-29
 
-**`cvg` v0.21.0 · 12 skills · the descent 0→8 is CLOSED on a real use case — and
+**Converge 0.1.0 (one unit, one version) · 12 skills · the descent 0→8 is CLOSED on a real use case — and
 the backlog is EMPTY. 9 of 9 tasks settled (2026-07-28 evening sweep, PRs #2–#8),
 including the first fully unattended landing.**
 

@@ -151,7 +151,7 @@ bash ~/converge/install.sh --help          # all the flags
 
 ```bash
 cvg version
-# → cvg 0.21.0 (task-spec 3.6.0)
+# → cvg 0.1.0 (task-spec 0.1.0)
 
 python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
 # → Skill is valid!
@@ -465,7 +465,9 @@ blocks evals that also pass on the unpatched baseline. An **effort gate** routes
 work by size (XS–M → Task-Spec; L conditional on a long-horizon engine; XL and
 subjective work refused).
 
-Ships as a plugin at **v3.6.0** with a JSON Schema (Draft 2020-12), an L0/L1/L2
+Ships inside Converge at the package version, with the spec **FORMAT at v3** — a data
+contract versioned independently of the release, as are `VALIDATOR_VERSION` and the
+HMAC envelope. Carries a JSON Schema (Draft 2020-12), an L0/L1/L2
 executor-conformance suite, and dispatch recipes for Claude Code, Codex, Kimi,
 Cursor, Gemini, taskship, and anthive. Deep-dive PDF:
 [`docs/task-spec-v3.6.0.pdf`](docs/task-spec-v3.6.0.pdf).
@@ -608,24 +610,33 @@ converge/
 
 ## 🧾 Status
 
-**Method v6** (blueprint PDF) · **task-spec plugin v3.6.0** · **cvg v0.21.0** ·
+**Converge 0.1.0** — the CLI, the twelve skills and the task-spec engine ship as
+ONE unit at ONE version (root `VERSION`, gated by `tests/test-version-unity.sh`) ·
 Anthropic validator passing on all 12 skills · extracted from a production
 **postgres → duckdb → dbt → MCP** run.
 
-**The descent 0→7 is closed on a real use case** (`tests/uc-analytics`, a
-greenfield analytical backbone over an operational Postgres): `CHECK_BRD=PASS ·
-CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK · CHECK_CONSENSUS=OK · TIER=1
-×9 · CHECK_REGISTER=OK` (live board, 9⇄9, ready frontier 1) `·
-CHECK_RUNTIME_CONTRACT=PASS ×9 · DOCTOR_RUNTIME_CONTRACT=OK`.
+**The descent 0→8 is closed on a real use case, and the backlog is empty**
+(`tests/uc-analytics`, a greenfield analytical backbone over an operational
+Postgres): `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK ·
+CHECK_CONSENSUS=OK · TIER=1 ×9 · CHECK_REGISTER=OK` (live board, 9⇄9, ready
+frontier empty) `· CHECK_RUNTIME_CONTRACT=PASS ×9 · DOCTOR_RUNTIME_CONTRACT=OK ·
+TASK_LOOP=LOCAL_SETTLED ×2 + SETTLED ×7`.
 
-**Pass 8 is now a real loop, not a gate.** The kernel enforces the budgets specs
-had always declared — three-axis ceilings, a stagnation detector, a fresh process
-per attempt, durable checkpoints, and eight named terminal states — proven by its
-own hermetic suite (stub engines, no model called). The loop has been run
-end-to-end on the frontier task and correctly went RED, refused to open a PR, and
-wrote a blocked receipt. Next ([`PLAN.md`](PLAN.md)): drive that task to green,
-then **P0** — the Manager and the CI eval-gate that make "fleet green, closed by
-evals" true at scale.
+**Pass 8 is a real loop, not a gate.** The kernel enforces the budgets specs had
+always declared — three-axis ceilings, a stagnation detector, a fresh process per
+attempt, durable checkpoints, and eight named terminal states — proven by its own
+hermetic suite (stub engines, no model called) and then driven to green across the
+**entire** 9-task backlog: two settled locally, seven through merged PRs (#2–#8),
+the last four green on the first iteration, each closing its own tracker issue
+unattended.
+
+**What is NOT true yet, stated plainly.** Tier-2 verification — an independent
+different-family judge grading against a holdout the worker cannot see — is
+implemented (`cvg verify`) and **graded none of those nine landings**: every green
+above is tier-1, self-reported. No spec yet carries a `## Holdout` block. And the
+**Manager** (unattended sequencing across the fleet) does not exist, so the loop
+runs one task at a time, invoked by hand. Those two are the gap between a good
+single-task harness and a factory — see [`PLAN.md`](PLAN.md) §2.
 
 ---
 
