@@ -3,9 +3,13 @@
 #
 # WHY THIS EXISTS
 # Pass 2 was the ONLY pass in the chain with no suite at all. `CHECK_ADR` was
-# declared closed on the uc-analytics run (7 ADRs canonical) and nothing anywhere
-# proved the gate could still refuse a bad set. A gate that has never been shown to
-# FAIL is a claim, not a check.
+# declared closed on a real proving-ground run (7 ADRs canonical) and nothing
+# anywhere proved the gate could still refuse a bad set. A gate that has never been
+# shown to FAIL is a claim, not a check.
+#
+# (Deliberately no fixture path named above: the shipped product must not reference
+# the proving ground, and CI enforces that with a blunt grep that cannot tell a
+# comment from an import — which is exactly what makes it ungameable.)
 #
 # WHAT PASS 2 ACTUALLY GUARDS
 # A grounding ADR records a FACT or CONSTRAINT about the terrain — what IS, or what
