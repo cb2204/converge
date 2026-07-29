@@ -1,7 +1,7 @@
 ---
 id: T-20260729-obs-rowcounts
 title: Add a row-count observability probe for the four public tables
-status: ready
+status: done
 format_version: 3
 profile: standard  # lite | standard | full — scales required zones to effort/blast-radius (see references/concepts/profiles.md)
 effort: XS  # LEAF: XS|S|M → Kimi ; L → GLM (execution_backend: glm) . NODE: XL|XXL → add a children: block, decompose (see references/concepts/effort-gate.md)

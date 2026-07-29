@@ -9,3 +9,6 @@
 {"ts":"2026-07-28T22:35:02Z","task":"T-20260721-srv-core","event":"status_change","from":"ready","to":"done"}
 {"ts":"2026-07-28T22:53:23Z","task":"T-20260721-srv-honest","event":"status_change","from":"ready","to":"done"}
 {"ts":"2026-07-28T23:11:57Z","task":"T-20260721-srv-mcp","event":"status_change","from":"ready","to":"done"}
+{"ts":"2026-07-29T19:40:21Z","task":"T-20260729-obs-rowcounts","event":"status_change","from":"ready","to":"done"}
+{"ts":"2026-07-29T19:40:32Z","task":"T-20260729-obs-rowcounts","event":"status_change","from":"done","to":"ready"}
+{"ts":"2026-07-29T20:35:06Z","task":"T-20260729-obs-rowcounts","event":"status_change","from":"ready","to":"done"}

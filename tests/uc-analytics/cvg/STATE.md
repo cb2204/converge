@@ -22,3 +22,8 @@ An error or an exhausted budget is never recorded as success.
 | 2026-07-28T22:34:02Z | `T-20260721-srv-core` | claude | **SETTLED** | 1/5 | — |
 | 2026-07-28T22:45:36Z | `T-20260721-srv-honest` | claude | **SETTLED** | 1/5 | — |
 | 2026-07-28T23:03:42Z | `T-20260721-srv-mcp` | claude | **SETTLED** | 1/5 | — |
+| 2026-07-29T19:34:27Z | `T-20260729-obs-rowcounts` | codex | **SETTLED** | 1/15 | — |
+| 2026-07-29T20:08:40Z | `T-20260729-obs-fence` | kimi | **ERROR** | 2/15 | the verification step itself could not run |
+| 2026-07-29T20:11:22Z | `T-20260729-obs-fence` | kimi | **ERROR** | 0/15 | the task could not be resolved or its contract is missing |
+| 2026-07-29T20:33:22Z | `T-20260729-obs-fence` | kimi | **BLOCKED** | 1/15 | tier-2 returned no usable verdict (rc=1) — a verdict that cannot be obtained is never a pa |
+| 2026-07-29T20:52:00Z | `T-20260729-obs-fence` | kimi | **BLOCKED** | 1/15 | tier-2 REFUTED: a green eval is necessary, not sufficient. Read the findings above. |
