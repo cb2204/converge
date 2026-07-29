@@ -132,10 +132,9 @@ jobs:
           bash skills/task-spec/tests/test-portability-e2e.sh
           bash skills/task-spec/tests/test-v3-closed-loop-e2e.sh
 
-      - name: companions (teaching · legacy safety · skill-creator)
+      - name: companions (teaching · skill-creator)
         run: |
           bash skills/pass-to-lesson/tests/run-tests.sh
-          bash skills/agents-kbs-tech-stack/tests/test-safety-contracts.sh
           bash skills/skill-creator/tests/test-skill-creator.sh
 
       - name: task-spec doc consistency

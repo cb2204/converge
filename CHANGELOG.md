@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to **Converge** are documented here — the CLI (`bin/cvg`), the
-twelve skills, and the task-spec engine, which ship as ONE unit at ONE version.
+eleven skills, and the task-spec engine, which ship as ONE unit at ONE version.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 The version lives in the root `VERSION` file and nowhere else authoritative.
@@ -34,7 +34,7 @@ The first release where the number means the same thing everywhere.
 
 ### Added
 - **One version for the whole package.** Root `VERSION` is the single source of
-  truth; all twelve skills declare `metadata.version`, and `bin/cvg`, the
+  truth; all skills declare `metadata.version`, and `bin/cvg`, the
   task-spec engine, the Pass 0 / Pass 1 gates and both JSON manifests agree with
   it. `tests/test-version-unity.sh` gates it and is proven to fail on drift.
 - **Pass 2 finally has a suite** (`skills/tech-req-to-adrs/tests/run-tests.sh`,
@@ -70,6 +70,14 @@ The first release where the number means the same thing everywhere.
   `task-specs-to-issues` had claimed Apache-2.0 inside an MIT repository.
 - `compatibility` is nested under `metadata` in every skill (it was top-level in
   one).
+
+### Removed
+- **`agents-kbs-tech-stack`** — the legacy harness donor, deleted rather than
+  shipped. Pass 7B absorbed its cross-tool emitter pattern long ago, and a
+  reference audit found nothing left invoking it — not `bin/cvg`, not any
+  skill's scripts, only the catalog naming it. Eleven skills remain (9 spine +
+  2 utility); its CI suite retires with it; the package stays recoverable from
+  git history.
 
 ### Fixed
 - **Nine symptoms of one root cause**: gates deriving their own answer to "where

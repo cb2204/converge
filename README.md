@@ -134,7 +134,7 @@ cd ~/my-project
 bash ~/converge/install.sh
 ```
 
-That does two separate things: it makes the twelve skills visible to Claude Code
+That does two separate things: it makes the eleven skills visible to Claude Code
 under `.claude/skills/`, and it puts the `cvg` CLI on your PATH. It verifies
 itself and prints `INSTALL=OK`. Re-running it is safe.
 
@@ -392,9 +392,8 @@ flaw. The adversary is what makes the sign-off worth something.
 
 ## 🗂 Skills Catalog
 
-Twelve skills: **nine that implement the spine**, plus **two utilities**
-(`skill-creator`, `pass-to-lesson`) and **one legacy package**
-(`agents-kbs-tech-stack`, the harness donor). Every skill is self-contained
+Eleven skills: **nine that implement the spine** plus **two utilities**
+(`skill-creator`, `pass-to-lesson`). Every skill is self-contained
 (`SKILL.md` + `references/` + `scripts/`, with `runbooks/`, `templates/`, and
 `tests/` on the larger ones).
 
@@ -414,9 +413,8 @@ Twelve skills: **nine that implement the spine**, plus **two utilities**
 | [`task-loop`](skills/task-loop) | 8 | one issue → green-eval PR | `--issue N` (req) · `--agent claude\|codex\|kimi` |
 | [`pass-to-lesson`](skills/pass-to-lesson) | *util* | after any pass, teach what was built | `--depth full\|brief` |
 | [`skill-creator`](skills/skill-creator) | *util* | author, eval, and validate skills | — |
-| [`agents-kbs-tech-stack`](skills/agents-kbs-tech-stack) | *legacy* | tech-KB scaffolder — the cross-tool emitter Pass 7 reuses | `--strict` |
 
-**By the numbers:** 12 skill packages (9 spine + 2 utility + 1 legacy) with full
+**By the numbers:** 11 skill packages (9 spine + 2 utility) with full
 regression and conformance suites in `task-spec` and `task-to-runtime-contract`.
 
 ---
@@ -568,7 +566,7 @@ converge/
 │   ├── cvg                              #   the router · zero model credentials
 │   ├── _ui.sh                           #   degradation-correct ANSI layer
 │   └── README.md                        #   the surface ledger
-├── skills/                              # the method — 9 spine + 2 utility + 1 legacy
+├── skills/                              # the method — 9 spine + 2 utility
 │   ├── idea-to-brd/                     # Pass 0 · Capture (optional)
 │   ├── brd-docs-to-tech-req/            # Pass 1 · Intent
 │   ├── tech-req-to-adrs/                # Pass 2 · Structure
@@ -579,8 +577,7 @@ converge/
 │   ├── task-to-runtime-contract/        # Pass 7 · Bind (+ multi-engine harness)
 │   ├── task-loop/                       # Pass 8 · The Loop (execution)
 │   ├── pass-to-lesson/                  # util · teach after any pass
-│   ├── skill-creator/                   # util · author + validate skills
-│   └── agents-kbs-tech-stack/           # legacy · cross-tool emitter (harness donor)
+│   └── skill-creator/                   # util · author + validate skills
 ├── docs/                                # the two canonical PDFs
 │   ├── converge-method-v6.pdf           #   the blueprint — method, architecture, agent protocol
 │   ├── task-spec-v3.6.0.pdf             #   the cornerstone unit, in depth
@@ -610,9 +607,9 @@ converge/
 
 ## 🧾 Status
 
-**Converge 0.1.0** — the CLI, the twelve skills and the task-spec engine ship as
+**Converge 0.1.0** — the CLI, the eleven skills and the task-spec engine ship as
 ONE unit at ONE version (root `VERSION`, gated by `tests/test-version-unity.sh`) ·
-Anthropic validator passing on all 12 skills · extracted from a production
+Anthropic validator passing on all 11 skills · extracted from a production
 **postgres → duckdb → dbt → MCP** run.
 
 **The descent 0→8 is closed on a real use case, and the backlog is empty**

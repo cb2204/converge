@@ -71,9 +71,11 @@ PHASE 2 · BUILD — machine-led · the dark factory
 | 7 | Bind *(+harness emit)* | `task-to-runtime-contract` | per-task contract + multi-engine harness · `CHECK_RUNTIME_CONTRACT` |
 | 8 | Loop ↺ | `task-loop` | green-eval PR closes the issue → frontier advances |
 
-**Skills = 12:** 9 spine (above) · 2 utils (`pass-to-lesson`, `skill-creator`) ·
-1 legacy (`agents-kbs-tech-stack` — the harness donor for 7b). **DELETED:**
-`plans-to-coherent-spec` (old Fork A) + `stack-to-harness` (superseded by Bind).
+**Skills = 11:** 9 spine (above) · 2 utils (`pass-to-lesson`, `skill-creator`).
+**DELETED:** `plans-to-coherent-spec` (old Fork A) · `stack-to-harness`
+(superseded by Bind) · `agents-kbs-tech-stack` (2026-07-29 — the legacy harness
+donor; Pass 7b absorbed its emitter pattern and a reference audit found nothing
+left invoking it).
 
 ### Phase 2 — machine-side, step by step
 
@@ -148,7 +150,7 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 | Looking for… | Go to |
 |---|---|
-| **The method** (12 skills, the chain, no fork) | [`skills/README.md`](skills/README.md) |
+| **The method** (11 skills, the chain, no fork) | [`skills/README.md`](skills/README.md) |
 | **The plan** (state, rules, tracks, backlog, log) | this file |
 | **The proving ground** (greenfield run, Pass 0 →) | [`tests/uc-analytics/`](tests/uc-analytics/) — its `CLAUDE.md` maps the inside |
 | **The machine fixture** (Track M test floor) | [`tests/e2e-test-engine/`](tests/e2e-test-engine/) |
@@ -161,7 +163,7 @@ root `tasks/` + `temp/` **cleared**; Phase 1 **crystal-clear (locked)**; Phase 2
 
 ## §1 · Where we are — 2026-07-29
 
-**Converge 0.1.0 (one unit, one version) · 12 skills · the descent 0→8 is CLOSED on a real use case — and
+**Converge 0.1.0 (one unit, one version) · 11 skills · the descent 0→8 is CLOSED on a real use case — and
 the backlog is EMPTY. 9 of 9 tasks settled (2026-07-28 evening sweep, PRs #2–#8),
 including the first fully unattended landing.**
 

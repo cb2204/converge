@@ -63,7 +63,7 @@ fi
 
 # Re-running must not damage a working install.
 OUT2="$(bash "$SRC/install.sh" --target "$T" --bin-dir "$T/bin" 2>&1)"
-if printf '%s' "$OUT2" | grep -q 'skipped 12' && "$T/bin/cvg" version >/dev/null 2>&1; then
+if printf '%s' "$OUT2" | grep -q 'skipped 11' && "$T/bin/cvg" version >/dev/null 2>&1; then
   ok "re-running the installer is safe and skips what is already there"
 else
   bad "re-running the installer is not idempotent"

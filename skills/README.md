@@ -1,9 +1,8 @@
 # The Converge Skill Chain
 
-Twelve self-contained agent skills implement the Converge method — **nine spine
+Eleven self-contained agent skills implement the Converge method — **nine spine
 skills** (the passes, including the optional Capture ⓪ and the opt-in Register),
-**two utility skills** (`skill-creator`, `pass-to-lesson`), and **one legacy
-package** (`agents-kbs-tech-stack`, the harness donor). Every active skill passes
+**two utility skills** (`skill-creator`, `pass-to-lesson`). Every skill passes
 the official validator (checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
 and every engine or tracker is bound by a **flag, never a name**.
@@ -97,7 +96,6 @@ judgment.
 | 8 | **The Loop** · [`task-loop`](task-loop/) | Run each attempt in fresh context, enforce iteration/time/token ceilings plus stagnation, persist checkpoints, and land in exactly one named state. | Green-eval PR/local commit or explicit handoff · `TASK_LOOP=<state>` + tier-2 `CHECK_VERIFY=<verdict>` |
 | util | [`pass-to-lesson`](pass-to-lesson/) | After any closed pass, teach the owner what was built, why it is shaped that way, and what would break without it. | Durable lesson + teach-ready `CHECK_LESSON=PASS` · *optional* |
 | util | [`skill-creator`](skill-creator/) | Author, evaluate, package, and structurally validate agent skills. | Validated skill package |
-| legacy | [`agents-kbs-tech-stack`](agents-kbs-tech-stack/) | Preserve the cross-tool emitter used by the newer runtime harness; standing-fleet scaffolding is no longer canonical. | Migration support only |
 
 `cvg verify` belongs to the **Pass 8 runtime story** even though its script is
 packaged under `task-to-runtime-contract`: it consumes the bound spec and diff,
@@ -273,7 +271,7 @@ kernel spells no vendor and a hung CLI dies at a watchdog cap.
 
 ---
 
-## Utilities & legacy
+## Utilities
 
 ### `pass-to-lesson` — the teaching companion (optional, after any pass)
 
@@ -295,35 +293,7 @@ grader/comparator/analyzer agents), package for distribution, and validate
 structure (`quick_validate.py` — the check every skill in this folder passes).
 **Ships:** 9 Python scripts + an eval-viewer (its own `generate_review.py`).
 
-### Legacy: `agents-kbs-tech-stack`
-
-Scaffolds a per-technology architect/developer agent pair + KB tree and — the
-part still in play — **emits cross-tool mirrors** (`AGENTS.md`,
-`.cursor/rules/*`, `.github/copilot-instructions.md`, `.claude/`) so every engine
-inherits one contract. Pass 7 reuses that emission for its harness step (7b); the
-standing-fleet scaffolding itself is no longer canonical. Safety contracts are
-maintained: differing cross-tool files produce `.proposed` siblings, and strict
-mode rejects TODO-seeded KB content.
-
----
-
-## Compliance & conventions
-
-- **Validator:** active skills pass `quick_validate.py` (frontmatter schema —
-  only `name/description/license/allowed-tools/metadata/compatibility` keys;
-  naming; description present and bounded).
-- **Anatomy:** every skill is `SKILL.md` + `references/` + `scripts/`, with
-  `runbooks/`, `templates/`, `tests/` on the larger ones. Everything
-  *enforceable* is a script, not prose; core gate paths are **bash-3.2-safe**
-  (macOS system bash).
-- **Engine neutrality:** engines and trackers appear only as flags
-  (`--adversary codex`, `--tracker linear`, `--agent kimi`) — never in a
-  skill's name or hard-coded in a script.
-- **Contributing:** validate any change with
-  `python3 skills/skill-creator/scripts/quick_validate.py <skill-dir>`; add
-  concepts under `references/concepts/`, playbooks under `runbooks/`.
-
-**By the numbers:** 12 skill packages (9 spine + 2 utility + 1 legacy), with full
+**By the numbers:** 11 skill packages (9 spine + 2 utility), with full
 test and conformance suites in `task-spec` and `task-to-runtime-contract`.
 
 > *"You are converged when the eval passes — not when you feel done."*
