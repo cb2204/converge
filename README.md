@@ -627,13 +627,19 @@ hermetic suite (stub engines, no model called) and then driven to green across t
 the last four green on the first iteration, each closing its own tracker issue
 unattended.
 
-**What is NOT true yet, stated plainly.** Tier-2 verification — an independent
-different-family judge grading against a holdout the worker cannot see — is
-implemented (`cvg verify`) and **graded none of those nine landings**: every green
-above is tier-1, self-reported. No spec yet carries a `## Holdout` block. And the
-**Manager** (unattended sequencing across the fleet) does not exist, so the loop
-runs one task at a time, invoked by hand. Those two are the gap between a good
-single-task harness and a factory — see [`PLAN.md`](PLAN.md) §2.
+**Tier 2 has graded real work, in both directions.** Two specs carried the
+first `## Holdout` blocks through live cross-family dispatches (2026-07-29):
+codex built and kimi **UPHELD** (`obs-rowcounts` — settled through a merged PR);
+kimi built and codex **REFUTED** (`obs-fence` — a fail-open `OSError` swallow
+the three green evals could not see, caught by exactly the holdout line reserved
+for the judge; the kernel refused settlement). *A green eval is necessary, not
+sufficient — demonstrated, not asserted.*
+
+**What is NOT true yet, stated plainly.** The nine backbone landings predate
+those runs and remain tier-1, self-reported. And the **Manager** (unattended
+sequencing across the fleet) does not exist, so the loop runs one task at a
+time, invoked by hand. That is the gap between a good single-task harness and a
+factory — see [`PLAN.md`](PLAN.md) §2.
 
 ---
 

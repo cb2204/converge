@@ -143,7 +143,7 @@ either seat):
   necessary, not sufficient — demonstrated, not asserted.*
 
 ### Known gaps at 0.1.0
-- `task-spec/SKILL.md` is 566 lines against skill-creator's own 500-line rule.
+- `task-spec/SKILL.md` is 569 lines against skill-creator's own 500-line rule.
 - Lessons exist for passes 0–3 only.
 - The kernel's tier-2 judge timeout is fixed at the verifier's 300s default —
   a slow judge lands `BLOCKED` on work it never graded (`CVG_VERIFIER` wrapping

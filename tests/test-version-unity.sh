@@ -161,6 +161,17 @@ else
   bad "per-skill licence found in: $LIC — the root LICENSE governs"
 fi
 
+# ----- the CLI's front door must claim the package version -----
+# bin/README.md said v0.20.0 while the binary said 0.1.0 — the same class
+# d6e8c92 fixed on the root readme, caught by a reviewer instead of a gate.
+echo
+echo "[3b] bin/README.md (the CLI front door) claims the package version"
+if head -20 bin/README.md | grep -q "cvg $PKG"; then
+  ok "bin/README.md header says cvg $PKG"
+else
+  bad "bin/README.md header claims a version the binary denies (wants: cvg $PKG)"
+fi
+
 # ----- schema versions must NOT have been swept up -----
 # The counter-test. If a future edit "unifies" a data-contract version into the
 # release number, specs stop validating against their own declared schema. These

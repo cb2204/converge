@@ -8,7 +8,8 @@
 > not done, matching the 2026-07-16 housekeeping call that folded all contracts
 > into one file.
 
-**cvg v0.20.0** · (0.20.0 — **Pass 8 becomes an actual loop.** `loop` now routes
+**cvg 0.1.0** — one unit, one version (root `VERSION`); the numbers
+below are the CLI's pre-unification lineage · (0.20.0 — **Pass 8 becomes an actual loop.** `loop` now routes
 to `loop-kernel.sh`, which runs **attempt → verify → repeat** until the spec's
 Exit Check exits 0, bounded on three axes (iterations · wall-clock · tokens) with
 a stagnation detector, each attempt in a **fresh engine process** with state on
@@ -74,7 +75,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg` | The router. One name over the proven task-spec scripts. Referee, never a player: no model credentials, no LLM calls, wrapped commands are byte-exact pass-throughs (`exec`). Bash 3.2-safe, zero dependencies. |
 | `_ui.sh` | Shared presentation layer (sourced). Color only on an interactive TTY; `NO_COLOR` non-empty disables; `CVG_COLOR=0|1` overrides; 8 basic ANSI colors only; color never carries meaning alone. Never touches wrapped-command output. Grows the stage strip at `cvg capture`. |
 
-## Command surface (v0.20.0)
+## Command surface (0.1.0)
 
 | Command | Wraps | Proven by |
 |---|---|---|
