@@ -24,45 +24,7 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
-### Fixed
-- **A finished spec was starting a second board.** `validate-task-spec.sh` wrote
-  `_state.yaml` as a plain sibling of the spec, but `transition-status.sh` moves a
-  finished spec down into a status bucket (`done/`, `parked/`, `queue/`). So
-  validating anything already moved built a SHADOW index *inside the bucket* —
-  holding that one task — while the real index beside it went stale and unread.
-  Found as an untracked `cvg/tasks/done/_state.yaml` on the proving ground
-  carrying 1 of 9 tasks. `rebuild-state.sh` has always scanned buckets
-  recursively into ONE index at the backlog root; this is the writer catching up
-  to the reader. A **fifth** symptom of the 0.1.0 root cause below — nothing had
-  ever moved a spec into `tasks/done/` before the first task finished.
-- **…and the two index writers disagreed on what paths are relative to.** The
-  validator anchored at the parent of `tasks/`, which is right only for the bare
-  layout; under `cvg/tasks` it names `cvg/` and emits `tasks/done/T-x.md` where
-  `rebuild-state.sh` emits `cvg/tasks/done/T-x.md`. Harmless only for as long as
-  the two wrote to *different files* — the moment the shadow board was fixed they
-  shared one, and a validate after a rebuild would have mixed two path styles in
-  a single list. `STATE_DIR` and `ANCHOR` are now chosen in the same branch, so
-  they cannot be sourced from two different roots (which is how a nested
-  workspace briefly resolved its index locally but its anchor from an unrelated
-  outer backlog, and emitted absolute paths).
-- **Fail-soft is not the same as silent.** The Pass 8 tracker call discarded the
-  bridge's output *and* its status, so a run printed "the board will follow this
-  run" and nothing in its own log could confirm or deny it. That is how the
-  broken Linear board-write fixed in 0.1.0 survived weeks unnoticed: every log
-  looked identical to a working one, and the only way to find out was to go and
-  look at the board. The call is still fail-soft — the evals decide the verdict,
-  never the board — but now **accounted**: output lands in
-  `cvg/loop/<task>/tracker.log`, and a `TRACKER=OK|FAILED|SKIPPED` token prints
-  beside `TASK_LOOP=`. An unverifiable claim in a log is worse than no claim.
-
-### Added
-- Regression rows for each of the above, every one proven to fail against the
-  pre-fix code: the shadow board, the anchor agreement between the two index
-  writers, and — the load-bearing one — a **differential** in
-  `tests/test-loop-kernel.sh` showing a run whose tracker bridge fails lands on
-  exactly the state and exit code of one whose bridge succeeds. Stated as a
-  comparison rather than a hardcoded state, because a constant would pass just
-  as happily if the board were the thing dictating it.
+(nothing yet — everything below ships in 0.1.0)
 
 ---
 
@@ -85,6 +47,23 @@ The first release where the number means the same thing everywhere.
   keeps that list honest by failing with the exact path when a suite is unwired.
 - **One changelog to rule them all** — this file, promoted from
   `skills/task-spec/CHANGELOG.md`.
+- Regression rows for each of the fixes below, every one proven to fail against
+  the pre-fix code: the shadow board, the anchor agreement between the two index
+  writers, and — the load-bearing one — a **differential** in
+  `tests/test-loop-kernel.sh` showing a run whose tracker bridge fails lands on
+  exactly the state and exit code of one whose bridge succeeds. Stated as a
+  comparison rather than a hardcoded state, because a constant would pass just
+  as happily if the board were the thing dictating it.
+- **`--post-hoc` mode on `write-execution-receipt.py`** — evidence for a spec
+  that finished after binding (moved into a status bucket, frontmatter stamped
+  by the POST-gate). Refuses unless the sign-off HMAC still verifies, records
+  both the current and bind-time spec hashes, and names its own provenance in
+  `generated_by`. Written for the ninth landing's missing receipt (below); along
+  the way the writer turned out to be a fourth site of the "done/ is invisible"
+  class.
+- **The first `## Holdout` blocks** — two XS specs (`obs-rowcounts`,
+  `obs-fence`) authored to give tier 2 its first real work; the judge-only
+  section is excluded from the 7B worker brief. See **Proven**.
 
 ### Changed
 - Per-skill licence claims removed; the root `LICENSE` (MIT) governs the unit.
@@ -105,18 +84,68 @@ The first release where the number means the same thing everywhere.
 - `plugin.json` / `marketplace.json` were left at `3.6.0` by the first pass of the
   version unification — caught by `lint-skill-docs.sh`, and the unity gate now
   enumerates JSON manifests too.
+- **A finished spec was starting a second board.** `validate-task-spec.sh` wrote
+  `_state.yaml` as a plain sibling of the spec, but `transition-status.sh` moves a
+  finished spec down into a status bucket (`done/`, `parked/`, `queue/`). So
+  validating anything already moved built a SHADOW index *inside the bucket* —
+  holding that one task — while the real index beside it went stale and unread.
+  Found as an untracked `cvg/tasks/done/_state.yaml` on the proving ground
+  carrying 1 of 9 tasks. `rebuild-state.sh` has always scanned buckets
+  recursively into ONE index at the backlog root; this is the writer catching up
+  to the reader. A **fifth** symptom of the nine-symptom root cause above —
+  nothing had ever moved a spec into `tasks/done/` before the first task
+  finished.
+- **…and the two index writers disagreed on what paths are relative to.** The
+  validator anchored at the parent of `tasks/`, which is right only for the bare
+  layout; under `cvg/tasks` it names `cvg/` and emits `tasks/done/T-x.md` where
+  `rebuild-state.sh` emits `cvg/tasks/done/T-x.md`. Harmless only for as long as
+  the two wrote to *different files* — the moment the shadow board was fixed they
+  shared one, and a validate after a rebuild would have mixed two path styles in
+  a single list. `STATE_DIR` and `ANCHOR` are now chosen in the same branch, so
+  they cannot be sourced from two different roots.
+- **Fail-soft is not the same as silent.** The Pass 8 tracker call discarded the
+  bridge's output *and* its status, so a run printed "the board will follow this
+  run" and nothing in its own log could confirm or deny it. That is how the
+  broken Linear board-write survived weeks unnoticed: every log looked identical
+  to a working one. The call is still fail-soft — the evals decide the verdict,
+  never the board — but now **accounted**: output lands in
+  `cvg/loop/<task>/tracker.log`, and a `TRACKER=OK|FAILED|SKIPPED` token prints
+  beside `TASK_LOOP=`. An unverifiable claim in a log is worse than no claim.
+- **The ninth landing had no receipt, because no landing wrote one.** The loop
+  never settled `cap-freshness` — its only landing was BLOCKED, and completion
+  was operator-driven — so no `result: pass` receipt ever existed. Closed
+  honestly: the accept gate re-run dry against the settled tree, a `--post-hoc`
+  receipt written, and the gap documented in `receipts/README.md` rather than
+  papered over.
 
 ### Proven
 Backlog swept 9/9 on the `uc-analytics` proving ground: `TASK_LOOP=LOCAL_SETTLED`
 ×2 then `SETTLED` ×7 through merged PRs, the last four green on the first
 iteration, board parity `CHECK_REGISTER=OK` at 9⇄9 with an empty ready frontier.
 
+**Tier 2 has now graded real work, and both verdicts exist** (2026-07-29, on the
+two `## Holdout` specs — cross-family in both directions, no anthropic model in
+either seat):
+- `obs-rowcounts` — codex built it green in one iteration; **kimi UPHELD** every
+  holdout assertion → `TASK_LOOP=SETTLED`, PR #9, receipt on file.
+- `obs-fence` — kimi built it green in one iteration; **codex REFUTED**: the
+  fence swallows `OSError` and reports an unreadable surface as `FENCE=OK`,
+  exactly the exit-code contract the holdout reserved for the judge. The kernel
+  refused settlement → `TASK_LOOP=BLOCKED`, handoff written. *A green eval is
+  necessary, not sufficient — demonstrated, not asserted.*
+
 ### Known gaps at 0.1.0
-- **Tier 2 graded nothing.** All ten dispatches ran with `--verify` off, and no
-  spec carries a `## Holdout` block, so the independent-judge property is
-  implemented and unexercised.
 - `task-spec/SKILL.md` is 566 lines against skill-creator's own 500-line rule.
 - Lessons exist for passes 0–3 only.
+- The kernel's tier-2 judge timeout is fixed at the verifier's 300s default —
+  a slow judge lands `BLOCKED` on work it never graded (`CVG_VERIFIER` wrapping
+  `verify-work.py --timeout N` is the working escape hatch).
+- `--resume` under worktree isolation cuts a FRESH worktree and restarts at
+  attempt 1 — the checkpoint survives, the working tree does not.
+- `generate-task-spec.sh` anchors `tasks/` at the git root, not the workspace —
+  the seventh sighting of the D1 run-context class.
+- `obs-fence` is deliberately left `BLOCKED` on the board: the refuted work and
+  its handoff are the living demonstration of the refute path.
 
 ---
 

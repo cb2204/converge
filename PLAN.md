@@ -264,7 +264,9 @@ keeps its state on disk instead of in a conversation.
    which is the start of retiring the class — not the end of it. The Manager would
    multiply the next instance across 8 tasks. Do this BEFORE 6.
 5. **Harvest** — lessons for passes 4,5,6,7,8 (0–3 exist). Then merge to main and
-   tag; note v0.1 is already taken, so this is **v0.2**.
+   tag. *(Superseded on versioning: e8afbbc unified the package at 0.1.0, and the
+   old local `v0.1` tag — July 8, never pushed, pre-method history — is retired;
+   the release tag is `v0.1.0`, matching `VERSION`.)*
 6. **The Manager** — and it is SIMPLER than assumed here: the uc-analytics DAG is a
    7-deep chain with ONE 2-wide fork (`cap-freshness` ∥ `tf-silver`) — and that fork
    is now the live frontier. It needs unattended sequencing, not fan-out. `cvg lint`
@@ -294,24 +296,30 @@ retired — they are re-ordered below with what the sweep taught.
    `tracker()` swallows the bridge's stdout *and* stderr, so "the board will follow
    this run" is unfalsifiable from the log. A fail-soft call that reports nothing
    cannot be verified; it needs a `TRACKER=OK|SKIPPED|FAILED` token.
-2. **Tier 2 graded NOTHING** — all ten dispatches of the sweep ran `tier 2: off`.
-   The holdout verifier is one of the three properties that make this a dark
-   factory rather than agentic coding, and it did not grade a single one of the
-   nine landings. Every green is therefore self-reported: authored, implemented
-   and graded by one family. `cvg verify` exists and is proven on its own suite —
-   what is missing is having *used* it. Re-verify a representative sample
-   (`srv-mcp` and `tf-gold`, the highest blast radius and the amended one) with
-   `--verify --judge codex` before any claim of end-to-end sign-off. This is a
-   prerequisite for item 4, not a nice-to-have: B-2 makes it a gate, and gating a
-   check that has never returned a verdict on real work is automating a guess.
+2. ~~**Tier 2 graded NOTHING**~~ — **closed 2026-07-29, harder than asked.**
+   Instead of re-verifying settled work, two fresh XS specs carried the first
+   `## Holdout` blocks through live cross-family dispatches, and BOTH verdicts
+   now exist on real work with no anthropic model in either seat:
+   `obs-rowcounts` (codex builds → kimi judges) **UPHELD** → `SETTLED`, PR #9;
+   `obs-fence` (kimi builds → codex judges) **REFUTED** — a fail-open
+   `OSError` swallow the deterministic evals could not see, caught by exactly
+   the holdout line reserved for the judge — → `BLOCKED`, left on the board as
+   the living demonstration that *a green eval is necessary, not sufficient*.
+   Three new gaps observed and logged in the CHANGELOG: the kernel's fixed 300s
+   judge timeout (a slow judge lands BLOCKED on ungraded work; `CVG_VERIFIER`
+   wrapper is the escape hatch), `--resume` cutting a fresh worktree, and the
+   generator anchoring `tasks/` at the git root (D1 sighting #7).
 3. **Harvest** — lessons for passes 4–8 (0–3 exist). The sweep is the material:
    the run-context class (×6 patched, `ts_workspace_root` is the start of
    retiring it), the stale-epoch ERROR pair, the PR-base defect, the write leg
    that had never run. What the method *learned* is worth more than what it
    built, and it is not yet written down.
-4. **Merge to main and tag v0.2** — the first release where every claim in the
-   readme has a receipt behind it. Update readme §Status first (the loop closed
-   n=9, not n=1; the descent line gains `TASK_LOOP=SETTLED ×7`).
+4. **Merge to main and tag `v0.1.0`** — the first release where every claim in
+   the readme has a receipt behind it. The tag matches root `VERSION` (0.1.0,
+   e8afbbc); the stale local `v0.1` of July 8 was never pushed and is deleted,
+   not reused — one number, one meaning, everywhere. Update readme §Status
+   first (the loop closed n=9, not n=1; the descent line gains
+   `TASK_LOOP=SETTLED ×7`).
 5. **The Manager (B-1)** — now genuinely unblocked: the loop has closed nine
    times, once fully unattended, so automating it no longer automates an
    unproven path. Start with `cvg run --once` (the stateless tick over
@@ -446,7 +454,7 @@ their full narrative lives in §10 and in git history.
   projected all 9 signed specs onto Linear as **CVG-21…29** (9 created, then
   idempotently updated), 8 `depends_on` → blocked-by links, receipts stamped.
   Native-field + projection + structure tiers shipped and live-proven:
-  assignee (via `.cvg/people-map`), state from DAG position (root→Todo,
+  assignee (via `.cvg/identity-map`), state from DAG position (root→Todo,
   blocked→Backlog), subscribers, the in-frontmatter `projection:` block, and
   opt-in Initiative → Project → Capture/Transform/Serve milestones with an
   append-only health note. **`register --check` is now a real 1:1 parity gate**
@@ -640,7 +648,7 @@ scheduler, settlement, and required checks.
 > alongside `budget_iterations`; park on exhaustion.
 >
 > **The Linear path is already wired.** `register` emits `--assignee agent:<role>`;
-> one `.cvg/people-map` line makes assignment *the* dispatch signal with zero new
+> one `.cvg/identity-map` line makes assignment *the* dispatch signal with zero new
 > code. What's missing is a signed, always-on receiver — see
 > `skills/task-specs-to-issues/references/agents-api-scaffold.md` (T4 scaffold,
 > deliberately dark).
@@ -819,8 +827,10 @@ hand-written) so the method is drivable from engines that don't load skills.
   Five folders, one kind of knowledge each: **brain** (inputs, append-only) →
   **docs** (agreements, gated) → **sketch** (drafts, transient) → **tasks**
   (sealed units) → **receipts** (evidence, write-once). `cvg/INDEX.md` is the
-  front door. Exception: `tasks/` stays git-root anchored until the project is
-  its own repo. *Remaining riders:* the grounding-receipt skill enhancement
+  front door. Task discovery now resolves the consuming workspace, so sealed
+  units live canonically in `<project>/cvg/tasks/` even when that project is
+  nested inside a larger Git repository. *Remaining riders:* the
+  grounding-receipt skill enhancement
   (Pass 0 Step 1 / Pass 1 Step 1.5 read the home's index and emit a receipt —
   provenance for every question not asked), plus P-10 and P-11.
 
@@ -1096,8 +1106,9 @@ references survive in the READMEs). What is actually left:
   constraint on writes was the per-task `fs.write` scope, and the guard's job is
   to enforce what the spec declared — so a spec scoping writes to `auth/` was an
   instruction, not a violation. The gate is a second, standing, per-repo fence:
-  denylist beats contract, it is outside the signed payload, and `max_files`
-  caps blast radius independently of paths. Unparseable = FAIL, never skipped.
+  protected paths beat contract, it is outside the signed payload, and
+  `max_changed_files` caps blast radius independently of paths. Unparseable =
+  FAIL, never skipped.
   `cvg gate [--path P]` inspects it. **cvg 0.21.0.**
   **A pre-existing security bug fell out of building it:** `lstrip("./")`
   strips every leading dot, so `.env` was normalised to `env` and
@@ -1374,11 +1385,11 @@ references survive in the READMEs). What is actually left:
 - **2026-07-24 · R① REGISTER CLOSED LIVE** — the uc-analytics backbone (9 signed
   specs) projected onto Linear as **CVG-21…29** (9 created, then re-registered
   idempotently `created 0, updated 9`), 8 blocked-by links, receipts stamped.
-  Tiers shipped: T1 native fields (assignee via `.cvg/people-map`, state from DAG
+  Tiers shipped: T1 native fields (assignee via `.cvg/identity-map`, state from DAG
   root→Todo/blocked→Backlog, subscribers), T2 in-frontmatter `projection:` block
   (cycle/parent/sla/project/milestone; HMAC-safe — all 9 seals re-verified after
   editing), T3 opt-in structure (Initiative → Project → Capture/Transform/Serve,
-  3 issues each, + append-only health). `cvg setup people` / `setup projection`
+  3 issues each, + append-only health). `cvg setup identities` / `setup projection`
   born; portability held (github/jira/fake accept-and-discard).
   **`register --check` hardened into a real 1:1 parity gate** via a new
   six-verb-contract `list-issues` (count · orphan · missing · dup) — proven to
