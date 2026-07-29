@@ -51,7 +51,11 @@
 
 set -euo pipefail
 
-CHECK_BRD_VERSION="0.4.0"
+# The PACKAGE version, not this script's own. Converge ships as ONE unit:
+# the root VERSION file is the source of truth and tests/test-version-unity.sh
+# fails the build if any declaration here drifts from it. Bump VERSION, then
+# run that gate with --sync.
+CHECK_BRD_VERSION="0.1.0"
 
 # A valid ISO date SHAPE: month 01-12, day 01-31 (2026-13-45 is not a date).
 # First screen only — iso_dates_real() proves the day exists in its month.

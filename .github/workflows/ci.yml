@@ -109,6 +109,9 @@ jobs:
         # the result cannot drift with a vendor CLI's behaviour.
         run: bash tests/test-loop-kernel.sh
 
+      - name: one package, one version
+        run: bash tests/test-version-unity.sh
+
       - name: pass gates
         run: |
           bash skills/idea-to-brd/tests/run-tests.sh

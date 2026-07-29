@@ -50,7 +50,11 @@
 
 set -euo pipefail
 
-CHECK_TECH_SPEC_VERSION="0.5.0"
+# The PACKAGE version, not this script's own. Converge ships as ONE unit:
+# the root VERSION file is the source of truth and tests/test-version-unity.sh
+# fails the build if any declaration here drifts from it. Bump VERSION, then
+# run that gate with --sync.
+CHECK_TECH_SPEC_VERSION="0.1.0"
 
 # A valid ISO date: month 01-12, day 01-31 (2026-13-45 is not a date).
 ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'

@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.21.0"
+CVG_VERSION="0.1.0"
 
 # Resolve THIS script through any symlink chain before locating its companions.
 # The normal install puts a symlink on PATH (~/.local/bin/cvg → <checkout>/bin/cvg),
