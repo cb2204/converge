@@ -121,6 +121,7 @@ jobs:
         run: |
           bash skills/idea-to-brd/tests/run-tests.sh
           bash skills/brd-docs-to-tech-req/tests/run-tests.sh
+          bash skills/tech-req-to-adrs/tests/run-tests.sh
           bash skills/reqs-to-swimlane-plans/tests/run-tests.sh
           bash skills/sketch-plans-adversarial-review/tests/run-tests.sh
 
@@ -136,6 +137,13 @@ jobs:
           bash skills/pass-to-lesson/tests/run-tests.sh
           bash skills/agents-kbs-tech-stack/tests/test-safety-contracts.sh
           bash skills/skill-creator/tests/test-skill-creator.sh
+
+      - name: task-spec doc consistency
+        # A LINT, not a suite — so the coverage gate below cannot see it. It is
+        # wired by hand because it earned it: it caught plugin.json and
+        # marketplace.json still claiming 3.6.0 after the version unification,
+        # which every suite in the package had missed.
+        run: bash skills/task-spec/scripts/lint-skill-docs.sh
 
       - name: every suite in the package is wired into this workflow
         # The gate that keeps this list honest. Without it the next suite someone

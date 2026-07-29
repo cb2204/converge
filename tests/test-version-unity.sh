@@ -104,6 +104,28 @@ do
   [ "$got" = "$PKG" ] || CODE_DRIFT=$((CODE_DRIFT+1))
 done
 
+# ----- JSON manifests -----
+# These were MISSED by the first version of this gate, and the miss was caught by
+# lint-skill-docs.sh rather than by CI: unifying the shell versions left
+# plugin.json and marketplace.json at 3.6.0, so `task-spec` shipped claiming two
+# different versions. A gate that enumerates "every declaration" has to actually
+# enumerate them, including the ones that are not shell variables.
+echo
+echo "[1b] JSON manifests equal VERSION"
+for jf in skills/task-spec/plugin.json skills/task-spec/marketplace.json; do
+  if [ ! -f "$jf" ]; then bad "$jf is missing"; continue; fi
+  got="$(grep -m1 -E '"version"[[:space:]]*:' "$jf" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
+  if [ "$got" = "$PKG" ]; then
+    ok "$(basename "$jf") = $PKG"
+  elif [ "$SYNC" = true ]; then
+    sed -i.bak -E "s/(\"version\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"/\1\"${PKG}\"/" "$jf" && rm -f "$jf.bak"
+    echo "  sync — $(basename "$jf"): $got -> $PKG"
+  else
+    bad "$(basename "$jf") = $got, VERSION says $PKG — run with --sync"
+    CODE_DRIFT=$((CODE_DRIFT+1))
+  fi
+done
+
 # ----- every skill declares metadata.version, and it matches -----
 echo
 echo "[2] all twelve skills declare metadata.version = VERSION"
