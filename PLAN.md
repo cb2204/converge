@@ -339,6 +339,44 @@ retired — they are re-ordered below with what the sweep taught.
    framing — the moat extension, and it comes after the factory runs unattended,
    not before.
 
+### The streamline harvest (2026-07-29) — what the tier-2 hours actually bought
+
+Every item below is a defect or friction that cost real wall-clock today, named
+so the next session spends minutes where this one spent hours. S1–S4 and S7 are
+small enough to land as ordinary commits; S5 and S6 change method behavior and
+deserve their own task-specs (dogfood them through the loop).
+
+- **S1 (S) · the judge gets a timeout dial.** The kernel invokes the verifier
+  with no `--timeout`, so the 300s default decides — codex timed out judging
+  work it never graded, landing BLOCKED. Pass `CVG_VERIFY_TIMEOUT` (or
+  `--judge-timeout`) through, with a per-engine default. The `CVG_VERIFIER`
+  wrapper trick is the workaround, not the fix.
+- **S2 (M) · `--resume` must reattach, not restart.** A resume cut a FRESH
+  worktree, called itself attempt 1, and re-implemented work that existed green
+  in the KEPT worktree. The checkpoint records enough to reattach; a resume that
+  cannot must say so instead of silently starting over.
+- **S3 (S) · the resume/re-bind drift.** The first resume refused a committed
+  contract ("legacy profile selects 'generic', spec selects 'kimi'") that the
+  fresh dispatch had accepted. One re-mint fixed it; the drift's cause is
+  unexplained, and an unexplained gate refusal is a future lost hour.
+- **S4 (S) · the generator joins D1.** `generate-task-spec.sh` anchored
+  `cvg/tasks` at the git root — sighting #7 of the run-context class. Route it
+  through `ts_workspace_root` like everything else.
+- **S5 (M · task-spec) · REFUTED becomes iteration fuel.** The readme's diagram
+  promises "refuted → loop"; the kernel lands BLOCKED and waits for an operator
+  to relay the findings. Feed the judge's findings into the next attempt's
+  brief, bounded by the same budgets — a refutation should cost one more
+  iteration, not a human.
+- **S6 (M · task-spec) · acceptance on a shared tree.** The POST-gate's blast
+  radius diffs the whole working tree, so green, upheld, MERGED work sat
+  unacceptable because a parallel session had unrelated WIP checked out. The
+  documented claim is "evals re-run from a clean checkout" — make GATE B do
+  exactly that (scope to the task's own commits, or run in a throwaway
+  worktree).
+- **S7 (XS) · `--max-seconds` may not take.** The resumed run was passed 3600
+  and the banner still declared 1800s. Verify the flag reaches the budget; a
+  dial that silently does nothing is worse than no dial.
+
 **Also true now:** CI has run for the first time and is **green on ubuntu AND
 macos** (7 host-dependent defects found in 5 runs) — the note that once stood here
 saying `.github/workflows/ci.yml` had never executed is retired. The repo write
@@ -454,7 +492,7 @@ their full narrative lives in §10 and in git history.
   projected all 9 signed specs onto Linear as **CVG-21…29** (9 created, then
   idempotently updated), 8 `depends_on` → blocked-by links, receipts stamped.
   Native-field + projection + structure tiers shipped and live-proven:
-  assignee (via `.cvg/identity-map`), state from DAG position (root→Todo,
+  assignee (via `.cvg/identity`), state from DAG position (root→Todo,
   blocked→Backlog), subscribers, the in-frontmatter `projection:` block, and
   opt-in Initiative → Project → Capture/Transform/Serve milestones with an
   append-only health note. **`register --check` is now a real 1:1 parity gate**
@@ -648,7 +686,7 @@ scheduler, settlement, and required checks.
 > alongside `budget_iterations`; park on exhaustion.
 >
 > **The Linear path is already wired.** `register` emits `--assignee agent:<role>`;
-> one `.cvg/identity-map` line makes assignment *the* dispatch signal with zero new
+> one `.cvg/identity` line makes assignment *the* dispatch signal with zero new
 > code. What's missing is a signed, always-on receiver — see
 > `skills/task-specs-to-issues/references/agents-api-scaffold.md` (T4 scaffold,
 > deliberately dark).
@@ -1385,11 +1423,11 @@ references survive in the READMEs). What is actually left:
 - **2026-07-24 · R① REGISTER CLOSED LIVE** — the uc-analytics backbone (9 signed
   specs) projected onto Linear as **CVG-21…29** (9 created, then re-registered
   idempotently `created 0, updated 9`), 8 blocked-by links, receipts stamped.
-  Tiers shipped: T1 native fields (assignee via `.cvg/identity-map`, state from DAG
+  Tiers shipped: T1 native fields (assignee via `.cvg/identity`, state from DAG
   root→Todo/blocked→Backlog, subscribers), T2 in-frontmatter `projection:` block
   (cycle/parent/sla/project/milestone; HMAC-safe — all 9 seals re-verified after
   editing), T3 opt-in structure (Initiative → Project → Capture/Transform/Serve,
-  3 issues each, + append-only health). `cvg setup identities` / `setup projection`
+  3 issues each, + append-only health). `cvg setup identity` / `setup projection`
   born; portability held (github/jira/fake accept-and-discard).
   **`register --check` hardened into a real 1:1 parity gate** via a new
   six-verb-contract `list-issues` (count · orphan · missing · dup) — proven to
