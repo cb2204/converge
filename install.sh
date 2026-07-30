@@ -10,18 +10,29 @@
 # Copy (default) pins the complete 0.1.0 tool surface so a consuming repository
 # does not depend on this checkout. `--symlink` is the explicit development mode.
 #
+# It also works with no checkout at all — the one-line install:
+#
+#   curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh | bash
+#
+# When run standalone it shallow-clones the released source to a temp dir and
+# hands off to the installer inside the clone. No TTY is assumed (a piped
+# script has none), and every choice is overridable:
+#   CVG_REF=v0.1.0        pin an exact release tag  (default: main)
+#   CVG_REPO_URL=<url>    install from a fork or mirror
+#
 # This script installs. It never configures, never writes a credential, and
 # never configures credentials. Re-running it is safe.
 #
 # Bash 3.2 compatible (stock macOS).
 set -euo pipefail
 
-CVG_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CVG_SRC="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 TARGET="$PWD"
 MODE="copy"
 BIN_DIR=""
 DO_BIN=1
 FORCE=0
+ORIG_ARGS=("$@")
 
 usage() {
   cat <<EOF
@@ -36,6 +47,9 @@ usage: install.sh [--target DIR] [--copy|--symlink] [--bin-dir DIR] [--no-bin] [
   --force        replace existing skill entries
 
 Examples
+  # one-line install into the current repo (no checkout needed)
+  curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh | bash
+  # from a checkout
   cd ~/my-project && bash /path/to/converge/install.sh
   bash install.sh --target ~/my-project --copy
 EOF
@@ -56,7 +70,26 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-[ -d "$CVG_SRC/skills" ] || { echo "ERROR: no skills/ beside install.sh — is this a Converge checkout?" >&2; exit 2; }
+# --- 0. remote bootstrap ------------------------------------------------------
+# No skills/ or bin/cvg beside this file means we are running standalone
+# (curl | bash, or a copied script). Fetch the released source and hand off to
+# the installer inside the clone. The clone is temporary: the default copy mode
+# pins everything into the target, so nothing references it afterwards — which
+# is also why --symlink is refused here (it would link into a deleted dir).
+if [ ! -d "$CVG_SRC/skills" ] || [ ! -f "$CVG_SRC/bin/cvg" ]; then
+  [ "$MODE" = "symlink" ] && { echo "ERROR: the one-line install is copy-only — clone the repo for a --symlink development install" >&2; exit 2; }
+  command -v git >/dev/null 2>&1 || { echo "ERROR: the one-line install needs git on PATH" >&2; exit 2; }
+  REPO_URL="${CVG_REPO_URL:-https://github.com/luanmorenommaciel/converge.git}"
+  REF="${CVG_REF:-main}"
+  echo "Converge one-line install — fetching $REPO_URL @ $REF"
+  CLONE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/converge-install.XXXXXX")"
+  trap 'rm -rf "$CLONE_DIR"' EXIT
+  git clone --quiet --depth 1 --branch "$REF" "$REPO_URL" "$CLONE_DIR" \
+    || { echo "ERROR: could not clone $REPO_URL @ $REF" >&2; exit 2; }
+  bash "$CLONE_DIR/install.sh" --target "$TARGET" ${ORIG_ARGS[@]+"${ORIG_ARGS[@]}"}
+  exit $?
+fi
+
 [ -d "$TARGET" ] || { echo "ERROR: target '$TARGET' does not exist" >&2; exit 2; }
 TARGET="$(cd "$TARGET" && pwd)"
 

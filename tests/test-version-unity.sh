@@ -112,7 +112,8 @@ done
 # enumerate them, including the ones that are not shell variables.
 echo
 echo "[1b] JSON manifests equal VERSION"
-for jf in skills/task-spec/plugin.json skills/task-spec/marketplace.json; do
+for jf in skills/task-spec/plugin.json skills/task-spec/marketplace.json \
+          .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
   if [ ! -f "$jf" ]; then bad "$jf is missing"; continue; fi
   got="$(grep -m1 -E '"version"[[:space:]]*:' "$jf" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
   if [ "$got" = "$PKG" ]; then

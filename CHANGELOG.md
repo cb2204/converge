@@ -68,6 +68,21 @@ The first release where the number means the same thing everywhere.
   (`docs/converge-v0.1.pdf`, `docs/task-spec-v0.1.pdf`) and four interactive
   HTML walkthroughs under `presentation/`, replacing the pre-unification
   v6 / v3.6.0 documents.
+- **Claude Code plugin marketplace install** — `.claude-plugin/plugin.json` +
+  `marketplace.json` make the repository itself an installable plugin:
+  `/plugin marketplace add luanmorenommaciel/converge` then
+  `/plugin install converge@cvg` ships all eleven skills AND puts `bin/cvg` on
+  the session PATH — over git, no package manager, nothing to authenticate.
+  Both manifests are enumerated by the version-unity gate.
+- **The one-line install** — `install.sh` now bootstraps itself when run
+  standalone (`curl -fsSL …/install.sh | bash`): it shallow-clones the released
+  source to a temp dir and hands off to the installer inside the clone.
+  Copy-only by design (no durable checkout to symlink against), no TTY
+  assumed, `CVG_REF` pins an exact tag, `CVG_REPO_URL` installs from a fork.
+- **The readme, rewritten as a front door** — 60-second quickstart, one
+  flow diagram, the nine passes as a table, three install paths ranked by
+  friction, and a Status section where every claim links to the suite that
+  proves it. 720 lines became ~270.
 
 ### Changed
 - Per-skill licence claims removed; the root `LICENSE` (MIT) governs the unit.

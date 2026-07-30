@@ -1,0 +1,19 @@
+{
+  "name": "cvg",
+  "description": "Converge — spec-first delivery for coding agents. One install ships the eleven /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
+  "owner": {
+    "name": "Luan Moreno M. Maciel",
+    "url": "https://github.com/luanmorenommaciel"
+  },
+  "plugins": [
+    {
+      "name": "converge",
+      "source": "./",
+      "description": "The nine-pass Converge method (eleven skills) plus the cvg referee CLI on PATH. Zero dependencies: bash 3.2+, no npm, no pip.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "category": "workflow",
+      "keywords": ["agentic", "task-spec", "evals", "delivery", "referee"]
+    }
+  ]
+}
