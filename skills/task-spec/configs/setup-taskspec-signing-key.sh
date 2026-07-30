@@ -157,6 +157,6 @@ echo "Signing key written: $KEY_PATH (chmod 600)"
 echo "keyid: $KEYID"
 echo ""
 echo "This file is OUTSIDE version control (.git/info is never committed)."
-echo "Stamps produced by safe-to-delegate.sh --stamp will now reach Tier 1"
-echo "(full crypto trust). Verify with: bash scripts/validate-task-spec.sh <spec>"
+echo "Stamps produced by 'cvg tasks gate --stamp' will now reach Tier 1"
+echo "(full crypto trust). Verify with: cvg tasks validate <spec>"
 exit 0
