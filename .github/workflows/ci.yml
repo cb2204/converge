@@ -52,7 +52,10 @@ jobs:
       - name: set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12.13"
+          # Major-only: an exact patch pin breaks the moment a runner image
+          # drops it (3.12.13 vanished from macOS 26.4 arm64). Dependency
+          # locking lives in the hash-locked requirements file, not here.
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: .github/requirements-ci.txt
 
@@ -66,7 +69,8 @@ jobs:
       - name: set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "22.23.1"
+          # Major-only for the same reason as Python above; the lockfile pins deps.
+          node-version: "22"
           cache: npm
           cache-dependency-path: skills/task-spec/references/examples/package-lock.json
 
@@ -213,8 +217,10 @@ jobs:
         # A gate that stops parsing is a fence that silently disappears.
         run: |
           python3 skills/task-to-runtime-contract/scripts/check-gate.py --repo . | tail -3
-          python3 skills/task-to-runtime-contract/scripts/check-gate.py --repo . \
-            --path auth/x.py >/dev/null && { echo "gate failed to refuse auth/"; exit 1; } || true
+          if python3 skills/task-to-runtime-contract/scripts/check-gate.py --repo . \
+            --path auth/x.py >/dev/null; then
+            echo "gate failed to refuse auth/"; exit 1
+          fi
           echo "gate refuses what it must"
 
       - name: removed proving grounds cannot remain dependencies
