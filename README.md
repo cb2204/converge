@@ -75,8 +75,8 @@ Three doors, same result: the eleven skills land in every harness's native direc
 **② npm / npx** — anywhere Node lives; the package embeds the CLI *and* all skills:
 
 ```bash
-npm install -g github:luanmorenommaciel/converge     # cvg + cvg-install on PATH
-cvg-install                                          # pin skills into the current repo
+npm install -g github:luanmorenommaciel/converge
+cvg-install
 ```
 
 Prefer project-local? `npm install -D github:luanmorenommaciel/converge`, then use
@@ -154,8 +154,40 @@ cvg loop --issue T-… --agent claude
 ```
 
 The loop lands in exactly one terminal state — `TASK_LOOP=SETTLED` on success, an honest named
-failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change. Agents
-can discover the whole surface in one call: `cvg agent-context`.
+failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change.
+
+**Or steer it from chat.** The commands above are the referee's surface — but the skills are
+installed *in your harness*, and `cvg agent-context` hands any agent the whole surface as one
+JSON manifest. So in practice you don't type `cvg` yourself: you steer in plain language, stage
+by stage, and the agent drives the gates. A real run reads like this:
+
+```text
+you   › I want a storm-alerts feed for our customers. Start a Converge run — capture it.
+agent › Pass 0 (idea-to-brd): drafting the BRD, grilling the gaps out of the idea…
+        CHECK_BRD=PASS — the brief is signed.
+
+you   › Take it to requirements and architecture.
+agent › Pass 1 (brd-docs-to-tech-req): CHECK_TECH_SPEC=PASS.
+        Pass 2 (tech-req-to-adrs): five ADRs recorded — CHECK_ADR=OK.
+
+you   › Break it down, then have Codex attack the plan.
+agent › Pass 3: two swimlanes, six legs — CHECK_PLAN=OK.
+        Pass 4: codex raised 3 objections. Two resolved; one needs your call.
+
+you   › Objection two is right — merge the retry logic into one leg. Then sign.
+agent › Plan amended. CHECK_CONSENSUS=OK — the barrier is behind us.
+
+you   › Cut the tasks and put them on the board.
+agent › Pass 5: six Task-Specs, evals authored first, all TIER=1 and HMAC-sealed.
+        Pass 6: six issues, dependencies as blocked-by — CHECK_REGISTER=OK.
+
+you   › Ship the first ready task.
+agent › Pass 7: contract bound — CHECK_RUNTIME_CONTRACT=PASS.
+        Pass 8: attempt → verify → repeat… evals green on iteration 2.
+        TASK_LOOP=SETTLED — PR opened, receipt written. Next ready task: 2 of 6.
+```
+
+You own intent and judgment; the factory owns procedure and proof.
 
 ## 🔁 How it works
 
