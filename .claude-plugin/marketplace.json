@@ -1,6 +1,6 @@
 {
   "name": "cvg",
-  "description": "Converge — spec-first delivery for coding agents. One install ships the eleven /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
+  "description": "Converge — compile intent into shipped software. The dark factory for coding agents: one install ships the eleven /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
   "owner": {
     "name": "Luan Moreno M. Maciel",
     "url": "https://github.com/luanmorenommaciel"

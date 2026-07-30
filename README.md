@@ -1,8 +1,11 @@
 <div align="center">
 
+[![Converge — compile intent into shipped software. The dark factory where done is proven, not claimed.](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
+
 # Converge
 
-**Spec-first delivery for coding agents — `done` is decided by runnable evals, not claimed by the agent.**
+**Compile intent into shipped software.**
+*The dark factory for coding agents — autonomous delivery where `done` is proven by runnable evals, never claimed by the agent.*
 
 [![ci](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml/badge.svg)](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/luanmorenommaciel/converge)](https://github.com/luanmorenommaciel/converge/releases/latest)
@@ -24,11 +27,14 @@ Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one re
 
 ## What is Converge?
 
-Whatever coding agent you use — Claude Code, Codex, Kimi, Grok Build — Converge makes it work
-against **signed task specs whose completion is enforced by evals, not by the agent's word**.
-Every task ships with runnable bash evals authored *before* the work; a task only settles when
-those evals exit green, and an adversarial judge from a **different model family** can be asked
-to refute the result against holdout criteria the builder never saw.
+Converge **compiles intent into software**: a raw idea enters a nine-gate production line and
+comes out the other end as merged, proven work — the *dark factory* model, where autonomous
+agents do the building and machines do the checking. Whatever coding agent you run — Claude
+Code, Codex, Kimi, Grok Build — it works against **signed task specs whose completion is
+enforced by evals, not by the agent's word**. Every task ships with runnable bash evals
+authored *before* the work; a task only settles when those evals exit green, and an
+adversarial judge from a **different model family** can be asked to refute the result against
+holdout criteria the builder never saw.
 
 The unit of work is the **Task-Spec**: a self-verifying markdown file with a machine-checked
 format, an effort budget, an HMAC sign-off seal, and its own definition of done. The `cvg` CLI
@@ -113,29 +119,43 @@ before reporting `INSTALL=OK`.
 
 ## ⚡ Quickstart: your first gated task
 
-Once installed, everything happens in the repository you want to deliver into. Three setup
-commands, then the loop:
+Once installed, everything happens in the repository you want to deliver into.
+
+**1 · Stand up the control plane.** Two tracked artifacts (the write fence and the workspace)
+plus a repo-private signing key that never enters git:
 
 ```bash
-# 1 · Stand up the control plane (tracked files, safe to review like any code)
-cvg init                  # → CVG_INIT=OK      .cvg/gate.yaml + cvg/ workspace
-cvg setup signing         # → SETUP_SIGNING=OK repo-private HMAC key, outside git
-cvg setup                 # → SETUP=READY      readiness board with your exact next step
-
-# 2 · Route the work, author the spec, seal it
-cvg lane "add a health endpoint"          # → LANE=FAST        how much ceremony this earns
-cvg tasks new add-health-endpoint XS      # spec scaffolded — you write the evals FIRST
-cvg tasks validate cvg/tasks/T-*.md       # → OK               structure + six-tier sizing
-cvg tasks gate --stamp cvg/tasks/T-*.md   # → VERDICT: DELEGATE · TIER=1   HMAC-sealed
-
-# 3 · Bind the contract, run the loop
-cvg bind --task cvg/tasks/T-*.md          # → CHECK_RUNTIME_CONTRACT=PASS
-cvg loop --issue T-… --agent claude       # → TASK_LOOP=SETTLED (or an honest failure state)
+cvg init
+cvg setup signing
+cvg setup
 ```
 
-Every command ends in one stable, greppable token — a harness never parses prose. Swap
-`--agent claude` for `codex` or `kimi`; the gates don't change. Agents can discover the whole
-surface in one call: `cvg agent-context`.
+`cvg setup` ends with `SETUP=READY` and your exact next step if anything is missing.
+
+**2 · Route, author, seal.** Ask how much ceremony the change earns, scaffold the spec, write
+its evals *first*, then let the gate seal it:
+
+```bash
+cvg lane "add a health endpoint"
+cvg tasks new add-health-endpoint XS
+cvg tasks validate cvg/tasks/T-*.md
+cvg tasks gate --stamp cvg/tasks/T-*.md
+```
+
+The gate answers `VERDICT: DELEGATE` and stamps the HMAC seal — from here on, editing an eval
+breaks the seal.
+
+**3 · Bind and run the loop.** Freeze the execution contract, then let an engine attempt while
+the evals verify:
+
+```bash
+cvg bind --task cvg/tasks/T-*.md
+cvg loop --issue T-… --agent claude
+```
+
+The loop lands in exactly one terminal state — `TASK_LOOP=SETTLED` on success, an honest named
+failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change. Agents
+can discover the whole surface in one call: `cvg agent-context`.
 
 ## 🔁 How it works
 
@@ -169,39 +189,69 @@ waives**: nothing irreversible rides FAST, and no lane dispatches an unsigned sp
 Each pass is an installable skill with one job, one output, and one gate. You (or your agent)
 do the work; the gate proves it happened.
 
-| # | Pass | What you do | The gate proves | Token |
+| # | Pass · skill | What you do | The gate proves | Token |
 |:--:|---|---|---|---|
-| 0 | Capture *(optional)* | Turn a raw idea into a BRD — the skill grills the gaps out of you | the brief is complete and signed | `CHECK_BRD=PASS` |
-| 1 | Intent | Derive testable tech requirements from the BRD | every requirement is testable, blockers resolved | `CHECK_TECH_SPEC=PASS` |
-| 2 | Structure | Record the architecture as ADRs | the decision set is canonical and consistent | `CHECK_ADR=OK` |
-| 3 | Decompose | Split the work into swimlanes of ordered legs | tree shape and dependencies are sound | `CHECK_PLAN=OK` |
-| 4 | **Consensus — the barrier** | A *different-family* model attacks the plan; you resolve objections and sign | cross-family review really ran; provenance stamped | `CHECK_CONSENSUS=OK` |
-| 5 | **Tasking — the cornerstone** | Author Task-Specs: evals first, then budget, then the HMAC seal | each spec is atomic, sized, and safe to delegate | `TIER=1` |
-| 6 | Register *(opt-in)* | Project specs onto Linear / GitHub / Jira, one spec = one issue | board ⇄ backlog is 1:1, dependency DAG intact | `CHECK_REGISTER=OK` |
-| 7 | Bind | Freeze the execution contract: profile, write fence, pinned hashes | this host can actually enforce it | `CHECK_RUNTIME_CONTRACT=PASS` |
-| 8 | The Loop | An engine attempts, evals verify, repeat — bounded on three axes | evals green within budget, receipt written | `TASK_LOOP=SETTLED` |
+| 0 | **Capture** *(optional)*<br>[`idea-to-brd`](skills/idea-to-brd/) | Turn a raw idea into a BRD — the skill grills the gaps out of you | the brief is complete and signed | `CHECK_BRD=PASS` |
+| 1 | **Intent**<br>[`brd-docs-to-tech-req`](skills/brd-docs-to-tech-req/) | Derive testable tech requirements from the BRD | every requirement is testable, blockers resolved | `CHECK_TECH_SPEC=PASS` |
+| 2 | **Structure**<br>[`tech-req-to-adrs`](skills/tech-req-to-adrs/) | Record the architecture as ADRs | the decision set is canonical and consistent | `CHECK_ADR=OK` |
+| 3 | **Decompose**<br>[`reqs-to-swimlane-plans`](skills/reqs-to-swimlane-plans/) | Split the work into swimlanes of ordered legs | tree shape and dependencies are sound | `CHECK_PLAN=OK` |
+| 4 | **Consensus — the barrier**<br>[`sketch-plans-adversarial-review`](skills/sketch-plans-adversarial-review/) | A *different-family* model attacks the plan; you resolve objections and sign | cross-family review really ran; provenance stamped | `CHECK_CONSENSUS=OK` |
+| 5 | **Tasking — the cornerstone**<br>[`task-spec`](skills/task-spec/) | Author Task-Specs: evals first, then budget, then the HMAC seal | each spec is atomic, sized, and safe to delegate | `TIER=1` |
+| 6 | **Register** *(opt-in)*<br>[`task-specs-to-issues`](skills/task-specs-to-issues/) | Project specs onto Linear / GitHub / Jira, one spec = one issue | board ⇄ backlog is 1:1, dependency DAG intact | `CHECK_REGISTER=OK` |
+| 7 | **Bind**<br>[`task-to-runtime-contract`](skills/task-to-runtime-contract/) | Freeze the execution contract: profile, write fence, pinned hashes | this host can actually enforce it | `CHECK_RUNTIME_CONTRACT=PASS` |
+| 8 | **The Loop**<br>[`task-loop`](skills/task-loop/) | An engine attempts, evals verify, repeat — bounded on three axes | evals green within budget, receipt written | `TASK_LOOP=SETTLED` |
 
-Pass skills: [`idea-to-brd`](skills/idea-to-brd/) · [`brd-docs-to-tech-req`](skills/brd-docs-to-tech-req/) ·
-[`tech-req-to-adrs`](skills/tech-req-to-adrs/) · [`reqs-to-swimlane-plans`](skills/reqs-to-swimlane-plans/) ·
-[`sketch-plans-adversarial-review`](skills/sketch-plans-adversarial-review/) · [`task-spec`](skills/task-spec/) ·
-[`task-specs-to-issues`](skills/task-specs-to-issues/) · [`task-to-runtime-contract`](skills/task-to-runtime-contract/) ·
-[`task-loop`](skills/task-loop/) — plus two utilities, [`pass-to-lesson`](skills/pass-to-lesson/)
-(teach what a pass just did) and [`skill-creator`](skills/skill-creator/) (author + validate new
-skills). The full catalog with per-skill detail: [`skills/README.md`](skills/README.md).
+Two utilities round out the eleven: [`pass-to-lesson`](skills/pass-to-lesson/) (teach what a
+pass just did) and [`skill-creator`](skills/skill-creator/) (author + validate new skills).
+The full catalog with per-skill detail: [`skills/README.md`](skills/README.md).
 
 ## 🛠 The `cvg` CLI
 
-One referee for the whole descent. Commands group by stage; every wrapped gate is a byte-exact
-pass-through, and every verdict ends in one token.
+One referee for the whole descent. Every wrapped gate is a byte-exact pass-through, and every
+verdict ends in one greppable token.
 
-| Stage | Commands | What they do |
-|---|---|---|
-| **Start** | `init` · `setup` · `setup signing\|tracker\|key\|repo\|identity\|projection\|harness\|engines` · `doctor` | stand up the control plane, provision the signing key, connect a tracker (key goes to the OS keychain, never the repo), check engine readiness |
-| **Design** *(0–4)* | `capture` · `intent` · `structure` · `decompose` · `review` · `lane` | run each design gate; `review --adversary codex,kimi` dispatches the cross-family attack; `lane` routes work to FAST / NORMAL / FULL |
-| **Author & sign** *(5)* | `tasks new\|validate\|gate\|accept\|dod` · `eval` · `lint` | scaffold a spec, validate structure + sizing, seal it with the sign-off HMAC, run its evals, lint the backlog |
-| **Board** *(6)* | `register` · `register --check` · `ready` · `transition` · `tasks metrics` | project specs onto a tracker (1 spec = 1 issue), gate the mapping, list the dispatchable frontier, move statuses |
-| **Execute** *(7–8)* | `bind` · `loop` · `verify` · `gate` | freeze the contract, run the bounded loop, request the cross-family judge, query the repo write fence |
-| **For agents** | `agent-context` · `--json` · `--dry-run` | full machine-readable manifest in one call; uniform JSON envelope on any command; preview a mutation without performing it |
+```bash
+# ── start ────────────────────────────────────────────────────────────────────
+cvg init                        # tracked control plane: write fence + workspace
+cvg setup                       # readiness board with your exact next step
+cvg setup signing               # repo-private HMAC key — specs become signable
+cvg setup tracker linear        # connect a board; the key goes to the OS keychain
+cvg doctor                      # engine readiness: ≥2 engines, ≥1 cross-family
+
+# ── design (passes 0–4) ──────────────────────────────────────────────────────
+cvg capture                     # Pass 0 gate: the BRD exit contract
+cvg intent                      # Pass 1 gate: testable requirements
+cvg structure                   # Pass 2 gate: the ADR set
+cvg decompose                   # Pass 3 gate: the swimlane tree
+cvg review --adversary codex    # Pass 4 dispatch: a cross-family model attacks the plan
+cvg review --check              # Pass 4 gate: objections resolved, provenance intact
+cvg lane "what you'll build"    # route the work: FAST | NORMAL | FULL
+
+# ── author & sign (pass 5) ───────────────────────────────────────────────────
+cvg tasks new <slug> <effort>   # scaffold a Task-Spec — you write the evals FIRST
+cvg tasks validate <spec>       # structure + six-tier sizing gate
+cvg tasks gate --stamp <spec>   # sign-off: VERDICT + the HMAC seal
+cvg tasks dod <spec>            # definition of done + traceability matrix
+cvg eval <spec>                 # run the spec's own evals
+cvg lint                        # lint the whole backlog: cycles, overlaps
+
+# ── board (pass 6, opt-in) ───────────────────────────────────────────────────
+cvg register                    # specs → tracker issues, 1:1, deps as blocked-by
+cvg register --check            # gate the mapping: parity, DAG, no orphans
+cvg ready                       # the dispatchable frontier: ready AND unblocked
+cvg transition <id> <state>     # move a task between statuses, locked + logged
+
+# ── execute (passes 7–8) ─────────────────────────────────────────────────────
+cvg bind --task <spec>          # freeze the execution contract + write fence
+cvg loop --issue <id>           # attempt → verify → repeat, bounded on three axes
+cvg verify --task <spec>        # tier-2: a different-family judge tries to refute
+cvg gate --path <p>             # ask the repo write fence about one path
+
+# ── for agents ───────────────────────────────────────────────────────────────
+cvg agent-context               # the whole surface as one JSON manifest
+cvg <anything> --json           # uniform response envelope, any command
+cvg <mutation> --dry-run        # preview without performing
+```
 
 What a session actually looks like:
 

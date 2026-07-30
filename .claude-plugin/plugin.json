@@ -1,7 +1,7 @@
 {
   "name": "converge",
   "displayName": "Converge",
-  "description": "Spec-first delivery for coding agents: the nine-pass method as eleven skills plus the zero-dependency cvg referee CLI (bin/cvg on PATH). done is decided by runnable evals, not claimed by the agent.",
+  "description": "Compile intent into shipped software — the dark factory for coding agents. Nine gated passes as eleven skills plus the zero-dependency cvg referee CLI (bin/cvg on PATH); done is proven by runnable evals, never claimed by the agent.",
   "version": "0.1.0",
   "author": {
     "name": "Luan Moreno M. Maciel"
