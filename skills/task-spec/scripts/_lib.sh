@@ -418,7 +418,9 @@ ts_lock_acquire() {
   fi
   # No live holder, or no pid recorded: reclaim if older than the stale window.
   now="$(date +%s 2>/dev/null || echo 0)"
-  mtime="$(stat -f %m "$d" 2>/dev/null || stat -c %Y "$d" 2>/dev/null || echo 0)"
+  # GNU first: on Linux, BSD-style `stat -f %m` is the MOUNT POINT (filesystem
+  # status), exit 0 — so BSD must be the fallback, never the first try.
+  mtime="$(stat -c %Y "$d" 2>/dev/null || stat -f %m "$d" 2>/dev/null || echo 0)"
   age=$(( now - mtime ))
   if [[ "$now" -gt 0 && "$mtime" -gt 0 && "$age" -ge "$TS_LOCK_STALE_SEC" ]]; then
     rm -rf "$d" 2>/dev/null

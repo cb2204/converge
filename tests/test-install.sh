@@ -30,7 +30,9 @@ local_state_fingerprint() {
   done
 }
 file_mode() {
-  stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1" 2>/dev/null || true
+  # GNU first: on Linux, BSD-style `stat -f` is FILESYSTEM status and exits 0
+  # with the wrong answer, so it must be the fallback, never the first try.
+  stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || true
 }
 
 echo "=================================================================="
