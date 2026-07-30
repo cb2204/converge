@@ -104,6 +104,29 @@ stub_engine "" tstnoop 'echo "stub: changed nothing"; echo "ENGINE_TOKENS=100"; 
 # An engine that actually satisfies the eval on its first attempt.
 stub_engine "" tstfix 'sed -i.bak "/NEVERMATCH/d" README.md 2>/dev/null || true; rm -f README.md.bak; echo "stub: fixed it"; exit 0'
 
+# ------------------------------------------------ profile/runtime consistency
+W="$(new_ws)"
+python3 - "$W/cvg/execution/T-20260602-golden/execution-profile.yaml" <<'PY'
+import json, sys
+path = sys.argv[1]
+data = json.load(open(path))
+data["enforcement"]["primary_runtime"] = "codex"
+json.dump(data, open(path, "w"), indent=2, sort_keys=True)
+PY
+run_kernel "$W" --dry-run
+if [ "$RK_RC" -eq 0 ] && grep -q 'with codex' <<<"$RK_OUT"; then
+  ok "a vendor-bound profile selects its own execution engine"
+else
+  bad "the loop ignored primary_runtime: $RK_OUT"
+fi
+run_kernel "$W" --agent claude --dry-run
+if [ "$RK_RC" -eq 2 ] && grep -q "bound to 'codex'" <<<"$RK_OUT"; then
+  ok "an explicit engine/profile mismatch fails before execution"
+else
+  bad "the loop accepted a runtime different from the bound profile"
+fi
+drop_ws "$W"
+
 # ---------------------------------------------------------------- STALLED
 W="$(new_ws)"
 run_kernel "$W" --agent tstnoop
@@ -524,6 +547,10 @@ drop_ws "$W"
 GW="$(new_ws)"
 mkdir -p "$GW/.cvg" "$GW/auth"
 printf 'version: 1\ndenylist:\n  - "auth/**"\n  - ".env"\nmax_files: 2\n' > "$GW/.cvg/gate.yaml"
+# Settlement trusts policy from its base commit, never a worktree copy an agent
+# could delete or weaken. Commit the fixture policy before producing the diff.
+git -C "$GW" add .cvg/gate.yaml
+git -C "$GW" commit --quiet -m "test gate baseline"
 # A contract that explicitly authorizes the forbidden path.
 python3 - "$GW/cvg/execution/T-20260602-golden/execution-profile.yaml" <<'PYEOF'
 import json, sys
@@ -556,20 +583,24 @@ PYEOF
 rm -f "$GW/auth/login.py"
 BR_OUT="$( (cd "$GW" && python3 "$SRC/skills/task-to-runtime-contract/scripts/check-path-policy.py" \
   --profile cvg/execution/T-20260602-golden/execution-profile.yaml --repo "$GW" 2>&1) || true )"
-if grep -q 'exceeds max_files' <<<"$BR_OUT"; then
+if grep -q 'exceeds max_changed_files' <<<"$BR_OUT"; then
   ok "blast radius is capped even when every path is in scope"
 else
-  bad "max_files did not fire"
+  bad "max_changed_files did not fire"
 fi
 
 # A gate that cannot be parsed must FAIL, never be skipped.
-printf 'version: 1\nnonsense-key: yes\n' > "$GW/.cvg/gate.yaml"
+printf 'version: 1\nnonsense_key: yes\n' > "$GW/.cvg/gate.yaml"
+git -C "$GW" add .cvg/gate.yaml
+git -C "$GW" commit --quiet -m "malformed gate fixture"
 BAD_OUT="$( (cd "$GW" && python3 "$SRC/skills/task-to-runtime-contract/scripts/check-path-policy.py" \
   --profile cvg/execution/T-20260602-golden/execution-profile.yaml --repo "$GW" 2>&1) || true )"
-if grep -q 'Gate policy unreadable' <<<"$BAD_OUT"; then
+if grep -q '^Path policy error:' <<<"$BAD_OUT" \
+  && grep -q "unknown gate key 'nonsense_key'" <<<"$BAD_OUT" \
+  && grep -q '^CHECK_PATH_POLICY=FAIL$' <<<"$BAD_OUT"; then
   ok "an unparseable gate FAILS closed — not silently skipped"
 else
-  bad "a broken gate was treated as no gate"
+  bad "a broken gate was treated as no gate: $(tail -2 <<<"$BAD_OUT" | head -1)"
 fi
 
 # Dotfiles must not be mangled. lstrip("./") turned ".env" into "env" and
@@ -586,6 +617,29 @@ else
   bad "dotfile paths are still being mangled"
 fi
 rm -rf "$GW"
+
+# The supervised legacy escape hatch may skip the per-task contract, but it may
+# never skip standing repository policy.
+LW="$(new_ws)"
+sed -i.bak '/NEVERMATCH/d' "$LW/README.md" 2>/dev/null || true
+rm -f "$LW/README.md.bak"
+mkdir -p "$LW/.cvg" "$LW/auth"
+printf 'version: 2\nprotected_paths:\n  - "**/auth/**"\nmax_changed_files: 12\n' > "$LW/.cvg/gate.yaml"
+git -C "$LW" add .cvg/gate.yaml README.md
+git -C "$LW" commit --quiet -m "legacy gate baseline"
+LW_BASE="$(git -C "$LW" rev-parse HEAD)"
+printf 'forbidden\n' > "$LW/auth/legacy.txt"
+LW_OUT="$( (cd "$LW" && TASKSPEC_SIGNING_KEY="$KEY" \
+  bash "$SRC/skills/task-loop/scripts/open-issue-pr.sh" \
+    --issue T-20260602-golden --tasks-dir cvg/tasks \
+    --legacy-no-contract --base "$LW_BASE" --dry-run 2>&1) || true )"
+if grep -q 'CHECK_PATH_POLICY=FAIL' <<<"$LW_OUT" \
+  && grep -q 'green eval rejected by the settlement path policy' <<<"$LW_OUT"; then
+  ok "legacy-no-contract still enforces the repository gate"
+else
+  bad "legacy mode bypassed standing repository policy"
+fi
+drop_ws "$LW"
 
 # ------------------------------------------------ engines must not inherit stdin
 # An engine handed an open-but-never-closing stdin can finish its work and then

@@ -413,10 +413,10 @@ while read -r id; do
 
   # --- Native-field seed (T1): tracker-neutral flags the Linear adapter consumes
   # and github/jira/fake accept-and-ignore. All three are OPTIONAL and fail-soft on
-  # the adapter side, so a plain register with no people-map / no state names is
+  # the adapter side, so a plain register with no identity / no state names is
   # unaffected. Ownership: assignee + state are SEED-ONCE (create only), subscribers
   # UNION-merge — the adapter enforces that split; the driver just supplies signal.
-  #   assignee: the most-specific people-map KEY (agent role beats engine beats the
+  #   assignee: the most-specific identity KEY (agent role beats engine beats the
   #             `default` catch-all); the adapter resolves KEY -> person + fails soft.
   # "any" carries no routing signal (same as the label rule above), so it is NOT a
   # key — it falls through to the `default` catch-all. agent role beats engine.

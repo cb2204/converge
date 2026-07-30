@@ -121,8 +121,8 @@ Until the file is renamed, that guard never matches — the scaffold is inert.
 ### Seam 3 — Assignment is *already* the trigger (no code change)
 
 This is the payoff. `register.sh` already emits `--assignee agent:<role>`;
-`linear.sh` resolves it through `_ln_people_map_lookup` → `_ln_resolve_user`
-(which passes a UUID straight through). So a single `.cvg/people-map` line —
+`linear.sh` resolves it through `_ln_identity_lookup` → `_ln_resolve_user`
+(which passes a UUID straight through). So a single `.cvg/identity` line —
 
 ```
 agent:claude=<app-user-uuid>        # from the `agent-whoami` verb / _lna_app_user_id
@@ -202,7 +202,7 @@ receiver should emit a `thought` acknowledgement before it does anything slow.
 
 1. Stand up the receiver service (Seam 0/5) with the four secrets in *its* env.
 2. Create the OAuth app, walk the `actor=app` consent, capture the token.
-3. `_lna_app_user_id` → put `agent:<role>=<uuid>` in `.cvg/people-map` (Seam 3).
+3. `_lna_app_user_id` → put `agent:<role>=<uuid>` in `.cvg/identity` (Seam 3).
 4. `_lna_webhook_ensure <receiver-url>` once; stash the returned secret.
 5. `git mv linear-agents.sh.scaffold linear-agents.sh`, `chmod` to match the
    other companions, and delete each stub's `_lna_unwired … || return $?` guard.

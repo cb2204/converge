@@ -109,7 +109,7 @@ gh_upsert() {
       #     registers here; the enrichment just degrades to nothing. Shift
       #     widths MUST match linear.sh (every arg takes a value except the
       #     bare --use-default-template flag), or the arg parse desyncs.
-      --assignee)             shift 2 ;;  # people-map -> Linear assignee; no seeded gh assignee
+      --assignee)             shift 2 ;;  # identity -> Linear assignee; no seeded gh assignee
       --state)                shift 2 ;;  # no pre-open workflow state on a fresh issue
       --subscriber)           shift 2 ;;  # repeatable; GitHub has no subscriber seeding
       --project)              shift 2 ;;  # Linear project; GitHub Projects v2 not wired
@@ -297,7 +297,7 @@ gh_write_result() {
 # ---------------------------------------------------------------------------
 # The Linear adapter grows a projection surface: structure (projects,
 # milestones, initiatives), documents, an append-only project-update health
-# timeline, and a people directory for `cvg setup people`. None of these map
+# timeline, and an identity directory for `cvg setup identity`. None of these map
 # onto GitHub Issues, so here they DEGRADE SILENTLY — each verb accepts (and
 # ignores) its arguments, echoes a clearly-synthetic id when a caller captures
 # one, and exits 0. This is the portability guarantee: a spec that projects
@@ -328,7 +328,7 @@ gh_project_update_noop() {
   return 0
 }
 
-# users  (people directory for `cvg setup people`) — GitHub has no Linear
+# users  (identity directory for `cvg setup identity`) — GitHub has no Linear
 # directory to enumerate, so emit an EMPTY list; setup then reports NEEDS_MAP.
 gh_users_noop() {
   echo "note: 'users' is a no-op on the github backend (no Linear directory to enumerate)" >&2

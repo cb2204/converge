@@ -43,7 +43,7 @@ way where they're strong — *implementation*. As more is automated, sending the
 right intent stays the one irreducible driver of building the right thing.
 
 > [!TIP]
-> **New here?** Read [`docs/converge-method-v6.pdf`](docs/converge-method-v6.pdf)
+> **New here?** Read [`docs/converge-v0.1.pdf`](docs/converge-v0.1.pdf)
 > — the canonical blueprint — and [`skills/README.md`](skills/README.md) for the
 > skill-by-skill map. This repo is the *portable method*, kept independent of any
 > single use-case so it can evolve on its own.
@@ -134,31 +134,39 @@ cd ~/my-project
 bash ~/converge/install.sh
 ```
 
-That does two separate things: it makes the eleven skills visible to Claude Code
-under `.claude/skills/`, and it puts the `cvg` CLI on your PATH. It verifies
-itself and prints `INSTALL=OK`. Re-running it is safe.
+That installs pinned copies of the eleven skills under `.agents/skills/` for
+Codex and Kimi and under `.claude/skills/` for Claude Code. It also puts the
+`cvg` CLI on your PATH, verifies the package, and prints `INSTALL=OK`.
+Re-running it is safe.
 
-Symlinks are the default, so `git pull` in the checkout updates every project at
-once. Pin a version instead when a repo must build the same way in six months:
+Copy mode is the release default: the consuming project does not depend on the
+Converge checkout remaining on disk. Symlinks are an explicit development mode:
 
 ```bash
-bash ~/converge/install.sh --copy          # pins this version
+bash ~/converge/install.sh --symlink       # development: track the checkout
 bash ~/converge/install.sh --no-bin        # skills only, leave my PATH alone
 bash ~/converge/install.sh --help          # all the flags
 ```
 
-**Verify the wiring:**
+**Initialize and verify the project:**
 
 ```bash
+cvg init
+# → CVG_INIT=OK
+
+cvg setup signing
+# → SETUP_SIGNING=OK
+
+cvg setup
 cvg version
 # → cvg 0.1.0 (task-spec 0.1.0)
 
-python3 .claude/skills/skill-creator/scripts/quick_validate.py .claude/skills/task-spec
+python3 .agents/skills/skill-creator/scripts/quick_validate.py .agents/skills/task-spec
 # → Skill is valid!
 ```
 
-…then restart Claude Code and drive the descent one pass at a time by its trigger
-phrases:
+Restart Codex, Kimi, or Claude Code, then drive the descent one pass at a time
+by its trigger phrases:
 
 ```text
 "capture this idea into a brief"        → Pass 0 · idea-to-brd
@@ -183,35 +191,43 @@ cvg/
 ├── sketch/       swimlane plans — transient by design, superseded at Pass 5
 ├── tasks/        sealed execution units — HMAC-stamped T-*.md
 ├── execution/    per-task runtime contracts + task briefs (Pass 7)
+├── loop/         resumable execution state + human handoffs (Pass 8)
 └── receipts/     evidence — gate verdicts and pass receipts, write-once
 ```
 
 *brain feeds → docs agree → sketch explores → tasks execute → receipts prove.*
 
-Every pass discovers this workspace first and the bare directory second
-(`cvg/tasks/` then `tasks/`), and an explicit path or `--tasks-dir` always wins.
+`.cvg/gate.yaml` is the tracked standing write fence. Machine-local integration
+choices such as `.cvg/config` and `.cvg/identity` are kept outside Git through
+the repository's local exclude file.
+
+Every v0.1 command resolves the canonical `cvg/tasks/` backlog through one shared
+project-root resolver. The older bare `tasks/` layout remains a compatibility
+fallback only when that layout already exists, and an explicit
+`TASKSPEC_BACKLOG_DIR` always wins.
 The workspace **need not be the git root** — `<repo>/projects/demo/cvg/` works —
 and everything resolves relative to it, including the directory a spec's own
-evals run in. You do not have to create this by hand: the passes write into it,
-and `cvg setup harness` scaffolds the project router that points a worker at it.
+evals run in. `cvg init` creates the workspace; `cvg setup harness` optionally
+scaffolds the small project router that points a worker at it.
 
 **Author + gate a single Task-Spec (the cornerstone unit), start to finish:**
 
 ```bash
-# 0 · KEY (once per repo) — provision the HMAC signing key so the gate can seal
+# 0 · INIT + KEY (once per repo)
 #     specs for Tier-1 crypto trust (unsupervised dispatch). Skip it and the gate
 #     still runs, but only reaches Tier-2 (structural) → supervised dispatch only.
-bash .claude/skills/task-spec/configs/setup-taskspec-signing-key.sh
+cvg init
+cvg setup signing
 
 # 1 · GENERATE — scaffold a spec from intent (fill the {{TODO}} stubs it leaves)
-bash .claude/skills/task-spec/scripts/generate-task-spec.sh <slug> <effort> [agent] [source]
+cvg tasks new <slug> <effort> [agent] [source]
 
 # 2 · VALIDATE — structural linter (warns on unfilled stubs; does NOT stamp)
-bash .claude/skills/task-spec/scripts/validate-task-spec.sh cvg/tasks/T-<slug>.md
+cvg tasks validate cvg/tasks/T-<slug>.md
 
 # 3 · GATE — the autonomy contract; flips signed_off:true on structural + eval pass,
 #     then seals the eval bodies in an HMAC envelope so hand-stamping is rejected
-bash .claude/skills/task-spec/scripts/safe-to-delegate.sh --stamp cvg/tasks/T-<slug>.md
+cvg tasks gate --stamp cvg/tasks/T-<slug>.md
 #    → VERDICT: DELEGATE   (the only path to a dispatchable spec)
 ```
 
@@ -309,7 +325,7 @@ another pass or renumber Bind.
 The **Manager** — which issue runs, when, in parallel, watching PRs, settling the
 dependency graph — is a future **CI/CD** concern (e.g. GitHub Actions), *not* an
 in-session skill. `task-loop` is the execution loop you build; you schedule the
-Manager around it later ([`PLAN.md`](PLAN.md) tracks it as B-1, the P0 item).
+Manager around it later — it is the top item on the roadmap.
 
 <details>
 <summary><b>Pass-by-pass — the steps inside each gate</b></summary>
@@ -468,7 +484,7 @@ contract versioned independently of the release, as are `VALIDATOR_VERSION` and 
 HMAC envelope. Carries a JSON Schema (Draft 2020-12), an L0/L1/L2
 executor-conformance suite, and dispatch recipes for Claude Code, Codex, Kimi,
 Cursor, Gemini, taskship, and anthive. Deep-dive PDF:
-[`docs/task-spec-v3.6.0.pdf`](docs/task-spec-v3.6.0.pdf).
+[`docs/task-spec-v0.1.pdf`](docs/task-spec-v0.1.pdf).
 
 ---
 
@@ -579,67 +595,56 @@ converge/
 │   ├── pass-to-lesson/                  # util · teach after any pass
 │   └── skill-creator/                   # util · author + validate skills
 ├── docs/                                # the two canonical PDFs
-│   ├── converge-method-v6.pdf           #   the blueprint — method, architecture, agent protocol
-│   ├── task-spec-v3.6.0.pdf             #   the cornerstone unit, in depth
-│   ├── src/                             #   HTML sources + render.sh (Chrome → PDF)
-│   ├── presentation/                    #   interactive HTML walkthroughs
-│   └── archive/                         #   superseded blueprints + proposals
-├── tests/                               # the hermetic suites + two fixtures
+│   ├── converge-v0.1.pdf                 #   the blueprint — method, architecture, agent protocol
+│   └── task-spec-v0.1.pdf                #   the cornerstone unit, in depth
+├── presentation/                        # interactive HTML walkthroughs
+├── tests/                               # hermetic suites — offline, no secrets, stub engines only
 │   ├── test-loop-kernel.sh              #   Pass 8's brakes, proven with stub engines only
 │   ├── test-cvg-json-envelope.sh        #   the agent-facing output contract
 │   ├── test-install.sh                  #   the install surface
-│   ├── e2e-test-engine/                 #   the machine floor (incl. a designed-RED eval)
-│   └── uc-analytics/                    #   the method proving ground (a real cvg/ workspace)
+│   ├── test-clean-room-install-e2e.sh   #   empty repo → install → init → settled task
+│   ├── test-version-unity.sh            #   one package, one version — everywhere
+│   └── test-ci-covers-every-suite.sh    #   a suite CI never runs is coverage on the tin
 ├── .github/workflows/ci.yml             # the gauntlet, in public — offline, no secrets, macOS + Linux
-├── install.sh                           # skills → .claude/skills/ · cvg → PATH
-└── PLAN.md                              # the one working document (state · rules · backlog · log)
+├── install.sh                           # skills → .agents + .claude · pinned cvg → PATH
+├── CHANGELOG.md                         # the release ledger
+├── VERSION                              # the one authoritative version number
+└── LICENSE                              # MIT — governs the whole unit
 ```
 
 | Doc | What it is |
 |-----|------------|
-| [`docs/converge-method-v6.pdf`](docs/converge-method-v6.pdf) | **the canonical blueprint** — the descent, the barrier, the architecture, the agent protocol, the worked example |
-| [`docs/task-spec-v3.6.0.pdf`](docs/task-spec-v3.6.0.pdf) | the cornerstone unit, in depth — six tiers, dual gates, six zones, anti-reward-hacking, conformance |
-| [`docs/src/`](docs/src/) | the HTML sources both PDFs render from (`render.sh`) |
-| [`docs/archive/`](docs/archive/) | superseded blueprints, kept for provenance |
-| [`PLAN.md`](PLAN.md) | the single working document — where we are, what's next, the rules, both tracks, the backlog, the log |
+| [`docs/converge-v0.1.pdf`](docs/converge-v0.1.pdf) | **the canonical blueprint** — the descent, the barrier, the architecture, the agent protocol, the worked example |
+| [`docs/task-spec-v0.1.pdf`](docs/task-spec-v0.1.pdf) | the cornerstone unit, in depth — six tiers, dual gates, six zones, anti-reward-hacking, conformance |
+| [`presentation/converge.html`](presentation/converge.html) | interactive visual walkthrough of the complete method, trust chain, evidence model, and adoption path |
+| [`presentation/task-spec.html`](presentation/task-spec.html) | interactive Task-Spec anatomy, authoring, signing, execution, acceptance, and recovery guide |
+| [`presentation/cvg-passes-skills-cli.html`](presentation/cvg-passes-skills-cli.html) | step-by-step reference for all nine passes, eleven skills, and the shipped `cvg` CLI |
+| [`presentation/asd-agentic-loop.html`](presentation/asd-agentic-loop.html) | deep runtime explanation of ASD, the agentic loop, bounded autonomy, and settlement |
 
 ---
 
 ## 🧾 Status
 
-**Converge 0.1.0** — the CLI, the eleven skills and the task-spec engine ship as
-ONE unit at ONE version (root `VERSION`, gated by `tests/test-version-unity.sh`) ·
-Anthropic validator passing on all 11 skills · extracted from a production
-**postgres → duckdb → dbt → MCP** run.
-
-**The descent 0→8 is closed on a real use case, and the backlog is empty**
-(`tests/uc-analytics`, a greenfield analytical backbone over an operational
-Postgres): `CHECK_BRD=PASS · CHECK_TECH_SPEC=PASS · CHECK_ADR=OK · CHECK_PLAN=OK ·
-CHECK_CONSENSUS=OK · TIER=1 ×9 · CHECK_REGISTER=OK` (live board, 9⇄9, ready
-frontier empty) `· CHECK_RUNTIME_CONTRACT=PASS ×9 · DOCTOR_RUNTIME_CONTRACT=OK ·
-TASK_LOOP=LOCAL_SETTLED ×2 + SETTLED ×7`.
+**Converge 0.1.0** ships the CLI, eleven skills, and Task-Spec engine as one
+versioned unit. The clean-room acceptance suite creates an empty Git repository,
+installs pinned project-local skills for Codex, Kimi, and Claude Code, runs
+`cvg init` and signing setup, seals and binds a Task-Spec, drives a deterministic
+RED→GREEN stub-engine loop, accepts it, moves it to `done/`, and verifies the
+receipt hash chain, lifecycle ledger, deterministic task index, and complete
+independence from the Converge source checkout.
 
 **Pass 8 is a real loop, not a gate.** The kernel enforces the budgets specs had
 always declared — three-axis ceilings, a stagnation detector, a fresh process per
-attempt, durable checkpoints, and eight named terminal states — proven by its own
-hermetic suite (stub engines, no model called) and then driven to green across the
-**entire** 9-task backlog: two settled locally, seven through merged PRs (#2–#8),
-the last four green on the first iteration, each closing its own tracker issue
-unattended.
+attempt, durable checkpoints, and eight named terminal states. Its hermetic suite
+proves settlement, exhaustion, cancellation, no-progress braking, path-policy
+enforcement, tracker-write authority, and resumability with stub engines only;
+no live model or tracker credential is needed for the release proof.
 
-**Tier 2 has graded real work, in both directions.** Two specs carried the
-first `## Holdout` blocks through live cross-family dispatches (2026-07-29):
-codex built and kimi **UPHELD** (`obs-rowcounts` — settled through a merged PR);
-kimi built and codex **REFUTED** (`obs-fence` — a fail-open `OSError` swallow
-the three green evals could not see, caught by exactly the holdout line reserved
-for the judge; the kernel refused settlement). *A green eval is necessary, not
-sufficient — demonstrated, not asserted.*
-
-**What is NOT true yet, stated plainly.** The nine backbone landings predate
-those runs and remain tier-1, self-reported. And the **Manager** (unattended
-sequencing across the fleet) does not exist, so the loop runs one task at a
-time, invoked by hand. That is the gap between a good single-task harness and a
-factory — see [`PLAN.md`](PLAN.md) §2.
+**What is NOT true yet, stated plainly.** The **Manager** (unattended sequencing
+across multiple Task-Specs) does not exist, so the Loop runs one assigned task at
+a time. Live vendor-engine quality still depends on the selected runtime and the
+strength of the authored evals and optional holdout judge; the hermetic release
+suite proves control-flow correctness, not model quality.
 
 ---
 
@@ -650,7 +655,8 @@ factory — see [`PLAN.md`](PLAN.md) §2.
 
 Both — but primarily a **method**. The nine passes are the intellectual product;
 the skill chain is the runnable embodiment for agent runtimes. You adopt the
-method by wiring the skills into your repo's `.claude/skills/` (see
+method by installing the skills into your repo's `.agents/skills/` and
+`.claude/skills/` (see
 [Quickstart](#-quickstart)) and running the chain pass by pass.
 </details>
 
@@ -687,7 +693,7 @@ The Manager decides *which* issue runs, when, in parallel, and watches PRs — t
 an orchestration layer, and a Git-native world already provides most of it (GitHub
 Actions as scheduler, the PR as state settlement, branch protection as the gate).
 So Converge builds the execution **Loop** now and schedules the Manager around it
-later in CI/CD — it's **B-1, the P0 item** in [`PLAN.md`](PLAN.md).
+later in CI/CD — it's the top item on the roadmap.
 </details>
 
 ---

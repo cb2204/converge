@@ -11,8 +11,8 @@ venv/
 # Editor
 *.swp
 
-# Converge runtime artifacts (derived from frontmatter/git — never committed)
-tasks/_state.yaml
+# Converge task indexes are derived but committed and byte-reproducible. CI can
+# rebuild them to detect drift; do not ignore either canonical or legacy state.
 _fleet.jsonl
 
 # Pass 8 loop scratch. Each attempt writes a brief, a transcript and a durable
@@ -23,8 +23,7 @@ _fleet.jsonl
 # picks up.
 # The `**/` prefix is load-bearing: a pattern containing a slash is anchored to
 # this file's directory, so a root-anchored `cvg/loop/...` would silently miss
-# every workspace that is not the repo root — including the proving ground at
-# tests/uc-analytics/cvg/, which is the layout these patterns exist for.
+# nested workspaces.
 **/cvg/loop/*/state.env
 **/cvg/loop/*/STOP
 **/cvg/loop/*/brief-*.md
@@ -51,14 +50,13 @@ temp/legs-e2e/
 # cvg local setup state — tracker choice + the workspace's team UUID, written by
 # `cvg setup`. Not secret (cvg never stores credentials), but workspace-specific:
 # each user runs `cvg setup` for their own board rather than inheriting yours.
-# Machine-local cvg state (tracker choices, people map, projection cache) is
+# Machine-local cvg state (tracker choices, identity, projection cache) is
 # ignored, but the repo WRITE FENCE is shipped policy: gate.yaml answers "may ANY
 # task ever write here?" and a fence that does not travel protects one laptop.
 # CI asserts it is parseable and active, and reported CHECK_GATE=ABSENT until now.
 # Any .cvg at any depth is machine-local — EXCEPT the repo-root write fence.
-# `.cvg/*` alone was anchored to the root, which un-ignored the fixture's own
-# tests/uc-analytics/.cvg/. Ignore everywhere, re-admit the root directory so
-# git will descend into it, then publish only gate.yaml from it.
+# Ignore local `.cvg` state everywhere, re-admit the root directory so Git will
+# descend into it, then publish only gate.yaml from it.
 **/.cvg/
 !/.cvg/
 /.cvg/*

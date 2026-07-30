@@ -69,6 +69,58 @@ ts_die() {
   exit 1
 }
 
+# Append one valid JSON object to the lifecycle ledger. Arguments after the
+# path are key/value pairs; schema_version is serialized as an integer.
+ts_append_metric() {
+  _tsam_path="$1"
+  shift
+  python3 - "$_tsam_path" "$@" <<'PY'
+import json
+import os
+import sys
+
+path = sys.argv[1]
+items = sys.argv[2:]
+if len(items) % 2:
+    raise SystemExit("ts_append_metric requires key/value pairs")
+record = {}
+for index in range(0, len(items), 2):
+    key, value = items[index], items[index + 1]
+    record[key] = int(value) if key == "schema_version" else value
+os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+with open(path, "a", encoding="utf-8") as handle:
+    handle.write(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n")
+PY
+}
+
+# Render a Task-Spec template without passing user-controlled values through a
+# sed program. TITLE and SOURCE_NOTE are JSON-quoted YAML scalars; every other
+# value is replaced literally. Remaining arguments are key/value pairs for
+# {{KEY}} placeholders.
+ts_render_template() {
+  _tsrt_template="$1"
+  _tsrt_output="$2"
+  shift 2
+  python3 - "$_tsrt_template" "$_tsrt_output" "$@" <<'PY'
+import json
+import pathlib
+import sys
+
+template_path = pathlib.Path(sys.argv[1])
+output_path = pathlib.Path(sys.argv[2])
+items = sys.argv[3:]
+if len(items) % 2:
+    raise SystemExit("ts_render_template requires key/value pairs")
+text = template_path.read_text(encoding="utf-8")
+for index in range(0, len(items), 2):
+    key, value = items[index], items[index + 1]
+    if key in {"TITLE", "SOURCE_NOTE"}:
+        value = json.dumps(value, ensure_ascii=False)
+    text = text.replace("{{" + key + "}}", value)
+output_path.write_text(text, encoding="utf-8")
+PY
+}
+
 # ===========================================================================
 # v3 — open-format helpers: profiles, A2A lifecycle, behavior/eval extraction
 # ===========================================================================
@@ -877,4 +929,39 @@ ts_workspace_root() {
     _tswr_p="$_tswr_next"
   done
   printf '%s' "$_tswr_d"
+}
+
+# ts_backlog_root <task-spec-path>
+#
+# Resolve the one backlog that owns a Task-Spec. An explicit
+# TASKSPEC_BACKLOG_DIR wins when it contains the file; otherwise the nearest
+# ancestor named `tasks` is canonical. This makes root, done/, parked/, and
+# future nested buckets converge on one _state.yaml.
+ts_backlog_root() {
+  _tsbr_path="$1"
+  [ -d "$_tsbr_path" ] || _tsbr_path="$(dirname "$_tsbr_path")"
+  _tsbr_path="$(cd "$_tsbr_path" 2>/dev/null && pwd)" || return 1
+
+  if [ -n "${TASKSPEC_BACKLOG_DIR:-}" ] && [ -d "$TASKSPEC_BACKLOG_DIR" ]; then
+    _tsbr_explicit="$(cd "$TASKSPEC_BACKLOG_DIR" 2>/dev/null && pwd)" || _tsbr_explicit=""
+    case "$_tsbr_path" in
+      "$_tsbr_explicit"|"$_tsbr_explicit"/*)
+        printf '%s' "$_tsbr_explicit"
+        return 0
+        ;;
+    esac
+  fi
+
+  _tsbr_cursor="$_tsbr_path"
+  while [ -n "$_tsbr_cursor" ] && [ "$_tsbr_cursor" != "/" ]; do
+    if [ "$(basename "$_tsbr_cursor")" = "tasks" ]; then
+      printf '%s' "$_tsbr_cursor"
+      return 0
+    fi
+    _tsbr_next="$(dirname "$_tsbr_cursor")"
+    [ "$_tsbr_next" = "$_tsbr_cursor" ] && break
+    _tsbr_cursor="$_tsbr_next"
+  done
+
+  printf '%s' "$_tsbr_path"
 }

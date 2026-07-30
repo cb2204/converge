@@ -442,11 +442,11 @@ sed '/{{TODO: this should fail}}/d' "$TARGET" > "${TARGET}.tmp" && mv "${TARGET}
 # 5. transition-status.sh — ready → in-progress
 # ---------------------------------------------------------------------------
 echo "=== 5. transition-status.sh: ready → in-progress ==="
-bash "$SCRIPT_DIR/transition-status.sh" "$ID" in-progress "self-test" >/dev/null 2>&1 && trans_rc=0 || trans_rc=$?
+bash "$SCRIPT_DIR/transition-status.sh" "$ID" in-progress >/dev/null 2>&1 && trans_rc=0 || trans_rc=$?
 if [[ $trans_rc -eq 0 ]]; then
-  pass "transition to in-progress succeeds"
+  pass "transition without an optional reason succeeds"
 else
-  fail "transition to in-progress failed (rc=$trans_rc)"
+  fail "transition without an optional reason failed (rc=$trans_rc)"
 fi
 
 if grep -q "^status: in-progress" "$TARGET"; then
@@ -465,6 +465,35 @@ fi
 # 6. transition-status.sh — in-progress → done
 # ---------------------------------------------------------------------------
 echo "=== 6. transition-status.sh: in-progress → done ==="
+# Completion is now a settled state, not a file move. Supply the acceptance
+# envelope and passing receipt that the transition gate requires.
+if bash "$SCRIPT_DIR/transition-status.sh" "$ID" done "premature" >/dev/null 2>&1; then
+  fail "transition allowed done before acceptance and a passing receipt"
+else
+  pass "transition rejects premature done"
+fi
+if [[ -f "$TARGET" ]] && grep -q '^status: in-progress$' "$TARGET"; then
+  pass "rejected done transition leaves the task unchanged"
+else
+  fail "rejected done transition mutated or moved the task"
+fi
+awk '
+  /^tags:/ && !added {
+    print
+    print "signed_off: true"
+    print "signed_off_by: self-test"
+    print "signed_off_at: 2026-05-27T00:01:00Z"
+    print "accepted: true"
+    print "accepted_by: self-test"
+    print "accepted_at: 2026-05-27T00:02:00Z"
+    added=1
+    next
+  }
+  { print }
+' "$TARGET" > "${TARGET}.tmp" && mv "${TARGET}.tmp" "$TARGET"
+mkdir -p cvg/receipts
+printf '{"schema":"cvg.execution-receipt.v1","task_id":"%s","result":"pass"}\n' "$ID" \
+  > "cvg/receipts/${ID}.json"
 bash "$SCRIPT_DIR/transition-status.sh" "$ID" done "self-test" >/dev/null 2>&1 && trans_rc=0 || trans_rc=$?
 if [[ $trans_rc -eq 0 ]]; then
   pass "transition to done succeeds"
@@ -558,7 +587,16 @@ echo "=== 11. safe-to-delegate.sh (pre-delegation gate) ==="
 # A valid (well-formed, unbuilt) spec should get VERDICT: DELEGATE (exit 0).
 # A spec with a broken eval body should get DO NOT DELEGATE (exit non-zero).
 gate_ok="tasks/T-20990910-gate-ok.md"
-sed 's/^id:.*/id: T-20990910-gate-ok/' "tasks/done/${ID}.md" > "$gate_ok" 2>/dev/null \
+sed \
+  -e 's/^id:.*/id: T-20990910-gate-ok/' \
+  -e 's/^status:.*/status: ready/' \
+  -e 's/^signed_off:.*/signed_off: false/' \
+  -e 's/^signed_off_by:.*/signed_off_by: (none)/' \
+  -e 's/^signed_off_at:.*/signed_off_at: (none)/' \
+  -e 's/^accepted:.*/accepted: false/' \
+  -e 's/^accepted_by:.*/accepted_by: (none)/' \
+  -e 's/^accepted_at:.*/accepted_at: (none)/' \
+  "tasks/done/${ID}.md" > "$gate_ok" 2>/dev/null \
   || sed 's/^id:.*/id: T-20990910-gate-ok/' "$TARGET" > "$gate_ok" 2>/dev/null
 
 sd_out=$(bash "$SCRIPT_DIR/safe-to-delegate.sh" "$gate_ok" 2>&1) && sd_rc=0 || sd_rc=$?
@@ -725,6 +763,13 @@ if grep -q 'path: tasks/T-20260602-golden.md' "$NEST/deep/workspace/tasks/_state
 else
   fail "indexed paths are not workspace-relative"
 fi
+rm -f "$NEST/deep/workspace/tasks/_state.yaml"
+bash "$SCRIPT_DIR/validate-task-spec.sh" --no-state "$NESTED_SPEC" >/dev/null 2>&1 || true
+if [ ! -e "$NEST/deep/workspace/tasks/_state.yaml" ]; then
+  pass "--no-state makes structural validation genuinely read-only"
+else
+  fail "--no-state still wrote the derived task index"
+fi
 rm -rf "$NEST"
 
 # ---------------------------------------------------------------------------
@@ -771,6 +816,30 @@ if [ -n "$BUCKET_V" ] && [ "$BUCKET_V" = "$BUCKET_R" ]; then
   pass "validate-task-spec and rebuild-state anchor paths identically"
 else
   fail "the two index writers disagree (validate: ${BUCKET_V:-none} / rebuild: ${BUCKET_R:-none})"
+fi
+
+# A rebuild carries top-level queue/stats sections. Validating one task after
+# that rebuild must replace its task record inside tasks:, never append a record
+# below stats: (which creates a structurally misleading YAML document).
+SECOND="$BUCKET/tasks/done/T-20260603-second.md"
+sed 's/T-20260602-golden/T-20260603-second/g' \
+  "$FIXTURES_DIR/T-20260602-golden.md" > "$SECOND"
+( cd "$BUCKET" && bash "$SCRIPT_DIR/rebuild-state.sh" ) >/dev/null 2>&1 || true
+( cd "$BUCKET" && bash "$SCRIPT_DIR/validate-task-spec.sh" \
+    tasks/done/T-20260602-golden.md ) >/dev/null 2>&1 || true
+STATE="$BUCKET/tasks/_state.yaml"
+LAST_TASK_LINE="$(grep -n '^- id:' "$STATE" 2>/dev/null | tail -1 | cut -d: -f1 || true)"
+STATS_LINE="$(grep -n '^stats:' "$STATE" 2>/dev/null | head -1 | cut -d: -f1 || true)"
+TOP_SECTIONS="$(grep -Ec '^(tasks|ready_queue|in_progress|blocked|stats):$' "$STATE" 2>/dev/null || true)"
+if [ -n "$LAST_TASK_LINE" ] && [ -n "$STATS_LINE" ] \
+  && [ "$LAST_TASK_LINE" -lt "$STATS_LINE" ] \
+  && [ "$TOP_SECTIONS" -eq 5 ] \
+  && grep -q '^- id: T-20260602-golden$' "$STATE" \
+  && grep -q '^- id: T-20260603-second$' "$STATE" \
+  && grep -q '^  total: 2$' "$STATE"; then
+  pass "validate after rebuild keeps every task inside one canonical YAML document"
+else
+  fail "validate after rebuild corrupted tasks/queues/stats structure"
 fi
 rm -rf "$BUCKET"
 
@@ -883,6 +952,56 @@ else
   fail "a cross-prefix task was not flagged"
 fi
 rm -rf "$LB"
+
+# Batch rendering must keep timestamps distinct from counters and must never
+# interpret user text as a sed program or hand-built JSON.
+BATCH_ROOT="$(mktemp -d -t cvg-batch.XXXXXX)"
+mkdir -p "$BATCH_ROOT/tasks"
+printf '%s\n' 'safe-render: Fix A & B | C "quoted"' > "$BATCH_ROOT/intents.txt"
+if TASKSPEC_BACKLOG_DIR="$BATCH_ROOT/tasks" \
+  bash "$SCRIPT_DIR/batch-generate.sh" \
+    --intent-file "$BATCH_ROOT/intents.txt" --effort S \
+    --source-note 'docs/A&B|C "quoted"' --skip-validation >/dev/null 2>&1; then
+  BATCH_SPEC="$(find "$BATCH_ROOT/tasks" -maxdepth 1 -name 'T-*-safe-render.md' -print | head -1)"
+  if python3 - "$BATCH_SPEC" "$BATCH_ROOT/tasks/_metrics.jsonl" <<'PY'
+import datetime
+import json
+import pathlib
+import sys
+
+spec = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()
+title = next(line.removeprefix("title: ") for line in spec if line.startswith("title: "))
+source = next(line.removeprefix("source_note: ") for line in spec if line.startswith("source_note: "))
+created = next(line.removeprefix("created: ") for line in spec if line.startswith("created: "))
+assert json.loads(title) == 'Fix A & B | C "quoted"'
+assert json.loads(source) == 'docs/A&B|C "quoted"'
+datetime.datetime.fromisoformat(created.replace("Z", "+00:00"))
+events = [
+    json.loads(line)
+    for line in pathlib.Path(sys.argv[2]).read_text(encoding="utf-8").splitlines()
+    if line
+]
+assert events[-1]["event"] == "created"
+assert events[-1]["mode"] == "batch"
+assert events[-1]["source"] == 'docs/A&B|C "quoted"'
+PY
+  then
+    pass "batch generation preserves ISO timestamps and safely quotes template/JSON input"
+  else
+    fail "batch generation emitted malformed YAML scalars, timestamps, or JSONL"
+  fi
+else
+  fail "batch generation failed on punctuation-safe user input"
+fi
+if TASKSPEC_BACKLOG_DIR="$BATCH_ROOT/tasks" \
+  bash "$SCRIPT_DIR/batch-generate.sh" \
+    --intent-file "$BATCH_ROOT/intents.txt" --effort S \
+    --agent 'bad|agent' --skip-validation >/dev/null 2>&1; then
+  fail "batch generation accepted an unsafe agent scalar"
+else
+  pass "batch generation rejects unsafe agent scalars"
+fi
+rm -rf "$BATCH_ROOT"
 fi   # end: bash >= 4 available
 
 # ---------------------------------------------------------------------------

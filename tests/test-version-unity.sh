@@ -3,7 +3,7 @@
 #
 # WHY THIS EXISTS
 # Before 2026-07-29 the package carried NINE independent version lineages: the
-# twelve skills declared seven different `metadata.version` values (0.3.0 .. 1.1.0)
+# skills once declared seven different `metadata.version` values (0.3.0 .. 1.1.0)
 # or none at all, `bin/cvg` said 0.21.0, `task-spec` said 3.6.0, and two gate
 # scripts kept private numbers behind their own `--version` flags. Nothing
 # reconciled them, so "which version of Converge is this?" had no answer — and a
@@ -128,7 +128,7 @@ done
 
 # ----- every skill declares metadata.version, and it matches -----
 echo
-echo "[2] all twelve skills declare metadata.version = VERSION"
+echo "[2] every skill declares metadata.version = VERSION"
 SKILL_N=0; SKILL_BAD=0
 for d in skills/*/; do
   [ -f "$d/SKILL.md" ] || continue
@@ -172,6 +172,17 @@ else
   bad "bin/README.md header claims a version the binary denies (wants: cvg $PKG)"
 fi
 
+# ----- the root front door must claim the package version -----
+# d6e8c92 fixed the root readme claiming an old version, and a reviewer caught
+# it — not a gate. This is that gate: both identity claims must equal VERSION.
+echo
+echo "[3c] README.md (the root front door) claims the package version"
+if grep -q "Converge $PKG" README.md && grep -q "cvg $PKG" README.md; then
+  ok "README.md says Converge $PKG and cvg $PKG"
+else
+  bad "README.md claims a version the package denies (wants: Converge $PKG / cvg $PKG)"
+fi
+
 # ----- schema versions must NOT have been swept up -----
 # The counter-test. If a future edit "unifies" a data-contract version into the
 # release number, specs stop validating against their own declared schema. These
@@ -185,10 +196,10 @@ else
   bad "VALIDATOR_VERSION was changed — that is a spec-format version, not a release version"
   SCHEMA_OK=1
 fi
-if grep -qE 'format_version: 3' tests/uc-analytics/cvg/tasks/done/*.md 2>/dev/null; then
-  ok "task-spec format_version stays 3"
+if grep -qE '^format_version: 3$' skills/task-spec/templates/task-spec.md.tpl 2>/dev/null; then
+  ok "task-spec template format_version stays 3"
 else
-  echo "  note — no format_version: 3 spec found to check (fixture-dependent, not a failure)"
+  bad "task-spec template format_version drifted — schema versions are not release versions"
 fi
 
 echo

@@ -24,7 +24,7 @@ The **Manager concern** — which issue runs, when, how many tasks run in
 parallel, dependency settlement, locks, and worktrees — is an orchestration
 layer **outside the numbered pass chain**: a future CI/CD concern (e.g. GitHub
 Actions as scheduler, the PR as state settlement, branch protection as the
-gate), tracked as item **B-1** in `PLAN.md`. A human or that CI implementation
+gate), tracked on the project roadmap. A human or that CI implementation
 supplies `--issue N`; this loop drives that one issue to a green-eval PR and
 stops. Task-local helpers allowed by the execution profile do not authorize
 cross-task fan-out.

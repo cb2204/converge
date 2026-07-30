@@ -120,6 +120,11 @@ if ! ts_size_is_leaf "$EFFORT"; then
   exit 1
 fi
 
+if ! [[ "$AGENT" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "ERROR: agent must contain only letters, digits, dot, underscore, or hyphen" >&2
+  exit 1
+fi
+
 case "$PROFILE" in
   lite|standard|full) ;;
   *) echo "ERROR: profile must be lite, standard, or full (got: '$PROFILE')" >&2; exit 1 ;;
@@ -148,13 +153,13 @@ if [[ -z "$GIT_ROOT" ]]; then
 fi
 
 if [[ "$QUEUE" == true ]]; then
-  OUTDIR="$GIT_ROOT/tasks/queue"
+  OUTDIR="$TASKSPEC_BACKLOG_DIR/queue"
 else
-  OUTDIR="$GIT_ROOT/tasks"
+  OUTDIR="$TASKSPEC_BACKLOG_DIR"
 fi
 
 DATE="$(date +%Y%m%d)"
-CREATED="$(date -u +%FT%TZ)"
+CREATED_AT="$(date -u +%FT%TZ)"
 
 if [[ "$DRY_RUN" == true ]]; then
   echo "[DRY RUN] Would create specs in $OUTDIR from $INTENT_FILE"
@@ -162,7 +167,7 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 # Counters
-CREATED=0
+CREATED_COUNT=0
 FAILED=0
 VALIDATION_FAILED=0
 FILES=()
@@ -228,37 +233,28 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     exit 1
   fi
 
-  sed \
-    -e "s|{{ID}}|$ID|g" \
-    -e "s|{{TITLE}}|$description|g" \
-    -e "s|{{STATUS}}|ready|g" \
-    -e "s|{{PROFILE}}|$PROFILE|g" \
-    -e "s|{{EFFORT}}|$EFFORT|g" \
-    -e "s|{{BUDGET_ITERATIONS}}|15|g" \
-    -e "s|{{AGENT}}|$AGENT|g" \
-    -e "s|{{DEPENDS_ON}}|[]|g" \
-    -e "s|{{TOUCHES_PATHS_YAML}}|  - {{TODO: path/to/file}}|g" \
-    -e "s|{{SOURCE_NOTE}}|$SOURCE_NOTE|g" \
-    -e "s|{{CREATED}}|$CREATED|g" \
-    -e "s|{{TAGS}}|[]|g" \
-    -e "s|{{WHY_ONE_PARAGRAPH}}|{{TODO: 1-2 sentence why}}|g" \
-    -e "s|{{GOAL_ONE_PARAGRAPH}}|{{TODO: concrete success in one paragraph}}|g" \
-    -e "s|{{CONTEXT_LEAN_MAX_100_LINES}}|{{TODO: lean context, link to existing docs}}|g" \
-    -e "s|{{B1_GIVEN}}|{{TODO: precondition}}|g" \
-    -e "s|{{B1_WHEN}}|{{TODO: action}}|g" \
-    -e "s|{{B1_THEN}}|{{TODO: observable outcome}}|g" \
-    -e "s|{{B2_GIVEN}}|{{TODO: precondition}}|g" \
-    -e "s|{{B2_WHEN}}|{{TODO: action}}|g" \
-    -e "s|{{B2_THEN}}|{{TODO: observable outcome}}|g" \
-    -e "s|{{DO_NOT_TOUCH_LIST}}|- {{TODO: exact path or (none)}}|g" \
-    "$TEMPLATE" > "$TARGET"
+  ts_render_template "$TEMPLATE" "$TARGET" \
+    ID "$ID" TITLE "$description" STATUS ready PROFILE "$PROFILE" \
+    EFFORT "$EFFORT" BUDGET_ITERATIONS 15 AGENT "$AGENT" DEPENDS_ON "[]" \
+    TOUCHES_PATHS_YAML "  - {{TODO: path/to/file}}" SOURCE_NOTE "$SOURCE_NOTE" \
+    CREATED "$CREATED_AT" TAGS "[]" \
+    WHY_ONE_PARAGRAPH "{{TODO: 1-2 sentence why}}" \
+    GOAL_ONE_PARAGRAPH "{{TODO: concrete success in one paragraph}}" \
+    CONTEXT_LEAN_MAX_100_LINES "{{TODO: lean context, link to existing docs}}" \
+    B1_GIVEN "{{TODO: precondition}}" B1_WHEN "{{TODO: action}}" \
+    B1_THEN "{{TODO: observable outcome}}" B2_GIVEN "{{TODO: precondition}}" \
+    B2_WHEN "{{TODO: action}}" B2_THEN "{{TODO: observable outcome}}" \
+    AGENT_PRODUCES "code | docs | config | tests" \
+    DO_NOT_TOUCH_LIST "- {{TODO: exact path or (none)}}"
 
   # Append _metrics.jsonl entry
-  METRICS="$OUTDIR/_metrics.jsonl"
-  mkdir -p "$OUTDIR"
-  echo "{\"schema_version\":1,\"ts\":\"$CREATED\",\"task\":\"$ID\",\"event\":\"created\",\"author\":\"$(whoami)\",\"source\":\"$SOURCE_NOTE\",\"effort\":\"$EFFORT\",\"agent\":\"$AGENT\",\"mode\":\"batch\"}" >> "$METRICS"
+  METRICS="$TASKSPEC_BACKLOG_DIR/_metrics.jsonl"
+  mkdir -p "$TASKSPEC_BACKLOG_DIR"
+  ts_append_metric "$METRICS" \
+    schema_version 1 ts "$CREATED_AT" task "$ID" event created \
+    author "$(whoami)" source "$SOURCE_NOTE" effort "$EFFORT" agent "$AGENT" mode batch
 
-  CREATED=$((CREATED + 1))
+  CREATED_COUNT=$((CREATED_COUNT + 1))
   FILES+=("$TARGET")
   echo "Created $TARGET"
 done < "$INTENT_FILE"
@@ -276,7 +272,7 @@ fi
 
 echo ""
 echo "=== Batch generate summary ==="
-echo "Created: $CREATED spec(s)"
+echo "Created: $CREATED_COUNT spec(s)"
 echo "Failed:  $FAILED slug(s)"
 
 # Bulk validation

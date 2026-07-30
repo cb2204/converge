@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -195,14 +197,54 @@ def run_judge(engine: str, prompt: str, timeout: int) -> tuple[bool, str]:
     if not cmd:
         return False, f"no dispatch recipe for engine: {engine}"
     try:
-        proc = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout, check=False)
+        # Vendor CLIs may inspect stdin or spawn helpers. Close stdin explicitly
+        # and own a fresh process group so a timeout kills the whole dispatch,
+        # not only its parent while a grandchild keeps stdout/stderr pipes open.
+        proc = subprocess.Popen(
+            cmd,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                proc.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                try:
+                    proc.communicate(timeout=1)
+                except subprocess.TimeoutExpired:
+                    # A helper that deliberately escaped the process group can
+                    # still own an inherited pipe. Close our read ends rather
+                    # than letting an untrusted descendant erase the timeout.
+                    if proc.stdout:
+                        proc.stdout.close()
+                    if proc.stderr:
+                        proc.stderr.close()
+                    try:
+                        proc.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        pass
+            return False, f"judge timed out after {timeout}s"
     except subprocess.TimeoutExpired:
+        # Defensive only: the inner handler above owns normal timeouts.
         return False, f"judge timed out after {timeout}s"
     except OSError as exc:
         return False, f"judge could not start: {exc}"
-    if proc.returncode != 0 and not proc.stdout.strip():
-        return False, f"judge exited {proc.returncode}: {proc.stderr.strip()[:300]}"
-    return True, proc.stdout
+    if proc.returncode != 0 and not stdout.strip():
+        return False, f"judge exited {proc.returncode}: {stderr.strip()[:300]}"
+    return True, stdout
 
 
 def extract_verdict(raw: str) -> dict | None:

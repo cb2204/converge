@@ -16,6 +16,7 @@ SCHEMA = "cvg.execution-profile.v1"
 VERSION = "1.0.0"
 TOPOLOGIES = {"single", "single-explorer", "implementer-verifier", "parallel"}
 PERMISSIONS = {"read-only", "scoped-write"}
+SUPPORTED_RUNTIMES = frozenset({"claude", "codex", "kimi"})
 
 
 class ContractError(Exception):
@@ -134,6 +135,20 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     return data, body
 
 
+def infer_primary_runtime(frontmatter: dict[str, Any]) -> tuple[str, str]:
+    """Resolve the bundled runtime selected by a Task-Spec.
+
+    `execution_backend` is canonical and `agent` is the compatibility fallback.
+    Open-string engines without a bundled adapter resolve to the portable
+    generic contract rather than being represented as natively supported.
+    """
+    for field in ("execution_backend", "agent"):
+        value = str(frontmatter.get(field) or "").strip().lower()
+        if value in SUPPORTED_RUNTIMES:
+            return value, f"task_spec.{field}"
+    return "generic", "fallback.generic"
+
+
 def task_paths(frontmatter: dict[str, Any]) -> list[str]:
     values: list[str] = []
     for key in ("touches_paths", "creates_paths"):
@@ -235,7 +250,18 @@ def profile_task_path(profile: dict[str, Any], repo: Path) -> Path:
         value = profile["task"]["spec_ref"]["path"]
     except (KeyError, TypeError) as exc:
         raise ContractError("profile is missing task.spec_ref.path") from exc
-    return resolve_inside_repo(str(value), repo, must_exist=True)
+    expected = resolve_inside_repo(str(value), repo, must_exist=False)
+    if expected.is_file():
+        return expected
+    # A successful transition moves `tasks/T-*.md` to `tasks/done/T-*.md`.
+    # That lifecycle move does not alter the signed bytes or invalidate the
+    # execution evidence. Resolve only this one canonical relocation; never scan
+    # broadly or accept an arbitrary same-named file elsewhere.
+    if expected.parent.name == "tasks":
+        landed = expected.parent / "done" / expected.name
+        if landed.is_file():
+            return landed
+    raise ContractError(f"required task spec does not exist: {expected}")
 
 
 def verify_signoff_pure(task: Path, repo: Path, tool_home: Path) -> tuple[int, str]:
@@ -481,14 +507,14 @@ RUNTIME_CONTROLS: dict[str, dict[str, dict[str, str]]] = {
         "tracker.write": {"kind": "detect", "mechanism": "settlement policy check"},
     },
     "claude": {
-        "fs.write": {"kind": "prevent", "mechanism": "PreToolUse hook permissionDecision=deny + permissions.deny Edit(...)"},
+        "fs.write": {"kind": "detect", "mechanism": "portable whole-repo postflight; emitted PreToolUse fragment prevents Edit/Write/NotebookEdit only when a dispatcher installs it, while Bash remains broader"},
         "proc.exec": {"kind": "prevent", "mechanism": "permissions.deny Bash(...) + sandbox (Seatbelt/bubblewrap)"},
         "net.egress": {"kind": "prevent", "mechanism": "sandbox deniedDomains + WebFetch deny rules"},
         "vcs.push": {"kind": "detect", "mechanism": "Bash(git push:*) deny rule; still verified at settlement"},
         "tracker.write": {"kind": "detect", "mechanism": "settlement policy check"},
     },
     "codex": {
-        "fs.write": {"kind": "prevent", "mechanism": "Landlock writable-roots (workspace-write), on by default"},
+        "fs.write": {"kind": "detect", "mechanism": "workspace sandbox prevents writes outside writable roots; Task-Spec subpaths are enforced by the portable whole-repo postflight"},
         "proc.exec": {"kind": "prevent", "mechanism": "seccomp-bpf syscall filter"},
         "net.egress": {"kind": "prevent", "mechanism": "seccomp blocks network syscalls unless allowlisted"},
         "vcs.push": {"kind": "prevent", "mechanism": "network denied by sandbox unless explicitly allowed"},

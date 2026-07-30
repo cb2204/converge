@@ -22,7 +22,7 @@ artifacts.
   pinned context, enforcement adapters, the emitted harness, and readiness.
 - **The Manager owns** task selection and concurrency across tasks. It is a
   future CI/CD concern (e.g. GitHub Actions), **not a numbered pass and not an
-  in-session skill** — see `PLAN.md` item B-1.
+  in-session skill** — tracked on the project roadmap.
 - **Pass 8 (`task-loop`) owns** one assigned task, its bounded RED/GREEN loop,
   and one PR or blocked report.
 
@@ -211,8 +211,10 @@ human teaching projection, not the machine-knowledge writer.
 - Generated artifacts contain no unresolved placeholders.
 - The capability envelope is epoch-bound to the current spec hash, its `fs.write`
   grant equals the Task-Spec's declared scope, and closure is mandatory.
-- Every required control is enforced by the primary runtime, or explicitly
-  waived — and the declared `assurance` matches what the resolver proves.
+- Every required control is at least detectably enforced by the primary
+  runtime, or explicitly waived — and the declared `assurance` matches what the
+  resolver proves. A profile never upgrades `detect` to `prevent` merely because
+  the vendor has an optional hook or workspace-wide sandbox.
 - The 7B task brief exists and carries the current epoch.
 - `bind --check` performs **zero repository writes** and runs no project code.
 - The final machine token is `CHECK_RUNTIME_CONTRACT=PASS`.

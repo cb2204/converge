@@ -150,7 +150,11 @@ set +e
 # reads like a spec defect and is really the gate failing to start. This repo
 # declares bash 3.2 as its floor, and the same idiom is already used in the Pass 8
 # engine adapters for exactly this reason.
-v_out=$(bash "$VALIDATE" --shellcheck-evals ${PASS_THROUGH[@]+"${PASS_THROUGH[@]}"} "$FILE" 2>&1)
+# A gate is a read-only verdict unless --stamp was explicitly requested.
+# Validation's derived-index refresh is useful when invoked directly, but would
+# make a plain sign-off check mutate _state.yaml and contradict the gate/JSON
+# contract. The task's status is unchanged here, so suppress that side effect.
+v_out=$(bash "$VALIDATE" --no-state --shellcheck-evals ${PASS_THROUGH[@]+"${PASS_THROUGH[@]}"} "$FILE" 2>&1)
 v_rc=$?
 set -e
 if [[ $v_rc -ne 0 ]]; then

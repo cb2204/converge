@@ -20,7 +20,7 @@ The block lives in the frontmatter and its keys are **indented**:
 id: T-20260723-auth-revamp
 signed_off: true
 depends_on: [T-20260723-auth-schema]
-execution_backend: claude          # → assignee (via people-map)
+execution_backend: claude          # → assignee (via identity)
 agent: python-developer            # → assignee (more specific; wins over backend)
 signed_off_by: luan@owshq.com      # → subscribers
 projection:
@@ -60,7 +60,7 @@ Ownership follows the same derived-vs-seed-once split as labels/priority:
 
 | field | source | ownership | Linear native field |
 |-------|--------|-----------|---------------------|
-| assignee | `execution_backend` / `agent` → [people-map](./people-map.md) | **seed-once** (create only) | `assigneeId` |
+| assignee | `execution_backend` / `agent` → [identity](./identity.md) | **seed-once** (create only) | `assigneeId` |
 | state | DAG position — root → `Todo`, blocked → `Backlog` | **seed-once** (create only) | `stateId` |
 | subscribers | `signed_off_by` (comma/space separated) | **union-merged** (never drops a human) | `subscriberIds` |
 | `projection.cycle` | the block | re-synced | `cycleId` (name / number / uuid) |

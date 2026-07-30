@@ -105,9 +105,9 @@ Every adapter declares what it did with each control:
 ```json
 "controls": {
   "fs.write": {
-    "status": "handled",
-    "enforcement_kind": "prevent",
-    "mechanism": "Landlock writable-roots (workspace-write), on by default"
+    "status": "mapped",
+    "enforcement_kind": "detect",
+    "mechanism": "workspace sandbox bounds writable roots; whole-repo postflight enforces Task-Spec subpaths"
   }
 }
 ```
@@ -120,15 +120,21 @@ Current matrix (what each runtime genuinely provides):
 
 | capability | generic | claude | codex | kimi |
 |---|---|---|---|---|
-| `fs.write` | detect | **prevent** | **prevent** | detect |
+| `fs.write` | detect | detect | detect | detect |
 | `proc.exec` | — | **prevent** | **prevent** | — |
 | `net.egress` | — | **prevent** | **prevent** | — |
 | `vcs.push` | detect | detect | **prevent** | detect |
 
-*Claude:* PreToolUse hook returning `permissionDecision: "deny"`, `permissions.deny`
-rules, and the Seatbelt/bubblewrap sandbox. *Codex:* Landlock writable-roots plus a
-seccomp-bpf filter, sandboxed by default. *Generic/Kimi:* the portable postflight
-diff guard only — honest, and only detection.
+*Claude:* Bind emits a valid PreToolUse settings fragment whose hook returns
+`permissionDecision: "deny"` for disallowed Edit/Write/NotebookEdit paths. That
+is prevention only after a dispatcher installs the fragment, and Bash remains a
+broader write surface, so the profile's guaranteed task-scope assurance stays
+**detect**. *Codex:* the workspace sandbox can prevent writes outside its
+writable roots, but it does not natively narrow those roots to Task-Spec
+subpaths; that finer boundary is also **detect** at postflight. Generic/Kimi
+likewise use the portable postflight. The table reports the guarantee the
+generated profile actually wires, not the strongest feature a vendor could
+provide in a separately configured environment.
 
 ## 6. Fail closed, or waive it in the open
 

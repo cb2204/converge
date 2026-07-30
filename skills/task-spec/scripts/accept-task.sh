@@ -386,6 +386,10 @@ if [[ "$STAMP" == true ]]; then
     exit 1
   fi
   echo "   ${GREEN}stamped${RESET} accepted: true by ${ACCEPTED_BY} at ${ts}"
+  mkdir -p "$TASKSPEC_BACKLOG_DIR"
+  ts_append_metric "$TASKSPEC_BACKLOG_DIR/_metrics.jsonl" \
+    schema_version 1 ts "$ts" task "$(basename "$FILE" .md)" \
+    event accepted author "$ACCEPTED_BY"
 fi
 
 echo "ACCEPTED=1"

@@ -8,41 +8,41 @@
 #
 # These map signal a spec ALREADY carries onto Linear's native issue fields, with
 # the same ownership split the label projection uses (see linear.sh):
-#   * assigneeId    (from execution_backend / agent via .cvg/people-map)  CREATE-only
+#   * assigneeId    (from execution_backend / agent via .cvg/identity) CREATE-only
 #   * stateId       (DAG root -> Todo, blocked -> Backlog)                CREATE-only
 #   * subscriberIds (from signed_off_by)                                 union-merged
 #
 # Resolution is READ-ONLY and every miss is FAIL-SOFT: an unmapped key, an
 # unresolvable email, or an absent state all echo empty so the caller simply OMITS
 # the field. Union-merge never drops a human. A cosmetic projection field must
-# never break a registration. See references/people-map.md for the KEY=VALUE map.
+# never break a registration. See references/identity.md for the KEY=VALUE map.
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# _ln_people_map_lookup KEY  — echo the value mapped to KEY in $TSI_PEOPLE_MAP,
-# falling back to the `default` key, else empty.
+# _ln_identity_lookup KEY — echo the value mapped to KEY in
+# $TSI_IDENTITY, falling back to `default`.
 # ---------------------------------------------------------------------------
 # The map is a plain KEY=VALUE file of CHOICES (never secrets): keys are
 # `backend:<engine>`, `agent:<role>`, or `default`; values are a Linear user's
 # email or uuid. Pure read — no network, no side effect — so it is safe to call on
 # every register. Absent file / absent key / absent default all echo empty.
-_ln_people_map_lookup() {
-  local key="$1" file="${TSI_PEOPLE_MAP:-}" val=""
+_ln_identity_lookup() {
+  local key="$1" file="${TSI_IDENTITY:-}" val=""
   [[ -n "$key" ]] || { printf ''; return 0; }
   [[ -n "$file" && -f "$file" ]] || { printf ''; return 0; }
   # First exact `KEY=` hit wins (setup writes replace-or-append, so there is one);
   # everything after the first `=` is the value verbatim (an email/uuid has none).
-  val="$(grep -m1 "^${key}=" "$file" 2>/dev/null | cut -d= -f2-)" || val=""
+  val="$(awk -F= -v k="$key" '$1 == k {sub(/^[^=]*=/, ""); print; exit}' "$file" 2>/dev/null)" || val=""
   # Fall back to the shared `default` mapping when this key is unmapped.
   if [[ -z "$val" && "$key" != "default" ]]; then
-    val="$(grep -m1 '^default=' "$file" 2>/dev/null | cut -d= -f2-)" || val=""
+    val="$(awk -F= '$1 == "default" {sub(/^[^=]*=/, ""); print; exit}' "$file" 2>/dev/null)" || val=""
   fi
   printf '%s' "$val"
 }
 
 # ---------------------------------------------------------------------------
-# _ln_resolve_user VALUE  — resolve a people-map value to a Linear user UUID.
+# _ln_resolve_user VALUE  — resolve an identity value to a Linear user UUID.
 # ---------------------------------------------------------------------------
 # A UUID passes straight through; anything else is treated as an email and looked
 # up via users(filter:{email:{eq}}). Read-only and fail-soft: an empty input, a

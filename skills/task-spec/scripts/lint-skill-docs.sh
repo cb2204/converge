@@ -54,12 +54,12 @@ fi
 # v2→v3 drift from recurring ("turn the freshest lesson into a gate").
 LIB_VER_FULL=$(grep -m1 '^TASKSPEC_VERSION=' "$SKILL_DIR/scripts/_lib.sh" 2>/dev/null | sed -E 's/.*"([^"]*)".*/\1/')
 LIB_MAJOR="${LIB_VER_FULL%%.*}"
-stale_ver=$(grep -rEn 'Task-Spec v[12]\.[0-9]|against the v[12]\.[0-9]+ format|a new Task-Spec v[12]\.[0-9]|Task-Spec v2 file|quality bar.*v[12]\.[0-9]|generation.*Task-Spec v[12]\.[0-9]' \
+stale_ver=$(grep -rEn 'Task-Spec v[123]\.[0-9]|against the v[123]\.[0-9]+ format|a new Task-Spec v[123]\.[0-9]|Task-Spec v2 file|quality bar.*v[123]\.[0-9]|generation.*Task-Spec v[123]\.[0-9]' \
   "$SKILL_DIR" --include='*.md' --include='*.sh' 2>/dev/null \
   | grep -vE '/CHANGELOG\.md:|task-spec-v1\.md:|/lint-skill-docs\.sh:' \
   || true)
 if [[ -n "$stale_ver" ]]; then
-  err "stale v1.x/v2.x SELF-DESCRIPTION presented as current (skill is v${LIB_VER_FULL}); update to v${LIB_MAJOR}:"
+  err "stale v1.x/v2.x/v3.x SELF-DESCRIPTION presented as current (package is ${LIB_VER_FULL}); versioned lineage claims belong in the CHANGELOG:"
   while IFS= read -r line; do err "  $line"; done <<< "$stale_ver"
 fi
 

@@ -38,17 +38,27 @@ set -euo pipefail
 # Match the bare layout AND the cvg/ workspace layout (any depth), so the hook
 # fires in a nested workspace too.
 if git diff --cached --name-only | grep -qE '(^|/)tasks/(queue/|done/|parked/)?T-.*\.md$'; then
-  SKILL_DIR="$(cd "$(dirname "$0")/../.claude/skills/task-spec/scripts" 2>/dev/null && pwd || true)"
-  if [[ -z "$SKILL_DIR" || ! -f "$SKILL_DIR/rebuild-state.sh" ]]; then
-    # Fallback: search from repo root
-    REPO_ROOT="$(git rev-parse --show-toplevel)"
-    SKILL_DIR="$REPO_ROOT/.claude/skills/task-spec/scripts"
-  fi
+  REPO_ROOT="$(git rev-parse --show-toplevel)"
+  SKILL_DIR=""
+  for candidate in \
+    "$REPO_ROOT/.agents/skills/task-spec/scripts" \
+    "$REPO_ROOT/.claude/skills/task-spec/scripts"; do
+    if [[ -f "$candidate/rebuild-state.sh" ]]; then
+      SKILL_DIR="$candidate"
+      break
+    fi
+  done
 
   if [[ -f "$SKILL_DIR/rebuild-state.sh" ]]; then
+    if [[ -d "$REPO_ROOT/cvg/tasks" ]]; then
+      TASKSPEC_BACKLOG_DIR="$REPO_ROOT/cvg/tasks"
+    else
+      TASKSPEC_BACKLOG_DIR="$REPO_ROOT/tasks"
+    fi
+    export TASKSPEC_BACKLOG_DIR
     bash "$SKILL_DIR/rebuild-state.sh"
-    if [[ -f tasks/_state.yaml ]]; then
-      git add tasks/_state.yaml
+    if [[ -f "$TASKSPEC_BACKLOG_DIR/_state.yaml" ]]; then
+      git add "$TASKSPEC_BACKLOG_DIR/_state.yaml"
     fi
   fi
 fi

@@ -25,7 +25,7 @@
 # whose verdict hands to Pass 2. --draft runs the structural checks and
 # NEVER authorizes.
 #
-# v0.5.0 hardening (PLAN.md P-9):
+# Blocker-gap hardening:
 #   * Check 7 fails CLOSED on blocker gaps: a blocker whose resolution is
 #     missing, blank, or any open/none/null/tbd/pending/awaiting sentinel
 #     (quoted or not) is unresolved. Only an affirmatively substantive

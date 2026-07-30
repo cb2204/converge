@@ -14,6 +14,7 @@ from _runtime_contract import (
     SCHEMA,
     authority_epoch,
     do_not_touch,
+    infer_primary_runtime,
     load_profile,
     parse_frontmatter,
     profile_task_path,
@@ -182,12 +183,48 @@ def main() -> int:
         # --- The resolver manifest: no adapter may weaken a required control silently.
         needed = enforcement.get("required_controls") or []
         primary = enforcement.get("primary_runtime")
+        inferred_runtime, inferred_source = infer_primary_runtime(frontmatter)
+        selection = enforcement.get("runtime_selection")
         waived = set(enforcement.get("unenforced_waivers") or [])
         if not needed:
             findings.append("enforcement declares no required controls")
         if not primary:
             findings.append("enforcement declares no primary runtime")
         else:
+            if selection is None:
+                # Pre-provenance profiles remain readable, but may not
+                # contradict the runtime selected by their sealed Task-Spec.
+                if primary != inferred_runtime:
+                    findings.append(
+                        "primary runtime drift: legacy profile selects "
+                        f"'{primary}', Task-Spec selects '{inferred_runtime}' "
+                        f"via {inferred_source} — re-bind"
+                    )
+            elif not isinstance(selection, dict):
+                findings.append("enforcement.runtime_selection must be an object")
+            else:
+                source = selection.get("source")
+                if selection.get("inferred_runtime") != inferred_runtime:
+                    findings.append(
+                        "runtime selection inference drift: profile records "
+                        f"'{selection.get('inferred_runtime')}', Task-Spec selects "
+                        f"'{inferred_runtime}' — re-bind"
+                    )
+                if selection.get("inferred_source") != inferred_source:
+                    findings.append(
+                        "runtime selection source drift: profile records "
+                        f"'{selection.get('inferred_source')}', expected "
+                        f"'{inferred_source}' — re-bind"
+                    )
+                if source == "operator_override":
+                    pass
+                elif source != inferred_source or primary != inferred_runtime:
+                    findings.append(
+                        "primary runtime drift: profile selection "
+                        f"'{primary}' via {source!r} does not match Task-Spec "
+                        f"selection '{inferred_runtime}' via {inferred_source} "
+                        "— re-bind or record an explicit operator override"
+                    )
             resolution = next(
                 (
                     e.get("resolution")

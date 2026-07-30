@@ -81,6 +81,11 @@ EFFORT="${ARGS[1]}"
 AGENT="${ARGS[2]:-any}"
 SOURCE_NOTE="${ARGS[3]:-(none)}"
 
+if ! [[ "$AGENT" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "ERROR: agent must contain only letters, digits, dot, underscore, or hyphen" >&2
+  exit 1
+fi
+
 if ! ts_size_is_valid "$EFFORT"; then
   echo "ERROR: effort must be one of $TS_SIZES (got: '$EFFORT'). See references/concepts/effort-gate.md" >&2
   exit 1
@@ -107,21 +112,11 @@ fi
 DATE="$(date +%Y%m%d)"
 CREATED="$(date -u +%FT%TZ)"
 ID="T-${DATE}-${SLUG}"
-# Resolve output directory
-GIT_ROOT=""
-if command -v git >/dev/null 2>&1; then
-  GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-fi
-if [[ -z "$GIT_ROOT" ]]; then
-  GIT_ROOT="$(pwd)"
-fi
 
 if [[ "$QUEUE" == true ]]; then
-  OUTDIR="$GIT_ROOT/tasks/queue"
-elif [[ "$STATUS" == "ready" && -d "$GIT_ROOT/tasks/queue" ]]; then
-  OUTDIR="$GIT_ROOT/tasks/queue"
+  OUTDIR="$TASKSPEC_BACKLOG_DIR/queue"
 else
-  OUTDIR="$GIT_ROOT/tasks"
+  OUTDIR="$TASKSPEC_BACKLOG_DIR"
 fi
 
 TARGET="$OUTDIR/${ID}.md"
@@ -141,36 +136,27 @@ if [[ ! -f "$TEMPLATE" ]]; then
   exit 1
 fi
 
-sed \
-  -e "s|{{ID}}|$ID|g" \
-  -e "s|{{TITLE}}|{{TODO: one-line title in imperative voice}}|g" \
-  -e "s|{{STATUS}}|$STATUS|g" \
-  -e "s|{{PROFILE}}|$PROFILE|g" \
-  -e "s|{{EFFORT}}|$EFFORT|g" \
-  -e "s|{{BUDGET_ITERATIONS}}|15|g" \
-  -e "s|{{AGENT}}|$AGENT|g" \
-  -e "s|{{DEPENDS_ON}}|[]|g" \
-  -e "s|{{TOUCHES_PATHS_YAML}}|  - {{TODO: path/to/file}}|g" \
-  -e "s|{{SOURCE_NOTE}}|$SOURCE_NOTE|g" \
-  -e "s|{{CREATED}}|$CREATED|g" \
-  -e "s|{{TAGS}}|[]|g" \
-  -e "s|{{WHY_ONE_PARAGRAPH}}|{{TODO: 1-2 sentence why}}|g" \
-  -e "s|{{GOAL_ONE_PARAGRAPH}}|{{TODO: concrete success in one paragraph}}|g" \
-  -e "s|{{CONTEXT_LEAN_MAX_100_LINES}}|{{TODO: lean context, link to existing docs}}|g" \
-  -e "s|{{B1_GIVEN}}|{{TODO: precondition}}|g" \
-  -e "s|{{B1_WHEN}}|{{TODO: action}}|g" \
-  -e "s|{{B1_THEN}}|{{TODO: observable outcome}}|g" \
-  -e "s|{{B2_GIVEN}}|{{TODO: precondition}}|g" \
-  -e "s|{{B2_WHEN}}|{{TODO: action}}|g" \
-  -e "s|{{B2_THEN}}|{{TODO: observable outcome}}|g" \
-  -e "s|{{AGENT_PRODUCES}}|code \\| docs \\| config \\| tests|g" \
-  -e "s|{{DO_NOT_TOUCH_LIST}}|- {{TODO: exact path or (none)}}|g" \
-  "$TEMPLATE" > "$TARGET"
+ts_render_template "$TEMPLATE" "$TARGET" \
+  ID "$ID" TITLE "{{TODO: one-line title in imperative voice}}" \
+  STATUS "$STATUS" PROFILE "$PROFILE" EFFORT "$EFFORT" \
+  BUDGET_ITERATIONS 15 AGENT "$AGENT" DEPENDS_ON "[]" \
+  TOUCHES_PATHS_YAML "  - {{TODO: path/to/file}}" SOURCE_NOTE "$SOURCE_NOTE" \
+  CREATED "$CREATED" TAGS "[]" \
+  WHY_ONE_PARAGRAPH "{{TODO: 1-2 sentence why}}" \
+  GOAL_ONE_PARAGRAPH "{{TODO: concrete success in one paragraph}}" \
+  CONTEXT_LEAN_MAX_100_LINES "{{TODO: lean context, link to existing docs}}" \
+  B1_GIVEN "{{TODO: precondition}}" B1_WHEN "{{TODO: action}}" \
+  B1_THEN "{{TODO: observable outcome}}" B2_GIVEN "{{TODO: precondition}}" \
+  B2_WHEN "{{TODO: action}}" B2_THEN "{{TODO: observable outcome}}" \
+  AGENT_PRODUCES "code | docs | config | tests" \
+  DO_NOT_TOUCH_LIST "- {{TODO: exact path or (none)}}"
 
 # Append _metrics.jsonl entry
-mkdir -p "$OUTDIR"
-METRICS="$OUTDIR/_metrics.jsonl"
-echo "{\"schema_version\":1,\"ts\":\"$CREATED\",\"task\":\"$ID\",\"event\":\"created\",\"author\":\"$(whoami)\",\"source\":\"$SOURCE_NOTE\",\"effort\":\"$EFFORT\",\"agent\":\"$AGENT\"}" >> "$METRICS"
+mkdir -p "$TASKSPEC_BACKLOG_DIR"
+METRICS="$TASKSPEC_BACKLOG_DIR/_metrics.jsonl"
+ts_append_metric "$METRICS" \
+  schema_version 1 ts "$CREATED" task "$ID" event created \
+  author "$(whoami)" source "$SOURCE_NOTE" effort "$EFFORT" agent "$AGENT"
 
 # Trigger state rebuild
 if [[ -x "$SKILL_DIR/scripts/rebuild-state.sh" ]]; then

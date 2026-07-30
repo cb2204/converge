@@ -8,9 +8,10 @@
 # It asserts each phase's contract AND the v3-specific behaviors:
 #   - profile/behavior/traceability validate
 #   - the pre-gate stamps signed_off (with HMAC under a key)
-#   - the executor makes the evals pass AND honors the lifecycle (→ done)
+#   - the executor makes the evals pass and leaves settlement to acceptance
 #   - the acceptance gate ACCEPTS (evals pass from clean state + blast-radius +
 #     HMAC intact) and stamps accepted: true
+#   - only an accepted task with a passing receipt can transition to done
 #   - the negative path: a blast-radius breach is REJECTED by accept-task
 #
 # Exit 0 = the closed loop works; non-zero = a phase broke.
@@ -44,6 +45,7 @@ echo "baseline" > src/baseline.txt
 git add -A && git commit -qm baseline
 
 SPEC="$WORK/tasks/T-20260618-e2e-closed-loop.md"
+TASK_ID="T-20260618-e2e-closed-loop"
 
 echo "${BOLD}=== Phase 1: AUTHOR a solvable v3 standard spec ===${RESET}"
 cat > "$SPEC" <<'SPEC'
@@ -182,7 +184,7 @@ GIT_ROOT="\$(cd "\$(dirname "\$SPEC")" && git rev-parse --show-toplevel)"; expor
 ts_set_frontmatter_field "\$SPEC" "status" "in-progress"
 printf 'done\n' > "\$GIT_ROOT/src/feature.txt"
 if bash "$SCRIPTS/run-task-spec.sh" "\$SPEC" >/dev/null 2>&1; then
-  ts_set_frontmatter_field "\$SPEC" "status" "done"
+  ts_set_frontmatter_field "\$SPEC" "status" "in-progress"
 else
   ts_set_frontmatter_field "\$SPEC" "status" "parked"
 fi
@@ -190,7 +192,7 @@ EXEC
 chmod +x "$INLINE_EXEC"
 bash "$INLINE_EXEC" "$SPEC"
 chk "executor created src/feature.txt == 'done'" "grep -qx done '$WORK/src/feature.txt'"
-chk "executor transitioned status → done (A2A completed)" "grep -q '^status: done' '$SPEC'"
+chk "executor leaves passing work in-progress for independent acceptance" "grep -q '^status: in-progress' '$SPEC'"
 
 echo "${BOLD}=== Phase 5: ACCEPT (post-execution gate) ===${RESET}"
 # accept-task re-runs evals from the worktree, checks blast radius vs baseline,
@@ -205,6 +207,14 @@ chk "accept emitted ACCEPTED=1" "echo \"\$a_out\" | grep -q 'ACCEPTED=1'"
 chk "accept GATE A (evals pass) reported" "echo \"\$a_out\" | grep -q 'A. Evals pass'"
 
 echo "${BOLD}=== Phase 6: LOOP CLOSED — final spec validates with full envelope ===${RESET}"
+mkdir -p "$WORK/cvg/receipts"
+printf '{"schema":"cvg.execution-receipt.v1","task_id":"%s","result":"pass"}\n' "$TASK_ID" \
+  > "$WORK/cvg/receipts/$TASK_ID.json"
+TASKSPEC_BACKLOG_DIR="$WORK/tasks" \
+  bash "$SCRIPTS/transition-status.sh" "$TASK_ID" done "closed-loop settlement" >/dev/null
+SPEC="$WORK/tasks/done/$TASK_ID.md"
+chk "settlement moved only accepted, receipted work to done" \
+  "[[ -f '$SPEC' ]] && grep -q '^status: done' '$SPEC'"
 f_out=$(TASKSPEC_SIGNING_KEY="$WORK/.git/info/taskspec-signing-key" bash "$SCRIPTS/validate-task-spec.sh" "$SPEC" 2>&1); f_rc=$?
 chk "final validate passes" "[[ $f_rc -eq 0 ]]"
 chk "final validate confirms Tier-1 HMAC" "echo \"\$f_out\" | grep -q 'OK(Tier 1)'"

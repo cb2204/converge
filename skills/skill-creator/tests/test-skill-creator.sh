@@ -182,7 +182,7 @@ PY
 )"; RC=$?
 rc_is "all sibling frontmatters parse without FrontmatterError" "$RC" "0"
 COUNT="${PARSE_SWEEP##parse-sweep-ok }"
-if [[ "$COUNT" =~ ^[0-9]+$ ]] && [[ "$COUNT" -ge 12 ]]; then ok "parse sweep covered $COUNT skills"; else bad "parse sweep saw '$COUNT' skills (expected >= 12)"; fi
+if [[ "$COUNT" =~ ^[0-9]+$ ]] && [[ "$COUNT" -ge 11 ]]; then ok "parse sweep covered $COUNT skills"; else bad "parse sweep saw '$COUNT' skills (expected >= 11)"; fi
 
 # -----------------------------------------------------------------------------
 echo; echo "[K] dependency kill: no PyYAML import left anywhere in scripts/"

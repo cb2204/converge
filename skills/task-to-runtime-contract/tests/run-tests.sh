@@ -18,6 +18,12 @@ FAIL=0
 ok() { PASS=$((PASS + 1)); printf 'ok    %s\n' "$1"; }
 bad() { FAIL=$((FAIL + 1)); printf 'FAIL  %s\n' "$1" >&2; }
 
+if python3 "$SKILL_DIR/tests/test-gate-policy.py"; then
+  ok "strict repository-gate parser and Git trust boundary"
+else
+  bad "repository-gate parser or Git trust boundary"
+fi
+
 TMP_REPO="$(mktemp -d -t cvg-runtime-contract.XXXXXX)"
 KEY_FILE="$(mktemp -t cvg-runtime-key.XXXXXX)"
 # shellcheck disable=SC2329  # invoked by trap
@@ -97,6 +103,12 @@ assert p["topology"]["mode"] == "single"
 assert p["canonical_sources"]["write_scope"].startswith("task_spec.")
 assert len(p["enforcement"]["adapters"]) == 4
 assert p["enforcement"]["receipt_writer"].endswith("write-execution-receipt.py")
+assert p["enforcement"]["primary_runtime"] == "generic"
+assert p["enforcement"]["runtime_selection"] == {
+    "source": "fallback.generic",
+    "inferred_runtime": "generic",
+    "inferred_source": "fallback.generic",
+}
 assert p["context"]["approved_project_knowledge"][0]["sha256"]
 assert p["context"]["external_docs"][0]["cache_path"].endswith("vendor-v1.md")
 PY
@@ -104,6 +116,61 @@ then
   ok "profile is thin, Tier 1, pinned, and portable"
 else
   bad "profile shape or semantics"
+fi
+
+DERIVED_TASK="$TMP_REPO/tasks/T-20260602-runtime-derived.md"
+DERIVED_PROFILE="$TMP_REPO/cvg/execution/T-20260602-runtime-derived/execution-profile.yaml"
+sed \
+  -e 's|T-20260602-golden|T-20260602-runtime-derived|g' \
+  -e 's|^execution_backend: any$|execution_backend: codex|' \
+  "$FIXTURE" > "$DERIVED_TASK"
+(
+  cd "$TMP_REPO"
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" \
+    bash "$SAFE" --stamp --stamp-by runtime-test \
+    tasks/T-20260602-runtime-derived.md >/dev/null
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
+    --task tasks/T-20260602-runtime-derived.md >/dev/null
+)
+if python3 - "$DERIVED_PROFILE" <<'PY'
+import json, sys
+e = json.load(open(sys.argv[1]))["enforcement"]
+assert e["primary_runtime"] == "codex"
+assert e["runtime_selection"]["source"] == "task_spec.execution_backend"
+assert e["runtime_selection"]["inferred_runtime"] == "codex"
+PY
+then
+  ok "Task-Spec execution_backend selects the primary runtime"
+else
+  bad "Task-Spec runtime selection was not bound into the profile"
+fi
+
+cp "$DERIVED_PROFILE" "$DERIVED_PROFILE.bak"
+python3 - "$DERIVED_PROFILE" <<'PY'
+import json, sys
+path = sys.argv[1]
+profile = json.load(open(path))
+profile["enforcement"]["primary_runtime"] = "generic"
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(profile, handle, indent=2, sort_keys=True)
+    handle.write("\n")
+PY
+set +e
+RUNTIME_DRIFT_OUT="$(
+  cd "$TMP_REPO" &&
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" python3 \
+    "$SKILL_DIR/scripts/check-runtime-contract.py" \
+    --repo "$TMP_REPO" --tool-home "$TOOL_HOME" \
+    --profile "$DERIVED_PROFILE" 2>&1
+)"
+RUNTIME_DRIFT_RC=$?
+set -e
+mv "$DERIVED_PROFILE.bak" "$DERIVED_PROFILE"
+if [ "$RUNTIME_DRIFT_RC" -ne 0 ] \
+  && grep -q 'primary runtime drift' <<<"$RUNTIME_DRIFT_OUT"; then
+  ok "runtime drift from the sealed Task-Spec fails readiness"
+else
+  bad "runtime drift escaped readiness: $RUNTIME_DRIFT_OUT"
 fi
 
 PROFILE_HASH_1="$(shasum -a 256 "$PROFILE" | awk '{print $1}')"
@@ -184,6 +251,22 @@ if (
   ok "vendor hook bridge enforces tool-input paths"
 else
   bad "tool-input hook bridge rejected allowed write"
+fi
+
+HOOK_DENY="$(
+  cd "$TMP_REPO"
+  printf '{"tool_name":"Write","tool_input":{"file_path":"src/forbidden.py"}}\n' |
+    CVG_EXECUTION_PROFILE="$PROFILE" \
+    python3 "$SKILL_DIR/scripts/guard-tool-input.py"
+)"
+if python3 -c 'import json,sys
+d=json.load(sys.stdin)["hookSpecificOutput"]
+assert d["hookEventName"] == "PreToolUse"
+assert d["permissionDecision"] == "deny"
+assert "src/forbidden.py" in d["permissionDecisionReason"]' <<<"$HOOK_DENY"; then
+  ok "Claude PreToolUse bridge emits a real structured deny decision"
+else
+  bad "tool-input bridge did not block with Claude's hook protocol"
 fi
 
 set +e
@@ -455,7 +538,8 @@ if python3 - "$PROFILE" <<'PY'
 import json, sys
 enforcement = json.load(open(sys.argv[1]))["enforcement"]
 by = {a["runtime"]: a["resolution"] for a in enforcement["adapters"]}
-assert by["codex"]["controls"]["fs.write"]["enforcement_kind"] == "prevent"
+assert by["codex"]["controls"]["fs.write"]["enforcement_kind"] == "detect"
+assert by["claude"]["controls"]["fs.write"]["enforcement_kind"] == "detect"
 assert by["generic"]["controls"]["fs.write"]["enforcement_kind"] == "detect"
 assert enforcement["required_controls"] == ["fs.write"]
 assert enforcement["assurance"] == "detect"  # primary runtime is generic
@@ -464,6 +548,21 @@ then
   ok "resolver manifest reports prevent vs detect per runtime"
 else
   bad "resolver manifest is missing or dishonest"
+fi
+
+CLAUDE_ADAPTER="$TMP_REPO/cvg/execution/T-20260602-golden/adapters/claude.json"
+if python3 - "$CLAUDE_ADAPTER" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+assert d["native_control"]["supports_prewrite_prevention"] is False
+group = d["claude_settings_fragment"]["hooks"]["PreToolUse"][0]
+assert group["matcher"] == "Edit|Write|NotebookEdit"
+assert "guard-tool-input.py" in group["hooks"][0]["command"]
+PY
+then
+  ok "Claude adapter emits an installable hook fragment without claiming it is installed"
+else
+  bad "Claude adapter overclaims or omits its PreToolUse integration fragment"
 fi
 
 # FAIL CLOSED: a required control the runtime cannot enforce must stop the gate.
@@ -536,6 +635,64 @@ assert 'primitive' in a['isolation'] and 'available' in a['isolation']"; then
 else
   bad "runtime attestation failed"
 fi
+
+# Every vendor process gets a closed stdin. A headless judge inheriting the
+# caller's pipe can wait forever for input even though its command line is
+# nominally non-interactive.
+JUDGE_BIN="$TMP_REPO/judge-bin"
+mkdir -p "$JUDGE_BIN"
+cat > "$JUDGE_BIN/codex" <<'SH'
+#!/usr/bin/env bash
+if IFS= read -r unexpected; then
+  printf 'INHERITED_STDIN:%s\n' "$unexpected"
+  exit 7
+fi
+printf '%s\n' '{"verdict":"UPHELD","confidence":"high","findings":[],"reasoning":"stdin closed"}'
+SH
+chmod +x "$JUDGE_BIN/codex"
+if printf 'MUST_NOT_REACH_JUDGE\n' \
+  | PATH="$JUDGE_BIN:$PATH" VERIFY_WORK="$SKILL_DIR/scripts/verify-work.py" \
+    python3 -c '
+import importlib.util, os
+spec = importlib.util.spec_from_file_location("verify_work", os.environ["VERIFY_WORK"])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+ok, raw = module.run_judge("codex", "prompt", 2)
+verdict = module.extract_verdict(raw)
+assert ok and verdict and verdict["verdict"] == "UPHELD", raw
+'; then
+  ok "tier-2 judge receives closed stdin"
+else
+  bad "tier-2 judge inherited caller stdin"
+fi
+
+# Killing only the vendor CLI's parent is not a timeout: a spawned helper can
+# retain the capture pipes and make communicate() hang until that helper exits.
+# The verifier owns a process group and must reap all of it promptly.
+cat > "$JUDGE_BIN/codex" <<'SH'
+#!/usr/bin/env bash
+( trap '' TERM; sleep 20 ) &
+trap '' TERM
+sleep 20
+SH
+chmod +x "$JUDGE_BIN/codex"
+if PATH="$JUDGE_BIN:$PATH" VERIFY_WORK="$SKILL_DIR/scripts/verify-work.py" \
+  python3 -c '
+import importlib.util, os, time
+spec = importlib.util.spec_from_file_location("verify_work", os.environ["VERIFY_WORK"])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+started = time.monotonic()
+ok, reason = module.run_judge("codex", "prompt", 1)
+elapsed = time.monotonic() - started
+assert not ok and "timed out after 1s" in reason, reason
+assert elapsed < 5, elapsed
+'; then
+  ok "tier-2 timeout kills the vendor process group promptly"
+else
+  bad "tier-2 timeout leaked a child process or exceeded its bound"
+fi
+rm -rf "$JUDGE_BIN"
 
 # ---------------------------------------------------------------------------
 # 7B — the task brief, WP2 — read-only check, lanes, and tier-2 verification
@@ -711,6 +868,21 @@ if [ -f "$WS/cvg/execution/T-20260602-golden/execution-profile.yaml" ] \
   ok "bind writes the contract into the workspace, not the repo root"
 else
   bad "the contract landed outside the workspace"
+fi
+mkdir -p "$WS/cvg/tasks/done"
+mv "$WS/cvg/tasks/T-20260602-golden.md" "$WS/cvg/tasks/done/"
+set +e
+LANDED_OUT="$(
+  cd "$WS" &&
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind --check \
+    --profile cvg/execution/T-20260602-golden/execution-profile.yaml 2>&1
+)"
+LANDED_RC=$?
+set -e
+if [ "$LANDED_RC" -eq 0 ] && grep -q '^CHECK_RUNTIME_CONTRACT=PASS$' <<<"$LANDED_OUT"; then
+  ok "a profile remains verifiable after its task lands in tasks/done"
+else
+  bad "canonical task completion made its profile look stale: $LANDED_OUT"
 fi
 rm -rf "$NEST_REPO"
 

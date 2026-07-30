@@ -21,6 +21,7 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from dataclasses import dataclass, field, asdict
@@ -114,6 +115,13 @@ def _validate(instance: Dict[str, Any], schema_path: Path, label: str) -> None:
     try:
         from jsonschema import Draft202012Validator
     except ImportError:
+        if os.environ.get("TASK_SPEC_REQUIRE_JSONSCHEMA") == "1":
+            print(
+                f"ERROR: jsonschema is required to validate {label} "
+                "when TASK_SPEC_REQUIRE_JSONSCHEMA=1",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         print(f"WARN: jsonschema not installed; skipping {label} validation", file=sys.stderr)
         return
     with schema_path.open() as f:

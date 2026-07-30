@@ -103,12 +103,14 @@ then asks a different-family judge to attack held-out criteria before settlement
 The CLI exposes Loop and tier-2 verification separately so neither can silently
 manufacture the other's verdict.
 
-**Install into a consuming repo** (symlink tracks upstream; copy pins a version):
+**Install into a consuming repo** (pinned copy for Codex, Kimi, and Claude Code):
 
 ```bash
-for s in /path/to/converge/skills/*/; do
-  ln -s "$s" ".claude/skills/$(basename "$s")"
-done
+bash /path/to/converge/install.sh --target /path/to/project
+cd /path/to/project
+cvg init
+cvg setup signing
+cvg setup
 ```
 
 ---
@@ -194,9 +196,9 @@ eval pass, blast radius, HMAC recheck, optional gold-sanity Goodhart guard).
 Locked atomic status transitions, a rebuildable state index, an append-only
 metrics ledger, an L0–L2 executor conformance suite, and dispatch recipes
 (Claude, Codex, Kimi, Gemini, taskship, anthive, custom) round out the runtime.
-**Ships:** 20 scripts · reference docs · runbooks · JSON Schemas · test + conformance suites.
+**Ships:** 22 scripts · reference docs · runbooks · JSON Schemas · test + conformance suites.
 **Gate:** every task carries a runnable eval — *no eval, not a task yet.*
-Full details: [`task-spec/README.md`](task-spec/README.md) · deep-dive PDF: [`../docs/task-spec-v3.6.0.pdf`](../docs/task-spec-v3.6.0.pdf).
+Full details: [`task-spec/README.md`](task-spec/README.md) · deep-dive PDF: [`../docs/task-spec-v0.1.pdf`](../docs/task-spec-v0.1.pdf).
 
 ### 6 · `task-specs-to-issues` — the tracker as state · **opt-in**
 
@@ -204,7 +206,7 @@ Optionally projects each signed-off Task-Spec onto exactly one tracker issue
 (`--tracker github|linear|jira`), with `blocked-by` links carrying the
 `depends_on` graph — so the execution loop reads a board instead of re-deriving
 state. Skip it to keep the queue repo-local. On Linear it also seeds native
-fields from the spec (assignee via `.cvg/people-map`, state from DAG position,
+fields from the spec (assignee via `.cvg/identity`, state from DAG position,
 subscribers) and honors an optional `projection:` block (cycle/parent/sla +
 opt-in Initiative→Project→Milestones). Only the loop writes state; only a green
 eval closes an issue — so the board never lies.

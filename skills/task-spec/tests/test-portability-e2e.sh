@@ -29,6 +29,13 @@ fail() {
 note() {
   echo "  ⏭ $1"
 }
+skip_cross_engine() {
+  if [[ "${TASK_SPEC_STRICT_CROSS_ENGINE:-0}" == "1" ]]; then
+    fail "$1 (strict cross-engine proof is required)"
+  else
+    note "$1"
+  fi
+}
 
 # Run a command with a wall-clock budget without relying on timeout(1)
 # (absent on stock macOS). Returns the command's exit code, or 124 if it
@@ -391,8 +398,8 @@ echo "═══ Step 7: Cross-engine equivalence (Python vs TypeScript) ══�
 # signed_off, eval count) are EQUAL between the two engines. This is also the
 # TS consumer's first CI coverage: a smoke test that the .ts compiles and runs.
 #
-# Floor preservation: if node is absent, or its deps cannot be installed
-# quickly, this step gracefully SKIPS (never hard-fails a stranger's install).
+# Floor preservation: local users without Node may skip this optional reference
+# proof. CI sets TASK_SPEC_STRICT_CROSS_ENGINE=1, making every skip a failure.
 TS_DIR="$INSTALLED/references/examples"
 TS_CONSUMER="$TS_DIR/consume-task-spec.ts"
 if [[ ! -f "$TS_CONSUMER" ]]; then
@@ -401,33 +408,39 @@ if [[ ! -f "$TS_CONSUMER" ]]; then
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  note "cross-engine proof skipped: node not present (any-agent floor preserved)"
+  skip_cross_engine "cross-engine proof skipped: node not present (any-agent floor preserved)"
 elif [[ ! -f "$TS_CONSUMER" ]]; then
-  note "cross-engine proof skipped: TS consumer not found at references/examples/"
+  skip_cross_engine "cross-engine proof skipped: TS consumer not found at references/examples/"
 elif [[ -z "$PY_JSON" ]]; then
-  note "cross-engine proof skipped: python consumer produced no JSON to compare against"
+  skip_cross_engine "cross-engine proof skipped: python consumer produced no JSON to compare against"
 else
   pass "node present ($(node --version 2>/dev/null)) — attempting cross-engine proof"
 
   TS_DEPS_OK=true
   if [[ ! -d "$TS_DIR/node_modules/ts-node" || ! -d "$TS_DIR/node_modules/yaml" || ! -d "$TS_DIR/node_modules/ajv" ]]; then
     if command -v npm >/dev/null 2>&1; then
-      echo "  installing TS consumer deps (npm install, 120s budget)…"
+      if [[ -f "$TS_DIR/package-lock.json" ]]; then
+        npm_install=(npm --prefix "$TS_DIR" ci --no-audit --no-fund --silent)
+        echo "  installing locked TS consumer deps (npm ci, 120s budget)…"
+      else
+        npm_install=(npm --prefix "$TS_DIR" install --no-audit --no-fund --silent)
+        echo "  installing TS consumer deps (npm install, 120s budget)…"
+      fi
       set +e
-      run_with_timeout 120 npm --prefix "$TS_DIR" install --no-audit --no-fund --silent >/dev/null 2>&1
+      run_with_timeout 120 "${npm_install[@]}" >/dev/null 2>&1
       npm_rc=$?
       set -e
       if [[ "$npm_rc" -ne 0 ]]; then
         TS_DEPS_OK=false
         if [[ "$npm_rc" -eq 124 ]]; then
-          note "cross-engine proof skipped: npm install exceeded 120s budget (no hang)"
+          skip_cross_engine "cross-engine proof skipped: npm dependency install exceeded 120s budget (no hang)"
         else
-          note "cross-engine proof skipped: npm install failed (rc=$npm_rc)"
+          skip_cross_engine "cross-engine proof skipped: npm dependency install failed (rc=$npm_rc)"
         fi
       fi
     else
       TS_DEPS_OK=false
-      note "cross-engine proof skipped: npm not available to install TS deps"
+      skip_cross_engine "cross-engine proof skipped: npm not available to install TS deps"
     fi
   fi
 
@@ -465,7 +478,7 @@ else
         echo "      ts:     $TS_LB" >&2
       fi
     elif [[ "$ts_rc" -eq 124 ]]; then
-      note "cross-engine proof skipped: TS consumer exceeded 90s budget (no hang)"
+      skip_cross_engine "cross-engine proof skipped: TS consumer exceeded 90s budget (no hang)"
     else
       fail "typescript consumer failed on golden fixture (rc=$ts_rc) — .ts may have rotted"
       run_ts_consumer 2>&1 | head -10

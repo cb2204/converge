@@ -165,12 +165,17 @@ PATH_POLICY_STATE="not-run"
 [ -n "$CONTRACT" ] || CONTRACT="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
 case "$CONTRACT" in /*) : ;; *) CONTRACT="$WORKSPACE_ROOT/$CONTRACT" ;; esac
 
-# ----- Portable Pass 6 settlement guard -----
-# A green eval cannot settle an out-of-scope diff. Vendor hooks may prevent the
-# write earlier; this postflight is the portable fail-closed baseline.
-if [ "$EVAL_RC" -eq 0 ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
+# ----- Portable settlement guard -----
+# A green eval cannot settle a forbidden diff. A bound run enforces both the
+# standing repository gate and Task-Spec scope; supervised legacy mode lacks the
+# latter but MUST still honor the repository gate.
+if [ "$EVAL_RC" -eq 0 ]; then
   PATH_GUARD="$SCRIPT_DIR/../../task-to-runtime-contract/scripts/check-path-policy.py"
-  PATH_ARGS=(--profile "$CONTRACT" --repo "$WORKSPACE_ROOT")
+  if [ "$LEGACY_NO_CONTRACT" = true ]; then
+    PATH_ARGS=(--gate-only --repo "$WORKSPACE_ROOT")
+  else
+    PATH_ARGS=(--profile "$CONTRACT" --repo "$WORKSPACE_ROOT")
+  fi
   # Which reference does "what this run changed" mean?
   #
   # Guessing the default branch here was a real defect, not a rough edge.
@@ -203,7 +208,7 @@ if [ "$EVAL_RC" -eq 0 ] && [ "$LEGACY_NO_CONTRACT" != true ]; then
     EVAL_OUT="${EVAL_OUT}
 
 ${PATH_OUT}
-RED — green eval rejected by the Pass 6 path policy."
+RED — green eval rejected by the settlement path policy."
   else
     PATH_POLICY_STATE="pass"
     EVAL_OUT="${EVAL_OUT}

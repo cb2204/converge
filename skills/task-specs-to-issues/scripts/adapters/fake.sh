@@ -285,8 +285,9 @@ fake_document() {
   echo "$fid"
 }
 
-# users -> id<TAB>name<TAB>email. One synthetic member so `cvg setup people` and the
-# people-map contract are exercisable offline; a real adapter enumerates the board.
+# users -> id<TAB>name<TAB>email. One synthetic identity makes
+# `cvg setup identity` and the identity contract exercisable offline; a
+# real adapter enumerates the board.
 fake_users() {
   printf 'FAKE-USER-1\tFake Tester\ttester@example.invalid\n'
 }

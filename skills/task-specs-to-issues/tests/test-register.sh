@@ -593,6 +593,62 @@ rc_nonzero "a genuinely unknown dependency still refuses the board" "$RC"
 has        "and it says why"                                        "$OUT" "neither active nor landed"
 
 # -----------------------------------------------------------------------------
+echo; echo "[X] identity lookup is literal, deterministic, and fail-soft"
+IDENTITY_FILE="$WORK/identity"
+printf '%s\n' \
+  'agent:coder=coder@example.invalid' \
+  'backend:codex=codex@example.invalid' \
+  'default=default@example.invalid' > "$IDENTITY_FILE"
+NATIVE_LIB="$SKILL_DIR/scripts/adapters/linear-native.sh"
+OUT="$(TSI_IDENTITY="$IDENTITY_FILE" \
+  bash -c '. "$1"; _ln_identity_lookup "agent:coder"' _ "$NATIVE_LIB")"
+has "identity resolves the selected key" "$OUT" "coder@example.invalid"
+OUT="$(TSI_IDENTITY="$IDENTITY_FILE" \
+  bash -c '. "$1"; _ln_identity_lookup "agent:missing"' _ "$NATIVE_LIB")"
+has "unmapped selector falls back to default" "$OUT" "default@example.invalid"
+OUT="$(TSI_IDENTITY="$IDENTITY_FILE" \
+  bash -c '. "$1"; _ln_identity_lookup "agent:.*"' _ "$NATIVE_LIB")"
+has "selector text is matched literally, never as regex" "$OUT" "default@example.invalid"
+OUT="$(TSI_IDENTITY_MAP="$IDENTITY_FILE" env -u TSI_IDENTITY \
+  bash -c '. "$1"; _ln_identity_lookup "agent:coder"' _ "$NATIVE_LIB")"
+rc_is "noncanonical identity environment names are ignored" "$OUT" ""
+
+# -----------------------------------------------------------------------------
+echo; echo "[Y] projection.lock is private, atomic, literal, and symlink-safe"
+STRUCTURE_LIB="$SKILL_DIR/scripts/adapters/linear-structure.sh"
+PROJECTION_LOCK="$WORK/projection.lock"
+OUT="$(TSI_PROJECTION_LOCK="$PROJECTION_LOCK" bash -c '
+  . "$1"
+  _ln_lock_put project "Analytics Backbone" "00000000-0000-0000-0000-000000000001"
+  _ln_lock_put project "Analytics Backbone" "00000000-0000-0000-0000-000000000002"
+  _ln_lock_get project "Analytics Backbone"
+' _ "$STRUCTURE_LIB")"
+has "projection cache returns the latest literal mapping" "$OUT" \
+  "00000000-0000-0000-0000-000000000002"
+ROWS="$(awk -F'\t' '$1=="project" && $2=="Analytics Backbone"{n++} END{print n+0}' "$PROJECTION_LOCK")"
+rc_is "projection cache replaces rather than duplicates a key" "$ROWS" "1"
+MODE="$(python3 -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[2:])' "$PROJECTION_LOCK")"
+rc_is "projection cache is mode 0600" "$MODE" "600"
+if ! find "$WORK" -maxdepth 1 -name '.projection-lock.*' -print | grep -q .; then
+  ok "projection cache leaves no temporary file behind"
+else
+  bad "projection cache leaked a temporary file"
+fi
+PROJECTION_TARGET="$WORK/projection-target"
+PROJECTION_LINK="$WORK/projection-link"
+printf 'untouched\n' > "$PROJECTION_TARGET"
+ln -s "$PROJECTION_TARGET" "$PROJECTION_LINK"
+TSI_PROJECTION_LOCK="$PROJECTION_LINK" bash -c '
+  . "$1"
+  _ln_lock_put project "Unsafe" "00000000-0000-0000-0000-000000000003"
+' _ "$STRUCTURE_LIB"
+if [ -L "$PROJECTION_LINK" ] && [ "$(cat "$PROJECTION_TARGET")" = "untouched" ]; then
+  ok "projection cache refuses a symlink without touching its target"
+else
+  bad "projection cache followed or replaced a symlink"
+fi
+
+# -----------------------------------------------------------------------------
 # Pass 6 must find the cvg/ workspace, like every other pass
 # -----------------------------------------------------------------------------
 # Passes 0-3 auto-discover cvg/docs, cvg/docs/adrs and cvg/sketch. Pass 6 was

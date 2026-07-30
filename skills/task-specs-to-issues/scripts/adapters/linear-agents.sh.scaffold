@@ -228,8 +228,8 @@ _lna_error() {   # _lna_error SESSION_ID BODY   (TERMINAL — eval RED)
 # ===========================================================================
 # SEAM 3 (assignment) lives in the EXISTING code, not here — that is the point.
 # register.sh already emits `--assignee agent:<role>`, linear.sh resolves it via
-# _ln_people_map_lookup + _ln_resolve_user (uuid passthrough). So a one-line
-# `.cvg/people-map` entry:
+# _ln_identity_lookup + _ln_resolve_user (uuid passthrough). So a one-line
+# `.cvg/identity` entry:
 #       agent:claude=<app-user-uuid>       # from `_lna_app_user_id`
 # makes register assign the issue to the AGENT with ZERO code change, and Linear
 # opens the AgentSession on that assignment. The only missing pieces are the app

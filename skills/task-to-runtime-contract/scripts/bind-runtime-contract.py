@@ -17,6 +17,7 @@ from _runtime_contract import (
     cited_adrs,
     do_not_touch,
     evidence_entry,
+    infer_primary_runtime,
     parse_frontmatter,
     parse_worker,
     relpath,
@@ -70,8 +71,8 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--dry-run", action="store_true")
     value.add_argument(
         "--runtime",
-        default="generic",
-        help="the runtime that must actually honor the contract (default: generic)",
+        default=None,
+        help="runtime that must honor the contract (default: infer a supported execution_backend/agent, else generic)",
     )
     value.add_argument(
         "--require",
@@ -97,12 +98,14 @@ def adapter_payload(adapter: str, profile_path: str) -> dict:
             "supports_prewrite_prevention": False,
         },
         "claude": {
-            "prewrite": "PreToolUse hook invokes tool_input_guard_command",
-            "supports_prewrite_prevention": True,
+            "prewrite": "generated PreToolUse settings fragment guards Edit/Write/NotebookEdit when installed",
+            "supports_prewrite_prevention": False,
+            "prewrite_prevention_status": "integration-required; Bash writes remain postflight-detected",
         },
         "codex": {
-            "prewrite": "workspace sandbox plus scoped instructions",
-            "supports_prewrite_prevention": True,
+            "prewrite": "workspace sandbox bounds writes to the workspace, not to Task-Spec paths",
+            "supports_prewrite_prevention": False,
+            "prewrite_prevention_status": "workspace-only; task scope is postflight-detected",
         },
         "kimi": {
             "prewrite": "permission mode or runtime hook when available",
@@ -111,7 +114,10 @@ def adapter_payload(adapter: str, profile_path: str) -> dict:
     }[adapter]
     scripts = "skills/task-to-runtime-contract/scripts"
     quoted = json.dumps(profile_path)
-    return {
+    tool_guard = (
+        f"CVG_EXECUTION_PROFILE={quoted} python3 {scripts}/guard-tool-input.py"
+    )
+    payload = {
         "schema": "cvg.runtime-adapter.v1",
         "adapter": adapter,
         "execution_profile": profile_path,
@@ -119,14 +125,29 @@ def adapter_payload(adapter: str, profile_path: str) -> dict:
         "candidate_guard_command": (
             f"python3 {scripts}/check-path-policy.py --profile {quoted} --candidate \"$CVG_CANDIDATE_PATH\""
         ),
-        "tool_input_guard_command": (
-            f"CVG_EXECUTION_PROFILE={quoted} python3 {scripts}/guard-tool-input.py"
-        ),
+        "tool_input_guard_command": tool_guard,
         "postflight_command": (
             f"python3 {scripts}/check-path-policy.py --profile {quoted} --base \"$CVG_BASE_REF\""
         ),
         "settlement_policy": "postflight_command is mandatory before PR or success receipt",
     }
+    if adapter == "claude":
+        payload["claude_settings_fragment"] = {
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Edit|Write|NotebookEdit",
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": tool_guard,
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+    return payload
 
 
 def main() -> int:
@@ -143,6 +164,11 @@ def main() -> int:
             )
         tier, _ = run_signoff_gate(task, repo, tool_home, args.supervised)
         allowed = task_paths(frontmatter)
+        inferred_runtime, inferred_source = infer_primary_runtime(frontmatter)
+        runtime_source = "operator_override"
+        if args.runtime is None:
+            args.runtime = inferred_runtime
+            runtime_source = inferred_source
         if not allowed:
             raise ContractError("Task-Spec declares no touches_paths or creates_paths")
 
@@ -309,6 +335,11 @@ def main() -> int:
                 "portable_postflight_required": True,
                 "required_controls": needed,
                 "primary_runtime": args.runtime,
+                "runtime_selection": {
+                    "source": runtime_source,
+                    "inferred_runtime": inferred_runtime,
+                    "inferred_source": inferred_source,
+                },
                 # 7B — the model-facing brief. Recorded so the gate can prove it
                 # exists and stays in step with this epoch.
                 "task_brief": relpath(profile_dir / "AGENTS.task.md", repo),

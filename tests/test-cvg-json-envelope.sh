@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.9.0, 2026 SOTA):
+# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.1.0):
 # the uniform --json response envelope {ok,data,error,meta,…} on every command, and
 # --dry-run on mutations. Proves, discriminating:
 #   · the envelope carries every SOTA key + a versioned meta
@@ -8,18 +8,19 @@
 #   · --json is position-independent and leaves the DEFAULT path byte-parity-exact
 #   · --dry-run on a mutation changes nothing (changed=false / dry_run=true)
 #   · agent-context stays raw JSON (not double-enveloped)
-# bash 3.2-safe. Python is stdlib-only. Uses the analytics proving ground as terrain.
+# bash 3.2-safe. Python is stdlib-only. Uses product-neutral skill fixtures.
 # shellcheck disable=SC2015  # file-wide, intentional: `A && B || bad` — ok()/bad() ARE the branches (ok always returns 0)
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CVG="$ROOT/bin/cvg"
-PG="$ROOT/tests/uc-analytics/cvg"
+PG="$ROOT"
+GOOD_BRD="skills/idea-to-brd/tests/fixtures/brd-canonical.md"
 BAD="$ROOT/skills/reqs-to-swimlane-plans/tests/fixtures/no-thread"
 T=0; F=0
 ok()  { T=$((T + 1)); printf 'ok    %s\n' "$1"; }
 bad() { T=$((T + 1)); F=$((F + 1)); printf 'FAIL  %-34s %s\n' "$1" "$2"; }
 
-# run cvg from the proving ground with CVG_HOME resolved; stdout only
+# Run cvg from the repository root with CVG_HOME resolved; stdout only.
 jrun() { ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" "$@" ) 2>/dev/null; }
 # extract a python expression over the parsed envelope `d`
 jget() { python3 -c "import json,sys
@@ -30,7 +31,7 @@ print('' if v is None else v)"; }
 echo "== cvg --json envelope + --dry-run (agent-native SOTA) =="
 
 # --- envelope shape ---
-O="$(jrun --json capture)"
+O="$(jrun --json capture "$GOOD_BRD")"
 if printf '%s' "$O" | python3 -c "import json,sys
 d=json.load(sys.stdin)
 need=['ok','command','converge_pass','token','verdict','exit_code','changed','dry_run','data','error','warnings','meta']
@@ -40,7 +41,7 @@ assert d['meta']['schema_version']=='1.0' and d['meta']['tool']=='cvg' and d['me
 " 2>/dev/null; then ok "envelope shape + meta{schema_version,version}"; else bad "envelope shape" "missing keys/meta"; fi
 
 # --- pass ---
-O="$(jrun --json capture)"
+O="$(jrun --json capture "$GOOD_BRD")"
 [ "$(printf '%s' "$O" | jget "d['ok']")" = "True" ] \
   && [ "$(printf '%s' "$O" | jget "d['token']")" = "CHECK_BRD=PASS" ] \
   && [ "$(printf '%s' "$O" | jget "d['verdict']")" = "PASS" ] \
@@ -69,16 +70,16 @@ O="$(jrun --json capture --bogus)"
 [ "$RC" -eq 2 ] && ok "exit code preserved (--json → 2)" || bad "exit-code preserved" "got $RC want 2"
 
 # --- position independence: --json before OR after the command ---
-A="$(jrun --json capture | jget "d['token']")"
-B="$(jrun capture --json | jget "d['token']")"
+A="$(jrun --json capture "$GOOD_BRD" | jget "d['token']")"
+B="$(jrun capture "$GOOD_BRD" --json | jget "d['token']")"
 [ "$A" = "$B" ] && [ "$A" = "CHECK_BRD=PASS" ] && ok "--json position-independent" || bad "--json position" "before=$A after=$B"
 
 # --- default path is byte-parity-exact (adding --json never changed default output) ---
-DA="$( ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" capture ) 2>&1 )"
-DB="$( ( cd "$PG" && bash "$ROOT/skills/idea-to-brd/scripts/check-brd.sh" docs/brd-analytical-backbone.md ) 2>&1 )"
+DA="$( ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" capture "$GOOD_BRD" ) 2>&1 )"
+DB="$( ( cd "$PG" && bash "$ROOT/skills/idea-to-brd/scripts/check-brd.sh" "$GOOD_BRD" ) 2>&1 )"
 [ "$DA" = "$DB" ] && ok "default byte-parity held (gate untouched)" || bad "default byte-parity" "diverged"
 # default emits NO json (first char is not '{')
-FC="$( ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" capture ) 2>/dev/null | head -c1 )"
+FC="$( ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" capture "$GOOD_BRD" ) 2>/dev/null | head -c1 )"
 [ "$FC" != "{" ] && ok "default output is plain (not JSON)" || bad "default plain" "emitted JSON by default"
 
 # --- --dry-run on a mutation changes nothing ---
@@ -91,10 +92,29 @@ DR="$( ( cd "$PG" && CVG_HOME="$ROOT" "$CVG" --dry-run transition T-nope "done" 
 printf '%s' "$DR" | grep -q '^DRY_RUN=OK$' && ok "--dry-run(text) mutation → DRY_RUN=OK" || bad "dry-run text" "no DRY_RUN token"
 
 # --- read-only command with --dry-run is a no-op (still runs, changed=false) ---
-O="$(jrun --json --dry-run capture)"
+O="$(jrun --json --dry-run capture "$GOOD_BRD")"
 [ "$(printf '%s' "$O" | jget "d['changed']")" = "False" ] \
   && [ "$(printf '%s' "$O" | jget "d['token']")" = "CHECK_BRD=PASS" ] \
   && ok "--dry-run read-only: runs, changed=false" || bad "dry-run read-only" "field mismatch"
+
+# --- subcommand mutability is classified by the exact form, not its parent ---
+SPEC="skills/task-spec/tests/fixtures/T-20260602-golden.md"
+STATE="$PG/skills/task-spec/tests/fixtures/_state.yaml"
+STATE_BEFORE="$(shasum -a 256 "$STATE" | awk '{print $1}')"
+O="$(jrun --json tasks validate --no-state "$SPEC")"
+STATE_AFTER="$(shasum -a 256 "$STATE" | awk '{print $1}')"
+[ "$(printf '%s' "$O" | jget "d['changed']")" = "False" ] \
+  && [ "$(printf '%s' "$O" | jget "d['dry_run']")" = "False" ] \
+  && [ "$STATE_BEFORE" = "$STATE_AFTER" ] \
+  && ok "tasks validate --no-state is genuinely read-only" \
+  || bad "validate --no-state mutability" "envelope or state hash disagreed"
+
+O="$(jrun --json --dry-run tasks gate --stamp-by release-audit "$SPEC")"
+[ "$(printf '%s' "$O" | jget "d['dry_run']")" = "True" ] \
+  && [ "$(printf '%s' "$O" | jget "d['changed']")" = "False" ] \
+  && [ "$(printf '%s' "$O" | jget "d['command']")" = "tasks gate" ] \
+  && ok "tasks gate mutates only when an explicit stamp flag is present" \
+  || bad "tasks gate stamp mutability" "dry-run did not intercept the stamped form"
 
 # --- agent-context stays raw JSON under --json (not double-enveloped) ---
 jrun --json agent-context | python3 -c "import json,sys

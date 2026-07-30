@@ -16,6 +16,7 @@
 #   --skip-exit-coverage     Skip Exit Check coverage check
 #   --shellcheck-evals       Run shellcheck on eval_N() bodies (opt-in, requires shellcheck)
 #   --dry-run-eval           Source evals in a disposable subshell and run Exit Check (opt-in)
+#   --no-state               Validate read-only; do not refresh tasks/_state.yaml
 #
 # Exit codes:
 #   0 — valid Task-Spec (current v3, or v2/v1) OR accepted legacy v0/v1/v2 with warnings
@@ -65,6 +66,8 @@ CHECK_EXIT_COVERAGE=true
 STRICT_DEPENDS=false
 SHELLCHECK_EVALS=false
 DRY_RUN_EVAL=false
+WRITE_STATE=true
+VALIDATOR_VERSION="2"
 
 # Parse flags
 ARGS=()
@@ -77,6 +80,7 @@ while [[ $# -gt 0 ]]; do
     --skip-exit-coverage) CHECK_EXIT_COVERAGE=false; shift ;;
     --shellcheck-evals) SHELLCHECK_EVALS=true; shift ;;
     --dry-run-eval) DRY_RUN_EVAL=true; shift ;;
+    --no-state) WRITE_STATE=false; shift ;;
     --) shift; ARGS+=("$@"); break ;;
     -*)
       echo "Unknown option: $1" >&2
@@ -978,6 +982,9 @@ fi
 # and acceptance presupposes sign-off. Hand-setting `accepted: true` is rejected
 # the same way hand-stamping signed_off is.
 ACCEPTED_RAW=$(grep -m1 '^accepted:' "$FILE" 2>/dev/null | awk -F: '{print $2}' | xargs || true)
+if [[ "$STATUS" == "done" && "${ACCEPTED_RAW:-}" != "true" ]]; then
+  ERRORS+=("status: done requires accepted: true — accept and settle the task before moving it into done/")
+fi
 if [[ "${ACCEPTED_RAW:-}" == "true" ]]; then
   ACC_BY=$(grep -m1 '^accepted_by:' "$FILE" 2>/dev/null | sed -E 's/^accepted_by:[[:space:]]*//' || true)
   ACC_AT=$(grep -m1 '^accepted_at:' "$FILE" 2>/dev/null | sed -E 's/^accepted_at:[[:space:]]*//' || true)
@@ -991,6 +998,24 @@ if [[ "${ACCEPTED_RAW:-}" == "true" ]]; then
   fi
   if [[ "${SIGNED_OFF_RAW:-}" != "true" ]]; then
     ERRORS+=("accepted: true but signed_off is not true — a task cannot be accepted before it is signed off (gate → dispatch → accept ordering)")
+  fi
+fi
+if [[ "$STATUS" == "done" ]]; then
+  WORKSPACE_ROOT="$(ts_workspace_root "$FILE")"
+  RECEIPT="$WORKSPACE_ROOT/cvg/receipts/${ID}.json"
+  if [[ ! -f "$RECEIPT" ]]; then
+    ERRORS+=("status: done requires a passing execution receipt at cvg/receipts/${ID}.json")
+  elif ! python3 - "$RECEIPT" "$ID" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    receipt = json.load(handle)
+assert receipt.get("task_id") == sys.argv[2]
+assert receipt.get("result") == "pass"
+PY
+  then
+    ERRORS+=("status: done receipt must be valid JSON with matching task_id and result: pass")
   fi
 fi
 
@@ -1009,108 +1034,14 @@ if [[ ${#ERRORS[@]} -gt 0 ]]; then
   exit 1
 fi
 
-# --- State writer (only on successful validation) ---
-# The index belongs to the WORKSPACE that owns the spec, never to the git root.
-# Anchoring it at the git root makes a nested workspace (a proving ground, a
-# sub-project, a monorepo package) spill its task list into the parent repo —
-# and check-path-policy.py already treats `_state.yaml` as a sibling of the
-# spec, so the git-root location was the odd one out.
-abs_file="$FILE"
-if [[ "$abs_file" != /* ]]; then
-  abs_file="$(cd "$(dirname "$FILE")" 2>/dev/null && pwd)/$(basename "$FILE")"
+# --- State writer (only on successful validation, unless --no-state) ---
+if [[ "$WRITE_STATE" == true ]]; then
+  STATE_DIR="$(ts_backlog_root "$FILE")"
+  TASKSPEC_BACKLOG_DIR="$STATE_DIR" \
+    TASKSPEC_STATE_GENERATOR="validate-task-spec.sh" \
+    TASKSPEC_STATE_VALIDATOR_VERSION="$VALIDATOR_VERSION" \
+    bash "$TASKSPEC_SKILL_DIR/scripts/rebuild-state.sh" >/dev/null
 fi
-
-# The index belongs to the BACKLOG ROOT, which is not always the spec's own
-# directory. A finished spec is moved into a status bucket — `done/`, `parked/`,
-# `queue/` (transition-status.sh) — and a plain `dirname` then wrote a SECOND,
-# one-task `_state.yaml` inside that bucket: a shadow board holding 1 of 9 tasks
-# while the real index went stale, and anchored differently from it besides
-# (basename `done` misses the `tasks` test below, so its paths came out
-# repo-relative instead of workspace-relative). rebuild-state.sh has always
-# scanned buckets recursively and written ONE index at the backlog root; this is
-# the writer catching up to the reader.
-spec_dir="$(dirname "$abs_file")"
-BACKLOG_ABS=""
-if [[ -n "${TASKSPEC_BACKLOG_DIR:-}" && -d "$TASKSPEC_BACKLOG_DIR" ]]; then
-  BACKLOG_ABS="$(cd "$TASKSPEC_BACKLOG_DIR" && pwd)"
-fi
-# STATE_DIR and ANCHOR are chosen in the SAME branch on purpose. They were
-# independent tests once, and the pair could then be sourced from two different
-# roots: a nested workspace resolved its index locally while the anchor came
-# from an unrelated outer `cvg/tasks`, and every path in it fell out absolute.
-# Whoever picks the index must also pick what its paths are relative to.
-if [[ -n "$BACKLOG_ABS" && ( "$spec_dir" == "$BACKLOG_ABS" || "$spec_dir" == "$BACKLOG_ABS"/* ) ]]; then
-  # The configured backlog owns this spec — authoritative, and honors an
-  # overridden TASKSPEC_BACKLOG_DIR whose basename is not `tasks`.
-  STATE_DIR="$BACKLOG_ABS"
-  # Anchor at the WORKSPACE ROOT: the directory a relative TASKSPEC_BACKLOG_DIR
-  # is read from. "Parent of `tasks/`" is right only for the bare layout; under
-  # `cvg/tasks` it names `cvg/` and yields `tasks/done/T-x.md` where
-  # rebuild-state.sh writes `cvg/tasks/done/T-x.md`. That disagreement used to
-  # be invisible because the two writers wrote to DIFFERENT files; sharing one
-  # index, it would mix two path styles in the same list. Stripping the
-  # configured suffix reproduces rebuild-state.sh's `find` anchor at any depth.
-  if [[ "$TASKSPEC_BACKLOG_DIR" != /* && "$BACKLOG_ABS" != "${BACKLOG_ABS%/"$TASKSPEC_BACKLOG_DIR"}" ]]; then
-    ANCHOR="${BACKLOG_ABS%/"$TASKSPEC_BACKLOG_DIR"}"
-  else
-    ANCHOR="$(dirname "$STATE_DIR")"
-  fi
-elif [[ "$(basename "$(dirname "$spec_dir")")" == "tasks" ]]; then
-  # A bucket under a `tasks/` dir we could not resolve through the env var —
-  # validating by absolute path from outside the workspace, say.
-  STATE_DIR="$(dirname "$spec_dir")"
-  ANCHOR="$(dirname "$STATE_DIR")"
-else
-  # Paths stay relative to the workspace so the index reads the same whether or
-  # not the workspace is itself a git repo.
-  STATE_DIR="$spec_dir"
-  if [[ "$(basename "$STATE_DIR")" == "tasks" ]]; then
-    ANCHOR="$(dirname "$STATE_DIR")"
-  else
-    ANCHOR="${GIT_ROOT:-$STATE_DIR}"
-  fi
-fi
-STATE_FILE="$STATE_DIR/_state.yaml"
-VALIDATOR_VERSION="2"
-TS="$(date -u +%FT%TZ)"
-
-mkdir -p "$STATE_DIR"
-TMP_STATE="${STATE_FILE}.tmp.$$"
-
-REL_PATH="${abs_file#"$ANCHOR"/}"
-
-ts_prepare_tmp "$TMP_STATE"
-
-{
-  echo "# Auto-generated by validate-task-spec.sh — DO NOT EDIT DIRECTLY"
-  echo "# Source of truth: frontmatter in each tasks/T-*.md"
-  echo "schema_version: 1"
-  echo "tasks:"
-
-  # Preserve existing entries except current ID
-  if [[ -f "$STATE_FILE" ]]; then
-    awk -v target="$ID" '
-      /^- id: / {
-        if (in_block && !skip_block) print block
-        in_block=1; skip_block=0; block=$0
-        if ($3 == target) skip_block=1
-        next
-      }
-      in_block { block = block "\n" $0; next }
-      END { if (in_block && !skip_block) print block }
-    ' "$STATE_FILE"
-  fi
-
-  # Write new/updated entry
-  echo "- id: ${ID}"
-  echo "  path: ${REL_PATH}"
-  echo "  status: ${STATUS}"
-  echo "  effort: ${EFFORT}"
-  echo "  last_validated: ${TS}"
-  echo "  validator_version: ${VALIDATOR_VERSION}"
-} > "$TMP_STATE"
-
-mv "$TMP_STATE" "$STATE_FILE"
 
 if [[ ${#WARNINGS[@]} -gt 0 ]]; then
   if [[ "$FORMAT_VERSION" == "0" ]]; then

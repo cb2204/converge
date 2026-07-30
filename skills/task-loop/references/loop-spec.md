@@ -182,9 +182,10 @@ let an agent edit the auth code.
 
 `.cvg/gate.yaml` answers a different question: *"may ANY task ever write here?"*
 It is per-repo and **standing**, it is not part of the signed payload, and
-**denylist beats contract, always** — re-signing a spec cannot buy access to
-anything it lists. `max_files` adds a blast-radius cap that is orthogonal to
-paths: twelve legal files changed unattended is a different event from two.
+**protected paths beat contract, always** — re-signing a spec cannot buy access
+to anything they cover. `max_changed_files` adds a blast-radius cap that is
+orthogonal to paths: twelve legal files changed unattended is a different event
+from two.
 
 An unparseable gate is a FAILURE, never a skipped control. A fence you can
 disable with a typo is not a fence.

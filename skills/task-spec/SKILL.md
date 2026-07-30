@@ -186,10 +186,13 @@ Run `scripts/validate-task-spec.sh tasks/T-*.md`:
   to catch syntax errors and dead variables
 - `--dry-run-eval` (opt-in): sources the bash blocks in a disposable subshell and verifies
   the Exit Check exits 0 against the current repo
+- `--no-state` (opt-in): performs the same validation without refreshing the
+  derived task index; use it for CI, audits, and other read-only gates
 
 **State invariant:** Every successful validation idempotently updates `tasks/_state.yaml` with the
  task's frontmatter snapshot, `last_validated` timestamp, and `validator_version`. Failed
- validations do **not** write state — broken specs never pollute the audit trail. If
+ validations do **not** write state — broken specs never pollute the audit trail.
+`--no-state` is the explicit read-only exception. If
  `_state.yaml` doesn't reflect a task file's frontmatter, the validator hasn't run on it
  OR `rebuild-state.sh` is overdue.
 

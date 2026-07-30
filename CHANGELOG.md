@@ -28,7 +28,7 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ---
 
-## [0.1.0] — 2026-07-29
+## [0.1.0] — 2026-07-30
 
 The first release where the number means the same thing everywhere.
 
@@ -64,6 +64,10 @@ The first release where the number means the same thing everywhere.
 - **The first `## Holdout` blocks** — two XS specs (`obs-rowcounts`,
   `obs-fence`) authored to give tier 2 its first real work; the judge-only
   section is excluded from the 7B worker brief. See **Proven**.
+- **The 0.1.0 documentation set** — two canonical PDFs
+  (`docs/converge-v0.1.pdf`, `docs/task-spec-v0.1.pdf`) and four interactive
+  HTML walkthroughs under `presentation/`, replacing the pre-unification
+  v6 / v3.6.0 documents.
 
 ### Changed
 - Per-skill licence claims removed; the root `LICENSE` (MIT) governs the unit.
@@ -78,6 +82,20 @@ The first release where the number means the same thing everywhere.
   skill's scripts, only the catalog naming it. Eleven skills remain (9 spine +
   2 utility); its CI suite retires with it; the package stays recoverable from
   git history.
+- **The `uc-analytics` proving ground** (`tests/uc-analytics/`) — the
+  greenfield use case the descent 0→8 was first closed on. Its evidence is
+  summarized under **Proven** below and preserved in git history; the shipped
+  package carries no project-specific content. A CI step now asserts nothing
+  shipped still depends on it.
+- **`tests/e2e-test-engine`** — the domain-flavored golden fixture (a toy
+  data stack with a designed-RED eval). Same reason: the released package is
+  domain-agnostic. End-to-end coverage lives in
+  `tests/test-clean-room-install-e2e.sh`, which builds a throwaway repository
+  and proves the full install → init → bind → loop → accept → receipt chain
+  with a stub engine — no domain fixture required.
+- **`PLAN.md`** — the internal working document. The backlog now lives on the
+  project's issue tracker; the shipped repository records the present
+  (readme, this changelog, the surface ledgers), not the working state.
 
 ### Fixed
 - **Nine symptoms of one root cause**: gates deriving their own answer to "where
@@ -123,13 +141,16 @@ The first release where the number means the same thing everywhere.
   never settled `cap-freshness` — its only landing was BLOCKED, and completion
   was operator-driven — so no `result: pass` receipt ever existed. Closed
   honestly: the accept gate re-run dry against the settled tree, a `--post-hoc`
-  receipt written, and the gap documented in `receipts/README.md` rather than
-  papered over.
+  receipt written, and the gap documented in the proving ground's receipts
+  ledger rather than papered over (that ledger left the tree with the proving
+  ground — see **Removed**).
 
 ### Proven
-Backlog swept 9/9 on the `uc-analytics` proving ground: `TASK_LOOP=LOCAL_SETTLED`
-×2 then `SETTLED` ×7 through merged PRs, the last four green on the first
-iteration, board parity `CHECK_REGISTER=OK` at 9⇄9 with an empty ready frontier.
+Backlog swept 9/9 on the `uc-analytics` proving ground (since removed from the
+tree — see **Removed**; the runs live in git history and the merged PRs):
+`TASK_LOOP=LOCAL_SETTLED` ×2 then `SETTLED` ×7 through merged PRs, the last
+four green on the first iteration, board parity `CHECK_REGISTER=OK` at 9⇄9
+with an empty ready frontier.
 
 **Tier 2 has now graded real work, and both verdicts exist** (2026-07-29, on the
 two `## Holdout` specs — cross-family in both directions, no anthropic model in
@@ -892,3 +913,6 @@ the autonomy-contract producer.
 
 Initial public release. The 4-zone EDD format with frontmatter + runnable bash
 evals + validation card. See git history for the full change set.
+
+[Unreleased]: https://github.com/luanmorenommaciel/converge/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/luanmorenommaciel/converge/releases/tag/v0.1.0

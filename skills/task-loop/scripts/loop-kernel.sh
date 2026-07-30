@@ -75,7 +75,7 @@ VERIFIER="${CVG_VERIFIER:-$SCRIPT_DIR/../../task-to-runtime-contract/scripts/ver
 
 err() { printf 'ERROR: %s\n' "$*" >&2; }
 
-ISSUE=""; TASKS_DIR=""; AGENT="claude"; NO_AGENT=false
+ISSUE=""; TASKS_DIR=""; AGENT="claude"; AGENT_EXPLICIT=false; NO_AGENT=false
 MAX_ITER=""; MAX_SECONDS=""; MAX_TOKENS=""
 ALLOW_EXTERNAL=false; DRY_RUN=false; RESUME=false
 BASE=""; CONTRACT=""; LEGACY_NO_CONTRACT=false
@@ -100,8 +100,8 @@ while [ $# -gt 0 ]; do
     --issue=*)        ISSUE="${1#--issue=}"; shift ;;
     --tasks-dir)      [ $# -ge 2 ] || { err "--tasks-dir requires a value"; exit 2; }; TASKS_DIR="$2"; shift 2 ;;
     --tasks-dir=*)    TASKS_DIR="${1#--tasks-dir=}"; shift ;;
-    --agent)          [ $# -ge 2 ] || { err "--agent requires a value"; exit 2; }; AGENT="$2"; shift 2 ;;
-    --agent=*)        AGENT="${1#--agent=}"; shift ;;
+    --agent)          [ $# -ge 2 ] || { err "--agent requires a value"; exit 2; }; AGENT="$2"; AGENT_EXPLICIT=true; shift 2 ;;
+    --agent=*)        AGENT="${1#--agent=}"; AGENT_EXPLICIT=true; shift ;;
     --no-agent)       NO_AGENT=true; shift ;;
     --max-iterations) [ $# -ge 2 ] || { err "--max-iterations requires a value"; exit 2; }; MAX_ITER="$2"; shift 2 ;;
     --max-iterations=*) MAX_ITER="${1#--max-iterations=}"; shift ;;
@@ -186,6 +186,48 @@ fi
   printf 'TASK_LOOP=ERROR\n'; exit 4
 }
 TASK_ID="$(basename "$TASK_FILE" .md)"
+
+# Bind names the runtime whose assurance was actually resolved. A caller may
+# not silently execute through a different vendor and keep the old receipt.
+# `generic` is the portable detect-only contract and remains compatible with
+# any concrete engine; a vendor-specific profile either selects that engine or
+# rejects an explicit mismatch.
+ROUTING_CONTRACT="$CONTRACT"
+[ -n "$ROUTING_CONTRACT" ] || ROUTING_CONTRACT="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/execution-profile.yaml"
+case "$ROUTING_CONTRACT" in
+  /*) : ;;
+  *)  if [ -f "$WORKSPACE_ROOT/$ROUTING_CONTRACT" ]; then
+        ROUTING_CONTRACT="$WORKSPACE_ROOT/$ROUTING_CONTRACT"
+      elif [ -f "$INVOCATION_DIR/$ROUTING_CONTRACT" ]; then
+        ROUTING_CONTRACT="$INVOCATION_DIR/$ROUTING_CONTRACT"
+      fi ;;
+esac
+if [ "$NO_AGENT" != true ] && [ -f "$ROUTING_CONTRACT" ]; then
+  PROFILE_RUNTIME="$(python3 -c '
+import json, sys
+try:
+    value = json.load(open(sys.argv[1])).get("enforcement", {}).get("primary_runtime", "")
+except Exception:
+    value = ""
+print(str(value).strip().lower())
+' "$ROUTING_CONTRACT" 2>/dev/null || true)"
+  case "$PROFILE_RUNTIME" in
+    generic|"") : ;;
+    claude|codex|kimi)
+      if [ "$AGENT_EXPLICIT" = true ] && [ "$AGENT" != "$PROFILE_RUNTIME" ]; then
+        err "execution profile is bound to '$PROFILE_RUNTIME', but --agent requested '$AGENT' — re-bind for that runtime or use --agent $PROFILE_RUNTIME"
+        printf 'TASK_LOOP=USAGE_ERROR\n'
+        exit 2
+      fi
+      AGENT="$PROFILE_RUNTIME"
+      ;;
+    *)
+      err "execution profile names unsupported primary_runtime '$PROFILE_RUNTIME' — re-bind with generic|claude|codex|kimi"
+      printf 'TASK_LOOP=ERROR\n'
+      exit 4
+      ;;
+  esac
+fi
 
 # --------------------------------------------------------------------------
 # Budgets — the spec declares them; flags may only TIGHTEN them.

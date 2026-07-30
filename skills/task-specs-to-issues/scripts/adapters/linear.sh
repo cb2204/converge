@@ -301,10 +301,11 @@ ln_teams() {
 }
 
 # ---------------------------------------------------------------------------
-# VERB: users — list workspace users as  id<TAB>name<TAB>email  (setup people).
+# VERB: users — list workspace identities as id<TAB>name<TAB>email.
 # ---------------------------------------------------------------------------
-# Backs `cvg setup people --list`: the human maps an execution_backend/agent CHOICE
-# to one of these emails. Read-only; never writes. Empty email prints blank.
+# Backs `cvg setup identity --list`: the human maps an
+# execution_backend/agent choice to one of these identities. Read-only; never
+# writes. Empty email prints blank.
 ln_users() {
   _ln_require_tools
   _linear_resolve_key
@@ -593,7 +594,7 @@ ln_upsert() {
     # fresh here (nothing to union yet). project/milestone arrive as resolved UUIDs
     # from the driver's structure pre-pass; cycle resolves here from a human ref.
     local c_ass c_state c_subs="[]" c_cyc c_input
-    c_ass="$(_ln_resolve_user "$(_ln_people_map_lookup "$assignee")" 2>/dev/null || true)"
+    c_ass="$(_ln_resolve_user "$(_ln_identity_lookup "$assignee")" 2>/dev/null || true)"
     c_state="$(_ln_state_id "$state" 2>/dev/null || true)"
     [ -n "$subscribers" ] && c_subs="$(_ln_resolve_subscribers "$subscribers" 2>/dev/null || printf '[]')"
     c_cyc="$(_ln_cycle_id "$cycle" 2>/dev/null || true)"

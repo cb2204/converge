@@ -55,6 +55,36 @@ if [[ "$CURRENT" == "$NEW_STATUS" ]]; then
   exit 0
 fi
 
+if [[ "$NEW_STATUS" == "done" ]]; then
+  ACCEPTED=$(grep -m1 '^accepted:' "$TASK_FILE" 2>/dev/null | awk -F: '{print $2}' | xargs || true)
+  ACCEPTED_BY=$(grep -m1 '^accepted_by:' "$TASK_FILE" 2>/dev/null | sed -E 's/^accepted_by:[[:space:]]*//' || true)
+  ACCEPTED_AT=$(grep -m1 '^accepted_at:' "$TASK_FILE" 2>/dev/null | sed -E 's/^accepted_at:[[:space:]]*//' || true)
+  if [[ "$ACCEPTED" != "true" || -z "$ACCEPTED_BY" || "$ACCEPTED_BY" == "(none)" \
+    || -z "$ACCEPTED_AT" || "$ACCEPTED_AT" == "(none)" ]]; then
+    echo "ERROR: $TASK_ID cannot enter done until cvg tasks accept --stamp records accepted:true, accepted_by, and accepted_at" >&2
+    exit 1
+  fi
+  WORKSPACE_ROOT="$(ts_workspace_root "$TASK_FILE")"
+  RECEIPT="$WORKSPACE_ROOT/cvg/receipts/${TASK_ID}.json"
+  if [[ ! -f "$RECEIPT" ]]; then
+    echo "ERROR: $TASK_ID cannot enter done without a passing execution receipt at $RECEIPT" >&2
+    exit 1
+  fi
+  if ! python3 - "$RECEIPT" "$TASK_ID" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    receipt = json.load(handle)
+assert receipt.get("task_id") == sys.argv[2]
+assert receipt.get("result") == "pass"
+PY
+  then
+    echo "ERROR: $TASK_ID receipt is malformed, belongs to another task, or is not result:pass" >&2
+    exit 1
+  fi
+fi
+
 TMP="${TASK_FILE}.tmp.$$"
 ts_prepare_tmp "$TMP"
 awk -v new="$NEW_STATUS" '
@@ -84,12 +114,11 @@ case "$NEW_STATUS" in
 esac
 
 TS="$(date -u +%FT%TZ)"
-LEDGER_LINE="{\"ts\":\"$TS\",\"task\":\"$TASK_ID\",\"event\":\"status_change\",\"from\":\"$CURRENT\",\"to\":\"$NEW_STATUS\""
+METRIC_ARGS=(schema_version 1 ts "$TS" task "$TASK_ID" event status_change from "$CURRENT" to "$NEW_STATUS")
 if [[ -n "$REASON" ]]; then
-  LEDGER_LINE="$LEDGER_LINE,\"reason\":\"$REASON\""
+  METRIC_ARGS+=(reason "$REASON")
 fi
-LEDGER_LINE="$LEDGER_LINE}"
-echo "$LEDGER_LINE" >> "$TASKSPEC_BACKLOG_DIR/_metrics.jsonl"
+ts_append_metric "$TASKSPEC_BACKLOG_DIR/_metrics.jsonl" "${METRIC_ARGS[@]}"
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [[ -x "$SKILL_DIR/scripts/rebuild-state.sh" ]]; then
@@ -98,4 +127,6 @@ fi
 
 echo ">>> $TASK_ID: $CURRENT -> $NEW_STATUS"
 echo "    file: $TARGET_LOC"
-[[ -n "$REASON" ]] && echo "    reason: $REASON"
+if [[ -n "$REASON" ]]; then
+  echo "    reason: $REASON"
+fi

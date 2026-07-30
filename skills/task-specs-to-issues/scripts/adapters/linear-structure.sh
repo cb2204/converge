@@ -33,26 +33,44 @@ _ln_lock_file() {
 # _ln_lock_get KIND NAME -> cached uuid (empty if absent). Exact kind+name match.
 _ln_lock_get() {
   local kind="$1" name="$2" f
+  case "$kind$name" in
+    *$'\t'*|*$'\r'*|*$'\n'*) printf ''; return 0 ;;
+  esac
   f="$(_ln_lock_file)"
-  [ -f "$f" ] || { printf ''; return 0; }
+  [ -f "$f" ] && [ ! -L "$f" ] || { printf ''; return 0; }
   awk -F'\t' -v k="$kind" -v n="$name" '$1==k && $2==n {print $3; exit}' "$f" 2>/dev/null || printf ''
 }
 
 # _ln_lock_put KIND NAME UUID -> record the mapping (replace an existing row,
 # else append). Best-effort: a cache-write failure never aborts the caller.
 _ln_lock_put() {
-  local kind="$1" name="$2" uuid="$3" f tmp
+  local kind="$1" name="$2" uuid="$3" f dir tmp input
   [ -n "$uuid" ] || return 0
+  case "$kind$name$uuid" in
+    *$'\t'*|*$'\r'*|*$'\n'*) return 0 ;;
+  esac
   f="$(_ln_lock_file)"
-  mkdir -p "$(dirname "$f")" 2>/dev/null || return 0
-  [ -f "$f" ] || : > "$f"
-  tmp="$f.tmp.$$"
+  # The cache is machine-local identity metadata. Refuse symlinks, write through
+  # an unpredictable same-directory temporary, and keep it private just like
+  # .cvg/config and .cvg/identity.
+  if [ -L "$f" ] || { [ -e "$f" ] && [ ! -f "$f" ]; }; then
+    return 0
+  fi
+  dir="$(dirname "$f")"
+  mkdir -p "$dir" 2>/dev/null || return 0
+  tmp="$(mktemp "$dir/.projection-lock.XXXXXX" 2>/dev/null)" || return 0
+  chmod 600 "$tmp" 2>/dev/null || true
+  input="/dev/null"
+  [ -f "$f" ] && input="$f"
   awk -F'\t' -v k="$kind" -v n="$name" -v u="$uuid" '
     BEGIN{OFS="\t"; done=0}
     $1==k && $2==n {print k,n,u; done=1; next}
     {print}
     END{ if(!done) print k,n,u }
-  ' "$f" > "$tmp" 2>/dev/null && mv "$tmp" "$f" 2>/dev/null || rm -f "$tmp" 2>/dev/null
+  ' "$input" > "$tmp" 2>/dev/null \
+    && mv "$tmp" "$f" 2>/dev/null \
+    && chmod 600 "$f" 2>/dev/null \
+    || rm -f "$tmp" 2>/dev/null
   return 0
 }
 

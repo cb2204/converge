@@ -105,7 +105,7 @@ jira_upsert() {
       #     Portability guarantee — the enrichment degrades to nothing. Shift
       #     widths MUST match linear.sh (every arg takes a value except the
       #     bare --use-default-template flag), or the arg parse desyncs.
-      --assignee)             shift 2 ;;  # people-map -> Linear assignee; not seeded on Jira
+      --assignee)             shift 2 ;;  # identity -> Linear assignee; not seeded on Jira
       --state)                shift 2 ;;  # register uses the runtime transition path instead
       --subscriber)           shift 2 ;;  # repeatable; Jira watchers not seeded here
       --project)              shift 2 ;;  # Linear project; distinct from JIRA_PROJECT_KEY
@@ -316,7 +316,7 @@ jira_project_update_noop() {
   return 0
 }
 
-# users  (people directory for `cvg setup people`) — no Linear directory here.
+# users  (identity directory for `cvg setup identity`) — no Linear directory here.
 jira_users_noop() {
   echo "note: 'users' is a no-op on the jira backend (no Linear directory to enumerate)" >&2
   return 0

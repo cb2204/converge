@@ -1,22 +1,28 @@
 #!/usr/bin/env python3
-"""Enforce Task-Spec write scope for one candidate path or the current diff."""
+"""Enforce the trusted repository gate and one Task-Spec write scope."""
 
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
+import sys
 from pathlib import Path
 
-from _gate_policy import GatePolicyError, load_gate
+from _gate_policy import (
+    GatePolicyError,
+    find_git_root,
+    load_gate,
+    load_gate_from_git,
+    normalize_repo_path,
+)
 from _runtime_contract import (
-    strip_dot_slash,
     ContractError,
     do_not_touch,
     load_profile,
     parse_frontmatter,
     path_allowed,
     profile_task_path,
-    relpath,
     resolve_inside_repo,
     resolve_repo,
     task_paths,
@@ -24,164 +30,266 @@ from _runtime_contract import (
 
 
 def arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Check paths against a runtime contract.")
-    parser.add_argument("--profile", required=True)
+    parser = argparse.ArgumentParser(
+        description="Check repository changes against standing and task policy."
+    )
+    parser.add_argument("--profile")
     parser.add_argument("--repo")
     parser.add_argument("--candidate", action="append", default=[])
-    parser.add_argument("--base")
+    parser.add_argument(
+        "--base",
+        help="trusted starting commit; defaults to HEAD for a worktree diff",
+    )
     parser.add_argument("--paths-from-stdin", action="store_true")
-    return parser.parse_args()
+    parser.add_argument(
+        "--gate-only",
+        action="store_true",
+        help="enforce the repository gate without a Task-Spec profile",
+    )
+    args = parser.parse_args()
+    if not args.gate_only and not args.profile:
+        parser.error("--profile is required unless --gate-only is used")
+    return args
 
 
-def diff_paths(repo: Path, base: str | None) -> list[str]:
-    # --relative does two things that both matter for a workspace nested inside
-    # a larger repo: it SCOPES the diff to that directory, and it returns paths
-    # relative to it. Without it, `git diff` reports the whole repository using
-    # repo-root-relative paths, while the contract's fs.write scope is written
-    # relative to the workspace — so every authorized file looks like a
-    # violation and every file elsewhere in the repo looks like the task's.
-    commands = []
-    if base:
-        commands.append(["git", "-C", str(repo), "diff", "--relative", "--name-only", f"{base}...HEAD"])
-    commands.append(["git", "-C", str(repo), "diff", "--relative", "--name-only", "HEAD"])
-    changed = ""
-    for command in commands:
-        proc = subprocess.run(command, text=True, capture_output=True, check=False)
-        if proc.returncode != 0:
-            raise ContractError(proc.stderr.strip() or "git diff failed")
-        changed += proc.stdout + "\n"
-    untracked = subprocess.run(
-        ["git", "-C", str(repo), "ls-files", "--others", "--exclude-standard"],
-        text=True,
+def _git_z(repo: Path, args: list[str], failure: str) -> list[str]:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args],
         capture_output=True,
         check=False,
     )
-    if untracked.returncode != 0:
-        raise ContractError(untracked.stderr.strip() or "git ls-files failed")
-    return sorted(
-        set(
-            line.strip()
-            for line in (changed + untracked.stdout).splitlines()
-            if line.strip()
+    if proc.returncode != 0:
+        message = os.fsdecode(proc.stderr).strip()
+        raise ContractError(message or failure)
+    values = []
+    for raw in proc.stdout.split(b"\0"):
+        if raw:
+            values.append(os.fsdecode(raw))
+    return values
+
+
+def diff_paths(git_root: Path, base: str | None) -> list[str]:
+    """Return every Git-visible changed endpoint, repository-root-relative."""
+    changed: list[str] = []
+    if base:
+        changed.extend(
+            _git_z(
+                git_root,
+                ["diff", "--no-renames", "--name-only", "-z", f"{base}...HEAD"],
+                "git base diff failed",
+            )
+        )
+    changed.extend(
+        _git_z(
+            git_root,
+            ["diff", "--no-renames", "--name-only", "-z", "HEAD"],
+            "git worktree diff failed",
         )
     )
+    changed.extend(
+        _git_z(
+            git_root,
+            ["ls-files", "--others", "--exclude-standard", "-z"],
+            "git untracked-file scan failed",
+        )
+    )
+    return sorted({normalize_repo_path(path) for path in changed})
+
+
+def _candidate_paths(
+    value: str,
+    workspace: Path,
+    git_root: Path,
+) -> tuple[str | None, str | None]:
+    """Return ``(workspace_relative, git_relative)`` for one candidate."""
+    raw = Path(value).expanduser()
+    if raw.is_absolute():
+        resolved = raw.resolve()
+    else:
+        canonical = normalize_repo_path(value)
+        resolved = (workspace / canonical).resolve()
+
+    workspace_relative: str | None
+    git_relative: str | None
+    try:
+        workspace_relative = normalize_repo_path(
+            resolved.relative_to(workspace).as_posix()
+        )
+    except ValueError:
+        workspace_relative = None
+    try:
+        git_relative = normalize_repo_path(
+            resolved.relative_to(git_root).as_posix()
+        )
+    except ValueError:
+        git_relative = None
+    return workspace_relative, git_relative
+
+
+def _workspace_path(
+    git_path: str,
+    workspace_prefix: str,
+) -> str | None:
+    if not workspace_prefix:
+        return git_path
+    prefix = workspace_prefix + "/"
+    if git_path.startswith(prefix):
+        return git_path[len(prefix) :]
+    return None
+
+
+def _is_framework_path(path: str, profile: dict) -> bool:
+    receipt_value = str(profile.get("receipt", {}).get("path", ""))
+    framework_paths = {receipt_value} if receipt_value else set()
+    task_dir = Path(profile["task"]["spec_ref"]["path"]).parent
+    framework_paths.update(
+        {
+            (task_dir / "_state.yaml").as_posix(),
+            (task_dir / "_metrics.jsonl").as_posix(),
+            "cvg/STATE.md",
+        }
+    )
+    if path in framework_paths:
+        return True
+    task_id = str(profile.get("task", {}).get("id", "")).strip()
+    loop_prefixes = ["cvg/loop/"]
+    if task_id:
+        loop_prefixes.append(f"cvg/loop/{task_id}/")
+    if any(path.startswith(prefix) for prefix in loop_prefixes):
+        return True
+    if receipt_value:
+        receipt = Path(receipt_value)
+        candidate = Path(path)
+        if (
+            candidate.parent == receipt.parent
+            and candidate.name.startswith(receipt.stem + ".attempt-")
+            and candidate.suffix == receipt.suffix
+        ):
+            return True
+    return False
+
+
+def _fail_gate(gate, root_paths: list[str]) -> int | None:
+    hits = gate.violations(root_paths)
+    if hits:
+        source = gate.source or "<built-in policy self-protection>"
+        print(
+            f"Repository gate ({source}) forbids these paths "
+            "— no spec may widen this:"
+        )
+        for path, rule in hits:
+            print(f"  - {path}  (protected_paths rule: {rule})")
+        print("CHECK_PATH_POLICY=FAIL")
+        return 1
+    if gate.active and gate.exceeds_blast_radius(len(root_paths)):
+        print(
+            f"Repository gate ({gate.source}): {len(root_paths)} changed paths "
+            f"exceeds max_changed_files={gate.max_changed_files}. Every path may "
+            "be in task scope and the settlement blast radius is still too large."
+        )
+        print("CHECK_PATH_POLICY=FAIL")
+        return 1
+    return None
 
 
 def main() -> int:
     args = arguments()
     try:
-        repo = resolve_repo(args.repo)
-        profile_path = resolve_inside_repo(args.profile, repo)
+        workspace = resolve_repo(args.repo)
+        git_root = find_git_root(workspace)
+        try:
+            workspace_prefix = workspace.relative_to(git_root).as_posix()
+        except ValueError as exc:
+            raise ContractError(
+                f"consuming project is outside its Git repository: {workspace}"
+            ) from exc
+        if workspace_prefix == ".":
+            workspace_prefix = ""
+
+        supplied = list(args.candidate)
+        if args.paths_from_stdin:
+            supplied.extend(line.rstrip("\r\n") for line in sys.stdin if line.strip())
+        diff_mode = not supplied and not args.paths_from_stdin
+
+        workspace_paths: list[str] = []
+        root_paths: list[str] = []
+        outside_workspace: list[str] = []
+        outside_git: list[str] = []
+
+        if diff_mode:
+            trusted_ref = args.base or "HEAD"
+            root_paths = diff_paths(git_root, args.base)
+            gate = load_gate_from_git(git_root, trusted_ref)
+            for path in root_paths:
+                local = _workspace_path(path, workspace_prefix)
+                if local is None:
+                    outside_workspace.append(path)
+                else:
+                    workspace_paths.append(local)
+        else:
+            gate = load_gate(git_root)
+            for value in supplied:
+                local, root_path = _candidate_paths(value, workspace, git_root)
+                if root_path is None:
+                    outside_git.append(value)
+                else:
+                    root_paths.append(root_path)
+                if local is None:
+                    outside_workspace.append(value)
+                else:
+                    workspace_paths.append(local)
+            root_paths = sorted(set(root_paths))
+
+        gate_failure = _fail_gate(gate, root_paths)
+        if gate_failure is not None:
+            return gate_failure
+
+        if outside_git:
+            print("Paths outside the Git repository:")
+            for path in outside_git:
+                print(f"  - {path}")
+            print("CHECK_PATH_POLICY=FAIL")
+            return 1
+        if outside_workspace:
+            print("Changes outside the consuming project:")
+            for path in sorted(set(outside_workspace)):
+                print(f"  - {path}")
+            print("CHECK_PATH_POLICY=FAIL")
+            return 1
+
+        if args.gate_only:
+            source = f" ({gate.source})" if gate.active else ""
+            print(
+                f"Repository gate ready: {len(root_paths)} path(s) checked{source}."
+            )
+            print("CHECK_PATH_POLICY=PASS")
+            return 0
+
+        profile_path = resolve_inside_repo(str(args.profile), workspace)
         profile = load_profile(profile_path)
-        task = profile_task_path(profile, repo)
+        task = profile_task_path(profile, workspace)
         frontmatter, body = parse_frontmatter(task)
         allowed = task_paths(frontmatter)
         forbidden = do_not_touch(body)
 
-        candidates = list(args.candidate)
-        if args.paths_from_stdin:
-            import sys
-
-            candidates.extend(line.strip() for line in sys.stdin if line.strip())
-        diff_mode = not candidates and not args.paths_from_stdin
+        # Framework evidence is exempt only from the task's scope. It was
+        # already evaluated by the standing gate and blast-radius cap above.
         if diff_mode:
-            candidates = diff_paths(repo, args.base)
-            receipt_value = str(profile.get("receipt", {}).get("path", ""))
-            framework_paths = {receipt_value} if receipt_value else set()
-            task_dir = Path(profile["task"]["spec_ref"]["path"]).parent
-            framework_paths.update(
-                {
-                    (task_dir / "_state.yaml").as_posix(),
-                    (task_dir / "_metrics.jsonl").as_posix(),
-                }
-            )
-            # The loop's own bookkeeping is FRAMEWORK output, not task output.
-            # Pass 8 writes briefs, attempt logs, a durable checkpoint and a
-            # handoff note under cvg/loop/<task-id>/ — that is how the loop
-            # externalizes memory instead of keeping it in a context window.
-            # Counting it as the task's diff made every green run fail its own
-            # path policy: the loop was convicted of the evidence it is required
-            # to leave behind. It is exempt from the scope AND never staged,
-            # because open-issue-pr.sh stages only the contract's fs.write paths.
-            #
-            # cvg/STATE.md is the same class and was missed. The kernel appends
-            # one row to it on EVERY landing, so it is dirty before the second
-            # run in a workspace ever reaches settlement — and that run is then
-            # refused for a line the loop wrote about the previous run. The
-            # first run in a fresh workspace passes, which is exactly why this
-            # survived: the failure needs a history to appear.
-            framework_paths.add("cvg/STATE.md")
-            task_id = str(profile.get("task", {}).get("id", "")).strip()
-            loop_prefixes = ["cvg/loop/"]
-            if task_id:
-                loop_prefixes.append(f"cvg/loop/{task_id}/")
+            workspace_paths = [
+                path
+                for path in workspace_paths
+                if not _is_framework_path(path, profile)
+            ]
 
-            def _is_framework(path: str) -> bool:
-                if path in framework_paths:
-                    return True
-                if any(path.startswith(prefix) for prefix in loop_prefixes):
-                    return True
-                if receipt_value:
-                    receipt = Path(receipt_value)
-                    if (
-                        Path(path).parent == receipt.parent
-                        and Path(path).name.startswith(receipt.stem + ".attempt-")
-                        and Path(path).suffix == receipt.suffix
-                    ):
-                        return True
-                return False
-
-            candidates = [path for path in candidates if not _is_framework(path)]
-        if not candidates:
-            print("No changed paths.")
+        if not workspace_paths:
+            print("No task-owned changed paths.")
             print("CHECK_PATH_POLICY=PASS")
             return 0
 
-        normalized = []
-        outside = []
-        for candidate in candidates:
-            value = Path(candidate)
-            if value.is_absolute():
-                try:
-                    normalized.append(relpath(value, repo))
-                except ContractError:
-                    outside.append(candidate)
-            else:
-                normalized.append(strip_dot_slash(candidate))
-        # ---- FENCE 1: the repo gate. Checked FIRST and independently. --------
-        # The contract answers "may this task write here?". The gate answers
-        # "may ANY task ever write here?". A spec cannot grant what the repo
-        # forbids, so the gate is evaluated before the scope and its verdict is
-        # not overridable by re-signing — it is not part of the signed payload.
-        try:
-            gate = load_gate(repo, Path.cwd())
-        except GatePolicyError as exc:
-            # A gate that cannot be parsed is a FAILURE, never a skipped
-            # control. A fence you can disable with a typo is not a fence.
-            print(f"Gate policy unreadable: {exc}")
-            print("CHECK_PATH_POLICY=FAIL")
-            return 1
-
-        if gate.active:
-            forbidden_hits = gate.violations(normalized)
-            if forbidden_hits:
-                print(f"Repo gate ({gate.source}) forbids these paths — no spec may widen this:")
-                for path, rule in forbidden_hits:
-                    print(f"  - {path}  (denylist rule: {rule})")
-                print("CHECK_PATH_POLICY=FAIL")
-                return 1
-            if gate.exceeds_blast_radius(len(normalized)):
-                print(
-                    f"Repo gate ({gate.source}): {len(normalized)} changed paths exceeds "
-                    f"max_files={gate.max_files}. Every path may be in scope and the blast "
-                    f"radius is still too large for one unattended change."
-                )
-                print("CHECK_PATH_POLICY=FAIL")
-                return 1
-
-        # ---- FENCE 2: the task's own declared scope --------------------------
-        violations = outside + [
-            path for path in normalized if not path_allowed(path, allowed, forbidden)
+        violations = [
+            path
+            for path in sorted(set(workspace_paths))
+            if not path_allowed(path, allowed, forbidden)
         ]
         if violations:
             print("Out-of-scope paths:")
@@ -189,11 +297,15 @@ def main() -> int:
                 print(f"  - {path}")
             print("CHECK_PATH_POLICY=FAIL")
             return 1
-        _fence = f" · repo gate {gate.source.parent.parent.name}/.cvg/gate.yaml" if gate.active else ""
-        print(f"Path policy ready: {len(normalized)} path(s) inside Task-Spec scope{_fence}.")
+
+        fence = f" · repository gate {gate.source}" if gate.active else ""
+        print(
+            f"Path policy ready: {len(set(workspace_paths))} path(s) inside "
+            f"Task-Spec scope{fence}."
+        )
         print("CHECK_PATH_POLICY=PASS")
         return 0
-    except ContractError as exc:
+    except (ContractError, GatePolicyError) as exc:
         print(f"Path policy error: {exc}")
         print("CHECK_PATH_POLICY=FAIL")
         return 1
