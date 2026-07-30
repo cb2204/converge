@@ -79,6 +79,19 @@ The first release where the number means the same thing everywhere.
   source to a temp dir and hands off to the installer inside the clone.
   Copy-only by design (no durable checkout to symlink against), no TTY
   assumed, `CVG_REF` pins an exact tag, `CVG_REPO_URL` installs from a fork.
+- **The npm door** — a root `package.json` ships the whole unit as an npm
+  package installable straight from git, no registry account required:
+  `npm i -g github:luanmorenommaciel/converge` puts `cvg` AND `cvg-install`
+  (the skills installer) on PATH; `npm i -D` + `npx cvg` works project-local.
+  The package embeds `bin/`, all eleven `skills/`, and the plugin manifests,
+  so the CLI resolves its own home inside the installed package. Both
+  installer entrypoints resolve npm's bin symlinks before locating
+  themselves; a CI step asserts the packed tarball carries every anchor.
+- **Grok Build is a first-class harness** — the installer now writes a third
+  skills directory, `.grok/skills/` (Grok's native project-level discovery
+  path), alongside `.agents/skills/` (Codex + Kimi) and `.claude/skills/`.
+  Grok also reads Claude Code marketplaces and the `AGENTS.md` family
+  natively, so the marketplace door and the shared skills serve it too.
 - **The readme, rewritten as a front door** — 60-second quickstart, one
   flow diagram, the nine passes as a table, three install paths ranked by
   friction, and a Status section where every claim links to the suite that

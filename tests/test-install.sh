@@ -55,11 +55,12 @@ fi
 # Every skill, and only skills — skills/README.md must not become a skill dir.
 AGENT_COUNT="$(find "$T/.agents/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
 CLAUDE_COUNT="$(find "$T/.claude/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
+GROK_COUNT="$(find "$T/.grok/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
 EXPECTED="$(find "$SRC/skills" -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
-if [ "$AGENT_COUNT" = "$EXPECTED" ] && [ "$CLAUDE_COUNT" = "$EXPECTED" ]; then
-  ok "every skill installs for Codex/Kimi and Claude Code ($EXPECTED each)"
+if [ "$AGENT_COUNT" = "$EXPECTED" ] && [ "$CLAUDE_COUNT" = "$EXPECTED" ] && [ "$GROK_COUNT" = "$EXPECTED" ]; then
+  ok "every skill installs for Codex/Kimi, Claude Code, and Grok Build ($EXPECTED each)"
 else
-  bad "installed agents=$AGENT_COUNT claude=$CLAUDE_COUNT, expected $EXPECTED each"
+  bad "installed agents=$AGENT_COUNT claude=$CLAUDE_COUNT grok=$GROK_COUNT, expected $EXPECTED each"
 fi
 
 # The release default is a pinned copy. The CLI companion must travel with it.
@@ -212,7 +213,7 @@ fi
 
 # Re-running must not damage a working install.
 OUT2="$(bash "$SRC/install.sh" --target "$T" --bin-dir "$T/bin" 2>&1)"
-EXPECTED_SKIPS=$((EXPECTED * 2))
+EXPECTED_SKIPS=$((EXPECTED * 3))   # three harness dirs: .agents, .claude, .grok
 if printf '%s' "$OUT2" | grep -q "skipped $EXPECTED_SKIPS" && "$T/bin/cvg" version >/dev/null 2>&1; then
   ok "re-running the installer is safe and skips what is already there"
 else
@@ -231,8 +232,9 @@ T2="$(mktemp -d -t cvg-install2.XXXXXX)"
 git -C "$T2" init --quiet
 bash "$SRC/install.sh" --target "$T2" --no-bin --copy >/dev/null 2>&1
 if [ -d "$T2/.agents/skills/task-spec" ] && [ ! -L "$T2/.agents/skills/task-spec" ] \
-  && [ -d "$T2/.claude/skills/task-spec" ] && [ ! -L "$T2/.claude/skills/task-spec" ]; then
-  ok "--copy pins real shared and Claude skill directories"
+  && [ -d "$T2/.claude/skills/task-spec" ] && [ ! -L "$T2/.claude/skills/task-spec" ] \
+  && [ -d "$T2/.grok/skills/task-spec" ] && [ ! -L "$T2/.grok/skills/task-spec" ]; then
+  ok "--copy pins real shared, Claude, and Grok skill directories"
 else
   bad "--copy still produced a symlink"
 fi
@@ -243,6 +245,7 @@ git -C "$T3" init --quiet
 bash "$SRC/install.sh" --target "$T3" --symlink --bin-dir "$T3/bin" >/dev/null 2>&1
 if [ -L "$T3/.agents/skills/task-spec" ] \
   && [ -L "$T3/.claude/skills/task-spec" ] \
+  && [ -L "$T3/.grok/skills/task-spec" ] \
   && [ -L "$T3/bin/cvg" ] \
   && "$T3/bin/cvg" version >/dev/null 2>&1; then
   ok "--symlink explicitly enables the live development install"

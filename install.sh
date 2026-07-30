@@ -3,8 +3,9 @@
 #
 # Two things get installed, and they are deliberately separate:
 #
-#   1. the SKILLS  → <target>/.agents/skills/*   for Codex + Kimi
+#   1. the SKILLS  → <target>/.agents/skills/*   for Codex + Kimi (AGENTS.md family)
 #                  → <target>/.claude/skills/*   for Claude Code
+#                  → <target>/.grok/skills/*     for Grok Build
 #   2. the CLI     → `cvg` on your PATH          so the gates are runnable by hand
 #
 # Copy (default) pins the complete 0.1.0 tool surface so a consuming repository
@@ -26,7 +27,19 @@
 # Bash 3.2 compatible (stock macOS).
 set -euo pipefail
 
-CVG_SRC="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# Resolve symlinks before locating ourselves: npm installs bins as symlinks
+# (node_modules/.bin/cvg-install → this file), and the symlink's directory has
+# no skills/ beside it — which would wrongly trigger the remote bootstrap.
+_inst_self="${BASH_SOURCE[0]:-$0}"
+while [ -L "$_inst_self" ]; do
+  _inst_link="$(readlink "$_inst_self")"
+  case "$_inst_link" in
+    /*) _inst_self="$_inst_link" ;;
+    *)  _inst_self="$(dirname "$_inst_self")/$_inst_link" ;;
+  esac
+done
+CVG_SRC="$(cd "$(dirname "$_inst_self")" && pwd)"
+unset _inst_self _inst_link
 TARGET="$PWD"
 MODE="copy"
 BIN_DIR=""
@@ -107,11 +120,12 @@ echo
 INSTALLED=0
 SKIPPED=0
 
-for SKILL_DIR in "$TARGET/.agents/skills" "$TARGET/.claude/skills"; do
+for SKILL_DIR in "$TARGET/.agents/skills" "$TARGET/.claude/skills" "$TARGET/.grok/skills"; do
   mkdir -p "$SKILL_DIR"
   case "$SKILL_DIR" in
     */.agents/skills) printf '  shared skills (Codex + Kimi):\n' ;;
     */.claude/skills) printf '  Claude Code skills:\n' ;;
+    */.grok/skills)   printf '  Grok Build skills:\n' ;;
   esac
   for src in "$CVG_SRC"/skills/*/; do
     [ -f "$src/SKILL.md" ] || continue

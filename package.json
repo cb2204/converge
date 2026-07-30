@@ -1,0 +1,35 @@
+{
+  "name": "@luanmorenommaciel/converge",
+  "version": "0.1.0",
+  "description": "Spec-first delivery for coding agents — done is decided by runnable evals, not claimed by the agent. Nine gated passes, eleven portable skills, and the cvg referee CLI (bash 3.2+, zero runtime dependencies).",
+  "bin": {
+    "cvg": "bin/cvg",
+    "cvg-install": "install.sh"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    "install.sh",
+    "VERSION",
+    ".claude-plugin/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luanmorenommaciel/converge.git"
+  },
+  "homepage": "https://github.com/luanmorenommaciel/converge#readme",
+  "bugs": "https://github.com/luanmorenommaciel/converge/issues",
+  "keywords": [
+    "agentic",
+    "task-spec",
+    "evals",
+    "delivery",
+    "referee",
+    "claude-code",
+    "codex",
+    "kimi",
+    "grok"
+  ],
+  "author": "Luan Moreno M. Maciel",
+  "license": "MIT"
+}

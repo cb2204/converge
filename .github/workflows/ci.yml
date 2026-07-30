@@ -134,6 +134,21 @@ jobs:
             exit 1
           fi
 
+      - name: the npm package carries the whole tool surface
+        # `npm i -g github:…` and `npx` ship whatever `files` whitelists. A
+        # missing anchor here means a broken install for every npm consumer.
+        run: |
+          npm pack --dry-run --json > /tmp/pack.json
+          python3 - <<'PY'
+          import json
+          files = {f["path"] for f in json.load(open("/tmp/pack.json"))[0]["files"]}
+          need = ["bin/cvg", "bin/_ui.sh", "install.sh", "VERSION",
+                  "skills/task-spec/SKILL.md", ".claude-plugin/plugin.json"]
+          missing = [p for p in need if p not in files]
+          assert not missing, f"npm package is missing: {missing}"
+          print(f"npm package OK — {len(files)} files, all anchors present")
+          PY
+
       - name: task-spec
         run: bash skills/task-spec/tests/test-task-spec-skill.sh
 
