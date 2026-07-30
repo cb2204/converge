@@ -501,6 +501,7 @@ cvg_init() {
   [ -f "$task_templates/INDEX.md" ] \
     && [ -f "$task_templates/tasks-README.md" ] \
     && [ -f "$task_templates/receipts-README.md" ] \
+    && [ -f "$task_templates/prompts/pass-0-capture.md" ] \
     && [ -f "$gate_template" ] || {
       ui_err "the installed Converge package is missing workspace templates"
       printf 'CVG_INIT=PACKAGE_ERROR\n'
@@ -509,6 +510,7 @@ cvg_init() {
 
   for dir in \
     "$root/.cvg" \
+    "$root/cvg/brain/_prompts" \
     "$root/cvg/brain/decisions" \
     "$root/cvg/brain/definitions" \
     "$root/cvg/brain/notes" \
@@ -562,6 +564,12 @@ cvg_init() {
   _cvg_init_copy "$task_templates/tasks-README.md" "$root/cvg/tasks/README.md" || return 1
   _cvg_init_copy "$task_templates/receipts-README.md" "$root/cvg/receipts/README.md" || return 1
   _cvg_init_copy "$gate_template" "$root/.cvg/gate.yaml" || return 1
+  # The canonical pass prompts — the steering blueprint, one file per pass.
+  # Seeded so every workspace carries the method's voice, not a re-improvised
+  # one; non-clobbering like everything else here, so local edits survive.
+  for file in "$task_templates/prompts/"*.md; do
+    _cvg_init_copy "$file" "$root/cvg/brain/_prompts/$(basename "$file")" || return 1
+  done
 
   if [ ! -e "$root/cvg/tasks/_metrics.jsonl" ]; then
     : > "$root/cvg/tasks/_metrics.jsonl"

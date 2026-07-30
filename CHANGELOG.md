@@ -87,6 +87,13 @@ The first release where the number means the same thing everywhere.
   so the CLI resolves its own home inside the installed package. Both
   installer entrypoints resolve npm's bin symlinks before locating
   themselves; a CI step asserts the packed tarball carries every anchor.
+- **Canonical pass prompts** — `cvg init` now seeds `cvg/brain/_prompts/`
+  with one steering blueprint per pass (pass-0-capture … pass-8-loop plus a
+  README with the folder-discipline map). The prompts canonize how each pass
+  is driven from a harness chat: mission, inputs, hard boundaries (never open
+  held-back material, never edit a sealed eval), procedure, artifact
+  destinations, and the exit gate with its token. Born from the first uc-01
+  proving-ground run, where the steering lived only in the conductor's head.
 - **Grok Build is a first-class harness** — the installer now writes a third
   skills directory, `.grok/skills/` (Grok's native project-level discovery
   path), alongside `.agents/skills/` (Codex + Kimi) and `.claude/skills/`.

@@ -76,7 +76,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 
 | Command | Wraps | Proven by |
 |---|---|---|
-| `cvg init` | native workspace templates | creates the canonical tracked `.cvg/gate.yaml` and `cvg/{brain,docs,sketch,tasks,execution,loop,receipts}` control plane without clobbering existing files; idempotent `CVG_INIT=OK\|UNCHANGED`. |
+| `cvg init` | native workspace templates | creates the canonical tracked `.cvg/gate.yaml` and `cvg/{brain,docs,sketch,tasks,execution,loop,receipts}` control plane without clobbering existing files, and seeds `cvg/brain/_prompts/` with the canonical pass prompts (one steering blueprint per pass); idempotent `CVG_INIT=OK\|UNCHANGED`. |
 | `cvg capture [--draft\|--no-go] [brief]` | `idea-to-brd/scripts/check-brd.sh` (Pass 0 exit contract) | golden byte-parity with the direct gate on the signed proving-ground BRD (R0.P); discovery contract (0→exit 2, 2→exit 2 naming both, 1→gates) |
 | `cvg intent [--draft] [spec]` | `brd-docs-to-tech-req/scripts/check-tech-spec.sh` (Pass 1 exit contract) | golden byte-parity with the direct gate on the signed proving-ground tech-spec (R1.P); same discovery contract; exit-2 paths end in `CHECK_TECH_SPEC=USAGE_ERROR` |
 | `cvg structure [--final] [--dir d]` | `tech-req-to-adrs/scripts/scaffold-adr.sh --check` (Pass 2 ADR gate) | golden byte-parity with the direct gate on the canonical proving-ground ADR set (R2.P, EMPTY diff); discovery over `cvg/docs/adrs/` then `docs/adrs/` (0→exit 2, 2→exit 2 naming both, 1→gates); FAIL passed through unmasked; exit-2 paths end in `CHECK_ADR=USAGE_ERROR` |
