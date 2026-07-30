@@ -16,6 +16,7 @@ Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one re
 
 [Install](#-install) ·
 [Quickstart](#-quickstart-your-first-gated-task) ·
+[Steer from chat](#-steering-the-factory-from-chat) ·
 [How it works](#-how-it-works) ·
 [The passes](#-the-nine-passes) ·
 [The CLI](#-the-cvg-cli) ·
@@ -154,12 +155,21 @@ cvg loop --issue T-… --agent claude
 ```
 
 The loop lands in exactly one terminal state — `TASK_LOOP=SETTLED` on success, an honest named
-failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change.
+failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change. And in
+day-to-day use you rarely type these commands at all — see the next section.
 
-**Or steer it from chat.** The commands above are the referee's surface — but the skills are
-installed *in your harness*, and `cvg agent-context` hands any agent the whole surface as one
-JSON manifest. So in practice you don't type `cvg` yourself: you steer in plain language, stage
-by stage, and the agent drives the gates. A real run reads like this:
+---
+
+## 💬 Steering the factory from chat
+
+The commands above are the referee's surface — but the skills are installed *in your harness*,
+and `cvg agent-context` hands any agent the whole surface as one JSON manifest. So in practice
+you don't type `cvg` yourself: **you steer in plain language, stage by stage, and the agent
+drives the gates.** You never need to memorize the sequence either — `cvg setup` always prints
+the exact next step, `cvg lane` tells you which passes a change earns, and `cvg ready` answers
+"what now?" between tasks.
+
+A real run reads like this:
 
 ```text
 you   › I want a storm-alerts feed for our customers. Start a Converge run — capture it.
@@ -187,7 +197,9 @@ agent › Pass 7: contract bound — CHECK_RUNTIME_CONTRACT=PASS.
         TASK_LOOP=SETTLED — PR opened, receipt written. Next ready task: 2 of 6.
 ```
 
-You own intent and judgment; the factory owns procedure and proof.
+**You own intent and judgment; the factory owns procedure and proof.** Your voice is needed at
+exactly the moments that deserve it: the barrier sign-off after the adversarial review, and any
+objection the machines cannot settle. Everything else runs on gates.
 
 ## 🔁 How it works
 
