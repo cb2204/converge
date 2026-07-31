@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to **Converge** are documented here — the CLI (`bin/cvg`), the
-eleven skills, and the task-spec engine, which ship as ONE unit at ONE version.
+twelve skills, and the task-spec engine, which ship as ONE unit at ONE version.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 The version lives in the root `VERSION` file and nowhere else authoritative.
@@ -71,7 +71,7 @@ The first release where the number means the same thing everywhere.
 - **Claude Code plugin marketplace install** — `.claude-plugin/plugin.json` +
   `marketplace.json` make the repository itself an installable plugin:
   `/plugin marketplace add luanmorenommaciel/converge` then
-  `/plugin install converge@cvg` ships all eleven skills AND puts `bin/cvg` on
+  `/plugin install converge@cvg` ships all the skills AND puts `bin/cvg` on
   the session PATH — over git, no package manager, nothing to authenticate.
   Both manifests are enumerated by the version-unity gate.
 - **The one-line install** — `install.sh` now bootstraps itself when run
@@ -83,10 +83,20 @@ The first release where the number means the same thing everywhere.
   package installable straight from git, no registry account required:
   `npm i -g github:luanmorenommaciel/converge` puts `cvg` AND `cvg-install`
   (the skills installer) on PATH; `npm i -D` + `npx cvg` works project-local.
-  The package embeds `bin/`, all eleven `skills/`, and the plugin manifests,
+  The package embeds `bin/`, the whole `skills/` catalog, and the plugin manifests,
   so the CLI resolves its own home inside the installed package. Both
   installer entrypoints resolve npm's bin symlinks before locating
   themselves; a CI step asserts the packed tarball carries every anchor.
+- **`conductor-steps` — the twelfth skill: the descent's sequence layer.**
+  Derives which pass is CURRENT and which comes NEXT from workspace evidence
+  (each pass leaves artifacts in a known `cvg/` folder — no stored state, no
+  session memory), enforces order fail-closed with pre/post hooks, and owns
+  the canonical pass prompts. Surfaced in the CLI as **`cvg next`**: the
+  evidence board, the next pass, its steering prompt, and its closing gate in
+  one instant, read-only call. Evidence presence is never a verdict — the
+  gates stay authoritative. Born from the first uc-01 conducted run, to cut
+  per-session cognitive load and keep the chat-driven descent in order.
+  Proven by a 19-check hermetic suite wired into CI.
 - **Canonical pass prompts** — `cvg init` now seeds `cvg/brain/_prompts/`
   with one steering blueprint per pass (pass-0-capture … pass-8-loop plus a
   README with the folder-discipline map). The prompts canonize how each pass
@@ -114,9 +124,9 @@ The first release where the number means the same thing everywhere.
 - **`agents-kbs-tech-stack`** — the legacy harness donor, deleted rather than
   shipped. Pass 7B absorbed its cross-tool emitter pattern long ago, and a
   reference audit found nothing left invoking it — not `bin/cvg`, not any
-  skill's scripts, only the catalog naming it. Eleven skills remain (9 spine +
-  2 utility); its CI suite retires with it; the package stays recoverable from
-  git history.
+  skill's scripts, only the catalog naming it. The catalog then stood at
+  eleven (9 spine + 2 utility; `conductor-steps` later made it twelve); its CI
+  suite retires with it; the package stays recoverable from git history.
 - **The `uc-analytics` proving ground** (`tests/uc-analytics/`) — the
   greenfield use case the descent 0→8 was first closed on. Its evidence is
   summarized under **Proven** below and preserved in git history; the shipped
@@ -199,6 +209,9 @@ either seat):
   necessary, not sufficient — demonstrated, not asserted.*
 
 ### Known gaps at 0.1.0
+- The two shipped PDFs (`docs/*.pdf`) predate `conductor-steps` and still say
+  "eleven skills"; they cannot be regenerated from this tree (their HTML
+  sources were retired). Re-render at the next doc pass.
 - `task-spec/SKILL.md` is 569 lines against skill-creator's own 500-line rule.
 - Lessons exist for passes 0–3 only.
 - The kernel's tier-2 judge timeout is fixed at the verifier's 300s default —

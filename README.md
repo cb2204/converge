@@ -12,7 +12,7 @@
 [![bash 3.2+](https://img.shields.io/badge/bash-3.2%2B-4EAA25?logo=gnubash&logoColor=white)](#requirements)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one referee CLI, eleven portable skills, zero runtime dependencies
+Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one referee CLI, twelve portable skills, zero runtime dependencies
 
 [Install](#-install) ·
 [Quickstart](#-quickstart-your-first-gated-task) ·
@@ -63,7 +63,7 @@ because the referee is plain bash + stdlib Python, the same install serves every
 
 ## 📦 Install
 
-Three doors, same result: the eleven skills land in every harness's native directory and the
+Three doors, same result: the twelve skills land in every harness's native directory and the
 `cvg` CLI lands on your PATH. Pick the one that matches your stack.
 
 **① Plugin marketplace** — inside Claude Code (Grok Build reads Claude marketplaces natively):
@@ -165,9 +165,10 @@ day-to-day use you rarely type these commands at all — see the next section.
 The commands above are the referee's surface — but the skills are installed *in your harness*,
 and `cvg agent-context` hands any agent the whole surface as one JSON manifest. So in practice
 you don't type `cvg` yourself: **you steer in plain language, stage by stage, and the agent
-drives the gates.** You never need to memorize the sequence either — `cvg setup` always prints
-the exact next step, `cvg lane` tells you which passes a change earns, and `cvg ready` answers
-"what now?" between tasks.
+drives the gates.** You never need to memorize the sequence either — **`cvg next`** derives
+where the descent stands from workspace evidence and names the next pass, its steering prompt,
+and its closing gate; `cvg lane` tells you which passes a change earns; `cvg setup` prints the
+exact next step when anything is missing; and `cvg ready` answers "what now?" between tasks.
 
 A real run reads like this:
 
@@ -245,8 +246,11 @@ do the work; the gate proves it happened.
 | 7 | **Bind**<br>[`task-to-runtime-contract`](skills/task-to-runtime-contract/) | Freeze the execution contract: profile, write fence, pinned hashes | this host can actually enforce it | `CHECK_RUNTIME_CONTRACT=PASS` |
 | 8 | **The Loop**<br>[`task-loop`](skills/task-loop/) | An engine attempts, evals verify, repeat — bounded on three axes | evals green within budget, receipt written | `TASK_LOOP=SETTLED` |
 
-Two utilities round out the eleven: [`pass-to-lesson`](skills/pass-to-lesson/) (teach what a
-pass just did) and [`skill-creator`](skills/skill-creator/) (author + validate new skills).
+Three utilities round out the twelve: [`conductor-steps`](skills/conductor-steps/) (the
+sequence layer — derives where the descent stands from workspace evidence, enforces order
+with pre/post hooks, and owns the canonical pass prompts; surfaced as `cvg next`),
+[`pass-to-lesson`](skills/pass-to-lesson/) (teach what a pass just did), and
+[`skill-creator`](skills/skill-creator/) (author + validate new skills).
 The full catalog with per-skill detail: [`skills/README.md`](skills/README.md).
 
 ## 🛠 The `cvg` CLI
@@ -318,7 +322,7 @@ surface ledger — every command, what it wraps, and what proved it — is
 
 ## 🧾 Status
 
-**Converge 0.1.0** ships the CLI, eleven skills, and the Task-Spec engine as one versioned unit —
+**Converge 0.1.0** ships the CLI, twelve skills, and the Task-Spec engine as one versioned unit —
 the first release where every claim has a receipt behind it:
 
 - **CI is public and green on macOS (bash 3.2) and Linux** — 21 hermetic suites, no secrets, no
@@ -347,7 +351,7 @@ on the roadmap; full history in the [CHANGELOG](CHANGELOG.md).
 | [`docs/task-spec-v0.1.pdf`](docs/task-spec-v0.1.pdf) | the cornerstone unit in depth — six tiers, dual gates, anti-reward-hacking |
 | [`presentation/converge.html`](presentation/converge.html) | interactive walkthrough — method, trust chain, evidence model |
 | [`presentation/task-spec.html`](presentation/task-spec.html) | Task-Spec anatomy, authoring, signing, execution, recovery |
-| [`presentation/cvg-passes-skills-cli.html`](presentation/cvg-passes-skills-cli.html) | all nine passes, eleven skills, and the CLI, step by step |
+| [`presentation/cvg-passes-skills-cli.html`](presentation/cvg-passes-skills-cli.html) | all nine passes, the skills, and the CLI, step by step |
 | [`presentation/asd-agentic-loop.html`](presentation/asd-agentic-loop.html) | the agentic loop: bounded autonomy and settlement |
 | [`skills/README.md`](skills/README.md) | the skill catalog — what each pass ships and gates |
 | [`bin/README.md`](bin/README.md) | the CLI surface ledger — every command and what proved it |

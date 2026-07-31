@@ -1,6 +1,6 @@
 {
   "name": "cvg",
-  "description": "Converge — compile intent into shipped software. The dark factory for coding agents: one install ships the eleven /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
+  "description": "Converge — compile intent into shipped software. The dark factory for coding agents: one install ships the twelve /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
   "owner": {
     "name": "Luan Moreno M. Maciel",
     "url": "https://github.com/luanmorenommaciel"
@@ -9,7 +9,7 @@
     {
       "name": "converge",
       "source": "./",
-      "description": "The nine-pass Converge method (eleven skills) plus the cvg referee CLI on PATH. Zero dependencies: bash 3.2+, no npm, no pip.",
+      "description": "The nine-pass Converge method (twelve skills) plus the cvg referee CLI on PATH. Zero dependencies: bash 3.2+, no npm, no pip.",
       "version": "0.1.0",
       "license": "MIT",
       "category": "workflow",

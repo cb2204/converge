@@ -470,7 +470,7 @@ cvg_init() {
     return 2
   fi
 
-  local root="$CVG_PROJECT_ROOT_DIR" task_templates gate_template
+  local root="$CVG_PROJECT_ROOT_DIR" task_templates gate_template prompt_templates
   local changed=0 dir file
   if ! git -C "$root" rev-parse --show-toplevel >/dev/null 2>&1; then
     ui_err "cvg init requires a Git repository; initialize Git first"
@@ -497,11 +497,12 @@ cvg_init() {
   done
 
   task_templates="$CVG_HOME_DIR/skills/task-spec/templates/workspace"
+  prompt_templates="$CVG_HOME_DIR/skills/conductor-steps/templates/prompts"
   gate_template="$CVG_HOME_DIR/skills/task-to-runtime-contract/templates/gate.yaml"
   [ -f "$task_templates/INDEX.md" ] \
     && [ -f "$task_templates/tasks-README.md" ] \
     && [ -f "$task_templates/receipts-README.md" ] \
-    && [ -f "$task_templates/prompts/pass-0-capture.md" ] \
+    && [ -f "$prompt_templates/pass-0-capture.md" ] \
     && [ -f "$gate_template" ] || {
       ui_err "the installed Converge package is missing workspace templates"
       printf 'CVG_INIT=PACKAGE_ERROR\n'
@@ -564,10 +565,10 @@ cvg_init() {
   _cvg_init_copy "$task_templates/tasks-README.md" "$root/cvg/tasks/README.md" || return 1
   _cvg_init_copy "$task_templates/receipts-README.md" "$root/cvg/receipts/README.md" || return 1
   _cvg_init_copy "$gate_template" "$root/.cvg/gate.yaml" || return 1
-  # The canonical pass prompts — the steering blueprint, one file per pass.
-  # Seeded so every workspace carries the method's voice, not a re-improvised
-  # one; non-clobbering like everything else here, so local edits survive.
-  for file in "$task_templates/prompts/"*.md; do
+  # The canonical pass prompts — the steering blueprint, one file per pass,
+  # owned by the conductor-steps skill (the sequence layer). Seeded so every
+  # workspace carries the method's voice; non-clobbering, so local edits survive.
+  for file in "$prompt_templates/"*.md; do
     _cvg_init_copy "$file" "$root/cvg/brain/_prompts/$(basename "$file")" || return 1
   done
 
@@ -1120,6 +1121,10 @@ cmd_help() {
   printf '  register --check         gate the mapping (1:1, DAG, no orphans); read-only\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  next [--lane FULL|NORMAL|FAST]\n'
+  printf '                           the CONDUCTOR — where the descent stands and which\n'
+  printf '                           pass comes next, derived from workspace evidence;\n'
+  printf '                           prints the steering prompt + closing gate (NEXT_PASS)\n'
   printf '  ready [--all]            the FRONTIER — ready AND unblocked. --all lists\n'
   printf '                           every status:ready spec, blocked or not\n'
   printf '  lint                     lint the whole backlog (cycles, overlaps)\n'
@@ -1679,6 +1684,13 @@ case "$CMD" in
     [ -f "$LANER" ] || { ui_err "task-spec skill is incomplete under $CVG_HOME_DIR/skills"; printf 'LANE=USAGE_ERROR\n'; exit 2; }
     exec python3 "$LANER" "$@"
     ;;
+  next)
+    # The conductor — where does the descent stand, what comes next. Derived
+    # from workspace evidence, never stored; read-only; gates stay authoritative.
+    CONDUCTOR="$CVG_HOME_DIR/skills/conductor-steps/scripts/next-pass.sh"
+    [ -f "$CONDUCTOR" ] || { ui_err "conductor-steps skill is incomplete under $CVG_HOME_DIR/skills"; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+    CVG_PROJECT_ROOT="$CVG_PROJECT_ROOT_DIR" exec bash "$CONDUCTOR" next "$@"
+    ;;
   gate)
     # The repo write fence — the one a Task-Spec cannot widen. Read-only.
     GATER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/check-gate.py"
@@ -1932,6 +1944,7 @@ m = {
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
+    c("next [--lane FULL|NORMAL|FAST]", None, "conductor-steps/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the canonical steering prompt to hand the agent (cvg/brain/_prompts/pass-N-*.md), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
     c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
     c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
     c("version", None, "native", ["cvg <semver>"], False, "cvg version", "Print the version."),

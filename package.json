@@ -1,7 +1,7 @@
 {
   "name": "@luanmorenommaciel/converge",
   "version": "0.1.0",
-  "description": "Compile intent into shipped software — the dark factory for coding agents. Nine gated passes, eleven portable skills, and the cvg referee CLI (bash 3.2+, zero runtime dependencies); done is proven by runnable evals, never claimed.",
+  "description": "Compile intent into shipped software — the dark factory for coding agents. Nine gated passes, twelve portable skills, and the cvg referee CLI (bash 3.2+, zero runtime dependencies); done is proven by runnable evals, never claimed.",
   "bin": {
     "cvg": "bin/cvg",
     "cvg-install": "install.sh"

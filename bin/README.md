@@ -110,6 +110,7 @@ R2.P golden diff EMPTY) · Task-Specs `tasks/done/T-20260719-cvg-router.md` +
 | `cvg eval <spec>` | `run-task-spec.sh` | ran its own birth task's evals, 3/3 + Exit Check |
 | `cvg lint` | `lint-backlog.sh` | routed pass-through |
 | `cvg transition <id> <state>` | `transition-status.sh` | moved `T-20260719-cvg-router` ready → done |
+| `cvg next [--lane FULL\|NORMAL\|FAST]` | `conductor-steps/scripts/next-pass.sh` | **the descent conductor** — derives which pass is current and which comes next from workspace evidence (no stored state), prints the evidence board, the canonical steering prompt (`cvg/brain/_prompts/pass-N-*.md`), and the pass's closing gate. Read-only and instant (presence probes, never gate execution); evidence presence is not a verdict — the gates stay authoritative. Same engine's `pre N`/`post N` hooks enforce order fail-closed. Proven: 19-check hermetic suite. `NEXT_PASS=0-8\|DONE`. |
 | `cvg ready [--all]` | `list-ready.sh` | **dependency-aware** — emits only the dispatchable frontier (status `ready` **and** every `depends_on` already done), then reports how many ready specs it hid. It previously ignored `depends_on` entirely and listed all 9 backbone specs as ready when the true frontier was 1, contradicting the register gate — and `ready` is the surface a Manager selects from, so it would have dispatched 8 tasks whose inputs do not exist yet. Fails closed on a dangling or cyclic edge; `--all` restores the flat listing. |
 | `cvg setup harness` | `task-to-runtime-contract/scripts/scaffold-router.py` | scaffolds the **project router** (~50 lines: identity, folder map, where-to-look, house rules) and stops. **cvg never generates doctrine.** Non-clobbering: an existing router is untouched and a `.proposed` sibling is written instead. `SETUP_HARNESS=OK\|PROPOSED\|UNCHANGED\|USAGE_ERROR`. |
 | `cvg setup engines` | `sketch-plans-adversarial-review/scripts/doctor.sh` | alias for `cvg doctor` inside the setup surface — per-engine readiness PASS/SKIP with the same `DOCTOR=OK\|FAIL` contract. |
@@ -170,8 +171,9 @@ told apart.
 
 ## Not yet built
 
-`status` · `next` · `ci` · `work` · `run`/`route` · `board`/`graph` ·
-`deliver`/`metrics` — tracked on the project board.
+`status` · `ci` · `work` · `run`/`route` · `board`/`graph` ·
+`deliver`/`metrics` — tracked on the project board. (`next` **shipped** as the
+conductor-steps surface.)
 
 `verify` **shipped** as the tier-2 judge; `doctor` and `lane` shipped
 earlier. What the surface still owes is *dispatch* across the fleet — the
