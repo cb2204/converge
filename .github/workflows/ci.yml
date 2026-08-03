@@ -167,6 +167,12 @@ jobs:
       - name: cvg json envelope
         run: bash tests/test-cvg-json-envelope.sh
 
+      - name: cvg doctor plugin — a project must not load a stale Converge
+        # The drift that let a use case run four green gates on skills eight
+        # commits old. Hermetic: a throwaway CLAUDE_CONFIG_DIR with a local git
+        # "marketplace"; no network, no real plugin install touched.
+        run: bash tests/test-cvg-doctor-plugin.sh
+
       - name: cvg lesson — the teaching companion's CLI door
         # The companion was the one skill with a gate script, a machine token,
         # and no verb. Byte-parity, the discovery contract, --immutable, and

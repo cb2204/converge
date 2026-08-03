@@ -24,6 +24,33 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
+### Added
+- **`cvg doctor plugin` — "which copy of me is actually running?"** A tool that
+  cannot answer that makes every other verdict it gives unfalsifiable, and this
+  release earned the check the hard way: a live use case returned four GREEN
+  gates while loading skills **eight commits stale**. `cvg` on PATH was a current
+  dev checkout; the plugin cache the project loads was pinned a week back. "It is
+  fixed" and "I do not see it" were both true, nothing on either side reported the
+  split, and finding it by hand cost several rounds.
+  - Compares the plugin install record's `gitCommitSha` against the marketplace
+    clone's HEAD, and — the claim that actually matters — **fingerprints the loaded
+    tree against that clone's content**. A sha alone is not enough: the cache path
+    is keyed by version (`…/cache/<mp>/<plugin>/<version>`), so while `VERSION`
+    does not move, an update resolves to the same directory and can rewrite the
+    record while keeping the old bytes.
+  - Also **warns when you are running a different copy than projects load**, since
+    green gates in a dev checkout prove nothing about the plugin. That warning is
+    the exact blind spot from 2026-08-03.
+  - `DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR`. Read-only and **offline by design** —
+    it never fetches, because a network-dependent doctor lies when offline.
+    `UNMANAGED` exits 0: using Converge from a checkout is legitimate, not a fault.
+- **`tests/test-cvg-doctor-plugin.sh`** (14 rows, hermetic) — reproduces both
+  failure shapes in a throwaway `CLAUDE_CONFIG_DIR` with a local git marketplace:
+  the cache pinned to an older commit, and the subtler same-version case where the
+  sha says current and only the content betrays it. Plus fail-closed on a missing
+  install path, `UNMANAGED` on no install, read-onlyness, and discoverability in
+  `help` and `agent-context`. Wired into CI.
+
 ### Changed
 - **The workspace folder is `cvg/swimlanes/`, not `cvg/sketch/`** — the last
   piece of the Pass 3 rename. `sketch` described a drafting stage; the folder

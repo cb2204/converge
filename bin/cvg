@@ -1051,6 +1051,124 @@ cvg_setup_projection() {
   return 0
 }
 
+# cvg_doctor_plugin — is the Converge a consuming project LOADS the same Converge
+# as its source?
+#
+# WHY THIS EXISTS
+# On 2026-08-03 a live use case returned four green gates while running skills
+# EIGHT commits stale. `cvg` on PATH resolved to a current dev checkout; the plugin
+# cache the project actually loads was pinned a week back. So "it is fixed" and "I
+# do not see it" were BOTH true, and neither side reported the split — it cost
+# several rounds to find by hand. Worse, the cache path is keyed by VERSION
+# (…/cache/<mp>/<plugin>/<version>), so while VERSION does not move an update
+# resolves to the same directory and the drift can persist indefinitely.
+#
+# A tool that cannot answer "which copy of me is actually running?" makes every
+# other verdict it gives unfalsifiable. This answers it.
+#
+# Read-only, offline (never fetches — a network-dependent doctor lies when offline).
+# Token: DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR
+cvg_doctor_plugin() {
+  CVG_DP_HOME="$CVG_HOME_DIR" python3 - <<'PY'
+import json, os, subprocess, sys, hashlib
+
+cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+plugins = os.path.join(cfg, "plugins")
+running = os.environ.get("CVG_DP_HOME", "")
+
+def out(tok, code):
+    print(f"DOCTOR_PLUGIN={tok}")
+    sys.exit(code)
+
+print("== cvg doctor plugin · which Converge does a consuming project load? ==")
+print(f"  running from : {running}")
+
+reg = os.path.join(plugins, "installed_plugins.json")
+if not os.path.isdir(plugins) or not os.path.exists(reg):
+    print("  no plugin installation found — nothing to compare.")
+    print("  (Converge is being used from a checkout or PATH install, not as a plugin.)")
+    out("UNMANAGED", 0)
+
+try:
+    reg_data = json.load(open(reg, encoding="utf-8")).get("plugins", {})
+except (ValueError, OSError) as e:
+    print(f"  FAIL — cannot read {reg}: {e}")
+    out("ERROR", 2)
+
+entries = [(k, e) for k, v in reg_data.items() if k.split("@")[0] == "converge"
+           for e in (v if isinstance(v, list) else [v])]
+if not entries:
+    print("  no converge plugin entry — nothing to compare.")
+    out("UNMANAGED", 0)
+
+def tree_hash(root, skip=(".git", ".in_use")):
+    """Content fingerprint of an install tree — the real claim, not just the sha."""
+    h = hashlib.sha256()
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d not in skip)
+        for fn in sorted(filenames):
+            p = os.path.join(dirpath, fn)
+            rel = os.path.relpath(p, root)
+            h.update(rel.encode())
+            try:
+                with open(p, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(65536), b""):
+                        h.update(chunk)
+            except OSError:
+                h.update(b"<unreadable>")
+    return h.hexdigest()
+
+stale = 0
+for key, e in entries:
+    mp = key.split("@", 1)[1] if "@" in key else ""
+    install = e.get("installPath", "")
+    clone = os.path.join(plugins, "marketplaces", mp)
+    print(f"\n  plugin       : {key}")
+    print(f"  loaded from  : {install}")
+    print(f"  version key  : {e.get('version','?')}")
+    if e.get("projectPath"):
+        print(f"  scoped to    : {e['projectPath']}")
+
+    if not os.path.isdir(install):
+        print("  FAIL — the recorded install path does not exist; the plugin cannot load.")
+        stale = 1
+        continue
+    if not os.path.isdir(os.path.join(clone, ".git")):
+        print(f"  WARN — no marketplace clone at {clone}; cannot prove freshness.")
+        continue
+
+    head = subprocess.run(["git", "-C", clone, "rev-parse", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    rec = (e.get("gitCommitSha") or "")
+    print(f"  source HEAD  : {head[:7] or '?'}   (marketplace clone, not fetched)")
+    print(f"  record says  : {rec[:7] or '<none>'}")
+
+    if head and rec and head != rec:
+        print("  FAIL — the install record names a commit the source has moved past.")
+        stale = 1
+
+    if tree_hash(install) != tree_hash(clone):
+        print("  FAIL — loaded CONTENT differs from the source clone.")
+        print("         The version-keyed cache path did not change, so an update")
+        print("         can resolve to this same directory and keep serving it.")
+        stale = 1
+    else:
+        print("  ok   — loaded content is byte-identical to the source clone.")
+
+    if running and os.path.realpath(running) != os.path.realpath(install):
+        print("  note — you are running a DIFFERENT copy than projects load.")
+        print("         Green gates here do not prove the plugin is current.")
+
+print()
+if stale:
+    print("GATE: STALE — refresh the plugin, then re-run. A consuming project is")
+    print("      loading a Converge that is not the source.")
+    out("STALE", 1)
+print("GATE: OK — every consuming project loads the same Converge as its source.")
+out("OK", 0)
+PY
+}
+
 cmd_version() {
   local ts_ver
   ts_ver="$(grep -m1 '^TASKSPEC_VERSION=' "$SCRIPTS/_lib.sh" | cut -d'"' -f2)"
@@ -1085,6 +1203,10 @@ cmd_help() {
   printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
   printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
+  printf '  doctor plugin            is the Converge your PROJECTS load the same one as\n'
+  printf '                           its source? compares the plugin install record and\n'
+  printf '                           its content against the marketplace clone. Read-only\n'
+  printf '                           and offline (DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR)\n'
   printf '  doctor runtime-contract  attest what THIS host can enforce for Pass 7 —\n'
   printf '                           isolation primitive, runtime binary, worktree\n'
   printf '                           (DOCTOR_RUNTIME_CONTRACT=OK|DEGRADED|FAIL)\n'
@@ -1861,9 +1983,18 @@ case "$CMD" in
         }
         exec python3 "$ATTEST" "$@"
         ;;
+      plugin)
+        shift
+        if [ $# -gt 0 ]; then
+          ui_err "cvg doctor plugin takes no arguments"
+          printf 'DOCTOR_PLUGIN=ERROR\n'
+          exit 2
+        fi
+        cvg_doctor_plugin
+        ;;
       "") exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
       *)
-        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract"
+        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract | plugin"
         printf 'DOCTOR=USAGE_ERROR\n'
         exit 2
         ;;
@@ -2056,6 +2187,7 @@ m = {
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
     c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
+    c("doctor plugin", None, "native (plugin install record + content fingerprint)", ["DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR"], False, "cvg doctor plugin", "Answer the one question that makes every other verdict falsifiable: is the Converge a CONSUMING PROJECT loads the same Converge as its source? Compares the plugin install record's gitCommitSha against the marketplace clone's HEAD, and — the real claim — fingerprints the loaded tree against that clone's content. STALE means a project is running skills that are not the source, which is invisible otherwise: the cache path is keyed by version, so while VERSION does not move an update resolves to the same directory and keeps serving the stale copy. Also warns when you are running a different copy (a dev checkout) than projects load, because green gates there prove nothing about the plugin. UNMANAGED (exit 0) when there is no plugin install to compare. Read-only and offline by design — it never fetches, since a network-dependent doctor lies when offline."),
     c("lesson [<file>] [--immutable <path>...]", None, "pass-to-lesson/check-lesson.sh", ["CHECK_LESSON=PASS|FAIL|USAGE_ERROR"], False, "cvg lesson cvg/docs/lessons/lesson-pass-1-billing.md", "The teaching companion's gate — optional, invocable after ANY pass closes, and it never blocks the descent. Converge delegates the writing of every artifact but not the understanding of it: this gates the lesson a pass earned (all seven sections by exact name, 'what breaks downstream' on every component block, a non-empty decisions table, 3-5 check-yourself questions, and well-formed teaching-mode sections when the lesson declares modes). With --immutable <taught-artifact>... it proves teaching changed nothing it taught (clean git status; outside a repo it warns and skips). Discovery finds cvg/docs/lessons/ then legacy docs/lessons/ when no path is given; lessons accumulate by design, so more than one is a usage error naming them all rather than a non-deterministic newest-wins guess. Steering prompt: skills/pass-to-lesson/references/pass-prompt.md. What the gate cannot see stays human: that every emitted artifact is actually taught, that each rejected alternative is real, and that the owner restated it in their own words."),
     c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
     c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
