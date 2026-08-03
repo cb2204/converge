@@ -95,7 +95,7 @@ The first release where the number means the same thing everywhere.
   **Additive, never breaking:** discovery tries the typed folder first and
   falls back to the legacy flat prefix, so workspaces created before this
   keep gating untouched (pinned by a regression row in the conductor suite).
-- **`conductor-steps` — the twelfth skill: the descent's sequence layer.**
+- **`evidence-to-next-pass` — the twelfth skill: the descent's sequence layer.**
   Derives which pass is CURRENT and which comes NEXT from workspace evidence
   (each pass leaves artifacts in a known `cvg/` folder — no stored state, no
   session memory), enforces order fail-closed with pre/post hooks, and owns
@@ -133,7 +133,7 @@ The first release where the number means the same thing everywhere.
   shipped. Pass 7B absorbed its cross-tool emitter pattern long ago, and a
   reference audit found nothing left invoking it — not `bin/cvg`, not any
   skill's scripts, only the catalog naming it. The catalog then stood at
-  eleven (9 spine + 2 utility; `conductor-steps` later made it twelve); its CI
+  eleven (9 spine + 2 utility; `evidence-to-next-pass` later made it twelve); its CI
   suite retires with it; the package stays recoverable from git history.
 - **The `uc-analytics` proving ground** (`tests/uc-analytics/`) — the
   greenfield use case the descent 0→8 was first closed on. Its evidence is
@@ -217,7 +217,7 @@ either seat):
   necessary, not sufficient — demonstrated, not asserted.*
 
 ### Known gaps at 0.1.0
-- The two shipped PDFs (`docs/*.pdf`) predate `conductor-steps` and still say
+- The two shipped PDFs (`docs/*.pdf`) predate `evidence-to-next-pass` and still say
   "eleven skills"; they cannot be regenerated from this tree (their HTML
   sources were retired). Re-render at the next doc pass.
 - `task-spec/SKILL.md` is 569 lines against skill-creator's own 500-line rule.

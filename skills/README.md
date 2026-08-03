@@ -2,7 +2,7 @@
 
 Twelve self-contained agent skills implement the Converge method — **nine spine
 skills** (the passes, including the optional Capture ⓪ and the opt-in Register),
-**three utility skills** (`conductor-steps`, `skill-creator`, `pass-to-lesson`).
+**three utility skills** (`evidence-to-next-pass`, `skill-creator`, `pass-to-lesson`).
 Every skill passes
 the official validator (checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
@@ -95,7 +95,7 @@ judgment.
 | 6 | **Register** · [`task-specs-to-issues`](task-specs-to-issues/) · *opt-in* | Idempotently project one signed spec to one issue and mirror every `depends_on` edge as `blocked-by`; the spec remains canonical. | Tracker shadow + backlinks · `CHECK_REGISTER` parity |
 | 7 | **Bind** · [`task-to-runtime-contract`](task-to-runtime-contract/) | Bind one signed revision to least-privilege paths, hash-pinned evidence, honest runtime controls, adapters, and a minimal identifier-only worker brief. | `execution-profile.yaml` + guards + `AGENTS.task.md` · `CHECK_RUNTIME_CONTRACT` |
 | 8 | **The Loop** · [`task-loop`](task-loop/) | Run each attempt in fresh context, enforce iteration/time/token ceilings plus stagnation, persist checkpoints, and land in exactly one named state. | Green-eval PR/local commit or explicit handoff · `TASK_LOOP=<state>` + tier-2 `CHECK_VERIFY=<verdict>` |
-| util | [`conductor-steps`](conductor-steps/) | The sequence layer: derive where the descent stands from workspace evidence, enforce order with pre/post hooks, hand the agent the right pass prompt. Surfaced as `cvg next`. | `NEXT_PASS=` · `CONDUCTOR_PRE=` · `CONDUCTOR_POST=` |
+| util | [`evidence-to-next-pass`](evidence-to-next-pass/) | The sequence layer: derive where the descent stands from workspace evidence, enforce order with pre/post hooks, hand the agent the right pass prompt. Surfaced as `cvg next`. | `NEXT_PASS=` · `PASS_PRE=` · `PASS_POST=` |
 | util | [`pass-to-lesson`](pass-to-lesson/) | After any closed pass, teach the owner what was built, why it is shaped that way, and what would break without it. | Durable lesson + teach-ready `CHECK_LESSON=PASS` · *optional* |
 | util | [`skill-creator`](skill-creator/) | Author, evaluate, package, and structurally validate agent skills. | Validated skill package |
 
@@ -277,7 +277,7 @@ kernel spells no vendor and a hung CLI dies at a watchdog cap.
 
 ## Utilities
 
-### `conductor-steps` — the sequence layer (above every pass)
+### `evidence-to-next-pass` — the sequence layer (above every pass)
 
 The descent's order, machine-derived: every pass leaves evidence in a known
 `cvg/` folder, so position is always readable from the workspace — no stored

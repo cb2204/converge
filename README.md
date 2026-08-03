@@ -246,7 +246,7 @@ do the work; the gate proves it happened.
 | 7 | **Bind**<br>[`task-to-runtime-contract`](skills/task-to-runtime-contract/) | Freeze the execution contract: profile, write fence, pinned hashes | this host can actually enforce it | `CHECK_RUNTIME_CONTRACT=PASS` |
 | 8 | **The Loop**<br>[`task-loop`](skills/task-loop/) | An engine attempts, evals verify, repeat — bounded on three axes | evals green within budget, receipt written | `TASK_LOOP=SETTLED` |
 
-Three utilities round out the twelve: [`conductor-steps`](skills/conductor-steps/) (the
+Three utilities round out the twelve: [`evidence-to-next-pass`](skills/evidence-to-next-pass/) (the
 sequence layer — derives where the descent stands from workspace evidence, enforces order
 with pre/post hooks, and owns the canonical pass prompts; surfaced as `cvg next`),
 [`pass-to-lesson`](skills/pass-to-lesson/) (teach what a pass just did), and

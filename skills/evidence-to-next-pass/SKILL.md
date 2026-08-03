@@ -1,12 +1,12 @@
 ---
-name: conductor-steps
+name: evidence-to-next-pass
 description: Converge descent conductor — owns the canonical pass prompts and the sequence itself. Derives which pass is CURRENT and which comes NEXT from workspace evidence (never from memory), enforces order with a pre-hook (refuse pass N until pass N-1 left its artifact) and a post-hook (verify the artifact landed in the right cvg/ folder), and hands the agent the right steering prompt for each pass. Use whenever someone asks "what's next", "where are we in the descent", "continue the run", "start pass N", or before steering ANY pass in a chat session — the pre-hook runs first, the pass prompt second, the post-hook and the cvg gate last. Reduces per-session cognitive load: an agent reads ONE prompt per pass instead of the whole method. Do NOT use it to waive or replace a cvg gate (evidence presence is not a verdict — the gates stay authoritative) and do NOT use it to pick the lane (cvg lane owns that).
 metadata:
   version: "0.1.0"
   compatibility: "Converge chain · sequence layer above all passes. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe); read-only — never mutates the workspace."
 ---
 
-# conductor-steps — the descent, in order, every time
+# evidence-to-next-pass — the descent, in order, every time
 
 > **Identity:** The conductor — knows where the descent stands and what comes next, by reading the floor, not by remembering.
 > **Domain:** Sequencing, pre/post enforcement, prompt delivery. Runs above every pass, changes nothing.
@@ -32,10 +32,10 @@ bash scripts/next-pass.sh post <N>                         # did pass N leave it
   (`cvg/brain/_prompts/pass-<N>-*.md`), and the gate that closes the pass.
   Also available as **`cvg next`**.
 - **`pre N`** is the fail-closed door: every lane pass before N must have left
-  its evidence. `CONDUCTOR_PRE=OK` or `CONDUCTOR_PRE=MISSING` (exit 1) naming
+  its evidence. `PASS_PRE=OK` or `PASS_PRE=MISSING` (exit 1) naming
   exactly what's absent.
 - **`post N`** verifies pass N's own artifact landed in its folder:
-  `CONDUCTOR_POST=OK` or `CONDUCTOR_POST=INCOMPLETE` (exit 1) — and always
+  `PASS_POST=OK` or `PASS_POST=INCOMPLETE` (exit 1) — and always
   reminds you which `cvg` gate gives the *authoritative* verdict.
 
 ## How a chat session uses this
@@ -53,7 +53,7 @@ bash scripts/next-pass.sh post <N>                         # did pass N leave it
 **Evidence presence is not a verdict.** The conductor reads that a BRD file
 exists; only `cvg capture` says it PASSES. The conductor sequences; the gates
 decide. It can refuse forward motion (pre-hook), but it can never grant it —
-a `CONDUCTOR_PRE=OK` with a failing gate downstream still fails.
+a `PASS_PRE=OK` with a failing gate downstream still fails.
 
 Pass 6 (Register) is opt-in and never blocks the sequence; its evidence is
 reported as informational. Lane selection belongs to `cvg lane` — pass the

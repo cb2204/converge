@@ -6,15 +6,15 @@
 # so "where are we" is always readable from the floor. Three verbs:
 #
 #   next [--lane FULL|NORMAL|FAST]   evidence board + NEXT_PASS=<N|DONE>
-#   pre  <N> [--lane ...]            fail-closed door: CONDUCTOR_PRE=OK|MISSING
-#   post <N>                         artifact check:   CONDUCTOR_POST=OK|INCOMPLETE
+#   pre  <N> [--lane ...]            fail-closed door: PASS_PRE=OK|MISSING
+#   post <N>                         artifact check:   PASS_POST=OK|INCOMPLETE
 #
 # THE ONE RULE: evidence presence is not a verdict. This script sequences;
 # the cvg gates decide. It refuses forward motion, it never grants a PASS.
 # Read-only by design — it must never mutate the workspace it reads.
 #
 # Pass 6 (Register) is opt-in: reported, never blocking.
-# Tokens: NEXT_PASS= · CONDUCTOR_PRE= · CONDUCTOR_POST= · CONDUCTOR=USAGE_ERROR
+# Tokens: NEXT_PASS= · PASS_PRE= · PASS_POST= · NEXT_PASS=USAGE_ERROR
 # bash 3.2 safe. Deps: find, grep.
 
 set -euo pipefail
@@ -128,17 +128,17 @@ LANE="FULL"
 TARGET=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --lane)   [ $# -ge 2 ] || { usage >&2; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+    --lane)   [ $# -ge 2 ] || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
               LANE="$2"; shift 2 ;;
     --lane=*) LANE="${1#--lane=}"; shift ;;
     [0-8])    TARGET="$1"; shift ;;
-    *) usage >&2; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2 ;;
+    *) usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2 ;;
   esac
 done
 ORDER="$(lane_order "$LANE" 2>/dev/null)" \
-  || { echo "unknown lane '$LANE' — FULL, NORMAL, or FAST" >&2; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+  || { echo "unknown lane '$LANE' — FULL, NORMAL, or FAST" >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
 
-WS="$(resolve_ws)" || { printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+WS="$(resolve_ws)" || { printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
 
 case "$CMD" in
   next)
@@ -160,7 +160,7 @@ case "$CMD" in
     fi
     ;;
   pre)
-    [ -n "$TARGET" ] || { usage >&2; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+    [ -n "$TARGET" ] || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
     MISSING=""
     for p in $ORDER; do
       [ "$p" = "$TARGET" ] && break
@@ -171,28 +171,28 @@ case "$CMD" in
       for p in $MISSING; do
         echo "  pass $p · $(pass_name "$p") — steer with cvg/brain/_prompts/$(prompt_file "$p")"
       done
-      printf 'CONDUCTOR_PRE=MISSING\n'
+      printf 'PASS_PRE=MISSING\n'
       exit 1
     fi
     echo "pass $TARGET ($(pass_name "$TARGET")) may start — every prior lane pass left its evidence"
-    printf 'CONDUCTOR_PRE=OK\n'
+    printf 'PASS_PRE=OK\n'
     ;;
   post)
-    [ -n "$TARGET" ] || { usage >&2; printf 'CONDUCTOR=USAGE_ERROR\n'; exit 2; }
+    [ -n "$TARGET" ] || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
     if has_pass "$TARGET"; then
       echo "pass $TARGET ($(pass_name "$TARGET")) left its artifact on the floor"
       echo "  authoritative verdict: $(gate_cmd "$TARGET")"
-      printf 'CONDUCTOR_POST=OK\n'
+      printf 'PASS_POST=OK\n'
     else
       echo "pass $TARGET ($(pass_name "$TARGET")) left NO artifact in its folder"
       echo "  steer with: cvg/brain/_prompts/$(prompt_file "$TARGET")"
-      printf 'CONDUCTOR_POST=INCOMPLETE\n'
+      printf 'PASS_POST=INCOMPLETE\n'
       exit 1
     fi
     ;;
   *)
     usage >&2
-    printf 'CONDUCTOR=USAGE_ERROR\n'
+    printf 'NEXT_PASS=USAGE_ERROR\n'
     exit 2
     ;;
 esac

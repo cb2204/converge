@@ -208,7 +208,7 @@ jobs:
         run: |
           bash skills/pass-to-lesson/tests/run-tests.sh
           bash skills/skill-creator/tests/test-skill-creator.sh
-          bash skills/conductor-steps/tests/run-tests.sh
+          bash skills/evidence-to-next-pass/tests/run-tests.sh
 
       - name: task-spec doc consistency
         # A LINT, not a suite — so the coverage gate below cannot see it. It is
