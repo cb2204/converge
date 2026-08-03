@@ -83,7 +83,7 @@ fi
 
 MISSING=""
 for path in \
-  .cvg/gate.yaml cvg/INDEX.md cvg/brain cvg/docs cvg/sketch cvg/tasks \
+  .cvg/gate.yaml cvg/INDEX.md cvg/brain cvg/docs cvg/swimlanes cvg/tasks \
   cvg/tasks/done cvg/tasks/parked cvg/tasks/_state.yaml \
   cvg/tasks/_metrics.jsonl cvg/execution cvg/loop cvg/receipts; do
   [ -e "$ROOM/$path" ] || MISSING="$MISSING $path"

@@ -80,8 +80,8 @@ answerable from the floor rather than from memory:
 | 0 `idea-to-brd` | `cvg/docs/brd/*.md` — or a `cvg/docs/no-go/*.md` record |
 | 1 `brd-docs-to-tech-req` | `cvg/docs/tech-spec/*.md` (requirements, metrics, gap register) |
 | 2 `tech-req-to-adrs` | `cvg/docs/adrs/NNNN-*.md` + `cvg/docs/CONTEXT.md` |
-| 3 `reqs-to-swimlane-plans` | `cvg/sketch/swimlane-*/` — one lane per folder, ordered legs inside |
-| 4 `sketch-plans-adversarial-review` | the same plans sharpened in place (the diff IS the artifact) + `cvg/sketch/.consensus/objection-log.json` + the fork declaration |
+| 3 `reqs-to-swimlane-plans` | `cvg/swimlanes/<seam>/` — one lane per folder, ordered legs inside |
+| 4 `sketch-plans-adversarial-review` | the same plans sharpened in place (the diff IS the artifact) + `cvg/swimlanes/.consensus/objection-log.json` + the fork declaration |
 | 5 `task-spec` | `cvg/tasks/T-*.md` — atomic, self-verifying, HMAC-sealed units |
 | ① `task-specs-to-issues` | the tracker board — one issue per spec, `blocked-by` edges |
 | 7 `task-to-runtime-contract` | `cvg/execution/<task-id>/execution-profile.yaml` + adapter manifests, bound evidence, and gate receipts |

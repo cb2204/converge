@@ -21,7 +21,23 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SINGLE="$HERE/dispatch-review.sh"
-SKETCH_DIR="sketch"
+# The swimlane tree: canonical cvg/swimlanes/, legacy cvg/swimlanes/ (or a bare
+# swimlanes/). Preference is by CONTENT, not existence — `cvg init` may have created
+# an empty swimlanes/ beside a populated legacy swimlanes/, and picking the empty one
+# would answer EMPTY and drop this workspace's Pass 3 evidence.
+_lane_tree() {
+  local c
+  for c in swimlanes sketch; do
+    if [ -d "$c" ] && [ -n "$(find "$c" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ]; then
+      printf '%s' "$c"; return 0
+    fi
+  done
+  for c in swimlanes sketch; do
+    if [ -d "$c" ]; then printf '%s' "$c"; return 0; fi
+  done
+  printf 'swimlanes'
+}
+SKETCH_DIR="$(_lane_tree)"
 ADVLIST="codex,kimi"
 AUTHOR_FAMILY="anthropic"
 OUT=""

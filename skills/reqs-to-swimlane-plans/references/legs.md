@@ -76,7 +76,7 @@ A swimlane is a **directory** — a lean PRD index plus one file per leg, so the
 PRD never bloats and each leg evolves on its own git history / review:
 
 ```
-sketch/swimlane-<seam>/
+swimlanes/<seam>/
   swimlane-<seam>.plan.md            the PRD (index → links to the legs)
   swimlane-<seam>-leg-01-<tech>.md   one leg, full detail
   swimlane-<seam>-leg-02-<tech>.md

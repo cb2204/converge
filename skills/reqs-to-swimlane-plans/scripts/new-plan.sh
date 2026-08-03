@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # new-plan.sh — Converge Pass 3 (DECOMPOSE): scaffold a swimlane as a directory —
 # one lean PRD index (_lane.md) plus one file per leg
-# (leg-NN-<tech>.md) — or --check the sketch/ tree for altitude
+# (leg-NN-<tech>.md) — or --check the swimlanes/ tree for altitude
 # drift and structural completeness.
 #
 # The swimlane PRD is a lean INDEX: it names the seam, shows the architecture, and
@@ -11,16 +11,16 @@
 # are the invariants --check guards.
 #
 # Usage:
-#   new-plan.sh "capture"                          Scaffold sketch/capture/_lane.md
+#   new-plan.sh "capture"                          Scaffold swimlanes/capture/_lane.md
 #   new-plan.sh --component "A · Capture" "capture" Set the identity line's component
 #   new-plan.sh --consumes <seam> "serve"          Mark a DOWNSTREAM swimlane + its consumed seam
-#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/capture/leg-01-dlt.md
+#   new-plan.sh --lane capture --leg 01-dlt         Scaffold swimlanes/capture/leg-01-dlt.md
 #   new-plan.sh --dir path/to/sketch ...            Override the sketch directory
-#   new-plan.sh --check                            Lint the sketch/ tree
+#   new-plan.sh --check                            Lint the swimlanes/ tree
 #   new-plan.sh --help
 #
 # Layout (dir-per-swimlane — the folder names the seam ONCE, nothing repeats it):
-#   sketch/
+#   swimlanes/
 #     <seam>/
 #       _lane.md                           the PRD (lean index; sorts above the legs)
 #       leg-NN-<tech>.md                   one file per leg (full detail)
@@ -30,7 +30,7 @@
 #   that is what lets the folder drop the prefix without the gate losing the lane.
 #
 # WHY NOTHING REPEATS THE FOLDER. The workspace adopted one naming rule — a folder
-#   per artifact type, the slug on the file (cvg/docs/brd/<slug>.md). sketch/ was
+#   per artifact type, the slug on the file (cvg/docs/brd/<slug>.md). swimlanes/ was
 #   the last place that still restated its own directory in every filename
 #   (swimlane-models/swimlane-models-leg-01-staging.md), so one tree taught two
 #   contradictory conventions. The folder names the seam once; the PRD is _lane.md
@@ -63,7 +63,23 @@
 
 set -euo pipefail
 
-SKETCH_DIR="sketch"
+# The swimlane tree: canonical cvg/swimlanes/, legacy cvg/swimlanes/ (or a bare
+# swimlanes/). Preference is by CONTENT, not existence — `cvg init` may have created
+# an empty swimlanes/ beside a populated legacy swimlanes/, and picking the empty one
+# would answer EMPTY and drop this workspace's Pass 3 evidence.
+_lane_tree() {
+  local c
+  for c in swimlanes sketch; do
+    if [ -d "$c" ] && [ -n "$(find "$c" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ]; then
+      printf '%s' "$c"; return 0
+    fi
+  done
+  for c in swimlanes sketch; do
+    if [ -d "$c" ]; then printf '%s' "$c"; return 0; fi
+  done
+  printf 'swimlanes'
+}
+SKETCH_DIR="$(_lane_tree)"
 COMPONENT=""
 CONSUMES=""
 LANE=""

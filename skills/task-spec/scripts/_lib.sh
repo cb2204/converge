@@ -37,7 +37,7 @@ export TASKSPEC_VERSION TASKSPEC_SKILL_DIR
 #   2. cvg/tasks   — the Converge workspace layout that cvg/INDEX.md prescribes
 #   3. tasks       — the bare layout (preserves the original behavior)
 #
-# Passes 0-3 already auto-discover cvg/docs, cvg/docs/adrs and cvg/sketch. The
+# Passes 0-3 already auto-discover cvg/docs, cvg/docs/adrs and cvg/swimlanes. The
 # task family did not, so `cvg ready`, `cvg lint` and the Pass 8 loop all
 # reported an empty backlog inside a perfectly valid workspace. Fixing it here
 # rather than in each script covers every consumer, task-loop included.

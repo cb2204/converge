@@ -12,7 +12,7 @@ why work exists, what was authorized, how it ran, and what proved it complete.
 |---|---|
 | `brain/` | Raw inputs and append-only discovery material |
 | `docs/` | Reviewed product and technical decisions |
-| `sketch/` | Decomposition, lanes, and consensus evidence |
+| `swimlanes/` | Decomposition, lanes, and consensus evidence |
 | `tasks/` | Canonical Task-Specs and their lifecycle projection |
 | `execution/` | Runtime contracts bound to signed Task-Spec hashes |
 | `loop/` | Resumable execution state and human handoffs |

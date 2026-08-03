@@ -25,6 +25,33 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 ## [Unreleased]
 
 ### Changed
+- **The workspace folder is `cvg/swimlanes/`, not `cvg/sketch/`** — the last
+  piece of the Pass 3 rename. `sketch` described a drafting stage; the folder
+  holds swimlanes, and now says so. Combined with the two renames before it, the
+  tree reads `cvg/swimlanes/models/leg-01-staging.md` where it used to read
+  `cvg/sketch/swimlane-models/swimlane-models-leg-01-staging.md`.
+  - Ten discovery sites converted, all dual-shape: `cvg init` (creates the
+    canonical folder), both `bin/cvg` discovery loops, the four `SKETCH_DIR`
+    defaults (Pass 3 + all three Pass 4 scripts, now one `_lane_tree` resolver),
+    and the conductor's Pass 3 + Pass 4 probes.
+  - **Preference is by CONTENT, not existence.** A later `cvg init` on a legacy
+    workspace creates an empty `cvg/swimlanes/` beside a populated `cvg/sketch/`;
+    picking the empty one would answer `EMPTY` and drop that workspace's Pass 3
+    evidence. Every resolver therefore prefers the folder that actually holds a
+    lane, and only falls back to existence.
+  - `cvg/sketch/` keeps gating green — verified end to end, including the
+    empty-canonical-beside-populated-legacy case.
+
+### Fixed
+- **Two back-compat fallbacks a bulk rename had silently neutered.** Rewriting
+  `cvg/sketch` → `cvg/swimlanes` across the tree also hit the lines that name the
+  legacy value *on purpose*: the conductor's fallback became
+  `if empty(swimlanes) && exists(swimlanes) → swimlanes` (a no-op), and both
+  `bin/cvg` loops became `for D in cvg/swimlanes cvg/swimlanes …` (a duplicate).
+  Legacy discovery was dead in both. Caught by the conductor suite going 27 → 20
+  green; the restored fallback now carries a comment telling the next bulk rename
+  to leave it alone. A rename that edits its own escape hatch is the whole risk
+  of this class of change.
 - **The swimlane folder names the seam once, and nothing inside repeats it** —
   `cvg/sketch/models/_lane.md` + `leg-01-staging.md`, where it used to be
   `cvg/sketch/swimlane-models/swimlane-models.plan.md` +

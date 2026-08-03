@@ -1,7 +1,7 @@
 ---
 
 name: reqs-to-swimlane-plans
-description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (sketch/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
+description: Implements Converge Pass 3 (DECOMPOSE). Reads the Pass 2 ADRs (docs/adrs/) plus the in-session understanding and splits the system into one sketch plan per swimlane (swimlanes/*.plan) along its natural seams — by feature or component, plan altitude only, no tasks and no implementation code. Decomposition chain — seam → swimlane → leg → task-spec; each lane's pieces are legs (one responsibility + one proving test), yielding 1:N task-specs at Pass 5. Use when the user says "decompose", "decompose this", "swimlane plans", "split it into plans", "find the seams", "one plan per lane", or "split the lane into legs". Each plan lists legs, dependencies, build order, and inherits the ADR decisions; the downstream lane names the exact upstream interface it consumes. Engine- and tracker-agnostic; runs in the same session as Pass 2, after structure is confirmed and before the plans are attacked in adversarial review. Not for atomic tasks or implementation code — that is Pass 5 (task-spec).
 metadata:
   version: "0.1.0"
   compatibility: Claude Code on the repo; same session as Pass 2 (tech-req-to-adrs). No engine/tracker flags.
@@ -27,7 +27,7 @@ metadata:
 | Slot | Contract |
 |------|----------|
 | **IN** | The Pass 2 understanding (held in-session) **+** the ADRs at `docs/adrs/*.md` (each a numbered decision file — e.g. a join-key decision, a date-grain decision, a metric-definition decision). |
-| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/<seam>/` holding a **lean PRD index** `_lane.md` **plus one file per leg** `leg-NN-<tech>.md`. Nothing inside the folder repeats the folder. The PRD links to its legs; it never embeds their detail. The folder carries the type and the file carries the slug — the same rule the typed `docs/` folders use — while the **stable id stays fully qualified in frontmatter** (`leg: swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
+| **OUT** | **One directory per swimlane** under `swimlanes/`: `swimlanes/<seam>/` holding a **lean PRD index** `_lane.md` **plus one file per leg** `leg-NN-<tech>.md`. Nothing inside the folder repeats the folder. The PRD links to its legs; it never embeds their detail. The folder carries the type and the file carries the slug — the same rule the typed `docs/` folders use — while the **stable id stays fully qualified in frontmatter** (`leg: swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
 | **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). Plus the seam-economics hardening: **one steel-thread lane** (H1), per-lane **risk + owner** (H2/H3), stated **seam evolution** (H4), and any cycle **broken and recorded** (H5). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
 
 ## Flags
@@ -53,7 +53,7 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 
 ### Step 2 — SWIMLANE: one plan per seam
 
-Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.** Each plan should carry:
+Write one sketch plan per seam under `swimlanes/`. **One lane, one plan, one focus.** Each plan should carry:
 
 1. **Identity + lane-meta line** — which component this is (e.g. A · Transform / B · Serve), its input/output contract, and the greppable **`lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<stream>`** line. **`owner` (H3 — Conway)** names the single stream/team that owns the lane (or `shared`/`platform`); a seam that splits one owner or fuses two is a coordination smell — flag it, because architecture mirrors the org's communication structure.
 2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN-<tech>`** in build order (`leg-01-dlt`, `leg-04-dbt-bronze`, `leg-01-fastapi` — which is also the filename, since the folder already names the swimlane; cited outside the plan by the fully-qualified key `swimlane-<seam>-leg-NN`). **Nomenclature (field-grounded):** the **stable reference key is `swimlane-<seam>-leg-NN`** (2-digit zero-pad so ids sort); the **`<tech>` is a lowercase-kebab tool slug appended as a *swappable display label*, never part of the key** — swapping DuckLake→Iceberg or dlt→Airbyte must not break a single cross-reference (embedding volatile tech in an identifier is the classic id anti-pattern). Each leg carries **one responsibility in prose** + **one proving-test cluster** (what its tests assert, never test code), is **independently finishable** (buildable/provable without any later leg), and is **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No quotas. See `references/legs.md`.
@@ -65,15 +65,15 @@ Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.
 
 ### The swimlane is a directory: a lean PRD + one file per leg (v0.8.0)
 
-The folder names the seam **once**. `sketch/models/` holds `_lane.md` and
-`leg-01-staging.md` — not `sketch/swimlane-models/swimlane-models.plan.md` and
+The folder names the seam **once**. `swimlanes/models/` holds `_lane.md` and
+`leg-01-staging.md` — not `swimlanes/models/swimlane-models.plan.md` and
 `swimlane-models-leg-01-staging.md`, which restated the directory in every
 filename and pushed the only part that differs off to the right. `_lane.md`
 sorts above the legs, and a **lane is recognized by containing a lane PRD, never
 by its directory name** — which is what allows the prefix to go without any gate
 losing the ability to find a swimlane.
 
-A swimlane is **`sketch/<seam>/`** (legacy `sketch/swimlane-<seam>/` still gated), containing:
+A swimlane is **`swimlanes/<seam>/`** (legacy `swimlanes/<seam>/` still gated), containing:
 
 - **The PRD — `_lane.md`** — a *lean index*. Field-grounded
   structure (Spec Kit / arc42 / Amazon PR-FAQ): **lane-meta · identity + why ·
@@ -117,11 +117,11 @@ Tie every lane back to the bound decisions in `docs/adrs/`.
 
 ### Step 4 — Gate and hand off
 
-Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every box holds, the `sketch/swimlane-*/` directories are the input to Pass 4 (`sketch-plans-adversarial-review`), where a **different** model attacks them one at a time (PRD then legs) and names the fork.
+Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every box holds, the `swimlanes/<seam>/` directories are the input to Pass 4 (`sketch-plans-adversarial-review`), where a **different** model attacks them one at a time (PRD then legs) and names the fork.
 
 ## Gate — confirm before leaving this pass
 
-- [ ] One **`sketch/<seam>/`** directory per genuine seam, each holding a lean PRD `_lane.md` + one file per leg `leg-NN-<tech>.md`. (`--check` also accepts the legacy `swimlane-<seam>/swimlane-<seam>.plan.md` + `swimlane-<seam>-leg-NN-<tech>.md`, so a workspace written before the rename never reads as EMPTY — the one failure mode that would silently drop a pass's evidence.)
+- [ ] One **`swimlanes/<seam>/`** directory per genuine seam, each holding a lean PRD `_lane.md` + one file per leg `leg-NN-<tech>.md`. (`--check` also accepts the legacy `swimlane-<seam>/swimlane-<seam>.plan.md` + `swimlane-<seam>-leg-NN-<tech>.md`, so a workspace written before the rename never reads as EMPTY — the one failure mode that would silently drop a pass's evidence.)
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
 - [ ] **The PRD is a lean index** — lane-meta, Seam, Architecture (mermaid + steps), **Non-Goals**, a Legs-index table linking to each leg file, Dependencies, Build order, Open questions — and holds **no leg detail**.
 - [ ] **Each leg file is complete and atomic** — frontmatter (stable `leg:` key, `parent`, `status`), a single **Responsibility**, **Proves** as **Given/When/Then** (1–3, no evals), Independence, Consumes/Produces, Appetite, Yields.
@@ -143,7 +143,7 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 ## Examples
 
 **Example 1 — a common two-lane cut (illustrative, for a data pipeline with a serving layer).**
-User says *"decompose this — the ADRs are written."* → From the in-session understanding + `docs/adrs/`, you identify the seam above the fixed upstream inputs and cut two lanes: Component A · Transform and Component B · Serve, with the published-output contract as the interface between them. → You write `sketch/<transform-lane>.plan` (the staged transformation layers, each layer's responsibility, a test strategy, build order gated on the frozen acceptance questions) and `sketch/<serve-lane>.plan` (a shared query core plus each transport/interface, the exact published columns each endpoint/tool consumes, read-only/contract-only isolation). → Result: two skimmable plans, each tracing to its ADRs, seam named, no implementation code — ready for adversarial review.
+User says *"decompose this — the ADRs are written."* → From the in-session understanding + `docs/adrs/`, you identify the seam above the fixed upstream inputs and cut two lanes: Component A · Transform and Component B · Serve, with the published-output contract as the interface between them. → You write `swimlanes/<transform-lane>.plan` (the staged transformation layers, each layer's responsibility, a test strategy, build order gated on the frozen acceptance questions) and `swimlanes/<serve-lane>.plan` (a shared query core plus each transport/interface, the exact published columns each endpoint/tool consumes, read-only/contract-only isolation). → Result: two skimmable plans, each tracing to its ADRs, seam named, no implementation code — ready for adversarial review.
 
 **Example 2 — resisting altitude drift.**
 User says *"split it into plans and write the dedup query while you're at it."* → You produce the plans, and in the relevant lane you write that step's *responsibility* ("dedup duplicate records by business signature, quarantine the rest") but **not** the query body. → You tell the user the query is Pass 5 (`task-spec`) work and the plan stays at altitude so Pass 4 can attack the plan before any code exists.
@@ -181,6 +181,6 @@ The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `l
 
 ## Handoff
 
-→ **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `sketch/*.plan` files produced here and attacks them **one at a time, leg by leg** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, legs that fail the independence or fold tests, and any altitude leak into task or code detail — sharpens them in place (the diff is the record, objections cite leg IDs), and — at **the barrier** — the owner signs off before the work crosses to task-driven decomposition (Pass 5, `task-spec`, which cuts tasks per leg, 1:N).
+→ **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `swimlanes/*.plan` files produced here and attacks them **one at a time, leg by leg** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, legs that fail the independence or fold tests, and any altitude leak into task or code detail — sharpens them in place (the diff is the record, objections cite leg IDs), and — at **the barrier** — the owner signs off before the work crosses to task-driven decomposition (Pass 5, `task-spec`, which cuts tasks per leg, 1:N).
 
 *Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.

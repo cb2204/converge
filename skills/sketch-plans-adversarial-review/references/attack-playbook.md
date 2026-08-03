@@ -20,7 +20,7 @@ When run through `cvg review --adversary <engine>`, this playbook is the framed
   (moonshot), or `gemini` (google) — never another anthropic model, because
   self-preference bias is measured and family-correlated. Same-model-fresh-context
   is the explicitly-weaker last resort.
-- **Attack per swimlane, then per leg.** Pass 3 is now `sketch/swimlane-<seam>/`
+- **Attack per swimlane, then per leg.** Pass 3 is now `swimlanes/<seam>/`
   (a lean PRD + one file per leg). Attack each leg file independently; tag every
   objection with its `swimlane` (and `leg` where applicable).
 - **Emit the stamped objection-log JSON**, conforming to

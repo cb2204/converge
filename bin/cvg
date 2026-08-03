@@ -484,7 +484,7 @@ cvg_init() {
     "$root/cvg/brain/definitions" "$root/cvg/brain/notes" \
     "$root/cvg/brain/refs" "$root/cvg/brain/transcripts" \
     "$root/cvg/docs" "$root/cvg/docs/adrs" "$root/cvg/docs/lessons" \
-    "$root/cvg/sketch" "$root/cvg/tasks" "$root/cvg/tasks/done" \
+    "$root/cvg/swimlanes" "$root/cvg/tasks" "$root/cvg/tasks/done" \
     "$root/cvg/tasks/parked" "$root/cvg/tasks/README.md" \
     "$root/cvg/tasks/_metrics.jsonl" "$root/cvg/tasks/_state.yaml" \
     "$root/cvg/execution" "$root/cvg/loop" "$root/cvg/receipts" \
@@ -520,7 +520,7 @@ cvg_init() {
     "$root/cvg/docs/no-go" \
     "$root/cvg/docs/adrs" \
     "$root/cvg/docs/lessons" \
-    "$root/cvg/sketch" \
+    "$root/cvg/swimlanes" \
     "$root/cvg/tasks/done" \
     "$root/cvg/tasks/parked" \
     "$root/cvg/execution" \
@@ -543,7 +543,7 @@ cvg_init() {
     "$root/cvg/docs/no-go/.gitkeep" \
     "$root/cvg/docs/adrs/.gitkeep" \
     "$root/cvg/docs/lessons/.gitkeep" \
-    "$root/cvg/sketch/.gitkeep" \
+    "$root/cvg/swimlanes/.gitkeep" \
     "$root/cvg/tasks/done/.gitkeep" \
     "$root/cvg/tasks/parked/.gitkeep" \
     "$root/cvg/execution/.gitkeep" \
@@ -1077,7 +1077,8 @@ cmd_help() {
   printf '  structure [--final] [--dir d]\n'
   printf '                           Pass 2 gate — finds cvg/docs/adrs/ (then\n'
   printf '                           docs/adrs/); --final requires nothing proposed\n'
-  printf '  decompose [--dir d]      Pass 3 gate — finds cvg/sketch/ (then sketch/)\n'
+  printf '  decompose [--dir d]      Pass 3 gate — finds cvg/swimlanes/ (then the\n'
+  printf '                           legacy cvg/swimlanes/)\n'
   printf '                           swimlane-*/ tree; CHECK_PLAN token\n'
   printf '  review --adversary E     Pass 4 dispatch — a different-family model\n'
   printf '                           (codex|kimi|claude) attacks the swimlanes headless;\n'
@@ -1620,7 +1621,7 @@ case "$CMD" in
     exec bash "$GATE" --check $STR_FLAGS --dir "$STR_DIR"
     ;;
   decompose)
-    # Pass 3 gate: locate the sketch/ tree, route to the reqs-to-swimlane-plans
+    # Pass 3 gate: locate the swimlanes/ tree, route to the reqs-to-swimlane-plans
     # checker. Exact exec pass-through (R3.P proves by byte-diff). Discovery/flag
     # errors exist ONLY on the exit-2 path and end in CHECK_PLAN=USAGE_ERROR.
     GATE="$CVG_HOME_DIR/skills/reqs-to-swimlane-plans/scripts/new-plan.sh"
@@ -1645,7 +1646,7 @@ case "$CMD" in
     if [ -z "$DEC_DIR" ]; then
       DEC_N=0
       DEC_LIST=""
-      for D in cvg/sketch sketch; do
+      for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
         [ -d "$D" ] || continue
         _cvg_has_lane "$D" || continue
         DEC_N=$((DEC_N + 1))
@@ -1654,7 +1655,7 @@ case "$CMD" in
 "
       done
       if [ "$DEC_N" -eq 0 ]; then
-        ui_err "no swimlane set (sketch/<seam>/_lane.md, or the legacy sketch/swimlane-*/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
+        ui_err "no swimlane set (swimlanes/<seam>/_lane.md, or the legacy swimlanes/<seam>/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
         printf 'CHECK_PLAN=USAGE_ERROR\n'
         exit 2
       fi
@@ -1690,13 +1691,13 @@ case "$CMD" in
     done
     if [ -z "$REV_DIR" ]; then
       REV_N=0
-      for D in cvg/sketch sketch; do
+      for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
         [ -d "$D" ] || continue
         _cvg_has_lane "$D" || continue
         REV_N=$((REV_N + 1)); REV_DIR="$D"
       done
       if [ "$REV_N" -ne 1 ]; then
-        ui_err "no unique swimlane tree (sketch/<seam>/, or the legacy sketch/swimlane-*/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
+        ui_err "no unique swimlane tree (swimlanes/<seam>/, or the legacy swimlanes/<seam>/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
         printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2
       fi
     fi
@@ -2014,7 +2015,7 @@ m = {
     {"code": 22, "name": "ENGINE_ERROR", "meaning": "dispatch: engine produced no parseable judgment (fail-closed)", "retryable": True,  "side_effects": "none"}
   ],
   "commands": [
-    c("init", None, "native (workspace templates)", ["CVG_INIT=OK|UNCHANGED|NOT_GIT|UNSAFE_PATH|USAGE_ERROR"], True, "cvg init", "Create the canonical tracked project control plane: .cvg/gate.yaml plus cvg/{brain,docs,sketch,tasks,execution,loop,receipts}. Non-clobbering, idempotent, and never writes credentials."),
+    c("init", None, "native (workspace templates)", ["CVG_INIT=OK|UNCHANGED|NOT_GIT|UNSAFE_PATH|USAGE_ERROR"], True, "cvg init", "Create the canonical tracked project control plane: .cvg/gate.yaml plus cvg/{brain,docs,swimlanes,tasks,execution,loop,receipts}. Non-clobbering, idempotent, and never writes credentials."),
     c("capture", 0, "idea-to-brd/check-brd.sh", ["CHECK_BRD=PASS|FAIL|USAGE_ERROR"], False, "cvg capture", "Pass 0 gate — the BRD exit contract."),
     c("intent", 1, "brd-docs-to-tech-req/check-tech-spec.sh", ["CHECK_TECH_SPEC=PASS|FAIL|USAGE_ERROR"], False, "cvg intent", "Pass 1 gate — the tech-spec exit contract."),
     c("structure", 2, "tech-req-to-adrs/scaffold-adr.sh --check", ["CHECK_ADR=OK|FAIL|USAGE_ERROR"], False, "cvg structure", "Pass 2 gate — the ADR set."),

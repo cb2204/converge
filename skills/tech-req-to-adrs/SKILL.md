@@ -193,7 +193,7 @@ Result: the ADR passes `--check`; no design leaks into Pass 2.
 ## Handoff
 
 → **`reqs-to-swimlane-plans`** (Pass 3, DECOMPOSE) reads `docs/adrs/*.md` as its
-grounding inputs and splits the system at its real seams into `sketch/*.plan`
+grounding inputs and splits the system at its real seams into `swimlanes/*.plan`
 files. Every plan must trace back to a fact recorded here, may not contradict
 a recorded ADR, and uses the canonical terms pinned in `docs/CONTEXT.md`.
 

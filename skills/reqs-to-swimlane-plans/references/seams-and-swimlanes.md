@@ -108,5 +108,5 @@ A seam is only as good as the contract pinned on it. The field's hard-won rules
 
 You leave Step 1 with: the list of lanes, the **dependency direction** between
 them, and the **named interface** on each seam (the contract that crosses it). You
-have *not* planned the contents yet — that is Step 2, one `sketch/<lane>.plan` per
+have *not* planned the contents yet — that is Step 2, one `swimlanes/<lane>.plan` per
 seam via `scripts/new-plan.sh`.

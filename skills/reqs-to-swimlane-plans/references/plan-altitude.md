@@ -59,7 +59,7 @@ writes the runnable eval.
 
 ## What the check catches
 
-`scripts/new-plan.sh --check` greps every `sketch/*.plan` for head-of-line
+`scripts/new-plan.sh --check` greps every `swimlanes/*.plan` for head-of-line
 altitude leaks and missing structure:
 
 - **Code / query leak** — a line that begins a concrete implementation statement

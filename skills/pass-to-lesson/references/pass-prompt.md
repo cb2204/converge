@@ -13,8 +13,8 @@ lesson invents no rationale it cannot source.
 **Procedure:**
 1. Locate the pass. Its artifacts live in one typed folder:
    `cvg/docs/brd/` (0) · `cvg/docs/tech-spec/` (1) · `cvg/docs/adrs/` +
-   `cvg/docs/CONTEXT.md` (2) · `cvg/sketch/swimlane-*/` (3) ·
-   `cvg/sketch/.consensus/objection-log.json` + the sharpened plans (4) ·
+   `cvg/docs/CONTEXT.md` (2) · `cvg/swimlanes/<seam>/` (3) ·
+   `cvg/swimlanes/.consensus/objection-log.json` + the sharpened plans (4) ·
    `cvg/tasks/T-*.md` (5) · the tracker board (①) ·
    `cvg/execution/<task-id>/` (7) · `cvg/receipts/` + the PR (8).
 2. Inventory its components at the granularity the owner will meet them, and

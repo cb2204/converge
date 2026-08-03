@@ -2,7 +2,7 @@
 # check-consensus-gate.sh — Converge Pass 4 (Consensus): the falsifiable exit gate.
 #
 # v0.4.0 — gates a STAMPED OBJECTION-LOG ARTIFACT (JSON), not plan prose. The
-# dispatch (cvg review --adversary) writes sketch/.consensus/objection-log.json;
+# dispatch (cvg review --adversary) writes swimlanes/.consensus/objection-log.json;
 # this gate validates its structure + semantics + PROVENANCE (it re-hashes the live
 # swimlane plans and requires they match the ones the adversary attacked). It never
 # reads the model's judgment — only refuses to let a soft pass slip through.
@@ -14,7 +14,7 @@
 # never a pass.
 #
 # Usage:
-#   check-consensus-gate.sh --dir sketch/                Gate the swimlane tree + its log
+#   check-consensus-gate.sh --dir swimlanes/                Gate the swimlane tree + its log
 #   check-consensus-gate.sh --log path/to/log.json ...   Point at a specific artifact
 #   check-consensus-gate.sh --author-family anthropic    Who wrote the plans (default anthropic)
 #   check-consensus-gate.sh --help
@@ -26,7 +26,23 @@
 
 set -euo pipefail
 
-SKETCH_DIR="sketch"
+# The swimlane tree: canonical cvg/swimlanes/, legacy cvg/swimlanes/ (or a bare
+# swimlanes/). Preference is by CONTENT, not existence — `cvg init` may have created
+# an empty swimlanes/ beside a populated legacy swimlanes/, and picking the empty one
+# would answer EMPTY and drop this workspace's Pass 3 evidence.
+_lane_tree() {
+  local c
+  for c in swimlanes sketch; do
+    if [ -d "$c" ] && [ -n "$(find "$c" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ]; then
+      printf '%s' "$c"; return 0
+    fi
+  done
+  for c in swimlanes sketch; do
+    if [ -d "$c" ]; then printf '%s' "$c"; return 0; fi
+  done
+  printf 'swimlanes'
+}
+SKETCH_DIR="$(_lane_tree)"
 LOG=""
 AUTHOR_FAMILY="anthropic"
 

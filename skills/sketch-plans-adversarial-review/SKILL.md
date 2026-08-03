@@ -18,7 +18,7 @@ Converge Pass 4 (Consensus): a *different-family* model attacks each swimlane pl
 
 - **The adversary must be a different model than the author.** The plans were written by Claude; a different engine (`--adversary`, default `codex`) attacks them. The same model reviewing its own plans produces agreement, not consensus — that defeats the entire pass. This is why Pass 4 binds a *different* model than every other pass in the chain.
 - **Default to refuted.** A merely-plausible plan step is not "fine" — the adversary must state why it *might* be wrong or the objection stands. Silence is not passing.
-- **Altitude lowers, it does not invert.** Pass 4 hardens what Pass 3 sketched. It creates NO new files and adds NO scope. New requirements are drift — push them back up the chain, never smuggle them in here. The diff on `sketch/*.plan` IS the record of what consensus changed.
+- **Altitude lowers, it does not invert.** Pass 4 hardens what Pass 3 sketched. It creates NO new files and adds NO scope. New requirements are drift — push them back up the chain, never smuggle them in here. The diff on `swimlanes/*.plan` IS the record of what consensus changed.
 - **Nothing is silently dropped.** Every logged objection ends in exactly one of FIX (revised in a plan) or ACCEPT (recorded risk + named owner + reason to proceed).
 - **The sign-off is the output.** The pass is not finished when the objections are resolved — it is finished when the **owner signs off**. That signature is the hand-off from human design to machine build, and it is the one thing no script can do for you (see Step 4).
 - **There is no fork, and no route to choose.** Consensus always descends to Pass 5 (`task-spec`). The old plan-driven path (Fork A / SDD) was retired in v3.4 and the branch was removed from the method entirely — task-spec's six-tier engine absorbs the whole range (a tightly-coupled slice is an `L` leaf, not a separate paradigm). The objection-log **schema still carries a `fork` field**, which is now a frozen compatibility token (`choice: B`), not a decision — see Step 4.
@@ -27,8 +27,8 @@ Converge Pass 4 (Consensus): a *different-family* model attacks each swimlane pl
 
 | | Artifact |
 |------|----------|
-| **IN** | The swimlane tree (`sketch/swimlane-<seam>/` — a lean PRD + one file per leg, from Pass 3 v0.7.0) + the tech-spec + the ADRs (`docs/adrs/*.md`) as ground truth, handed to a **different-family** adversary via the framed [`attack-playbook.md`](references/attack-playbook.md). |
-| **OUT** | The **same plans, sharpened in place** (the diff is the record) + a **stamped objection log** at `sketch/.consensus/objection-log.json` ([schema](references/objection-log.schema.json)) — the deterministic gate target — and **the owner's sign-off**. No new plan files. |
+| **IN** | The swimlane tree (`swimlanes/<seam>/` — a lean PRD + one file per leg, from Pass 3 v0.7.0) + the tech-spec + the ADRs (`docs/adrs/*.md`) as ground truth, handed to a **different-family** adversary via the framed [`attack-playbook.md`](references/attack-playbook.md). |
+| **OUT** | The **same plans, sharpened in place** (the diff is the record) + a **stamped objection log** at `swimlanes/.consensus/objection-log.json` ([schema](references/objection-log.schema.json)) — the deterministic gate target — and **the owner's sign-off**. No new plan files. |
 | **GATE** | Two halves. **Machine:** a **different-family** model attacked (proven by the artifact's provenance stamp + input hashes, *not* a grep of a word); every objection is FIX or ACCEPT-with-owner; the plans have **not drifted** since the review (the gate re-hashes them). `check-consensus-gate.sh` ends in `CHECK_CONSENSUS=OK\|FAIL\|EMPTY\|USAGE_ERROR` — falsifiable, see Step 5. **Human:** the owner signs off — the barrier, which no script can check. |
 
 ## Flags
@@ -45,9 +45,9 @@ Run the four core steps in order, then the gate. This is Pattern 5 (domain-intel
 
 ### Step 1 — ATTACK (refute as a skeptic who didn't write it)
 
-Dispatch the swimlane tree to the `--adversary` engine (headless, read-only, via `cvg review --adversary <e>`), framed by [`attack-playbook.md`](references/attack-playbook.md) as a skeptical principal engineer who did NOT write them and whose job is to REFUTE, not bless. The adversary **emits the stamped objection log** (`sketch/.consensus/objection-log.json`), never edits the plans.
+Dispatch the swimlane tree to the `--adversary` engine (headless, read-only, via `cvg review --adversary <e>`), framed by [`attack-playbook.md`](references/attack-playbook.md) as a skeptical principal engineer who did NOT write them and whose job is to REFUTE, not bless. The adversary **emits the stamped objection log** (`swimlanes/.consensus/objection-log.json`), never edits the plans.
 
-- **One swimlane at a time, then leg by leg.** Refutation is per-lane and per-leg (Pass 3 is now `sketch/swimlane-<seam>/` with one file per leg), ranked by build-time damage so the cheapest-to-kill wrong idea dies first — before any model/mart/endpoint exists.
+- **One swimlane at a time, then leg by leg.** Refutation is per-lane and per-leg (Pass 3 is now `swimlanes/<seam>/` with one file per leg), ranked by build-time damage so the cheapest-to-kill wrong idea dies first — before any model/mart/endpoint exists.
 - **Default to refuted.** Merely plausible is not enough; the adversary must say why a step might be wrong.
 - Hunt the build-time bites, using your stack's real seams:
   - **Unverified assumptions about existing state** — where a plan assumes something unproven about the shape of a source/input contract, required audit/lineage columns, or a data-store constraint (e.g. single-writer, transaction limits).
@@ -110,7 +110,7 @@ one is required to read the diff.
 field in **two** places, and rejects `A` in both:
 
 1. `objection-log.json` → a `fork` object with `choice: "B"` and a non-empty `reason`.
-2. The top 15 lines of **every** `sketch/swimlane-*/swimlane-*.plan.md` → a line
+2. The top 15 lines of **every** `swimlanes/<seam>/swimlane-*.plan.md` → a line
    matching `FORK: B (task-driven)`.
 
 This is a **frozen compatibility field, not a decision** — write it and move on.
@@ -123,8 +123,8 @@ removed.
 Run the bundled gate to make the exit condition machine-checkable:
 
 ```bash
-bash .claude/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh --dir sketch/
-# validates sketch/.consensus/objection-log.json (structure + provenance hashes);
+bash .claude/skills/sketch-plans-adversarial-review/scripts/check-consensus-gate.sh --dir swimlanes/
+# validates swimlanes/.consensus/objection-log.json (structure + provenance hashes);
 # ends in CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR. cvg review --check wraps this.
 ```
 
@@ -148,7 +148,7 @@ When the gate is green **and the owner has signed**, hand off to Pass 5 (`task-s
 ## Examples
 
 **Example 1 — "attack the plans"**
-User says *"have Codex refute the swimlane plans."* → Run Step 1 with `--adversary codex` against each `sketch/*.plan`, one at a time, default-to-refuted. The adversary returns 6 ranked objections, top one being a cross-lane interface gap — *a consumer lane reads a field the producing lane never emits* (for example, in a warehouse-plus-serving project: a serving endpoint reads a published column the transform lane never emits). → Result: objection logged with a plan-section citation, ready for Step 3.
+User says *"have Codex refute the swimlane plans."* → Run Step 1 with `--adversary codex` against each `swimlanes/*.plan`, one at a time, default-to-refuted. The adversary returns 6 ranked objections, top one being a cross-lane interface gap — *a consumer lane reads a field the producing lane never emits* (for example, in a warehouse-plus-serving project: a serving endpoint reads a published column the transform lane never emits). → Result: objection logged with a plan-section citation, ready for Step 3.
 
 **Example 2 — "consensus pass" end-to-end**
 User says *"run the consensus pass."* → Steps 1–2 surface 7 objections + 2 drifts (e.g. a freshness or latency number that contradicts the tech-spec). Step 3 FIXes 6 in place, ACCEPTs 1 to a named owner (a data-store constraint under concurrent load), reconciles the drifting number to the spec. Step 4: present the sharpened plans, the one accepted risk and its owner, and the two non-blocking open questions — **the owner signs off**. Step 5 gate is green. → Hand off to Pass 5 (`task-spec`).

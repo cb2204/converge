@@ -11,7 +11,7 @@ it; Pass 5/8 reuse it.
 One driver per engine behind a stable contract.
 
 - **Inputs:** `$1` framed prompt file (the attack-playbook) · `$2` workdir (a
-  read-only checkout / throwaway worktree of `sketch/`) · env `CVG_ADVERSARY_MODEL`,
+  read-only checkout / throwaway worktree of `swimlanes/`) · env `CVG_ADVERSARY_MODEL`,
   `CVG_TIMEOUT_SECS`, `CVG_OUT` (artifact path).
 - **Behavior:** map to the real invocation (below), **always read-only**, request
   **schema-validated JSON**, **wrap in `timeout`**, write raw → `$CVG_OUT.raw` and

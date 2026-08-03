@@ -4,7 +4,7 @@
 objection with the human, and get the human's signature. This is the last
 human sign-off before machines take over — treat it with that weight.
 
-**Inputs:** the gated swimlane tree (`cvg/sketch/`).
+**Inputs:** the gated swimlane tree (`cvg/swimlanes/`).
 
 **Procedure:**
 1. Check readiness: `cvg doctor` (needs ≥2 engines, ≥1 cross-family). You

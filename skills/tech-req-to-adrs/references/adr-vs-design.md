@@ -35,7 +35,7 @@ table keyed on it,"* split it:
    on `order_id` (`REFERENCES orders(order_id)`); no other key exists.* Evidence:
    the schema line. Consequence: *any Pass 3 plan must join on `order_id` only.*
 2. **Move the build.** The "payments fact table keyed on it" clause is a Pass 3
-   plan item. Delete it from the ADR; it will re-appear as a `sketch/*.plan` step.
+   plan item. Delete it from the ADR; it will re-appear as a `swimlanes/*.plan` step.
 
 The bundled `scaffold-adr.sh --check` greps for head-of-line build-verbs
 (Build/Create/Implement/Add/Design/…) precisely to catch step 2 leaking back in.

@@ -141,8 +141,8 @@ has_pass() {
     # as "Pass 3 left something on the floor". Presence is not a verdict; the
     # cvg decompose gate is what decides. (.consensus/ holds .json, so the
     # *.md filter excludes the objection log without naming it.)
-    3) [ -n "$(find "$WS/cvg/sketch" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ] ;;
-    4) [ -f "$WS/cvg/sketch/.consensus/objection-log.json" ] ;;
+    3) [ -n "$(find "$LANES" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ] ;;
+    4) [ -f "$LANES/.consensus/objection-log.json" ] ;;
     5) find "$WS/cvg/tasks" -name 'T-*.md' -print 2>/dev/null \
          | while IFS= read -r f; do
              grep -q '^signed_off: true' "$f" && echo hit && break
@@ -177,6 +177,19 @@ ORDER="$(lane_order "$LANE" 2>/dev/null)" \
   || { echo "unknown lane '$LANE' — FULL, NORMAL, or FAST" >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
 
 WS="$(resolve_ws)" || { printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
+
+# Pass 3 and Pass 4 both read the swimlane tree: canonical cvg/swimlanes/, with
+# the legacy cvg/sketch/ still honored. Preferred by CONTENT, not existence — an
+# empty canonical folder (created by a later `cvg init`) must never mask a
+# populated legacy one, which would drop this workspace's Pass 3 evidence.
+# NOTE: the literal "cvg/sketch" below is deliberate back-compat. Do not let a
+# bulk rename rewrite it to the canonical name — that silently makes the
+# fallback a no-op, which is exactly how this line broke once already.
+LANES="$WS/cvg/swimlanes"
+if [ -z "$(find "$LANES" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ] \
+   && [ -d "$WS/cvg/sketch" ]; then
+  LANES="$WS/cvg/sketch"
+fi
 
 case "$CMD" in
   next)

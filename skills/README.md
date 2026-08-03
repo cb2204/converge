@@ -72,7 +72,7 @@ flowchart TB
 
 **Where the passes look for your work.** Every pass discovers the **`cvg/`
 workspace first, then the bare directory** — `cvg/docs/`, `cvg/docs/adrs/`,
-`cvg/sketch/`, `cvg/tasks/` — and an explicit path always wins. The workspace is
+`cvg/swimlanes/`, `cvg/tasks/` — and an explicit path always wins. The workspace is
 not necessarily the git root (`<repo>/projects/demo/cvg/` is a supported layout),
 so everything resolves relative to the workspace: the specs, the execution
 profiles, and the directory a spec's own evals run in.
@@ -89,7 +89,7 @@ judgment.
 | 0 | **Capture** · [`idea-to-brd`](idea-to-brd/) · *optional* | Frontier interview rounds separate facts from owner decisions; the do-nothing test provides a real no-go exit. | Owner-voice BRD or durable no-go · `CHECK_BRD` |
 | 1 | **Intent** · [`brd-docs-to-tech-req`](brd-docs-to-tech-req/) | Trace BRD outcomes into falsifiable requirements, measurable acceptance, and the few decisions that materially change the build. | Verifiable tech-spec · `CHECK_TECH_SPEC` |
 | 2 | **Structure** · [`tech-req-to-adrs`](tech-req-to-adrs/) | Inspect the live system, record only hard-to-reverse grounding decisions, and pin one domain vocabulary; no implementation plan leaks in. | `cvg/docs/adrs/*` + `CONTEXT.md` · `CHECK_ADR` |
-| 3 | **Decompose** · [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | Cut natural one-way seams, designate a steel thread, and split each lane into independently provable legs while staying above task/code altitude. | `cvg/sketch/swimlane-*/` tree · `CHECK_PLAN` |
+| 3 | **Decompose** · [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | Cut natural one-way seams, designate a steel thread, and split each lane into independently provable legs while staying above task/code altitude. | `cvg/swimlanes/<seam>/` tree · `CHECK_PLAN` |
 | 4 | **Consensus** · [`sketch-plans-adversarial-review`](sketch-plans-adversarial-review/) | A different model family tries to refute every plan; every objection is fixed or explicitly accepted with an owner and provenance. | Hardened plans + stamped objection log · `CHECK_CONSENSUS` + owner sign-off |
 | 5 | **Tasking** · [`task-spec`](task-spec/) | Turn accepted legs into atomic, vendor-neutral units whose runnable evals travel with the work; PRE-gate and HMAC seal prevent silent goalpost edits. | Signed Task-Spec DAG under `cvg/tasks/` · `TIER=1` for unattended execution |
 | 6 | **Register** · [`task-specs-to-issues`](task-specs-to-issues/) · *opt-in* | Idempotently project one signed spec to one issue and mirror every `depends_on` edge as `blocked-by`; the spec remains canonical. | Tracker shadow + backlinks · `CHECK_REGISTER` parity |
@@ -162,7 +162,7 @@ you've drifted into planning.
 
 Same session as Pass 2, ADRs in hand: cuts where the system is already jointed
 (feature or component edges) and gives each seam exactly one focus-oriented
-sketch plan under `sketch/*.plan`. The decomposition chain is
+sketch plan under `swimlanes/*.plan`. The decomposition chain is
 **seam → swimlane → leg → task-spec**; a leg is a lane's named stretch (one
 responsibility, one proving test) that yields 1:N task-specs at Pass 5. The
 right number of lanes is the number of genuine seams — no more, no fewer.

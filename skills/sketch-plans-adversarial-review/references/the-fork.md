@@ -22,7 +22,7 @@
 
 Converge Pass 4 (Consensus), Step 4. Naming the fork *was* the decision of this pass;
 it is now a constant (B). The fork is still declared **at the top of every plan**
-(`sketch/*.plan`) as `FORK: B (task-driven)` + a one-line reason, and the gate
+(`swimlanes/*.plan`) as `FORK: B (task-driven)` + a one-line reason, and the gate
 (`scripts/check-consensus-gate.sh`) fails unless every plan carries it.
 
 ## The one question the fork answers
@@ -60,7 +60,7 @@ verifies in isolation and the system only makes sense as a whole → **Fork A**.
 *This is one concrete example, not the required shape.* Consider a project whose
 pipeline runs an ingest step into a data store, a multi-stage transform (for
 example, a dbt medallion: bronze → silver → gold), then a serving layer (an API,
-an MCP tool, or both). Such a system lands on **Fork B**, and both `sketch/*.plan`
+an MCP tool, or both). Such a system lands on **Fork B**, and both `swimlanes/*.plan`
 say so at the top, because:
 
 - The transform is a **deterministic, layered DAG**. Each stage has a known
