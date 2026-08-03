@@ -18,6 +18,7 @@ Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one re
 [Quickstart](#-quickstart-your-first-gated-task) ·
 [Steer from chat](#-steering-the-factory-from-chat) ·
 [How it works](#-how-it-works) ·
+[Control Room](#-control-room) ·
 [The passes](#-the-nine-passes) ·
 [The CLI](#-the-cvg-cli) ·
 [Docs](#-documentation)
@@ -60,6 +61,28 @@ because the referee is plain bash + stdlib Python, the same install serves every
 - **Harness-agnostic by construction.** Engines are one adapter file each; skills install into
   every harness's native discovery directory. The same signed spec dispatches to any of them —
   and the gate that scores the work is identical.
+
+## ✦ Control Room
+
+The optional [Control Room](apps/control-room/) makes a workspace observable
+without creating a second source of truth. It renders the real nine-pass
+lineage, evidence, gate verdicts, adversarial objections, and the command
+authorized by `cvg next`. The CLI still owns execution and proof; V0 is
+deliberately read-only.
+
+```bash
+npm run control-room:install
+npm run control-room:dev -- \
+  --cvg-home "$PWD" \
+  --project-root /absolute/path/to/your/converge-workspace
+```
+
+The local bridge accepts only fixed read-only CLI/Git operations, binds to
+loopback, and exposes only evidence already present in the workspace snapshot.
+Artifact previews are bound to the snapshot and SHA-256 so changed bytes cannot
+masquerade as captured proof. See the
+[Control Room guide](apps/control-room/README.md) for the architecture,
+contract, production build, and verification commands.
 
 ## 📦 Install
 
