@@ -25,6 +25,26 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 ## [Unreleased]
 
 ### Added
+- **`cvg doctor evidence` — can git show the floor the gates are standing on?**
+  Three parts of the method assume the workspace is version-controlled and none of
+  them checked: Pass 4 stamps sha256 provenance over the plan **files**, Pass 8
+  **settles by committing**, and `cvg lesson --immutable` proves teaching changed
+  nothing by reading `git status --porcelain`. Found live: a use case ran four green
+  gates over a workspace whose entire descent — BRD, tech-spec, six ADRs, eleven
+  legs, the objection log — was untracked. One `git clean -fd` from gone, with every
+  provenance claim above resting on nothing, and nothing reported it.
+  - Reports per artifact folder and **names the pass at risk**: "3 untracked files"
+    is not the finding, "Pass 4 cannot prove provenance" is.
+  - Exploring without git is legitimate; settling is not — so both `NOT_GIT` and
+    `UNTRACKED` fail closed at exit 1. `DOCTOR_EVIDENCE=OK|UNTRACKED|NOT_GIT|ERROR`,
+    read-only.
+  - What `cvg init` seeds is excluded: placeholders, the index, the two READMEs and
+    the two **derived** task indexes are the empty container, not evidence. A check
+    that fired on every freshly initialized workspace would cry wolf on day one and
+    get ignored — the suite pins that case, and it caught the over-broad first draft.
+  - `tests/test-cvg-doctor-evidence.sh` (15 rows, hermetic), wired into CI — 26
+    suites. Its first row reproduces 2026-08-03 exactly: a populated workspace, zero
+    of it tracked, and the check must name which pass is exposed.
 - **`cvg tasks plan` — the Pass 5 dry run.** "Show me what you are about to create,
   and why, before you create it." Until now the only way to see what Pass 5 produced
   was to produce it: `tasks new` writes one spec at a time, so an eleven-leg plan set

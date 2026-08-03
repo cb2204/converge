@@ -173,6 +173,13 @@ jobs:
         # "marketplace"; no network, no real plugin install touched.
         run: bash tests/test-cvg-doctor-plugin.sh
 
+      - name: cvg doctor evidence — can git show the floor the gates stand on?
+        # A use case ran four green gates over a workspace whose entire descent was
+        # untracked. Pass 4 stamps provenance over plan FILES, Pass 8 settles by
+        # COMMITTING, and lesson --immutable reads git status; all three rested on
+        # nothing and no gate's job was to look.
+        run: bash tests/test-cvg-doctor-evidence.sh
+
       - name: cvg tasks plan — the Pass 5 dry run derives, never invents
         # A preview that fills gaps with plausible tasks hides the defect worth
         # catching. The load-bearing rows are negative: a leg with no Yields
