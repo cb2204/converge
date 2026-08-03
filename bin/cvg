@@ -1143,6 +1143,124 @@ print("RESOLVE=OK")
 PY
 }
 
+# cvg_doctor_evidence — can git show the floor the gates are standing on?
+#
+# WHY THIS EXISTS
+# Three parts of the method quietly assume the workspace is under version control:
+#   Pass 4  stamps sha256 provenance over the plan FILES, so "the adversary
+#           attacked the current plans" is only as durable as the files themselves.
+#   Pass 8  settles by COMMITTING — it stages from the capability envelope's
+#           fs.write grant and writes a receipt last. There is nothing to commit
+#           from if the work was never tracked.
+#   lesson  `cvg lesson --immutable` proves teaching changed nothing by reading
+#           `git status --porcelain`; an untracked-but-referenced artifact fails it
+#           by design, so an untracked floor makes the proof impossible rather
+#           than false.
+# On 2026-08-03 a live use case ran four green gates over a workspace whose ENTIRE
+# descent — BRD, tech-spec, six ADRs, eleven legs — was untracked. One `git clean`
+# from gone, and every provenance claim above resting on nothing. Nothing reported
+# it, because no gate's job was to look.
+#
+# Early exploration without git is legitimate; settling without it is not. So this
+# fails closed and says which pass's evidence is at risk.
+#
+# Read-only. Token: DOCTOR_EVIDENCE=OK|UNTRACKED|NOT_GIT|ERROR
+cvg_doctor_evidence() {
+  CVG_DE_ROOT="$CVG_PROJECT_ROOT_DIR" python3 - <<'PY'
+import os, subprocess, sys
+
+root = os.environ["CVG_DE_ROOT"]
+ws = os.path.join(root, "cvg")
+
+def out(tok, code):
+    print(f"DOCTOR_EVIDENCE={tok}")
+    sys.exit(code)
+
+print("== cvg doctor evidence · can git show the floor the gates stand on? ==")
+print(f"  workspace: {ws}")
+
+if not os.path.isdir(ws):
+    print("  no cvg/ workspace here — run cvg init first.")
+    out("ERROR", 2)
+
+if subprocess.run(["git", "-C", root, "rev-parse", "--is-inside-work-tree"],
+                  capture_output=True, text=True).returncode != 0:
+    print("  FAIL — this workspace is not inside a git repository.")
+    print("         Exploring without git is fine; SETTLING is not. Pass 4 stamps")
+    print("         provenance over plan files, Pass 8 settles by committing, and")
+    print("         cvg lesson --immutable reads git status. None can hold here.")
+    out("NOT_GIT", 1)
+
+# Which pass does each folder carry evidence for? Naming the pass makes the risk
+# concrete: "3 untracked files" says less than "Pass 4 cannot prove provenance".
+AREAS = [
+    ("cvg/docs/brd",       "0 · Capture"),
+    ("cvg/docs/no-go",     "0 · Capture (no-go)"),
+    ("cvg/docs/tech-spec", "1 · Intent"),
+    ("cvg/docs/adrs",      "2 · Structure"),
+    ("cvg/swimlanes",      "3 · Decompose / 4 · Consensus"),
+    ("cvg/sketch",         "3 · Decompose / 4 · Consensus (legacy)"),
+    ("cvg/tasks",          "5 · Tasking"),
+    ("cvg/execution",      "7 · Bind"),
+    ("cvg/receipts",       "8 · Loop settlement"),
+    ("cvg/docs/lessons",   "companion · lessons"),
+    ("cvg/brain",          "brain · decisions and transcripts"),
+]
+
+# What `cvg init` seeds is the empty CONTAINER, not evidence: placeholders, the
+# workspace index, the two READMEs, and the two DERIVED task indexes (_state.yaml
+# and _metrics.jsonl are rebuilt from the specs, so they are output, not input to
+# any gate). Counting them would make every freshly initialized workspace fail
+# before a single pass had run — and a check that cries wolf on day one is a check
+# nobody keeps. Whether `cvg init`'s own output is committed is a real question,
+# but it is a different one, and conflating them buries the signal this exists for.
+SCAFFOLD = {".gitkeep", "INDEX.md", "README.md", "_state.yaml", "_metrics.jsonl"}
+
+
+def untracked_in(rel):
+    d = os.path.join(root, rel)
+    if not os.path.isdir(d):
+        return None
+    r = subprocess.run(["git", "-C", root, "ls-files", "--others",
+                        "--exclude-standard", "--", rel],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    files = [f for f in r.stdout.splitlines()
+             if f.strip() and os.path.basename(f) not in SCAFFOLD]
+    return files
+
+total = 0
+worst = []
+print()
+for rel, pass_name in AREAS:
+    files = untracked_in(rel)
+    if files is None:
+        continue
+    if files:
+        total += len(files)
+        worst.append((pass_name, rel, files))
+        print(f"  FAIL  {rel:22} {len(files):3} untracked   → pass {pass_name}")
+    else:
+        print(f"  ok    {rel:22}   all tracked   → pass {pass_name}")
+
+print()
+if total:
+    print(f"GATE: UNTRACKED — {total} evidence file(s) exist only on disk.")
+    for pass_name, rel, files in worst:
+        print(f"  pass {pass_name}: {rel}")
+        for f in files[:4]:
+            print(f"    {f}")
+        if len(files) > 4:
+            print(f"    … and {len(files) - 4} more")
+    print("  Commit them. A gate's verdict is only as durable as the artifact it")
+    print("  read, and an untracked artifact is one `git clean` from unprovable.")
+    out("UNTRACKED", 1)
+print("GATE: OK — every artifact the gates read is tracked; git can show the floor.")
+out("OK", 0)
+PY
+}
+
 # cvg_doctor_plugin — is the Converge a consuming project LOADS the same Converge
 # as its source?
 #
@@ -1302,6 +1420,11 @@ cmd_help() {
   printf '  review … [--timeout N]   raise the dispatch wall-clock cap (default 300s;\n'
   printf '                           a large plan set needs more). Fail-closed either way\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
+  printf '  doctor evidence          can git show the floor the gates stand on? Pass 4\n'
+  printf '                           stamps provenance over plan FILES, Pass 8 settles by\n'
+  printf '                           COMMITTING, and cvg lesson --immutable reads git —\n'
+  printf '                           all three need the workspace tracked. Names which\n'
+  printf '                           pass is at risk (DOCTOR_EVIDENCE token)\n'
   printf '  doctor plugin            is the Converge your PROJECTS load the same one as\n'
   printf '                           its source? compares the plugin install record and\n'
   printf '                           its content against the marketplace clone. Read-only\n'
@@ -2175,6 +2298,15 @@ case "$CMD" in
         }
         exec python3 "$ATTEST" "$@"
         ;;
+      evidence)
+        shift
+        if [ $# -gt 0 ]; then
+          ui_err "cvg doctor evidence takes no arguments"
+          printf 'DOCTOR_EVIDENCE=ERROR\n'
+          exit 2
+        fi
+        cvg_doctor_evidence
+        ;;
       plugin)
         shift
         if [ $# -gt 0 ]; then
@@ -2186,7 +2318,7 @@ case "$CMD" in
         ;;
       "") exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
       *)
-        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract | plugin"
+        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract | plugin | evidence"
         printf 'DOCTOR=USAGE_ERROR\n'
         exit 2
         ;;
@@ -2381,6 +2513,7 @@ m = {
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
     c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
     c("snapshot", None, "native (bin/cvg-snapshot.py)", ["WorkspaceSnapshot 2.0 at data.snapshot under --json"], False, "cvg snapshot --json", "Build the deterministic, offline-safe, read-only cockpit contract from canonical repository evidence. The stable snapshotId excludes observation timestamps; artifacts are digest-bound references only, layout stays frontend-owned, optional domains report unavailable, and any core method/gate failure fails closed."),
+    c("doctor evidence", None, "native (git ls-files --others over the cvg/ workspace)", ["DOCTOR_EVIDENCE=OK|UNTRACKED|NOT_GIT|ERROR"], False, "cvg doctor evidence", "Can git show the floor the gates are standing on? Three parts of the method assume the workspace is version-controlled and none of them checks: Pass 4 stamps sha256 provenance over the plan FILES, Pass 8 settles by COMMITTING (staging from the capability envelope's fs.write grant, receipt written last), and `cvg lesson --immutable` proves teaching changed nothing by reading `git status --porcelain`. Found live: a workspace ran four green gates while its entire descent — BRD, tech-spec, six ADRs, eleven legs — was untracked, one `git clean` from gone, with every provenance claim resting on nothing. Reports per artifact folder and NAMES THE PASS at risk, because \"3 untracked files\" says less than \"Pass 4 cannot prove provenance\". Exploring without git is legitimate; settling is not, so NOT_GIT and UNTRACKED both fail closed at exit 1. Read-only."),
     c("doctor plugin", None, "native (plugin install record + content fingerprint)", ["DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR"], False, "cvg doctor plugin", "Answer the one question that makes every other verdict falsifiable: is the Converge a CONSUMING PROJECT loads the same Converge as its source? Compares the plugin install record's gitCommitSha against the marketplace clone's HEAD, and — the real claim — fingerprints the loaded tree against that clone's content. STALE means a project is running skills that are not the source, which is invisible otherwise: the cache path is keyed by version, so while VERSION does not move an update resolves to the same directory and keeps serving the stale copy. Also warns when you are running a different copy (a dev checkout) than projects load, because green gates there prove nothing about the plugin. UNMANAGED (exit 0) when there is no plugin install to compare. Read-only and offline by design — it never fetches, since a network-dependent doctor lies when offline."),
     c("lesson [<file>] [--immutable <path>...]", None, "pass-to-lesson/check-lesson.sh", ["CHECK_LESSON=PASS|FAIL|USAGE_ERROR"], False, "cvg lesson cvg/docs/lessons/lesson-pass-1-billing.md", "The teaching companion's gate — optional, invocable after ANY pass closes, and it never blocks the descent. Converge delegates the writing of every artifact but not the understanding of it: this gates the lesson a pass earned (all seven sections by exact name, 'what breaks downstream' on every component block, a non-empty decisions table, 3-5 check-yourself questions, and well-formed teaching-mode sections when the lesson declares modes). With --immutable <taught-artifact>... it proves teaching changed nothing it taught (clean git status; outside a repo it warns and skips). Discovery finds cvg/docs/lessons/ then legacy docs/lessons/ when no path is given; lessons accumulate by design, so more than one is a usage error naming them all rather than a non-deterministic newest-wins guess. Steering prompt: skills/pass-to-lesson/references/pass-prompt.md. What the gate cannot see stays human: that every emitted artifact is actually taught, that each rejected alternative is real, and that the owner restated it in their own words."),
     c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
