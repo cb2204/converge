@@ -43,7 +43,13 @@ mk_leg() { # mk_leg <dir> <nn> <tech> <yields-count>
     printf 'Publish the %s surface so the next lane has one thing to read.\n\n' "$tech"
     printf '## Proves\n\n- Given x, when y, then z.\n\n## Appetite\n\nsmall\n\n'
     printf '## Yields at Pass 5B (named units, not specified here)\n\n'
-    for i in $(seq 1 "$n"); do printf -- '- One unit doing job %s of %s.\n' "$i" "$tech"; done
+    # Content-bearing bullets, because that is what a real leg writes. The
+    # earlier "One unit doing job N of <tech>" was all scaffolding words, so the
+    # only survivors were an index and the tech label — which made a slug-quality
+    # assertion impossible to state honestly.
+    for i in $(seq 1 "$n"); do
+      printf -- '- One unit publishing artifact %s of the %s contract.\n' "$i" "$tech"
+    done
     printf '\n## Re-verify when\n\nThe contract moves.\n'
   } > "$d/leg-$nn-$tech.md"
 }
@@ -89,6 +95,31 @@ case "$OUT" in
   *'cvg tasks new '*) ok "it prints the exact commands it would run" ;;
   *) bad "the preview should name the commands it becomes" ;;
 esac
+
+# Slugs must describe the unit, not its position. `…-1/-2/-3` told a worker nothing
+# about which of three it had been handed, and the index is an artifact of
+# iteration order rather than identity. Rationale in a bullet must not leak into
+# the name either — parentheticals, bold asides and backticked refs are stripped.
+case "$OUT" in
+  *"alpha-doing-job-1-first"*|*"alpha-job-1-first"*|*"alpha-1-first"*)
+    bad "slug kept the template's noise words" ;;
+  *) ok "slugs drop scaffolding words like 'one unit doing'" ;;
+esac
+if printf '%s\n' "$OUT" | grep -qE 'cvg tasks new alpha-[a-z0-9-]*[a-z]{3}'; then
+  ok "slugs are derived from the unit's own words, not an index"
+else
+  bad "slugs do not look derived from the unit text"
+fi
+if printf '%s\n' "$OUT" | grep -oE 'cvg tasks new [a-z0-9-]+' | sort | uniq -d | grep -q .; then
+  bad "two proposed specs share one slug"
+else
+  ok "no two proposed specs share a slug (collisions get a suffix, not a clash)"
+fi
+if printf '%s\n' "$OUT" | grep -oE 'cvg tasks new [a-z0-9-]+' | grep -qE '[a-z]-$|--'; then
+  bad "a slug was truncated mid-word or holds an empty segment"
+else
+  ok "no slug is severed mid-word (length is managed by whole words)"
+fi
 
 # ---------------------------------------------------------------------------
 echo

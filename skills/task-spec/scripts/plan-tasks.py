@@ -90,8 +90,57 @@ def bullets(body):
 
 
 def slugify(s):
+    """No length cap here: truncating a composed slug severed words mid-syllable
+    ("…-category-ra"). Length is managed by dropping whole trailing words in
+    unit_slug instead."""
     s = re.sub(r"[^a-z0-9]+", "-", s.lower())
-    return re.sub(r"^-+|-+$", "", s)[:40]
+    return re.sub(r"^-+|-+$", "", s)
+
+
+# Words that carry no identity. "One unit producing the …" is scaffolding every
+# bullet shares, so keeping it would name every task after the template.
+_NOISE = {
+    "one", "unit", "units", "the", "a", "an", "and", "or", "of", "its", "it",
+    "per", "with", "for", "to", "that", "this", "each", "from", "at", "in", "on",
+    "so", "then", "plus", "over", "into", "by", "is", "are", "be", "as", "not",
+    "producing", "asserting", "proving", "creating", "establishing", "declaring",
+    "exposing", "labelling", "labeling", "covering", "doing", "job",
+}
+
+
+def unit_slug(seam, tech, text, idx, taken):
+    """Name a proposed spec after WHAT IT DOES, not its position in a list.
+
+    `assurance-rule-checks-1/-2/-3` told a worker nothing about which of three it
+    had been handed — the index is an artifact of iteration order, not identity.
+    The unit's own words are the only description that exists at this point, so
+    they name it. Rationale is stripped first: parentheticals, bolded asides and
+    backticked cross-references are commentary about the unit, not the unit.
+    Falls back to seam-tech-idx only when nothing nameable survives, and always
+    de-duplicates, because two specs with one slug is worse than an ugly slug."""
+    t = re.sub(r"^\s*one\s+unit\s+", " ", text.strip(), flags=re.I)
+    t = re.sub(r"\(.*?\)", " ", t)        # (parenthetical asides)
+    t = re.sub(r"\*\*.*?\*\*", " ", t)    # **bolded rationale**
+    t = re.sub(r"`[^`]*`", " ", t)        # `cross-references`
+    t = re.sub(r"['\u2019]s\b", "", t)      # possessives: row's -> row, not row-s
+    words = [w for w in re.findall(r"[a-z0-9]+", t.lower())
+             if w not in _NOISE]
+    # Fill up to a budget by WHOLE words, so a long unit description yields a
+    # short readable slug rather than a severed one.
+    budget = max(18, 44 - len(seam))
+    stem_words = []
+    for w in words[:6]:
+        if stem_words and len("-".join(stem_words + [w])) > budget:
+            break
+        stem_words.append(w)
+    stem = "-".join(stem_words) if stem_words else f"{tech or 'unit'}-{idx}"
+    base = slugify(f"{seam}-{stem}")
+    slug, n = base, 1
+    while slug in taken:
+        n += 1
+        slug = f"{base}-{n}"
+    taken.add(slug)
+    return slug
 
 
 def lane_dirs(root):
@@ -157,6 +206,7 @@ def main():
 
     total_units = 0
     total_legs = 0
+    taken_slugs = set()
     commands = []
     for seam, d, _prd in lanes:
         legs = leg_files(d)
@@ -184,7 +234,7 @@ def main():
                 print("                  what it becomes; that is a Pass 3 gap.")
                 continue
             for i, u in enumerate(units, 1):
-                slug = slugify(f"{seam}-{tech or 'unit'}-{i}")
+                slug = unit_slug(seam, tech, u, i, taken_slugs)
                 total_units += 1
                 print(f"    would create [{i}] {slug}")
                 print(f"                     from: {u}")
