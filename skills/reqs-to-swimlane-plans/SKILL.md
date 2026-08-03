@@ -83,6 +83,16 @@ A swimlane is **`swimlanes/<seam>/`** (legacy `swimlanes/<seam>/` still gated), 
   line of responsibility each) **· Dependencies · Build order · Open questions ·
   Spec traceability.** The PRD holds **no leg detail** — it stays black-box
   altitude so it never bloats as legs grow.
+**What a `Yields` bullet may contain.** One unit of work, stated plainly, and
+nothing else. It is read directly by `cvg tasks plan` at Pass 5 — the preview
+derives one proposed Task-Spec per bullet and names it from the bullet's own words
+— so rationale, cross-references and edit notes in a bullet become noise in a task
+name. Reasoning belongs in **Responsibility** or **Independence**; ownership rules
+belong in **Independence**; a decision the leg has not made ("one unit, or three if
+they prove similar") must be **made here**, because Pass 5 cannot count an
+undecided list and will not guess. This is guidance, not a gate: a length or
+format heuristic would flag legitimate prose as often as it caught a real leak.
+
 - **One file per leg — `leg-NN-<tech>.md`** — atomic and
   independently evolvable. Structure (Spec Kit user-story / INVEST / Gherkin /
   Shape Up): **frontmatter** (`leg:` the stable key, `parent`, `swimlane`,

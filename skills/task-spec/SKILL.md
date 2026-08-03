@@ -48,6 +48,24 @@ is no route out; see references/concepts/effort-gate.md. L still needs a long-ho
 
 ---
 
+## Before you write anything: the dry run
+
+`cvg tasks plan` shows **which Task-Specs the accepted legs would become, and
+why**, before a single one is written. Per leg, in leg order: the stable key, tech
+label, status, appetite, dependency edges, the reason the leg exists (its own
+Responsibility), one proposed unit per bullet in its `Yields at Pass 5B` section,
+then the exact `cvg tasks new` commands that would follow.
+
+It **derives and never invents.** Every unit was declared by the leg itself at
+Pass 3, so a preview line that looks wrong means the LEG is wrong — fix Pass 3
+rather than working around it here. A leg with no `Yields` section reports as
+decomposing to **nothing**, because a dry run that filled that gap with something
+plausible would hide exactly the defect worth catching.
+
+Read-only: no spec, no eval, no sizing verdict, no HMAC seal. `tasks new` →
+`tasks validate` → `tasks gate --stamp` remain the real gates.
+`TASKS_PLAN=OK|EMPTY|USAGE_ERROR`.
+
 ## Workflow
 
 ```text

@@ -176,6 +176,12 @@ jobs:
         # "marketplace"; no network, no real plugin install touched.
         run: bash tests/test-cvg-doctor-plugin.sh
 
+      - name: cvg tasks plan — the Pass 5 dry run derives, never invents
+        # A preview that fills gaps with plausible tasks hides the defect worth
+        # catching. The load-bearing rows are negative: a leg with no Yields
+        # section must decompose to NOTHING and say so.
+        run: bash tests/test-cvg-tasks-plan.sh
+
       - name: cvg lesson — the teaching companion's CLI door
         # The companion was the one skill with a gate script, a machine token,
         # and no verb. Byte-parity, the discovery contract, --immutable, and

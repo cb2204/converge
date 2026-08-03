@@ -1343,6 +1343,10 @@ cmd_help() {
   printf '                           blocks the descent (CHECK_LESSON token)\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  tasks plan [--lane s]     Pass 5 DRY RUN — which Task-Specs the accepted\n'
+  printf '                           legs would become, and WHY, before anything is\n'
+  printf '                           written. Derived from each leg s own Yields\n'
+  printf '                           section; read-only (TASKS_PLAN token)\n'
   printf '  tasks new <slug> [options]\n'
   printf '                           create a Task-Spec in canonical cvg/tasks/\n'
   printf '  tasks validate [--no-state] <spec>\n'
@@ -1615,6 +1619,37 @@ case "$CMD" in
     cvg_init "$@"
     ;;
   tasks)
+    # `tasks plan` is the Pass 5 DRY RUN: it reads the gated swimlane tree and
+    # shows which Task-Specs would be created and WHY, before anything is written.
+    # It lives here rather than under `decompose` because the units it lists are
+    # Pass 5's output; it reads Pass 3's plans only because that is where each
+    # leg already declared what it becomes.
+    if [ "${1:-}" = "plan" ]; then
+      shift
+      PLANNER="$CVG_HOME_DIR/skills/task-spec/scripts/plan-tasks.py"
+      [ -f "$PLANNER" ] || { ui_err "task-spec skill is incomplete under $CVG_HOME_DIR/skills"; printf 'TASKS_PLAN=USAGE_ERROR\n'; exit 2; }
+      TP_DIR=""
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          --dir)   TP_DIR="${2:-}"; shift 2 ;;
+          --dir=*) TP_DIR="${1#--dir=}"; shift ;;
+          *)       break ;;
+        esac
+      done
+      if [ -z "$TP_DIR" ]; then
+        TP_N=0
+        for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
+          [ -d "$D" ] || continue
+          _cvg_has_lane "$D" || continue
+          TP_N=$((TP_N + 1)); TP_DIR="$D"
+        done
+        if [ "$TP_N" -ne 1 ]; then
+          ui_err "no unique swimlane tree (cvg/swimlanes/<seam>/, or the legacy cvg/sketch/) under cvg/ or . from '$PWD' — pass --dir <swimlanes>"
+          printf 'TASKS_PLAN=USAGE_ERROR\n'; exit 2
+        fi
+      fi
+      exec python3 "$PLANNER" --dir "$TP_DIR" "$@"
+    fi
     SUB="${1:-}"
     [ $# -gt 0 ] && shift
     case "$SUB" in
@@ -2317,6 +2352,7 @@ m = {
     c("loop --gate-only --issue <id>", 8, "task-loop/loop-kernel.sh --gate-only", ["task settlement gate verdict"], False, "cvg loop --gate-only --issue T-...", "Read-only settlement verdict: resolve the task/profile and evaluate the gate without starting an engine or attempt."),
     c("loop --estimate --issue <id>", 8, "task-loop/loop-kernel.sh --estimate", ["resolved budget ceiling"], False, "cvg loop --estimate --issue T-...", "Read-only preflight showing the bounded iteration, wall-clock, token, lane, model, and verification ceiling before authorization."),
     c("gate [--path P]", None, "task-to-runtime-contract/check-gate.py", ["CHECK_GATE=OK|ABSENT|FORBIDDEN|ERROR"], False, "cvg gate --path src/api.py", "The standing repo write fence — parses the tracked .cvg/gate.yaml policy and answers whether a path may be written. Read-only; the one fence a Task-Spec cannot widen. With no --path it reports whether the policy parses and is active."),
+    c("tasks plan [--lane <seam>] [--dir D]", "5B", "task-spec/plan-tasks.py", ["TASKS_PLAN=OK|EMPTY|USAGE_ERROR"], False, "cvg tasks plan", "Pass 5 DRY RUN — show which Task-Specs the accepted legs WOULD become, and why, before a single one is written. For each leg in leg order: its stable key, tech label, status, appetite, dependency edges, the reason it exists (its Responsibility), and one proposed unit per bullet in its own `Yields at Pass 5B` section — then the exact `cvg tasks new` commands that would follow. It DERIVES and never invents: every unit is declared by the leg itself at Pass 3, so a wrong preview line means a wrong leg, which is the defect worth catching. A leg with no Yields section is reported as decomposing to nothing rather than guessed at. Read-only: no spec, no eval, no sizing verdict and no HMAC seal — validate/gate/stamp remain the real gates."),
     c("tasks new <slug>", "5B", "task-spec/generate-task-spec.sh", ["Spec written"], True, "cvg tasks new add-health-endpoint", "Create one Task-Spec in the resolved canonical backlog (cvg/tasks first; legacy tasks only when that existing layout is explicitly selected), append a created event, and rebuild state."),
     c("tasks validate <spec>", "5B", "task-spec/validate-task-spec.sh", ["OK / FAIL (structural + six-tier sizing)"], True, "cvg tasks validate T-...md", "Structural lint + six-tier effort gate (leaf write-surface budgets; XL/XXL nodes need children). On success it refreshes the derived tasks/_state.yaml index."),
     c("tasks validate --no-state <spec>", "5B", "task-spec/validate-task-spec.sh --no-state", ["OK / FAIL (structural + six-tier sizing)"], False, "cvg tasks validate --no-state T-...md", "Read-only structural validation for CI, audits, and sign-off checks; performs the same validation without refreshing tasks/_state.yaml."),

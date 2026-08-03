@@ -8,6 +8,11 @@ a runnable eval is not a task yet.
 criteria (an answer key the human designated), you still do not open it —
 the human decides what enters evals vs what stays held out.
 
+**Start with the dry run:** `cvg tasks plan`. It lists the units each accepted leg
+already declared and why each exists, and writes nothing. Read it before authoring
+— a line that looks wrong means the leg is wrong, which is a Pass 3 fix, not a
+Pass 5 workaround; a leg that decomposes to nothing is a gap, not a green light.
+
 **Procedure, per leg:**
 1. `cvg tasks new <slug> <effort>` — effort honestly sized (XS/S/M/L are
    leaf budgets; XL/XXL must declare `children:` and decompose — a node is
