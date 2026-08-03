@@ -87,6 +87,14 @@ The first release where the number means the same thing everywhere.
   so the CLI resolves its own home inside the installed package. Both
   installer entrypoints resolve npm's bin symlinks before locating
   themselves; a CI step asserts the packed tarball carries every anchor.
+- **One typed folder per artifact type in the workspace.** `cvg init` now
+  seeds `cvg/docs/{brd,tech-spec,no-go,adrs,lessons}/`, so every Pass 0–2
+  artifact lives in a folder named for its type instead of three types living
+  flat behind filename prefixes (`brd-*.md`) while two lived in folders. One
+  stateable rule replaces an emergent one; the slug moves onto the file.
+  **Additive, never breaking:** discovery tries the typed folder first and
+  falls back to the legacy flat prefix, so workspaces created before this
+  keep gating untouched (pinned by a regression row in the conductor suite).
 - **`conductor-steps` — the twelfth skill: the descent's sequence layer.**
   Derives which pass is CURRENT and which comes NEXT from workspace evidence
   (each pass leaves artifacts in a known `cvg/` folder — no stored state, no

@@ -63,8 +63,8 @@ ISO_RE='[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])'
 
 usage_error() {
   printf 'ERROR: %s\n' "$1" >&2
-  printf 'usage: check-brd.sh [--draft] docs/brd-<slug>.md\n' >&2
-  printf '       check-brd.sh --no-go docs/no-go-<slug>.md\n' >&2
+  printf 'usage: check-brd.sh [--draft] docs/brd/<slug>.md\n' >&2
+  printf '       check-brd.sh --no-go docs/no-go/<slug>.md\n' >&2
   printf '       check-brd.sh --version\n' >&2
   echo "CHECK_BRD=USAGE_ERROR"
   exit 2
@@ -81,8 +81,8 @@ for ARG in "$@"; do
     --draft)   MODE="draft"; DRAFT_SET=1 ;;
     --no-go)   MODE="nogo";  NOGO_SET=1 ;;
     -h|--help)
-      echo "usage: check-brd.sh [--draft] docs/brd-<slug>.md" >&2
-      echo "       check-brd.sh --no-go docs/no-go-<slug>.md" >&2
+      echo "usage: check-brd.sh [--draft] docs/brd/<slug>.md" >&2
+      echo "       check-brd.sh --no-go docs/no-go/<slug>.md" >&2
       echo "       check-brd.sh --version" >&2
       echo "CHECK_BRD=USAGE_ERROR"
       exit 2

@@ -96,8 +96,12 @@ lane_order() {
 has_pass() {
   local n="$1"
   case "$n" in
-    0) [ -n "$(find "$WS/cvg/docs" -maxdepth 1 -name 'brd-*.md' -print 2>/dev/null | head -1)" ] ;;
-    1) [ -n "$(find "$WS/cvg/docs" -maxdepth 1 -name 'tech-spec-*.md' -print 2>/dev/null | head -1)" ] ;;
+    # Typed folder (canonical) OR the legacy flat prefix — a workspace created
+    # before the layout change must still read as complete.
+    0) [ -n "$(find "$WS/cvg/docs/brd" -maxdepth 1 -name '*.md' -print 2>/dev/null | head -1)" ] \
+       || [ -n "$(find "$WS/cvg/docs" -maxdepth 1 -name 'brd-*.md' -print 2>/dev/null | head -1)" ] ;;
+    1) [ -n "$(find "$WS/cvg/docs/tech-spec" -maxdepth 1 -name '*.md' -print 2>/dev/null | head -1)" ] \
+       || [ -n "$(find "$WS/cvg/docs" -maxdepth 1 -name 'tech-spec-*.md' -print 2>/dev/null | head -1)" ] ;;
     2) [ -n "$(find "$WS/cvg/docs/adrs" -maxdepth 1 -name '*.md' -print 2>/dev/null | head -1)" ] ;;
     3) [ -n "$(find "$WS/cvg/sketch" -path '*swimlane-*' -type f -print 2>/dev/null | head -1)" ] ;;
     4) [ -f "$WS/cvg/sketch/.consensus/objection-log.json" ] ;;

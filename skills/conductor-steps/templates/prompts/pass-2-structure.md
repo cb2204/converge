@@ -4,7 +4,7 @@
 decisions with alternatives and consequences, not narration of whatever was
 going to happen anyway.
 
-**Inputs:** the gated tech spec at `cvg/docs/tech-spec-*.md`.
+**Inputs:** the gated tech spec at `cvg/docs/tech-spec/`.
 
 **Procedure:**
 1. Identify each load-bearing choice the requirements force: storage, tooling,

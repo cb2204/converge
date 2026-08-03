@@ -109,7 +109,7 @@ sign.
 ## The no-go record (the other exit)
 
 When the do-nothing test shows tolerable inaction, write
-`cvg/docs/no-go-<slug>.md` instead of a BRD:
+`cvg/docs/no-go/<slug>.md` instead of a BRD:
 
 ```markdown
 # NO-GO — <idea title>

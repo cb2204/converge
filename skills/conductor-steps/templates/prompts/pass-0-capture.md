@@ -14,7 +14,7 @@ keys or expectation files, even if you can see them.
    (what counts and what doesn't; where the authoritative data lives; what
    "trust" means; how it will be re-run). Keep going until no blocker gaps
    remain — a vague answer is a gap, not an answer.
-3. Draft the BRD in the owner's voice at `cvg/docs/brd-<slug>.md`: goal,
+3. Draft the BRD in the owner's voice at `cvg/docs/brd/<slug>.md`: goal,
    scope, definitions, constraints, the questions it must answer, and
    explicit non-goals.
 4. File your notes: interview log → `cvg/brain/transcripts/`, judgment calls

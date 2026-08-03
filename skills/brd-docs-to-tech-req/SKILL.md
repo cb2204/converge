@@ -1,6 +1,6 @@
 ---
 name: brd-docs-to-tech-req
-description: Transforms a client BRD (cvg/docs/brd-*.md|.pdf) into a verifiable tech-spec (cvg/docs/tech-spec-*.md) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (frontier rounds with recommended defaults, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
+description: Transforms a client BRD (cvg/docs/brd/|.pdf) into a verifiable tech-spec (cvg/docs/tech-spec/) — the engineering solution shape for the client's problem. Implements Converge Pass 1 (Intent), the top of the chain. Use when a brief has landed and someone says "turn this brief into a tech-spec", "start Converge pass 1", or "what are we actually building here". Runs the Understand / Prior-art / Interrogate (frontier rounds with recommended defaults, gap register) / Crystallize steps and gates on restating the problem in one paragraph AND the spec answers it, every requirement falsifiable and prioritized, success metrics traced to the BRD's KPIs, no unresolved blocker gaps. Stays above the stack — no schema, no engine choice. Do NOT use for architecture or stack decisions (that is Pass 3), when a signed-off tech-spec already exists (go to Pass 2, tech-req-to-adrs), or when no BRD exists at all (run Pass 0, idea-to-brd, to capture the brief first). Engine/format bound via flags, never baked into the name.
 metadata:
   version: "0.1.0"
 ---
@@ -25,7 +25,7 @@ Pass 1 is the highest-altitude pass in Converge. It turns a client's Business Re
 
 ### Step 1 — Understand (read like the engineer who must deliver it)
 
-Read the BRD (`cvg/docs/brd-*.md|.pdf`, e.g. `cvg/docs/brd-analytical-backbone.md` — the `cvg/` workspace comes first; bare `docs/` is the legacy fallback) as the senior engineer accountable for delivery, not as a summarizer.
+Read the BRD (`cvg/docs/brd/|.pdf`, e.g. `cvg/docs/brd-analytical-backbone.md` — the `cvg/` workspace comes first; bare `docs/` is the legacy fallback) as the senior engineer accountable for delivery, not as a summarizer.
 
 - Find the **real pain**: who feels it, when, and what it costs — financial, operational, strategic — in the client's own numbers.
 - Separate **symptoms from the underlying problem**. A brief that asks for "a dashboard" usually has a decision the client can't make underneath it.
@@ -155,13 +155,13 @@ are different verdicts.**
 
 ```bash
 # while writing — structural validation only, NEVER authorizes descent:
-bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh --draft cvg/docs/tech-spec-<slug>.md
+bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh --draft cvg/docs/tech-spec/<slug>.md
 
 # the handoff gate (default) — passes ONLY a canonical spec: owner verdict
 # 'canonical' on the Sign-off verdict line (fence-stripped; pending/draft
 # there never authorizes) + a calendar-valid ISO date ON the verdict line
 # or the line immediately following it:
-bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh cvg/docs/tech-spec-<slug>.md
+bash .claude/skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh cvg/docs/tech-spec/<slug>.md
 ```
 
 Warnings are advisory, never fatal: stack-leak hits named by domain bucket
@@ -191,8 +191,8 @@ negative fixture must fail for its intended reason).
 
 | | Artifact |
 |------|----------|
-| **IN** | The customer BRD + attachments/threads — `cvg/docs/brd-*.md|.pdf` (e.g. `cvg/docs/brd-analytical-backbone.md`; the `cvg/` workspace first, bare `docs/` as the legacy fallback). The *what* and *why*, in the client's words. |
-| **OUT** | A tech-spec — `cvg/docs/tech-spec-*.md` or `.pdf` (e.g. `cvg/docs/tech-spec-analytical-engine.pdf`). The *how-well*, at a level the client signs off on. |
+| **IN** | The customer BRD + attachments/threads — `cvg/docs/brd/|.pdf` (e.g. `cvg/docs/brd-analytical-backbone.md`; the `cvg/` workspace first, bare `docs/` as the legacy fallback). The *what* and *why*, in the client's words. |
+| **OUT** | A tech-spec — `cvg/docs/tech-spec/` or `.pdf` (e.g. `cvg/docs/tech-spec-analytical-engine.pdf`). The *how-well*, at a level the client signs off on. |
 | **GATE** | Restate the problem in one paragraph AND the spec answers it: scope explicit, data named, every requirement falsifiable, success metrics traced to KPIs (current → target), assumptions owned. |
 
 ## Flags

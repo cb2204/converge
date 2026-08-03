@@ -517,6 +517,9 @@ cvg_init() {
     "$root/cvg/brain/notes" \
     "$root/cvg/brain/refs" \
     "$root/cvg/brain/transcripts" \
+    "$root/cvg/docs/brd" \
+    "$root/cvg/docs/tech-spec" \
+    "$root/cvg/docs/no-go" \
     "$root/cvg/docs/adrs" \
     "$root/cvg/docs/lessons" \
     "$root/cvg/sketch" \
@@ -537,6 +540,9 @@ cvg_init() {
     "$root/cvg/brain/notes/.gitkeep" \
     "$root/cvg/brain/refs/.gitkeep" \
     "$root/cvg/brain/transcripts/.gitkeep" \
+    "$root/cvg/docs/brd/.gitkeep" \
+    "$root/cvg/docs/tech-spec/.gitkeep" \
+    "$root/cvg/docs/no-go/.gitkeep" \
     "$root/cvg/docs/adrs/.gitkeep" \
     "$root/cvg/docs/lessons/.gitkeep" \
     "$root/cvg/sketch/.gitkeep" \
@@ -1052,9 +1058,9 @@ cmd_help() {
   printf '\n'
   printf '%spasses%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  capture [--draft|--no-go] [brief]\n'
-  printf '                           Pass 0 gate — finds cvg/docs/brd-*.md (then\n'
+  printf '                           Pass 0 gate — finds cvg/docs/brd/ (then\n'
   printf '                           docs/) when no path is given\n'
-  printf '  intent [--draft] [spec]  Pass 1 gate — finds cvg/docs/tech-spec-*.md\n'
+  printf '  intent [--draft] [spec]  Pass 1 gate — finds cvg/docs/tech-spec/\n'
   printf '                           (then docs/) when no path is given\n'
   printf '  structure [--final] [--dir d]\n'
   printf '                           Pass 2 gate — finds cvg/docs/adrs/ (then\n'
@@ -1469,7 +1475,11 @@ case "$CMD" in
     if [ -z "$CAP_TARGET" ]; then
       CAP_N=0
       CAP_LIST=""
-      for F in "cvg/docs/${CAP_KIND}-"*.md "docs/${CAP_KIND}-"*.md; do
+      # Typed folder first (cvg/docs/brd/*.md — the canonical layout since
+      # 0.1.0: one folder per artifact type), then the legacy flat prefix, so
+      # workspaces created before the layout change keep gating untouched.
+      for F in "cvg/docs/${CAP_KIND}/"*.md "docs/${CAP_KIND}/"*.md \
+               "cvg/docs/${CAP_KIND}-"*.md "docs/${CAP_KIND}-"*.md; do
         [ -f "$F" ] || continue
         CAP_N=$((CAP_N + 1))
         CAP_TARGET="$F"
@@ -1477,7 +1487,7 @@ case "$CMD" in
 "
       done
       if [ "$CAP_N" -eq 0 ]; then
-        ui_err "no ${CAP_KIND}-*.md found under cvg/docs/ or docs/ from '$PWD' — pass the file: cvg capture [--draft|--no-go] <file>"
+        ui_err "no ${CAP_KIND} document found under cvg/docs/${CAP_KIND}/ (or the legacy ${CAP_KIND}-*.md) from '$PWD' — pass the file: cvg capture [--draft|--no-go] <file>"
         printf 'CHECK_BRD=USAGE_ERROR\n'
         exit 2
       fi
@@ -1513,7 +1523,9 @@ case "$CMD" in
     if [ -z "$INT_TARGET" ]; then
       INT_N=0
       INT_LIST=""
-      for F in cvg/docs/tech-spec-*.md docs/tech-spec-*.md; do
+      # Typed folder first, legacy flat prefix second (see cvg capture).
+      for F in cvg/docs/tech-spec/*.md docs/tech-spec/*.md \
+               cvg/docs/tech-spec-*.md docs/tech-spec-*.md; do
         [ -f "$F" ] || continue
         INT_N=$((INT_N + 1))
         INT_TARGET="$F"
@@ -1521,7 +1533,7 @@ case "$CMD" in
 "
       done
       if [ "$INT_N" -eq 0 ]; then
-        ui_err "no tech-spec-*.md found under cvg/docs/ or docs/ from '$PWD' — pass the file: cvg intent [--draft] <file>"
+        ui_err "no tech-spec found under cvg/docs/tech-spec/ (or the legacy tech-spec-*.md) from '$PWD' — pass the file: cvg intent [--draft] <file>"
         printf 'CHECK_TECH_SPEC=USAGE_ERROR\n'
         exit 2
       fi

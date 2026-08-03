@@ -12,8 +12,8 @@
 # must stay above the stack: the engine is decided in Pass 3.
 #
 # Usage:
-#   bash check-tech-spec.sh cvg/docs/tech-spec-analytical-engine.md # canonical
-#   bash check-tech-spec.sh --draft cvg/docs/tech-spec-*.md         # validation only
+#   bash check-tech-spec.sh cvg/docs/tech-spec/analytical-engine.md # canonical
+#   bash check-tech-spec.sh --draft cvg/docs/tech-spec/<slug>.md  # validation only
 #   bash check-tech-spec.sh --version
 #
 # Exit contract (v0.5.0): draft validation and Pass 2 handoff authorization

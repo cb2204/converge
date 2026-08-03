@@ -4,7 +4,7 @@
 single requirement is *testable* — phrased so a machine (or a person with a
 checklist) can answer pass/fail without interpretation.
 
-**Inputs:** the signed BRD at `cvg/docs/brd-*.md`. Held-back material stays
+**Inputs:** the signed BRD at `cvg/docs/brd/`. Held-back material stays
 closed.
 
 **Procedure:**
@@ -14,7 +14,7 @@ closed.
 2. Name every blocker honestly. A blocker's resolution must be affirmative
    and substantive — "TBD", "pending", or a blank are unresolved, and the
    gate fails closed on them.
-3. Write `cvg/docs/tech-spec-<slug>.md`: requirements (numbered, testable),
+3. Write `cvg/docs/tech-spec/<slug>.md`: requirements (numbered, testable),
    data contracts, constraints inherited from the BRD, resolved blockers,
    non-goals.
 4. File judgment calls → `cvg/brain/decisions/`, working notes →

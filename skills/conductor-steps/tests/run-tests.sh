@@ -50,14 +50,14 @@ run 1 post 0 && printf '%s' "$OUT" | grep -q '^CONDUCTOR_POST=INCOMPLETE$' \
   && ok "post 0 reports no artifact yet" || bad "post 0 must be INCOMPLETE before the BRD exists"
 
 # --- the descent, one artifact at a time ------------------------------------
-touch "$T/cvg/docs/brd-shop.md"
+touch "$T/cvg/docs/brd/shop.md"
 run 0 next && printf '%s' "$OUT" | grep -q '^NEXT_PASS=1$' \
-  && ok "BRD on the floor: next is pass 1" || bad "after BRD, next should be 1 ($OUT)"
+  && ok "BRD in the typed folder: next is pass 1" || bad "after BRD, next should be 1 ($OUT)"
 run 0 post 0 && printf '%s' "$OUT" | grep -q '^CONDUCTOR_POST=OK$' \
   && printf '%s' "$OUT" | grep -q 'cvg capture' \
   && ok "post 0 sees the artifact and names the authoritative gate" || bad "post 0 should be OK now"
 
-touch "$T/cvg/docs/tech-spec-shop.md"
+touch "$T/cvg/docs/tech-spec/shop.md"
 run 0 next && printf '%s' "$OUT" | grep -q '^NEXT_PASS=2$' \
   && ok "tech-spec: next is pass 2" || bad "after tech-spec, next should be 2"
 
@@ -106,6 +106,18 @@ run 0 next || true
 AFTER="$(find "$T/cvg" -type f | wc -l | tr -d ' ')"
 [ "$BEFORE" = "$AFTER" ] && ok "the conductor is read-only — it wrote nothing" \
   || bad "the conductor mutated the workspace ($BEFORE -> $AFTER files)"
+
+# The legacy flat layout must still read as complete — no workspace gets
+# stranded by the folder change.
+T4="$(mktemp -d -t conductor-tests4.XXXXXX)"
+git -C "$T4" init --quiet
+( cd "$T4" && CVG_PROJECT_ROOT="$T4" bash "$REPO/bin/cvg" init >/dev/null )
+touch "$T4/cvg/docs/brd-legacy.md" "$T4/cvg/docs/tech-spec-legacy.md"
+OUT="$(cd "$T4" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q '^NEXT_PASS=2$' \
+  && ok "legacy flat brd-*/tech-spec-*.md still count as done" \
+  || bad "the flat layout was stranded by the folder change ($OUT)"
+rm -rf "$T4"
 
 run 2 bogus && printf '%s' "$OUT" | grep -q '^CONDUCTOR=USAGE_ERROR$' \
   && ok "unknown verb is a usage error (exit 2)" || bad "unknown verb must exit 2"

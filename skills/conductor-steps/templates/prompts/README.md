@@ -26,7 +26,9 @@ missing.
 |---|---|---|
 | `cvg/brain/transcripts/` | every pass | interview notes, dispatch summaries |
 | `cvg/brain/decisions/` | every pass | judgment calls that shaped the work |
-| `cvg/docs/` | passes 0–2 | BRD, tech spec, `adrs/` |
+| `cvg/docs/brd/` | pass 0 | the BRD (or `no-go/` — the other honest exit) |
+| `cvg/docs/tech-spec/` | pass 1 | the testable requirements |
+| `cvg/docs/adrs/` | pass 2 | one file per architecture decision |
 | `cvg/sketch/` | passes 3–4 | swimlanes, objection log |
 | `cvg/tasks/` | pass 5 | signed Task-Specs (`done/`, `parked/` lifecycle) |
 | `cvg/execution/` | pass 7 | execution profiles + adapter manifests |
