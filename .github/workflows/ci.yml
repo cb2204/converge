@@ -189,6 +189,14 @@ jobs:
         # section must decompose to NOTHING and say so.
         run: bash tests/test-cvg-tasks-plan.sh
 
+      - name: cvg tasks dod — the checklist must not weaken a criterion
+        # The only verb in the task-spec engine with a machine token and no suite,
+        # and it cost what an untested gate costs: `description:` was read with a
+        # class excluding ',', so block prose was cut at its first comma — where
+        # English puts the demanding clause. "exists, is executable, takes no
+        # arguments" rendered as "exists", which `touch` satisfies.
+        run: bash tests/test-cvg-tasks-dod.sh
+
       - name: cvg lesson — the teaching companion's CLI door
         # The companion was the one skill with a gate script, a machine token,
         # and no verb. Byte-parity, the discovery contract, --immutable, and

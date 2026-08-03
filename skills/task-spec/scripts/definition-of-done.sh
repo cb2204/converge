@@ -31,6 +31,18 @@ python3 - "$FILE" <<'PY'
 import re, sys
 spec = open(sys.argv[1], encoding="utf-8", errors="replace").read()
 
+
+def clip(s, n):
+    """Truncate on a WORD boundary and SAY SO.
+
+    A silent cut reads as the whole thing. This checklist is what a human ticks
+    off to declare a task done, so a criterion that arrives shortened arrives
+    weakened — and the reader has no way to tell."""
+    s = (s or "").strip()
+    if len(s) <= n:
+        return s
+    return s[:n].rsplit(" ", 1)[0] + " …"
+
 # behaviors: "- **B-1** — text"
 behaviors = re.findall(r'^\s*-\s*\*\*(B-\d+)\*\*\s*[—-]?\s*(.+?)\s*$', spec, re.M)
 bmap = dict(behaviors)
@@ -45,7 +57,16 @@ for e in entries:
     eid = re.search(r'\bid:\s*(eval_\d+)', e)
     if not eid:
         continue
-    desc = re.search(r'\bdescription:\s*"?([^,\n}"]+)', e)
+    # `description:` appears in two shapes, and only ONE of them ends at a comma.
+    # Inline flow form — `- {id: eval_1, description: x, runnable: bash}` — really
+    # does delimit fields with commas. Block form is prose, where a comma is
+    # content: "the entry point exists, is executable, takes no arguments and
+    # fetches nothing". Stopping at the first comma in block form dropped every
+    # clause after it, and English puts the DEMANDING half of a criterion there —
+    # so the checklist rendered "the entry point exists", which `touch` satisfies.
+    # Eight of eight descriptions in the uc-01 backlog were silently halved.
+    stop = r'[^,\n}"]' if e.lstrip().startswith("{") else r'[^\n"]'
+    desc = re.search(r'\bdescription:\s*"?(' + stop + r'+)', e)
     ver = re.search(r'\bverifies:\s*\[([^\]]*)\]', e)
     term = re.search(r'\bterminal:\s*(true|false)', e)
     evals.append({
@@ -72,7 +93,7 @@ if behaviors:
         evs = verified_by.get(bid, [])
         mark = "x" if evs else " "
         print("  [%s] %s → %s" % (mark, bid, (", ".join(evs) if evs else "NO EVAL — untraced")))
-        print("        %s" % (btext[:96]))
+        print("        %s" % clip(btext, 96))
         if not evs:
             gaps.append("%s has no verifying eval" % bid)
     # every eval should trace to a behavior when behaviors exist
@@ -88,7 +109,7 @@ if not evals:
 for ev in evals:
     star = " *" if ev["terminal"] else "  "
     trace = (" ⟵ %s" % ",".join(ev["verifies"])) if ev["verifies"] else ""
-    print("  [ ]%s %s — %s%s" % (star, ev["id"], (ev["desc"] or "(no description)"), trace))
+    print("  [ ]%s %s — %s%s" % (star, ev["id"], (clip(ev["desc"], 120) or "(no description)"), trace))
 print("\nExit Check (runnable):\n  %s" % exit_check)
 
 print("")

@@ -24,6 +24,29 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
+### Fixed
+- **`cvg tasks dod` was silently halving every acceptance criterion.** The
+  Definition-of-Done checklist is the artifact a human ticks off to declare a task
+  done, and it rendered each criterion cut at its first comma:
+  `the entry point exists, is executable, takes no arguments and fetches nothing`
+  arrived as `the entry point exists` — which `touch` satisfies. Eight of eight
+  descriptions in a live backlog were affected, every one losing its qualifier.
+  - Cause: `description:` was read with a character class excluding `,`. That is
+    correct for the **inline flow form** (`- {id: eval_1, description: x, runnable: bash}`),
+    where a comma ends a field, and wrong for **block prose**, where it is content.
+    The stop set is now chosen by shape, so both forms parse correctly.
+  - **English puts the demanding clause after the comma**, so the cut was not random
+    — it systematically kept the easy half of every criterion.
+  - Both truncations (criterion and behavior text) now cut on a word boundary and
+    say so with an ellipsis. The behavior line previously used a bare `[:96]` slice
+    that ended mid-sentence with no marker; a silent cut reads as the whole thing.
+  - `definition-of-done.sh` was the only verb in the task-spec engine with a machine
+    token and **zero suites**, which is how a defect this visible reached a real use
+    case. New `tests/test-cvg-tasks-dod.sh` (19 rows, wired into CI) pins the fix,
+    the flow-form case it must not break, announced truncation, the matrix in both
+    directions, `DOD=GAPS` with its exit code, byte-parity of the CLI door, and
+    read-onlyness. Verified against the shipped code: 4 rows go red.
+
 ### Added
 - **`cvg doctor evidence` — can git show the floor the gates are standing on?**
   Three parts of the method assume the workspace is version-controlled and none of
