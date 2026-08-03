@@ -8,6 +8,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GATE="$HERE/../scripts/check-consensus-gate.sh"
 GEN="$HERE/gen-log.py"
+CVGBIN="$(cd "$HERE/../../.." && pwd)/bin/cvg"
 TREE="$HERE/fixtures/tree"
 TOTAL=0; FAILED=0
 
@@ -45,6 +46,11 @@ check tampered-plan   "$S" 1 'changed since the review' '^CHECK_CONSENSUS=OK'
 # PRD fork line removed (stamp AFTER edit so hashes still match) -> fork-line fail
 S="$(newtree)"; grep -v '^FORK:' "$S"/swimlane-alpha/swimlane-alpha.plan.md > "$S"/tmp && mv "$S"/tmp "$S"/swimlane-alpha/swimlane-alpha.plan.md
 python3 "$GEN" "$S" good >/dev/null; check no-prd-fork "$S" 1 'fork not declared at the top' '^CHECK_CONSENSUS=OK'
+# The 2026-08-03 regression trio: an adversary proposal, a resolution nobody
+# signed, and a decision that leaves the risk explicitly open — none may be GREEN.
+S="$(newtree)"; python3 "$GEN" "$S" adversary-proposal-only >/dev/null; check adversary-proposal-only "$S" 1 'UNRESOLVED' '^CHECK_CONSENSUS=OK'
+S="$(newtree)"; python3 "$GEN" "$S" no-decider >/dev/null;              check no-decider "$S" 1 'no decided_by' '^CHECK_CONSENSUS=OK'
+S="$(newtree)"; python3 "$GEN" "$S" open-residual-risk >/dev/null;      check open-residual-risk "$S" 1 'open residual risk' '^CHECK_CONSENSUS=OK'
 # no log -> EMPTY (exit 2)
 S="$(newtree)"; check no-log "$S" 2 'CHECK_CONSENSUS=EMPTY' '^CHECK_CONSENSUS=OK'
 # usage error
@@ -67,7 +73,16 @@ TOTAL=$((TOTAL + 1)); OUT="$(CVG_CODEX_CMD="$FAKE" bash "$DISPATCH" --adversary 
 if [ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=OK$' && [ -f "$S/.consensus/objection-log.json" ]; then
   printf 'ok    %-22s (exit %s)\n' dispatch-stamps "$RC"
 else printf 'FAIL  %-22s exit %s\n' dispatch-stamps "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
-check dispatch-then-gate "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
+# A FRESH DISPATCH IS NOT CONSENSUS. This row asserted CHECK_CONSENSUS=OK
+# straight after a dispatch — i.e. it pinned the 2026-08-03 false-green as
+# correct behaviour. The adversary only proposes; the gate must stay RED until a
+# human decides, and then go GREEN once one has.
+check dispatch-then-gate "$S" 1 'UNRESOLVED' '^CHECK_CONSENSUS=OK'
+TOTAL=$((TOTAL + 1)); OUT="$(cd "$S/.." && bash "$CVGBIN" review --resolve all --fix --by tester --dir "$S" 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^RESOLVE=OK$'; then
+  printf 'ok    %-22s (exit %s)\n' resolve-records "$RC"
+else printf 'FAIL  %-22s exit %s\n' resolve-records "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
+check resolved-then-green "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
 # unknown adversary -> usage error
 TOTAL=$((TOTAL + 1)); OUT="$(bash "$DISPATCH" --adversary bogus --dir "$S" 2>&1)"; RC=$?
 if [ "$RC" -eq 2 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=USAGE_ERROR$'; then printf 'ok    %-22s (exit %s)\n' dispatch-bad-adv "$RC"
@@ -105,7 +120,8 @@ if [ "$RC" -eq 0 ] && printf '%s\n' "$OUT" | grep -q '^REVIEW=OK$' \
    && python3 -c "import json,sys; d=json.load(open('$S/.consensus/objection-log.json')); sys.exit(0 if len(d.get('adversaries',[]))==2 and len(d['objections'])==2 and d.get('cross_family') and d['objections'][1]['id']=='C2' else 1)"; then
   printf 'ok    %-22s (exit %s)\n' dispatch-multi "$RC"
 else printf 'FAIL  %-22s exit %s\n' dispatch-multi "$RC"; printf '%s\n' "$OUT" | sed 's/^/      | /'; FAILED=$((FAILED + 1)); fi
-check multi-then-gate "$S" 0 'CHECK_CONSENSUS=OK' 'FAIL'
+# Same for the merged path: two engines proposing is still nobody deciding.
+check multi-then-gate "$S" 1 'UNRESOLVED' '^CHECK_CONSENSUS=OK'
 # fail-closed: a single SAME-family engine (claude only) → no cross-family → ERROR, never a pass
 S="$(newtree)"; TOTAL=$((TOTAL + 1))
 OUT="$(CVG_CLAUDE_CMD="$FAKE" bash "$MULTI" --adversary claude --dir "$S" 2>&1)"; RC=$?

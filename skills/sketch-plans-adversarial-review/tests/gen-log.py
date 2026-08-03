@@ -28,11 +28,16 @@ log = {
         {"id": "C1", "severity": "high", "attack_class": "cross-lane-interface",
          "swimlane": "swimlane-alpha", "location": {"plan_file": "swimlane-alpha/swimlane-alpha.plan.md", "section": "Seam"},
          "evidence": "beta reads a field alpha never emits",
-         "resolution": {"disposition": "FIX", "fixed_in": "swimlane-alpha.plan.md#Seam"}},
+         # A resolution is an OWNER decision: decided_by/decided_at are what make it
+         # distinguishable from the adversary's proposal (which now lands in "proposal").
+         "resolution": {"disposition": "FIX", "fixed_in": "swimlane-alpha.plan.md#Seam",
+                        "decided_by": "owner-under-test", "decided_at": "2026-08-03T12:00:00Z"}},
         {"id": "C2", "severity": "medium", "attack_class": "unverified-assumption",
          "swimlane": "swimlane-alpha", "location": {"plan_file": "swimlane-alpha/swimlane-alpha.plan.md", "section": "Build order"},
          "evidence": "assumes src.* is single-writer",
-         "resolution": {"disposition": "ACCEPT", "owner": "team-a", "reason": "accepted under current load"}},
+         "resolution": {"disposition": "ACCEPT", "owner": "team-a", "reason": "accepted under current load",
+                        "decided_by": "owner-under-test", "decided_at": "2026-08-03T12:00:00Z",
+                        "risk_residual": "bounded: single-writer holds at current load"}},
     ],
     "fork": {"choice": "B", "reason": "every leg has a cheap runnable eval", "per_plan_declared": True},
     "open_questions": [{"q": "load ceiling?", "owner": "team-a", "blocks_build": False}],
@@ -43,6 +48,19 @@ if mode == "same-family":
     log["adversary"]["family"] = "anthropic"; log["adversary"]["engine_id"] = "claude"
 elif mode == "unresolved":
     log["objections"][0]["resolution"] = {"disposition": None}
+elif mode == "adversary-proposal-only":
+    # THE regression for 2026-08-03: the adversary's own FIX proposal must never
+    # satisfy the gate. This is the exact shape a fresh dispatch produces.
+    log["objections"][0].pop("resolution", None)
+    log["objections"][0]["proposal"] = {"disposition": "FIX",
+        "reason": "the read-only adversary did not implement the fix",
+        "risk_residual": "Open until the owner revises the plan"}
+elif mode == "no-decider":
+    log["objections"][0]["resolution"] = {"disposition": "FIX", "fixed_in": "x"}
+elif mode == "open-residual-risk":
+    log["objections"][0]["resolution"] = {"disposition": "FIX", "fixed_in": "x",
+        "decided_by": "owner-under-test", "decided_at": "2026-08-03T12:00:00Z",
+        "risk_residual": "Open until someone looks at it"}
 elif mode == "accept-no-owner":
     log["objections"][1]["resolution"] = {"disposition": "ACCEPT", "owner": ""}
 elif mode == "no-fork":

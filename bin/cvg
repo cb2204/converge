@@ -1051,6 +1051,98 @@ cvg_setup_projection() {
   return 0
 }
 
+# cvg_review_resolve — record the OWNER's decision on an objection.
+#
+# WHY THIS EXISTS
+# Pass 4 asks for the one thing a machine cannot supply: a human deciding whether
+# each objection is fixed or knowingly accepted. Before this verb the only place
+# to put that decision was the provenance-stamped objection log, by hand — so the
+# realistic outcomes were "nobody records anything" (and on 2026-08-03 the gate
+# read the adversary's own proposal as consent, going GREEN with seven criticals
+# open) or "someone hand-edits the artifact the barrier is supposed to trust".
+#
+# The decision is deliberately NOT inventable: decided_by comes from --by, then
+# .cvg/identity, then git config. If none resolves, this refuses rather than
+# signing on your behalf — an unattributable decision is what we just removed.
+#
+# Token: RESOLVE=OK | RESOLVE=USAGE_ERROR | RESOLVE=ERROR
+cvg_review_resolve() {  # <log> <ids-csv> <FIX|ACCEPT> <by> <owner> <risk> <note>
+  CVG_RS_LOG="$1" CVG_RS_IDS="$2" CVG_RS_DISP="$3" CVG_RS_BY="$4" \
+  CVG_RS_OWNER="$5" CVG_RS_RISK="$6" CVG_RS_NOTE="$7" \
+  CVG_RS_ROOT="$CVG_PROJECT_ROOT_DIR" python3 - <<'PY'
+import json, os, sys, subprocess, datetime, tempfile
+
+log_p = os.environ["CVG_RS_LOG"]; ids = os.environ["CVG_RS_IDS"]
+disp  = os.environ["CVG_RS_DISP"]; by = os.environ["CVG_RS_BY"].strip()
+owner = os.environ["CVG_RS_OWNER"].strip(); risk = os.environ["CVG_RS_RISK"].strip()
+note  = os.environ["CVG_RS_NOTE"].strip(); root = os.environ["CVG_RS_ROOT"]
+
+def die(msg, tok="RESOLVE=USAGE_ERROR", code=2):
+    print("error: %s" % msg, file=sys.stderr); print(tok); sys.exit(code)
+
+if not os.path.exists(log_p):
+    die("no objection log at %s — run cvg review --adversary <engine> first" % log_p)
+
+# decided_by: explicit, then the project's recorded identity, then git. Never invented.
+if not by:
+    ident = os.path.join(root, ".cvg", "identity")
+    if os.path.exists(ident):
+        for line in open(ident, encoding="utf-8"):
+            if line.startswith("default="):
+                by = line.split("=", 1)[1].strip(); break
+if not by:
+    by = subprocess.run(["git", "-C", root, "config", "user.name"],
+                        capture_output=True, text=True).stdout.strip()
+if not by:
+    die("cannot determine who is deciding — pass --by <name>, set .cvg/identity, or "
+        "configure git user.name. A decision nobody can be attributed to is exactly "
+        "what the barrier refuses.")
+
+if disp == "ACCEPT":
+    if not owner: die("--accept requires --owner <name> (who carries the accepted risk)")
+    if not risk:  die("--accept requires --risk <why it is acceptable>")
+    if risk.lower().startswith("open") or "open until" in risk.lower():
+        die("--risk %r still describes an OPEN risk; accepting means the risk is "
+            "understood and carried, not deferred" % risk[:50])
+
+art = json.load(open(log_p, encoding="utf-8"))
+objs = art.get("objections") or []
+by_id = {str(o.get("id")): o for o in objs if isinstance(o, dict)}
+targets = list(by_id) if ids.strip().lower() == "all" else [i.strip() for i in ids.split(",") if i.strip()]
+missing = [t for t in targets if t not in by_id]
+if missing:
+    die("no such objection id(s): %s — the log holds %s" % (", ".join(missing), ", ".join(sorted(by_id)) or "none"))
+
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+for t in targets:
+    o = by_id[t]
+    # The adversary's recommendation is preserved as `proposal` — the record should
+    # show what was advised AND what was decided, so a later reader can see when an
+    # owner overrode the attacker.
+    if "resolution" in o and "proposal" not in o:
+        o["proposal"] = o.pop("resolution")
+    res = {"disposition": disp, "decided_by": by, "decided_at": stamp}
+    if note:  res["note"] = note
+    if disp == "ACCEPT":
+        res["owner"] = owner
+        res["risk_residual"] = risk
+    o["resolution"] = res
+
+# Same-directory atomic write: a half-written barrier artifact is worse than none.
+d = os.path.dirname(log_p) or "."
+fd, tmp = tempfile.mkstemp(dir=d, prefix=".objection-log.", suffix=".tmp")
+with os.fdopen(fd, "w", encoding="utf-8") as fh:
+    json.dump(art, fh, indent=2); fh.write("\n")
+os.replace(tmp, log_p)
+
+undecided = [str(o.get("id")) for o in objs
+             if isinstance(o, dict) and not (o.get("resolution") or {}).get("decided_by")]
+print("recorded %s by %s at %s for: %s" % (disp, by, stamp, ", ".join(targets)))
+print("still undecided: %s" % (", ".join(sorted(undecided)) if undecided else "none — cvg review --check is next"))
+print("RESOLVE=OK")
+PY
+}
+
 # cvg_doctor_plugin — is the Converge a consuming project LOADS the same Converge
 # as its source?
 #
@@ -1202,6 +1294,11 @@ cmd_help() {
   printf '                           (codex|kimi|claude) attacks the swimlanes headless;\n'
   printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
   printf '  review [--check]         Pass 4 gate — the stamped objection log; CHECK_CONSENSUS\n'
+  printf '  review --resolve <id|all> --fix | --accept --owner N --risk W\n'
+  printf '                           record the OWNER decision on an objection — the one\n'
+  printf '                           thing Pass 4 cannot derive. The adversary only ever\n'
+  printf '                           PROPOSES; --check stays RED until a human decides\n'
+  printf '                           (RESOLVE token)\n'
   printf '  review … [--timeout N]   raise the dispatch wall-clock cap (default 300s;\n'
   printf '                           a large plan set needs more). Fail-closed either way\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
@@ -1351,7 +1448,7 @@ is_mutating() {
         *) return 1 ;;
       esac
       ;;
-    review)     for a in "$@"; do case "$a" in --adversary|--adversary=*) return 0 ;; esac; done; return 1 ;;
+    review)     for a in "$@"; do case "$a" in --adversary|--adversary=*|--resolve|--resolve=*) return 0 ;; esac; done; return 1 ;;
     bind)       for a in "$@"; do [ "$a" = "--check" ] && return 1; done; return 0 ;;
     # cvg strips --dry-run from "$@" before this guard runs, so scanning args
     # here would be dead code — consult the parsed flag. The loop kernel owns
@@ -1802,6 +1899,7 @@ case "$CMD" in
     DISPATCH="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/dispatch-review.sh"
     DISPATCH_MULTI="$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/dispatch-review-multi.sh"
     REV_MODE="check"; REV_ADV=""; REV_DIR=""; REV_TMO=""
+    REV_IDS=""; REV_DISP=""; REV_BY=""; REV_OWNER=""; REV_RISK=""; REV_NOTE=""
     while [ $# -gt 0 ]; do
       case "$1" in
         --check)     REV_MODE="check"; shift ;;
@@ -1814,8 +1912,16 @@ case "$CMD" in
         # CLI — you had to reach past cvg to the script, which is exactly what
         # the CLI exists to stop. A real 11-file plan set hit this on first use.
         --timeout)   REV_TMO="${2:-}"; shift 2 ;;
+        # Recording the owner's decision — the one input Pass 4 cannot derive.
+        --resolve)   REV_MODE="resolve"; REV_IDS="${2:-}"; shift 2 ;;
+        --fix)       REV_DISP="FIX"; shift ;;
+        --accept)    REV_DISP="ACCEPT"; shift ;;
+        --owner)     REV_OWNER="${2:-}"; shift 2 ;;
+        --risk)      REV_RISK="${2:-}"; shift 2 ;;
+        --note)      REV_NOTE="${2:-}"; shift 2 ;;
+        --by)        REV_BY="${2:-}"; shift 2 ;;
         --timeout=*) REV_TMO="${1#--timeout=}"; shift ;;
-        -*)          ui_err "unknown review flag '$1' — expected --check or --adversary <e> [--dir <sketch>] [--timeout <secs>]"
+        -*)          ui_err "unknown review flag '$1' — expected --check | --adversary <e> [--timeout <secs>] | --resolve <id|all> --fix|--accept [--owner N --risk W] [--note T] [--by N]  [--dir <sketch>]"
                      printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2 ;;
         *)           REV_DIR="$1"; shift ;;
       esac
@@ -1831,6 +1937,20 @@ case "$CMD" in
         ui_err "no unique swimlane tree (cvg/swimlanes/<seam>/, or the legacy cvg/sketch/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
         printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2
       fi
+    fi
+    if [ "$REV_MODE" = "resolve" ]; then
+      if [ -z "$REV_IDS" ]; then
+        ui_err "--resolve needs an objection id, a comma-list, or 'all'"
+        printf 'RESOLVE=USAGE_ERROR\n'; exit 2
+      fi
+      case "$REV_DISP" in
+        FIX|ACCEPT) : ;;
+        *) ui_err "--resolve needs --fix or --accept (ACCEPT also needs --owner and --risk)"
+           printf 'RESOLVE=USAGE_ERROR\n'; exit 2 ;;
+      esac
+      cvg_review_resolve "$REV_DIR/.consensus/objection-log.json" \
+        "$REV_IDS" "$REV_DISP" "$REV_BY" "$REV_OWNER" "$REV_RISK" "$REV_NOTE"
+      exit $?
     fi
     if [ "$REV_MODE" = "dispatch" ]; then
       REV_ARGS=(--adversary "$REV_ADV" --dir "$REV_DIR")

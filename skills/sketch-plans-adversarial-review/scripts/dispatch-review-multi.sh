@@ -101,6 +101,29 @@ if not logs:
     print("REVIEW=ERROR"); sys.exit(22)
 
 # provenance the REFEREE computes (never trusted from a sub-log)
+
+# THE ADVERSARY PROPOSES; ONLY THE OWNER RESOLVES.
+# A read-only attacker cannot fix a plan, so anything it writes under
+# "resolution" is a RECOMMENDATION — and on 2026-08-03 that distinction was the
+# difference between a barrier and a rubber stamp: the engine stamped
+# disposition FIX on every objection it filed, the gate asked only "does each
+# objection have a disposition?", and Pass 4 went GREEN with seven criticals
+# open. The referee therefore demotes any engine-supplied resolution to
+# "proposal" and NEVER emits "resolution" itself. Absence is the default, so the
+# gate fails closed until a human records a decision (cvg review --resolve).
+def demote_resolutions(objs):
+    out = []
+    for o in (objs or []):
+        if isinstance(o, dict):
+            o = dict(o)
+            if "resolution" in o:
+                if "proposal" not in o:
+                    o["proposal"] = o.pop("resolution")
+                else:
+                    o.pop("resolution", None)
+        out.append(o)
+    return out
+
 inputs = []
 for f in sorted(glob.glob(os.path.join(sketch, "*", "*.md"))):
     if os.path.basename(os.path.dirname(f)).startswith("."):
@@ -140,7 +163,7 @@ log = {
     "schema_version": "1.0", "pass": "4-consensus", "mode": "multi-adversary",
     "adversary": primary, "adversaries": advs, "cross_family": xfam,
     "author": {"model": "claude", "family": author_family},
-    "verdict": verdict, "inputs": inputs, "objections": objs,
+    "verdict": verdict, "inputs": inputs, "objections": demote_resolutions(objs),
     "cross_lane_interfaces": [], "fork": (forks[0] if forks else {}), "open_questions": [],
 }
 os.makedirs(os.path.dirname(out) or ".", exist_ok=True)

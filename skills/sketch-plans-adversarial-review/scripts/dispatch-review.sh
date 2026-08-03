@@ -177,6 +177,29 @@ for f in sorted(glob.glob(os.path.join(sketch, "*", "*.md"))):
     rel = os.path.relpath(f, sketch)
     inputs.append({"path": rel, "sha256": hashlib.sha256(open(f, "rb").read()).hexdigest()})
 prompt_sha = hashlib.sha256(open(os.environ.get("CVG_PROMPT", "/dev/null"), "rb").read()).hexdigest() if os.environ.get("CVG_PROMPT") else ""
+
+# THE ADVERSARY PROPOSES; ONLY THE OWNER RESOLVES.
+# A read-only attacker cannot fix a plan, so anything it writes under
+# "resolution" is a RECOMMENDATION — and on 2026-08-03 that distinction was the
+# difference between a barrier and a rubber stamp: the engine stamped
+# disposition FIX on every objection it filed, the gate asked only "does each
+# objection have a disposition?", and Pass 4 went GREEN with seven criticals
+# open. The referee therefore demotes any engine-supplied resolution to
+# "proposal" and NEVER emits "resolution" itself. Absence is the default, so the
+# gate fails closed until a human records a decision (cvg review --resolve).
+def demote_resolutions(objs):
+    out = []
+    for o in (objs or []):
+        if isinstance(o, dict):
+            o = dict(o)
+            if "resolution" in o:
+                if "proposal" not in o:
+                    o["proposal"] = o.pop("resolution")
+                else:
+                    o.pop("resolution", None)
+        out.append(o)
+    return out
+
 log = {
     "schema_version": "1.0", "pass": "4-consensus",
     "adversary": {"engine_id": engine, "model": judg.get("model", engine), "family": family,
@@ -185,7 +208,7 @@ log = {
     "verdict": judg.get("verdict", "REVISE"),
     "prompt_sha256": prompt_sha,
     "inputs": inputs,
-    "objections": judg.get("objections", []),
+    "objections": demote_resolutions(judg.get("objections", [])),
     "cross_lane_interfaces": judg.get("cross_lane_interfaces", []),
     "fork": judg.get("fork", {}),
     "open_questions": judg.get("open_questions", []),

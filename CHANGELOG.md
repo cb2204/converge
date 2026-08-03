@@ -24,6 +24,41 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
+### Fixed
+- **THE BARRIER NO LONGER PASSES ITSELF.** Pass 4 could be closed by dispatching
+  the adversary twice. The gate asked "does every objection carry a disposition?"
+  — and the read-only adversary stamped `disposition: FIX` on every objection it
+  filed, with `reason: "the read-only adversary did not implement the fix"` and
+  `risk_residual: "Open until …"`. So "all objections resolved" was satisfied by
+  the ATTACKER'S OWN PROPOSAL. Found live: uc-01 went
+  `GATE: GREEN — consensus reached (all objections resolved)` with **seven
+  objections open, two CRITICAL**, both saying the amendments under review were
+  wrong. Pass 4 is the last human sign-off before machines take over; a barrier
+  that greens because the attacker filed its objections is not a barrier.
+  - **Proposal and decision are now different fields.** The referee demotes
+    anything the engine writes under `resolution` to `proposal` and never emits
+    `resolution` itself, on both the single and merged dispatch paths. Absence is
+    the default, so the gate fails closed until a human decides.
+  - **The gate requires an owner decision**: `resolution.disposition` ∈
+    {FIX, ACCEPT} **plus** non-empty `decided_by` and `decided_at`; ACCEPT still
+    names an owner. A `risk_residual` still reading "Open until …" is now
+    incompatible with GREEN — the adversary is stating the risk is live, and the
+    gate must not read past it.
+  - **`cvg review --resolve <id|all> --fix | --accept --owner N --risk W`** records
+    that decision, so nobody hand-edits a provenance-stamped artifact. `decided_by`
+    resolves from `--by`, then `.cvg/identity`, then `git config user.name`, and
+    **refuses rather than inventing one** — an unattributable decision is what was
+    just removed. Same-directory atomic write; ACCEPT rejects a `--risk` that is
+    really a deferral.
+  - The Pass 4 suite grew 18 → 23 rows, and two of the old rows were **asserting
+    the defect**: `dispatch-then-gate` and `multi-then-gate` expected
+    `CHECK_CONSENSUS=OK` immediately after a dispatch. They now expect RED, with
+    new rows proving the loop closes only after `--resolve` (`resolve-records`,
+    `resolved-then-green`) and three regression rows pinning the exact shapes that
+    must never be green: an adversary proposal, a resolution nobody signed, and a
+    decision leaving the risk open.
+  - `objection-log.schema.json` documents both fields and bumps to schema 1.1.
+
 ### Added
 - **`cvg doctor plugin` — "which copy of me is actually running?"** A tool that
   cannot answer that makes every other verdict it gives unfalsifiable, and this

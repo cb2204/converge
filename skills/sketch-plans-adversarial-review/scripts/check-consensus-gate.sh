@@ -116,18 +116,48 @@ if not objs:
     fail("no objections logged — the adversary blessed everything (default-to-refuted violated)")
 else:
     bad = 0
+    # THE ADVERSARY PROPOSES; ONLY THE OWNER RESOLVES.
+    # Until 2026-08-03 this block accepted any objection carrying a disposition —
+    # and the read-only adversary stamped disposition FIX on every objection it
+    # filed ("the adversary did not implement the fix", risk "Open until …"). So
+    # "all objections resolved" was satisfied by the ATTACKER'S OWN PROPOSAL and
+    # Pass 4 could be passed by dispatching twice. Proposal and decision now live
+    # in different fields: the referee writes only `proposal`, and `resolution`
+    # exists solely because a human recorded one (cvg review --resolve), which is
+    # the single judgment THE BARRIER exists to capture.
     for o in objs:
         oid = o.get("id", "?")
         if not o.get("severity"):
-            fail("objection %s: missing severity"); bad += 1
-        res = o.get("resolution", {}) or {}
+            fail("objection %s: missing severity" % oid); bad += 1
+        res = o.get("resolution") or {}
+        if not res:
+            hint = " (the adversary proposed %r — that is a recommendation, not consent)" % (
+                (o.get("proposal") or {}).get("disposition")) if o.get("proposal") else ""
+            fail("objection %s: UNRESOLVED — no owner decision recorded%s. Record one: "
+                 "cvg review --resolve %s --fix   (or --accept --owner <name> --risk <why>)"
+                 % (oid, hint, oid))
+            bad += 1
+            continue
         disp = res.get("disposition")
         if disp not in ("FIX", "ACCEPT"):
             fail("objection %s: resolution.disposition must be FIX or ACCEPT (got %r)" % (oid, disp)); bad += 1
-        elif disp == "ACCEPT" and not (res.get("owner") or "").strip():
+            continue
+        # A decision nobody signed is indistinguishable from a machine's suggestion.
+        if not (res.get("decided_by") or "").strip():
+            fail("objection %s: resolution has no decided_by — only a human closes the barrier" % oid); bad += 1
+        if not (res.get("decided_at") or "").strip():
+            fail("objection %s: resolution has no decided_at timestamp" % oid); bad += 1
+        if disp == "ACCEPT" and not (res.get("owner") or "").strip():
             fail("objection %s: ACCEPT requires a non-empty owner" % oid); bad += 1
+        # The adversary's residual-risk note is an explicit statement that the risk
+        # is still live. GREEN must not read past it.
+        rr = (res.get("risk_residual") or "").strip()
+        if re.match(r"^open\b", rr, re.I) or "open until" in rr.lower():
+            fail("objection %s: resolution.risk_residual still reads %r — an open residual risk "
+                 "cannot be GREEN; either close it or ACCEPT it with an owner" % (oid, rr[:60]))
+            bad += 1
     if bad == 0:
-        ok("%d objection(s), each FIX or ACCEPT (ACCEPT names an owner)" % len(objs))
+        ok("%d objection(s), each decided by a human (FIX or ACCEPT; ACCEPT names an owner)" % len(objs))
     sev = [(o.get("severity") or "").lower() for o in objs]
     if not any(s in ("high", "critical") for s in sev) and verdict != "PASS":
         fail("no high/critical objection and verdict != PASS — weak/blessing review (H6)")
