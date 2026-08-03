@@ -1,9 +1,13 @@
-# `_prompts/` — the canonical pass prompts
+# The pass prompts — where they live, and the folder map
 
-One blueprint prompt per pass. These are the **steering contracts**: hand the
-right one to your agent at the start of each pass — paste it into the chat, or
-just say *"follow `cvg/brain/_prompts/pass-N-….md`"* — and the pass runs the
-way the method intends, in any harness.
+One blueprint prompt per pass, and **each pass skill owns its own**:
+`skills/<pass-skill>/references/pass-prompt.md`. They ship with the package and
+are never copied into a consuming project, so they cannot go stale against the
+installed version and your repository stays free of files you did not author.
+
+`cvg next` prints the owning skill and the absolute installed path for the pass
+you are on — hand that file to your agent, or just say *"follow the pass-prompt
+for `<skill>`"* — and the pass runs the way the method intends, in any harness.
 
 Which passes you run is not a choice you make here: **`cvg lane` decides**
 (FAST = 5→7→8 · NORMAL = 1→2→5→7→8 · FULL = 0→8). Between tasks, `cvg ready`

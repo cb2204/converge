@@ -105,12 +105,15 @@ The first release where the number means the same thing everywhere.
   gates stay authoritative. Born from the first uc-01 conducted run, to cut
   per-session cognitive load and keep the chat-driven descent in order.
   Proven by a 19-check hermetic suite wired into CI.
-- **Canonical pass prompts** — `cvg init` now seeds `cvg/brain/_prompts/`
-  with one steering blueprint per pass (pass-0-capture … pass-8-loop plus a
-  README with the folder-discipline map). The prompts canonize how each pass
-  is driven from a harness chat: mission, inputs, hard boundaries (never open
-  held-back material, never edit a sealed eval), procedure, artifact
-  destinations, and the exit gate with its token. Born from the first uc-01
+- **Canonical pass prompts, one per pass skill.** Every pass skill ships its
+  own steering blueprint at `references/pass-prompt.md`: mission, inputs, hard
+  boundaries (never open held-back material, never edit a sealed eval),
+  procedure, artifact destinations, and the exit gate with its token. `cvg next`
+  prints the owning skill and the installed path. **Nothing is copied into the
+  consuming project** — a project keeps only files it authored, and a prompt
+  can never drift from the package that ships it (an earlier design seeded
+  copies into `cvg/brain/_prompts/` and they went stale within a day, because
+  `init` is non-clobbering by design). Born from the first uc-01
   proving-ground run, where the steering lived only in the conductor's head.
 - **Grok Build is a first-class harness** — the installer now writes a third
   skills directory, `.grok/skills/` (Grok's native project-level discovery

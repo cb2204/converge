@@ -58,14 +58,29 @@ pass_name() {
   esac
 }
 
-prompt_file() {
+# Each pass skill owns its own steering prompt. Nothing is copied into the
+# consuming project: the prompt ships with the package, so it can never go
+# stale against the installed version.
+pass_skill() {
   case "$1" in
-    0) printf 'pass-0-capture.md' ;;   1) printf 'pass-1-intent.md' ;;
-    2) printf 'pass-2-structure.md' ;; 3) printf 'pass-3-decompose.md' ;;
-    4) printf 'pass-4-consensus.md' ;; 5) printf 'pass-5-tasking.md' ;;
-    6) printf 'pass-6-register.md' ;;  7) printf 'pass-7-bind.md' ;;
-    8) printf 'pass-8-loop.md' ;;      *) return 1 ;;
+    0) printf 'idea-to-brd' ;;
+    1) printf 'brd-docs-to-tech-req' ;;
+    2) printf 'tech-req-to-adrs' ;;
+    3) printf 'reqs-to-swimlane-plans' ;;
+    4) printf 'sketch-plans-adversarial-review' ;;
+    5) printf 'task-spec' ;;
+    6) printf 'task-specs-to-issues' ;;
+    7) printf 'task-to-runtime-contract' ;;
+    8) printf 'task-loop' ;;
+    *) return 1 ;;
   esac
+}
+
+# Absolute path to a pass's prompt inside the installed package. CVG_TOOL_HOME
+# is exported by the cvg router; standalone runs fall back to this checkout.
+prompt_path() {
+  local home="${CVG_TOOL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+  printf '%s/skills/%s/references/pass-prompt.md' "$home" "$(pass_skill "$1")"
 }
 
 gate_cmd() {
@@ -154,7 +169,8 @@ case "$CMD" in
       printf 'NEXT_PASS=DONE\n'
     else
       echo "next: pass $NEXT · $(pass_name "$NEXT")"
-      echo "  steer with : cvg/brain/_prompts/$(prompt_file "$NEXT")"
+      echo "  skill      : $(pass_skill "$NEXT")"
+      echo "  steer with : $(prompt_path "$NEXT")"
       echo "  close with : $(gate_cmd "$NEXT")"
       printf 'NEXT_PASS=%s\n' "$NEXT"
     fi
@@ -169,7 +185,7 @@ case "$CMD" in
     if [ -n "$MISSING" ]; then
       echo "pass $TARGET ($(pass_name "$TARGET")) may not start — missing evidence from:"
       for p in $MISSING; do
-        echo "  pass $p · $(pass_name "$p") — steer with cvg/brain/_prompts/$(prompt_file "$p")"
+        echo "  pass $p · $(pass_name "$p") — steer with $(pass_skill "$p") ($(prompt_path "$p"))"
       done
       printf 'PASS_PRE=MISSING\n'
       exit 1
@@ -185,7 +201,7 @@ case "$CMD" in
       printf 'PASS_POST=OK\n'
     else
       echo "pass $TARGET ($(pass_name "$TARGET")) left NO artifact in its folder"
-      echo "  steer with: cvg/brain/_prompts/$(prompt_file "$TARGET")"
+      echo "  steer with: $(pass_skill "$TARGET") ($(prompt_path "$TARGET"))"
       printf 'PASS_POST=INCOMPLETE\n'
       exit 1
     fi

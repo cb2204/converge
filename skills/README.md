@@ -285,11 +285,12 @@ state, no memory, no drift between sessions. `scripts/next-pass.sh` answers
 `next` (evidence board + `NEXT_PASS=`, the steering prompt, the closing gate —
 surfaced as **`cvg next`**), `pre N` (fail-closed door: refuse pass N until
 every prior lane pass left its artifact), and `post N` (did this pass fill its
-folder?). Owns `templates/prompts/` — the canonical pass prompts `cvg init`
-seeds into `cvg/brain/_prompts/`. Lane-aware (`--lane FULL|NORMAL|FAST`),
+folder?). Owns the pass→skill map that resolves each steering prompt — every
+pass skill carries its own at `references/pass-prompt.md`, shipped with the
+package and never copied into a project. Lane-aware (`--lane FULL|NORMAL|FAST`),
 read-only, instant (presence probes, no gate execution). **Evidence presence
 is never a verdict** — the `cvg` gates stay authoritative.
-**Ships:** `next-pass.sh` · 10 prompt templates · hermetic suite (19 checks).
+**Ships:** `next-pass.sh` · the folder-discipline map · hermetic suite (20 checks).
 
 ### `pass-to-lesson` — the teaching companion (optional, after any pass)
 

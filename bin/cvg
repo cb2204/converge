@@ -470,7 +470,7 @@ cvg_init() {
     return 2
   fi
 
-  local root="$CVG_PROJECT_ROOT_DIR" task_templates gate_template prompt_templates
+  local root="$CVG_PROJECT_ROOT_DIR" task_templates gate_template
   local changed=0 dir file
   if ! git -C "$root" rev-parse --show-toplevel >/dev/null 2>&1; then
     ui_err "cvg init requires a Git repository; initialize Git first"
@@ -497,12 +497,11 @@ cvg_init() {
   done
 
   task_templates="$CVG_HOME_DIR/skills/task-spec/templates/workspace"
-  prompt_templates="$CVG_HOME_DIR/skills/evidence-to-next-pass/templates/prompts"
   gate_template="$CVG_HOME_DIR/skills/task-to-runtime-contract/templates/gate.yaml"
   [ -f "$task_templates/INDEX.md" ] \
     && [ -f "$task_templates/tasks-README.md" ] \
     && [ -f "$task_templates/receipts-README.md" ] \
-    && [ -f "$prompt_templates/pass-0-capture.md" ] \
+    && [ -f "$CVG_HOME_DIR/skills/idea-to-brd/references/pass-prompt.md" ] \
     && [ -f "$gate_template" ] || {
       ui_err "the installed Converge package is missing workspace templates"
       printf 'CVG_INIT=PACKAGE_ERROR\n'
@@ -511,7 +510,6 @@ cvg_init() {
 
   for dir in \
     "$root/.cvg" \
-    "$root/cvg/brain/_prompts" \
     "$root/cvg/brain/decisions" \
     "$root/cvg/brain/definitions" \
     "$root/cvg/brain/notes" \
@@ -571,12 +569,11 @@ cvg_init() {
   _cvg_init_copy "$task_templates/tasks-README.md" "$root/cvg/tasks/README.md" || return 1
   _cvg_init_copy "$task_templates/receipts-README.md" "$root/cvg/receipts/README.md" || return 1
   _cvg_init_copy "$gate_template" "$root/.cvg/gate.yaml" || return 1
-  # The canonical pass prompts — the steering blueprint, one file per pass,
-  # owned by the evidence-to-next-pass skill (the sequence layer). Seeded so every
-  # workspace carries the method's voice; non-clobbering, so local edits survive.
-  for file in "$prompt_templates/"*.md; do
-    _cvg_init_copy "$file" "$root/cvg/brain/_prompts/$(basename "$file")" || return 1
-  done
+  # Pass prompts are NOT copied into the project. Each pass skill owns its own
+  # steering prompt (skills/<pass-skill>/references/pass-prompt.md) and ships
+  # with the package, so a consuming repository stays free of files it did not
+  # author and the prompts can never go stale against the installed version.
+  # `cvg next` prints the installed path.
 
   if [ ! -e "$root/cvg/tasks/_metrics.jsonl" ]; then
     : > "$root/cvg/tasks/_metrics.jsonl"
@@ -1956,7 +1953,7 @@ m = {
     c("eval <spec>", "5B", "task-spec/run-task-spec.sh", ["per-eval pass/fail"], False, "cvg eval T-...md", "Run a Task-Spec's evals."),
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
-    c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the canonical steering prompt to hand the agent (cvg/brain/_prompts/pass-N-*.md), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
+    c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
     c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
     c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
     c("version", None, "native", ["cvg <semver>"], False, "cvg version", "Print the version."),

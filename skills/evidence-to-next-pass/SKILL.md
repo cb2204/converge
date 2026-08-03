@@ -29,7 +29,7 @@ bash scripts/next-pass.sh post <N>                         # did pass N leave it
 
 - **`next`** prints the evidence board (one line per pass in the lane, ✓ or ·),
   then `NEXT_PASS=<N>` (or `DONE`), the steering prompt to hand the agent
-  (`cvg/brain/_prompts/pass-<N>-*.md`), and the gate that closes the pass.
+  (the owning skill's `references/pass-prompt.md`), and the gate that closes it.
   Also available as **`cvg next`**.
 - **`pre N`** is the fail-closed door: every lane pass before N must have left
   its evidence. `PASS_PRE=OK` or `PASS_PRE=MISSING` (exit 1) naming
@@ -59,8 +59,11 @@ Pass 6 (Register) is opt-in and never blocks the sequence; its evidence is
 reported as informational. Lane selection belongs to `cvg lane` — pass the
 lane you were given, don't infer one.
 
-## Owned assets
+## Where the prompts live
 
-`templates/prompts/` — the canonical pass prompts (`pass-0-capture.md` …
-`pass-8-loop.md` + README with the folder-discipline map), seeded into every
-workspace at `cvg/brain/_prompts/` by `cvg init`.
+Each **pass skill** owns its own steering prompt at
+`skills/<pass-skill>/references/pass-prompt.md` — this skill owns only the
+pass→skill map that resolves them, and `references/folder-map.md` (the
+cross-pass folder-discipline table). Prompts ship with the package and are
+**never copied into a consuming project**: one copy, always current, no files
+the project did not author.
