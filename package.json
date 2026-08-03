@@ -6,6 +6,13 @@
     "cvg": "bin/cvg",
     "cvg-install": "install.sh"
   },
+  "scripts": {
+    "control-room:install": "npm --prefix apps/control-room install",
+    "control-room:dev": "npm --prefix apps/control-room run dev --",
+    "control-room:build": "npm --prefix apps/control-room run build",
+    "control-room:check": "npm --prefix apps/control-room run check",
+    "control-room:start": "npm --prefix apps/control-room run start --"
+  },
   "files": [
     "bin/",
     "skills/",
