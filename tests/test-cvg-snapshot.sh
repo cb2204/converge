@@ -35,6 +35,13 @@ cp "$ROOT/skills/brd-docs-to-tech-req/tests/fixtures/golden-signed-tech-spec.md"
   "$WS/cvg/docs/tech-spec/snapshot.md"
 cp -R "$ROOT/skills/reqs-to-swimlane-plans/tests/fixtures/good/." \
   "$WS/cvg/swimlanes/"
+# Pass 4's frozen compatibility token belongs in every reviewed PRD. The Pass 3
+# fixture intentionally omits it, so this end-to-end snapshot fixture adds the
+# owner-approved handoff before the objection log stamps the live plan hashes.
+sed -i.bak '1a\
+FORK: B (task-driven) — every leg has a cheap runnable eval.
+' "$WS/cvg/swimlanes/swimlane-checkout/swimlane-checkout.plan.md"
+rm -f "$WS/cvg/swimlanes/swimlane-checkout/swimlane-checkout.plan.md.bak"
 cp "$ROOT/skills/task-spec/tests/fixtures/T-20260602-golden.md" \
   "$WS/cvg/tasks/T-20260602-golden.md"
 sed -i.bak 's/^signed_off: false$/signed_off: true/' \
@@ -201,6 +208,44 @@ if [ "$SID3" != "$SID2" ]; then
 else
   bad "snapshot evidence digest" "canonical task mutation did not change the digest"
 fi
+
+# Once Consensus closes but no Task-Spec exists, the exact Pass 5 frontier is
+# the newly added read-only preview. Cockpit must not skip straight to a
+# mutating `tasks new` recommendation.
+mv "$WS/cvg/tasks/T-20260602-golden.md" "$WS/T-20260602-golden.hold"
+python3 "$ROOT/skills/sketch-plans-adversarial-review/tests/gen-log.py" \
+  "$WS/cvg/swimlanes" good >/dev/null
+PASS5_GATE="$(srun --json review --check)"
+PASS5="$(srun --json snapshot)"
+if printf '%s' "$PASS5" | python3 -c "import json,sys
+s=json.load(sys.stdin)['data']['snapshot']
+assert s['method']['activePassId']=='pass-5'
+assert s['method']['passes'][5]['gate']['command']=='cvg tasks plan'
+assert s['work']['availability']=='empty'
+assert s['authorization']['state']=='allowed'
+assert s['authorization']['nextPassId']=='pass-5'
+assert s['authorization']['command']=='cvg tasks plan'
+assert s['authorization']['mutation']=='non_mutating'
+assert s['authorization']['dryRunSupported'] is True
+" 2>/dev/null; then
+  ok "Pass 5 authorizes the read-only task preview before creation"
+else
+  PASS5_DETAIL="$(printf '%s' "$PASS5" | python3 -c "import json,sys
+s=json.load(sys.stdin)['data']['snapshot']
+print('active=%r work=%r command=%r mutation=%r' % (
+  s['method']['activePassId'], s['work']['availability'],
+  s['authorization']['command'], s['authorization']['mutation']))
+" 2>/dev/null)"
+  PASS5_GATE_DETAIL="$(printf '%s' "$PASS5_GATE" | python3 -c "import json,sys
+d=json.load(sys.stdin)
+print('gate_ok=%r gate_verdict=%r gate_output=%r' % (
+  d['ok'], d['verdict'], d.get('data',{}).get('output')))
+" 2>/dev/null)"
+  bad "Pass 5 preview frontier" "${PASS5_DETAIL:-snapshot skipped}; ${PASS5_GATE_DETAIL:-gate unavailable}"
+fi
+mv "$WS/T-20260602-golden.hold" "$WS/cvg/tasks/T-20260602-golden.md"
+python3 "$ROOT/skills/sketch-plans-adversarial-review/tests/gen-log.py" \
+  "$WS/cvg/swimlanes" unresolved >/dev/null
 
 # NORMAL deliberately omits Capture, Decompose, and Consensus. Their evidence
 # remains observable, but those ceremonies cannot become hidden blockers.

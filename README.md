@@ -165,6 +165,7 @@ its evals *first*, then let the gate seal it:
 
 ```bash
 cvg lane "add a health endpoint"
+cvg tasks plan
 cvg tasks new add-health-endpoint XS
 cvg tasks validate cvg/tasks/T-*.md
 cvg tasks gate --stamp cvg/tasks/T-*.md
@@ -304,6 +305,7 @@ cvg review --check              # Pass 4 gate: objections resolved, provenance i
 cvg lane "what you'll build"    # route the work: FAST | NORMAL | FULL
 
 # ── author & sign (pass 5) ───────────────────────────────────────────────────
+cvg tasks plan                  # read-only preview: proposed specs + rationale
 cvg tasks new <slug> <effort>   # scaffold a Task-Spec — you write the evals FIRST
 cvg tasks validate <spec>       # structure + six-tier sizing gate
 cvg tasks gate --stamp <spec>   # sign-off: VERDICT + the HMAC seal

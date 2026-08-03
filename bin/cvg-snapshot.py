@@ -90,7 +90,7 @@ PASS_DEFINITIONS = (
         "order": 5,
         "label": "Tasking",
         "summary": "Delegable Task-Specs with bounded write surfaces.",
-        "command": "cvg tasks new <slug>",
+        "command": "cvg tasks plan",
         "args": (),
         "optional": False,
     },
@@ -135,7 +135,7 @@ ACTION_POLICY = {
     2: {"mutation": "non_mutating", "dryRunSupported": True},
     3: {"mutation": "non_mutating", "dryRunSupported": True},
     4: {"mutation": "non_mutating", "dryRunSupported": True},
-    5: {"mutation": "mutating", "dryRunSupported": True},
+    5: {"mutation": "non_mutating", "dryRunSupported": True},
     6: {"mutation": "non_mutating", "dryRunSupported": True},
     7: {"mutation": "non_mutating", "dryRunSupported": True},
     8: {"mutation": "non_mutating", "dryRunSupported": True},
@@ -854,7 +854,7 @@ def parse_tasks(
             severity="info",
             domain="work",
             message="No canonical task directory is present yet.",
-            remediation="Complete Pass 4, then create Task-Specs with `cvg tasks new`.",
+            remediation="Complete Pass 4, then preview Task-Specs with `cvg tasks plan`.",
         )
         return {
             "availability": "unavailable",
@@ -1481,6 +1481,25 @@ def build_method(
         if gates[f"pass-{order}"]["ok"] is not True:
             active_order = order
             break
+
+    # `cvg next` may consume the derived task index, but the snapshot's work
+    # contract is rebuilt from canonical Task-Spec frontmatter. A missing task,
+    # an empty task set, or an unsigned spec therefore keeps Pass 5 open even if
+    # a stale `_state.yaml` projection claims otherwise.
+    if 5 in required_set:
+        pass_5_index = required_orders.index(5)
+        active_is_after_pass_5 = (
+            active_order is None
+            or required_orders.index(active_order) > pass_5_index
+        )
+        tasks = work["tasks"]
+        pass_5_closed = (
+            work["availability"] == "available"
+            and bool(tasks)
+            and all(task["signedOff"] for task in tasks)
+        )
+        if active_is_after_pass_5 and not pass_5_closed:
+            active_order = 5
 
     active_pass_id = f"pass-{active_order}" if active_order is not None else None
     active_index = (

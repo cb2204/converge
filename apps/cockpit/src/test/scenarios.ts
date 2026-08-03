@@ -34,7 +34,7 @@ function pass(
         order === 4
           ? "cvg review --check"
           : order === 5
-            ? "cvg tasks new <slug>"
+            ? "cvg tasks plan"
             : `cvg pass-${order}`,
       token:
         ok === null

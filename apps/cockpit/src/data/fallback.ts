@@ -140,7 +140,7 @@ export const fallbackSnapshot: WorkspaceSnapshot = {
         optional: false,
         status: "waiting",
         gate: {
-          command: "cvg tasking",
+          command: "cvg tasks plan",
           token: null,
           verdict: null,
           exitCode: null,
