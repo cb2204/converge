@@ -22,7 +22,8 @@
 #
 # Pass 6 (Register) is opt-in: reported, never blocking.
 # Tokens: NEXT_PASS= · PASS_PRE= · PASS_POST= · NEXT_PASS=USAGE_ERROR
-# bash 3.2 safe. Deps: find, grep.
+# bash 3.2 safe. Deps: find, grep (+ python3, when present, for the barrier's
+# provenance half — see barrier_open; without it that half is left to the gate).
 
 set -euo pipefail
 
@@ -151,9 +152,17 @@ has_pass() {
          | while IFS= read -r f; do
              grep -q '^signed_off: true' "$f" && echo hit && break
            done | grep -q hit ;;
+    # A tracker_ref that says "(none)" is the TEMPLATE's placeholder, and every
+    # scaffolded spec carries one. Matching the field's PRESENCE therefore reported
+    # Register as done for a workspace with zero issues on any board — uc-01 showed
+    # [+] pass 6 with all four specs at `tracker_ref: (none)`. The probe has to look
+    # at the value, not the key: same vacuous-pass shape as an eval that goes green
+    # because its subject is absent.
     6) find "$WS/cvg/tasks" -name 'T-*.md' -print 2>/dev/null \
          | while IFS= read -r f; do
-             grep -q '^tracker_ref:' "$f" && echo hit && break
+             grep -qE '^tracker_ref:[[:space:]]*[^[:space:]]' "$f" \
+               && ! grep -qE '^tracker_ref:[[:space:]]*\(none\)[[:space:]]*$' "$f" \
+               && echo hit && break
            done | grep -q hit ;;
     7) [ -n "$(find "$WS/cvg/execution" -type f ! -name '.gitkeep' -print 2>/dev/null | head -1)" ] ;;
     8) [ -n "$(find "$WS/cvg/receipts" -type f ! -name 'README.md' -print 2>/dev/null | head -1)" ] ;;
@@ -179,7 +188,53 @@ barrier_open() {
   [ -f "$log" ] || return 1
   n_obj="$(grep -c '"severity"' "$log" 2>/dev/null)" || n_obj=0
   n_dec="$(grep -c '"decided_by"' "$log" 2>/dev/null)" || n_dec=0
-  [ "${n_obj:-0}" -gt "${n_dec:-0}" ]
+  # BARRIER_REASON tells the caller WHICH condition fired, so the remedy printed
+  # matches the cause. Set on every open path; never read unless barrier_open said 0.
+  BARRIER_REASON="undecided"
+  [ "${n_obj:-0}" -gt "${n_dec:-0}" ] && return 0
+
+  # THE SAME SURFACE LEAKED TWICE. The count above closed the first hole (objections
+  # nobody decided). Later the same day it read GREEN again — every objection decided,
+  # so `next` printed [+] for pass 4 and NEXT_PASS=7 — while `cvg review --check` said
+  # RED: three plans had been SHARPENED AFTER the adversary read them
+  # (foundation/leg-01-project.md and two models legs). Consent given to one text is
+  # not consent to another, and Pass 5 had already decomposed the unreviewed version.
+  #
+  # So provenance is part of "is the barrier closed", not a detail only the gate owns.
+  # This stays STRUCTURAL — it compares the sha256 the log ITSELF recorded for each
+  # reviewed input against the file on disk. No gate runs and no verdict is invented.
+  #
+  # Deliberately asymmetric, to stay coarse in the direction that cannot cause a false
+  # alarm: a MISSING inputs[] means "cannot verify here", and we leave that to the
+  # gate, which fails on it explicitly. Only a RECORDED hash that no longer matches —
+  # positive evidence of a post-review edit — reopens the barrier.
+  command -v python3 >/dev/null 2>&1 || return 1
+  BARRIER_REASON="stale"
+  python3 - "$log" "$LANES" >/dev/null 2>&1 <<'PY' || return 0
+import glob, hashlib, json, os, sys
+log, lanes = sys.argv[1], sys.argv[2]
+try:
+    art = json.load(open(log, encoding="utf-8"))
+except Exception:
+    sys.exit(0)                      # an unreadable log is the gate's finding, not ours
+inputs = {i["path"]: i.get("sha256")
+          for i in (art.get("inputs") or []) if i.get("path")}
+if not inputs:
+    sys.exit(0)                      # no provenance recorded — the gate reports that
+for f in sorted(glob.glob(os.path.join(lanes, "*", "*.md"))):
+    rel = os.path.relpath(f, lanes)
+    want = inputs.get(rel) or inputs.get(f)
+    if not want:
+        continue                     # unseen by the review — again, the gate's call
+    try:
+        got = hashlib.sha256(open(f, "rb").read()).hexdigest()
+    except OSError:
+        continue
+    if got != want:
+        sys.exit(1)                  # a reviewed plan changed → BARRIER OPEN
+sys.exit(0)
+PY
+  return 1
 }
 
 # '!' marks a pass whose artifact is on the floor but whose consent is not.
@@ -235,10 +290,22 @@ case "$CMD" in
       *" 4 "*)
         if barrier_open; then
           NEXT=4
-          echo '  ^ THE BARRIER is open: the objection log carries objections with no'
-          echo '    owner decision. Nothing past pass 4 is dispatchable until it closes.'
-          echo '    decide: cvg review --resolve <id|all> --fix   (or --accept --owner N --risk W)'
-          echo '    then  : cvg review --check'
+          # Two different things reopen the barrier and they need two different
+          # remedies. Printing the undecided-objections advice over a hash mismatch
+          # sends the owner to `--resolve`, which has nothing left to resolve — a
+          # correct RED with the wrong instruction still wastes the trip.
+          if [ "${BARRIER_REASON:-undecided}" = "stale" ]; then
+            echo '  ^ THE BARRIER is open: plan(s) were CHANGED after the adversary read'
+            echo '    them, so the recorded consent no longer covers the current text.'
+            echo '    Every objection is decided — sharpening the plans reopened it.'
+            echo '    re-attack: cvg review --adversary <engine> --timeout 900'
+            echo '    then     : cvg review --check'
+          else
+            echo '  ^ THE BARRIER is open: the objection log carries objections with no'
+            echo '    owner decision. Nothing past pass 4 is dispatchable until it closes.'
+            echo '    decide: cvg review --resolve <id|all> --fix   (or --accept --owner N --risk W)'
+            echo '    then  : cvg review --check'
+          fi
         fi ;;
     esac
     # Only offer teaching once something has actually closed — on a fresh floor

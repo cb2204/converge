@@ -202,6 +202,56 @@ OUT="$(cd "$T6" && bash "$ENGINE" pre 5 2>&1)"
 printf '%s' "$OUT" | grep -q '^PASS_PRE=OK$' \
   && ok "the pre-hook opens once a human has decided" \
   || bad "pre 5 should be OK after the barrier closes ($OUT)"
+
+# --- THE SECOND LEAK on the same surface: consent to a text that no longer exists.
+# Every objection decided, so the count-based check said the barrier was SHUT — and
+# `next` said NEXT_PASS=7 over three plans that had been sharpened AFTER the
+# adversary read them. Found live in uc-01 while `cvg review --check` said RED.
+printf 'the plan the adversary actually read\n' > "$T6/cvg/swimlanes/core/_lane.md"
+REVIEWED_SHA="$(shasum -a 256 "$T6/cvg/swimlanes/core/_lane.md" | awk '{print $1}')"
+cat > "$T6/cvg/swimlanes/.consensus/objection-log.json" <<JSON
+{"inputs":[{"path":"core/_lane.md","sha256":"$REVIEWED_SHA"}],
+ "objections":[{"id":"C1","severity":"critical",
+  "proposal":{"disposition":"FIX","reason":"adversary advice"},
+  "resolution":{"disposition":"FIX","decided_by":"owner","decided_at":"2026-08-03T12:00:00Z"}}]}
+JSON
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -qE '^NEXT_PASS=(DONE|5|7|8)$' \
+  && ok "a decided log whose plan hashes still MATCH advances (no false alarm)" \
+  || bad "matching provenance must not reopen the barrier ($OUT)"
+
+# now sharpen the plan, exactly as a human closing an objection would
+printf 'the plan after the owner sharpened it\n' > "$T6/cvg/swimlanes/core/_lane.md"
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q '^NEXT_PASS=4$' \
+  && ok "a plan CHANGED after review reopens the barrier — consent does not transfer" \
+  || bad "a post-review plan edit must stop next at 4 ($OUT)"
+printf '%s' "$OUT" | grep -q '\[!\] pass 4' \
+  && ok "and the board marks it [!], not [+]" \
+  || bad "pass 4 must be [!] when provenance is stale"
+printf '%s' "$OUT" | grep -q 'CHANGED after the adversary' \
+  && ok "the remedy names the REAL cause (re-attack), not --resolve" \
+  || bad "a stale-provenance barrier must not print the undecided-objection advice"
+OUT="$(cd "$T6" && bash "$ENGINE" pre 7 2>&1)" || true
+printf '%s' "$OUT" | grep -q '^PASS_PRE=MISSING$' \
+  && ok "the pre-hook refuses pass 7 behind a stale barrier (fail-closed)" \
+  || bad "pre 7 must refuse while provenance is stale ($OUT)"
+
+# --- Pass 6's probe must read the VALUE, not the key. Every scaffolded spec carries
+# `tracker_ref: (none)`, so matching the field's presence reported Register as done
+# for a workspace with zero issues on any board. uc-01 showed [+] pass 6 that way.
+printf -- '---\nstatus: ready\nsigned_off: true\ntracker_ref: (none)\n---\n' \
+  > "$T6/cvg/tasks/T-20260803-x.md"
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q '\[+\] pass 6' \
+  && bad "tracker_ref: (none) is the template placeholder — Register is NOT done" \
+  || ok "tracker_ref: (none) does not count as Register (the placeholder is not a ref)"
+printf -- '---\nstatus: ready\nsigned_off: true\ntracker_ref: linear:CVG-42\n---\n' \
+  > "$T6/cvg/tasks/T-20260803-x.md"
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q '\[+\] pass 6' \
+  && ok "a real tracker_ref does count as Register" \
+  || bad "a genuine tracker_ref must register as pass 6 ($OUT)"
 rm -rf "$T6"
 
 run 2 bogus && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \

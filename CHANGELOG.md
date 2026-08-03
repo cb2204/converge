@@ -53,6 +53,35 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
   while the human one lagged. Added.
 
 ### Fixed
+- **The conductor walked past THE BARRIER a second time — now it checks provenance.**
+  `cvg next` reported `[+] pass 4` and `NEXT_PASS=7` while `cvg review --check`, run in
+  the same directory seconds later, reported
+  `plan(s) changed since the review (hash mismatch)` and `CHECK_CONSENSUS=FAIL`. Three
+  plans had been sharpened *after* the adversary read them — a legitimate response to two
+  open criticals — and Pass 5 had already decomposed the unreviewed text.
+  - `barrier_open()` counted `"severity"` against `"decided_by"` and nothing else. Every
+    objection was decided, so the count said shut. **Consent given to one text is not
+    consent to another.** It now also compares the sha256 the log itself recorded for
+    each reviewed input against the file on disk — still a structural read, no gate runs.
+  - The function's own header documents the FIRST leak on this surface (objections nobody
+    had decided). That fix closed "did a human decide" and left "decide about *what*" open.
+  - The warning now distinguishes the two causes. A stale barrier says *"plan(s) were
+    CHANGED after the adversary read them … re-attack: cvg review --adversary"* instead of
+    pointing at `--resolve`, which would have nothing left to resolve — a correct RED with
+    the wrong instruction still wastes the trip.
+  - Deliberately asymmetric: a **missing** `inputs[]` is left to the gate, which fails on
+    it explicitly, so only positive evidence of a post-review edit reopens the barrier and
+    there is no false-alarm path. `python3` is used when present; without it that half is
+    left to the gate and the stated `find, grep` floor still holds.
+- **Pass 6 read as done for a workspace with zero issues on any board.** The probe was
+  `grep -q '^tracker_ref:'` — it matched the *key*. `(none)` is the template's placeholder
+  and every scaffolded spec carries one, so Register reported `[+]` from the moment the
+  first spec existed. The probe now reads the value and rejects `(none)`. The
+  vacuous-pass shape — green because the field exists, not because the work happened —
+  in the conductor rather than in an eval.
+  - Seven new rows in the conductor suite (32 → 39). Five go red against the shipped
+    code, and the "hashes still match → advance" row stays green in both, so the barrier
+    check is proven not to be over-tightened.
 - **`cvg tasks dod` was silently halving every acceptance criterion.** The
   Definition-of-Done checklist is the artifact a human ticks off to declare a task
   done, and it rendered each criterion cut at its first comma:
