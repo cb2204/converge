@@ -167,6 +167,12 @@ jobs:
       - name: cvg json envelope
         run: bash tests/test-cvg-json-envelope.sh
 
+      - name: cvg lesson — the teaching companion's CLI door
+        # The companion was the one skill with a gate script, a machine token,
+        # and no verb. Byte-parity, the discovery contract, --immutable, and
+        # read-onlyness are all proven here against throwaway repos.
+        run: bash tests/test-cvg-lesson.sh
+
       - name: install surface
         run: bash tests/test-install.sh
 

@@ -95,8 +95,8 @@ judgment.
 | 6 | **Register** · [`task-specs-to-issues`](task-specs-to-issues/) · *opt-in* | Idempotently project one signed spec to one issue and mirror every `depends_on` edge as `blocked-by`; the spec remains canonical. | Tracker shadow + backlinks · `CHECK_REGISTER` parity |
 | 7 | **Bind** · [`task-to-runtime-contract`](task-to-runtime-contract/) | Bind one signed revision to least-privilege paths, hash-pinned evidence, honest runtime controls, adapters, and a minimal identifier-only worker brief. | `execution-profile.yaml` + guards + `AGENTS.task.md` · `CHECK_RUNTIME_CONTRACT` |
 | 8 | **The Loop** · [`task-loop`](task-loop/) | Run each attempt in fresh context, enforce iteration/time/token ceilings plus stagnation, persist checkpoints, and land in exactly one named state. | Green-eval PR/local commit or explicit handoff · `TASK_LOOP=<state>` + tier-2 `CHECK_VERIFY=<verdict>` |
-| util | [`evidence-to-next-pass`](evidence-to-next-pass/) | The sequence layer: derive where the descent stands from workspace evidence, enforce order with pre/post hooks, hand the agent the right pass prompt. Surfaced as `cvg next`. | `NEXT_PASS=` · `PASS_PRE=` · `PASS_POST=` |
-| util | [`pass-to-lesson`](pass-to-lesson/) | After any closed pass, teach the owner what was built, why it is shaped that way, and what would break without it. | Durable lesson + teach-ready `CHECK_LESSON=PASS` · *optional* |
+| util | [`evidence-to-next-pass`](evidence-to-next-pass/) | The sequence layer: derive where the descent stands from workspace evidence, enforce order with pre/post hooks, hand the agent the right pass prompt, and name the optional teaching companion once a pass has closed. Surfaced as `cvg next`. | `NEXT_PASS=` · `PASS_PRE=` · `PASS_POST=` |
+| util | [`pass-to-lesson`](pass-to-lesson/) | After any closed pass, teach the owner what was built, why it is shaped that way, and what would break without it. Surfaced as `cvg lesson`. | Durable lesson + teach-ready `CHECK_LESSON=PASS` · *optional* |
 | util | [`skill-creator`](skill-creator/) | Author, evaluate, package, and structurally validate agent skills. | Validated skill package |
 
 `cvg verify` belongs to the **Pass 8 runtime story** even though its script is
@@ -290,7 +290,7 @@ pass skill carries its own at `references/pass-prompt.md`, shipped with the
 package and never copied into a project. Lane-aware (`--lane FULL|NORMAL|FAST`),
 read-only, instant (presence probes, no gate execution). **Evidence presence
 is never a verdict** — the `cvg` gates stay authoritative.
-**Ships:** `next-pass.sh` · the folder-discipline map · hermetic suite (20 checks).
+**Ships:** `next-pass.sh` · the folder-discipline map · hermetic suite (27 checks).
 
 ### `pass-to-lesson` — the teaching companion (optional, after any pass)
 
@@ -299,10 +299,13 @@ goes green, this companion reads everything the pass emitted and teaches it
 back — every component gets *what it is · why it's shaped this way · the
 decision it encodes · what breaks downstream without it* — plus the decisions
 and their rejected alternatives, a vocabulary of every term of art, and a
-closing Feynman quiz. The lesson persists at `docs/lessons/lesson-*.md`, so
-understanding survives the session. It explains decisions, never reopens them.
-**Ships:** `check-lesson.sh` (the gate linter), `references/lesson-template.md`. **Flags:** `--depth full|brief`, `--quiz on|off`.
-**Gate:** every emitted artifact taught, every decision names a rejected alternative, every term defined, 3–5 check-yourself questions, artifacts untouched.
+closing Feynman quiz. The lesson persists at `cvg/docs/lessons/lesson-*.md` (the
+folder `cvg init` creates), so understanding survives the session. It explains
+decisions, never reopens them. Optional, and it never blocks the descent — but
+not invisible: `cvg lesson` is its gate door and `cvg next` names it wherever a
+pass has closed.
+**Ships:** `check-lesson.sh` (the gate linter), `references/pass-prompt.md` (its steering prompt), `references/lesson-template.md`. **Flags:** `--depth full|brief`, `--quiz on|off`, `--level eli5|novice|expert`, plus the seven composable teaching modes.
+**Gate:** every emitted artifact taught, every decision names a rejected alternative, every term defined, 3–5 check-yourself questions, artifacts untouched (`cvg lesson --immutable` proves the last one).
 
 ### `skill-creator` — author, evaluate, validate
 
@@ -312,7 +315,7 @@ grader/comparator/analyzer agents), package for distribution, and validate
 structure (`quick_validate.py` — the check every skill in this folder passes).
 **Ships:** 9 Python scripts + an eval-viewer (its own `generate_review.py`).
 
-**By the numbers:** 11 skill packages (9 spine + 2 utility), with full
+**By the numbers:** 12 skill packages (9 spine + 3 utility), with full
 test and conformance suites in `task-spec` and `task-to-runtime-contract`.
 
 > *"You are converged when the eval passes — not when you feel done."*

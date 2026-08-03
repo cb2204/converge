@@ -1097,6 +1097,14 @@ cmd_help() {
   printf '                           default runs each attempt in an isolated git worktree,\n'
   printf '                           so a bad run never touches the tree you are reading\n'
   printf '\n'
+  printf '%steaching companion%s\n' "$UI_CYAN" "$UI_RESET"
+  printf '  lesson [file] [--immutable <taught>...]\n'
+  printf '                           gate the lesson written after ANY pass closed —\n'
+  printf '                           finds cvg/docs/lessons/ (then docs/lessons/) when\n'
+  printf '                           no path is given; --immutable proves teaching\n'
+  printf '                           changed nothing it taught. Optional: it never\n'
+  printf '                           blocks the descent (CHECK_LESSON token)\n'
+  printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  tasks new <slug> [options]\n'
   printf '                           create a Task-Spec in canonical cvg/tasks/\n'
@@ -1700,6 +1708,84 @@ case "$CMD" in
     [ -f "$SEQUENCER" ] || { ui_err "evidence-to-next-pass skill is incomplete under $CVG_HOME_DIR/skills"; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
     CVG_PROJECT_ROOT="$CVG_PROJECT_ROOT_DIR" exec bash "$SEQUENCER" next "$@"
     ;;
+  lesson)
+    # The teaching companion's gate. A lesson belongs to no pass — it teaches
+    # one that already closed — so this verb gates the LESSON's own structure
+    # and says nothing about the descent's position.
+    #
+    # Exact exec pass-through to the checker (zero decoration), like every other
+    # gate. Discovery and flag errors exist ONLY on the exit-2 path, and every
+    # exit-2 path still ends in CHECK_LESSON=USAGE_ERROR — agents are users, so
+    # a harness never has to parse prose to learn why it failed.
+    GATE="$CVG_HOME_DIR/skills/pass-to-lesson/scripts/check-lesson.sh"
+    [ -f "$GATE" ] || { ui_err "pass-to-lesson skill is incomplete under $CVG_HOME_DIR/skills"; printf 'CHECK_LESSON=USAGE_ERROR\n'; exit 2; }
+    LES_TARGET=""
+    LES_IMM=0
+    LES_IMM_ARGS=()
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --immutable)
+          # --immutable consumes every remaining argument (the taught set),
+          # exactly as the checker's own contract does. Mirroring it here keeps
+          # the two surfaces from drifting into different meanings.
+          LES_IMM=1; shift
+          while [ $# -gt 0 ]; do LES_IMM_ARGS+=("$1"); shift; done
+          ;;
+        -*)
+          ui_err "unknown lesson flag '$1' — expected --immutable <taught-artifact>..."
+          printf 'CHECK_LESSON=USAGE_ERROR\n'
+          exit 2
+          ;;
+        *)
+          if [ -n "$LES_TARGET" ]; then
+            ui_err "one lesson per gate — got '$LES_TARGET' and '$1'; teach one pass at a time"
+            printf 'CHECK_LESSON=USAGE_ERROR\n'
+            exit 2
+          fi
+          LES_TARGET="$1"; shift
+          ;;
+      esac
+    done
+    if [ "$LES_IMM" -eq 1 ] && [ "${#LES_IMM_ARGS[@]}" -eq 0 ]; then
+      ui_err "--immutable needs at least one taught-artifact path — cvg lesson [<lesson>] --immutable <path>..."
+      printf 'CHECK_LESSON=USAGE_ERROR\n'
+      exit 2
+    fi
+    if [ -z "$LES_TARGET" ]; then
+      LES_N=0
+      LES_LIST=""
+      # Typed folder first (cvg/docs/lessons/ — canonical since 0.1.0), then the
+      # legacy flat layout, same rule as every other pass gate. Unlike a pass
+      # artifact, lessons ACCUMULATE by design (one per taught pass), so the
+      # ambiguity path is the normal steady state rather than an error to be
+      # embarrassed by: name the file you just wrote. Newest-wins was rejected
+      # — git does not preserve mtimes, so a fresh clone would gate a different
+      # lesson than the working copy, and a gate that picks its own target
+      # non-deterministically is not a gate.
+      for F in cvg/docs/lessons/*.md docs/lessons/*.md; do
+        [ -f "$F" ] || continue
+        LES_N=$((LES_N + 1))
+        LES_TARGET="$F"
+        LES_LIST="${LES_LIST}  ${F}
+"
+      done
+      if [ "$LES_N" -eq 0 ]; then
+        ui_err "no lesson found under cvg/docs/lessons/ (or the legacy docs/lessons/) from '$PWD' — write one with the pass-to-lesson skill, then: cvg lesson [<file>]"
+        printf 'CHECK_LESSON=USAGE_ERROR\n'
+        exit 2
+      fi
+      if [ "$LES_N" -gt 1 ]; then
+        ui_err "ambiguous: $LES_N lessons found — pass the one you just wrote:"
+        printf '%s' "$LES_LIST" >&2
+        printf 'CHECK_LESSON=USAGE_ERROR\n'
+        exit 2
+      fi
+    fi
+    if [ "$LES_IMM" -eq 1 ]; then
+      exec bash "$GATE" "$LES_TARGET" --immutable "${LES_IMM_ARGS[@]}"
+    fi
+    exec bash "$GATE" "$LES_TARGET"
+    ;;
   gate)
     # The repo write fence — the one a Task-Spec cannot widen. Read-only.
     GATER="$CVG_HOME_DIR/skills/task-to-runtime-contract/scripts/check-gate.py"
@@ -1954,6 +2040,7 @@ m = {
     c("lint", "5B", "task-spec/lint-backlog.sh", ["backlog issues"], False, "cvg lint", "Lint the backlog for overlaps/cycles."),
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
     c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
+    c("lesson [<file>] [--immutable <path>...]", None, "pass-to-lesson/check-lesson.sh", ["CHECK_LESSON=PASS|FAIL|USAGE_ERROR"], False, "cvg lesson cvg/docs/lessons/lesson-pass-1-billing.md", "The teaching companion's gate — optional, invocable after ANY pass closes, and it never blocks the descent. Converge delegates the writing of every artifact but not the understanding of it: this gates the lesson a pass earned (all seven sections by exact name, 'what breaks downstream' on every component block, a non-empty decisions table, 3-5 check-yourself questions, and well-formed teaching-mode sections when the lesson declares modes). With --immutable <taught-artifact>... it proves teaching changed nothing it taught (clean git status; outside a repo it warns and skips). Discovery finds cvg/docs/lessons/ then legacy docs/lessons/ when no path is given; lessons accumulate by design, so more than one is a usage error naming them all rather than a non-deterministic newest-wins guess. Steering prompt: skills/pass-to-lesson/references/pass-prompt.md. What the gate cannot see stays human: that every emitted artifact is actually taught, that each rejected alternative is real, and that the owner restated it in their own words."),
     c("ready [--all]", "5B", "task-spec/list-ready.sh", ["frontier task list (+ a hidden-blocked count)"], False, "cvg ready", "List the DISPATCHABLE FRONTIER — status:ready specs whose every depends_on edge is already done. This is the surface a Manager selects work from, so it is dependency-aware by default: listing a spec whose inputs do not exist yet would dispatch work that cannot pass. Fails closed on a dangling or cyclic edge. --all restores the flat listing of every status:ready spec, blocked or not."),
     c("help", None, "native", [], False, "cvg help", "Human-readable command map."),
     c("version", None, "native", ["cvg <semver>"], False, "cvg version", "Print the version."),

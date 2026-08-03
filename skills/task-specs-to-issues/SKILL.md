@@ -124,7 +124,7 @@ then passes one ready issue to **`task-loop --issue N`** (Pass 8): it verifies
 that execution profile, runs the eval to GREEN, checks the final diff against
 the Task-Spec path policy, and opens one PR. Only the loop writes result state.
 
-*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 
 ## References
 

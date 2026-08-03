@@ -119,6 +119,42 @@ printf '%s' "$OUT" | grep -q '^NEXT_PASS=2$' \
   || bad "the flat layout was stranded by the folder change ($OUT)"
 rm -rf "$T4"
 
+# --- the teaching companion: named, never sequenced -------------------------
+# A lesson is not a pass: it must never appear in the descent order, never gate
+# anything, and never displace the machine token. But "a pass just closed" is
+# exactly its trigger, so the conductor names it wherever there is something to
+# teach — and stays quiet when there is not.
+T5="$(mktemp -d -t conductor-tests5.XXXXXX)"
+git -C "$T5" init --quiet
+( cd "$T5" && CVG_PROJECT_ROOT="$T5" bash "$REPO/bin/cvg" init >/dev/null )
+OUT="$(cd "$T5" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q 'cvg lesson' \
+  && bad "a fresh floor has nothing to teach — the companion line must stay quiet" \
+  || ok "fresh floor: no teaching offer (an always-on hint is noise)"
+
+touch "$T5/cvg/docs/brd/shop.md"
+OUT="$(cd "$T5" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q 'teach it   : cvg lesson' \
+  && ok "once a pass has closed, the conductor names cvg lesson" \
+  || bad "the companion should be offered after the first artifact lands ($OUT)"
+[ "$(printf '%s\n' "$OUT" | tail -1)" = "NEXT_PASS=1" ] \
+  && ok "the companion line never displaces the NEXT_PASS token" \
+  || bad "NEXT_PASS must remain the last line of next"
+
+OUT="$(cd "$T5" && bash "$ENGINE" post 0 2>&1)"
+printf '%s' "$OUT" | grep -q 'teach it   : cvg lesson' \
+  && [ "$(printf '%s\n' "$OUT" | tail -1)" = "PASS_POST=OK" ] \
+  && ok "post N offers the lesson and keeps PASS_POST last" \
+  || bad "post 0 should name the companion without displacing its token ($OUT)"
+
+for L in FULL NORMAL FAST; do
+  OUT="$(cd "$T5" && bash "$ENGINE" next --lane "$L" 2>&1)"
+  printf '%s' "$OUT" | grep -qE '^  \[.\] pass (lesson|9)' \
+    && bad "the companion leaked into the $L descent order — a lesson is not a pass" \
+    || ok "$L order carries passes only; the companion is advisory"
+done
+rm -rf "$T5"
+
 run 2 bogus && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \
   && ok "unknown verb is a usage error (exit 2)" || bad "unknown verb must exit 2"
 run 2 next --lane WARP && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \

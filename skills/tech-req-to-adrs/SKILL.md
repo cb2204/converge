@@ -197,7 +197,7 @@ grounding inputs and splits the system at its real seams into `sketch/*.plan`
 files. Every plan must trace back to a fact recorded here, may not contradict
 a recorded ADR, and uses the canonical terms pinned in `docs/CONTEXT.md`.
 
-*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 
 ## References
 

@@ -143,7 +143,7 @@ un-spoofable):
 
 - [ ] **The owner has signed off** — the barrier is crossed, and the work now belongs to the machine.
 
-When the gate is green **and the owner has signed**, hand off to Pass 5 (`task-spec`). *Optional debrief:* **`pass-to-lesson`** teaches what this pass just sharpened — the surviving objections and the accepted risks — before the descent continues.
+When the gate is green **and the owner has signed**, hand off to Pass 5 (`task-spec`). *Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just sharpened — the surviving objections and the accepted risks — before the descent continues.
 
 ## Examples
 

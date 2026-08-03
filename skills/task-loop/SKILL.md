@@ -225,7 +225,7 @@ is now emitted only once the outcome it reports is known; a red run writes a
 - [ ] The run landed in exactly ONE named terminal state, and no error or
   exhausted budget was reported as a success.
 
-*Optional debrief:* **`pass-to-lesson`** teaches the PR — what changed, the decision each hunk encodes, what the eval actually proved — before the owner reviews or merges it.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches the PR — what changed, the decision each hunk encodes, what the eval actually proved — before the owner reviews or merges it.
 
 When these hold, the issue has converged: green eval, branch, PR.
 

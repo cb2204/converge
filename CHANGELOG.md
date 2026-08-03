@@ -24,7 +24,65 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
-(nothing yet — everything below ships in 0.1.0)
+### Added
+- **`cvg lesson` — the teaching companion finally has a CLI door.**
+  `pass-to-lesson` was the only skill in the package with no verb: it shipped a
+  gate script (`check-lesson.sh`), a machine token (`CHECK_LESSON`), and a
+  workspace folder that `cvg init` has always created (`cvg/docs/lessons/`) — and
+  nothing on the CLI could reach any of it. The only way to run the gate was to
+  know the path to a script inside the installed package, which means neither
+  `cvg help` nor `cvg agent-context` could tell an agent the capability existed.
+  Converge delegates the writing of every artifact but not the understanding of
+  it, so the gate that proves a lesson is teach-ready belongs on the referee.
+  The verb is a byte-exact `exec` pass-through like every other wrapped gate, and
+  `check-lesson.sh` stays runnable on its own.
+  - Discovery follows the house contract — `cvg/docs/lessons/` first, then legacy
+    `docs/lessons/`; nothing found → exit 2, one → gates, more than one → exit 2
+    **naming every candidate**. Newest-wins was rejected on purpose: git does not
+    preserve mtimes, so a fresh clone would gate a different lesson than the
+    working copy, and a gate that picks its own target non-deterministically is
+    not a gate.
+  - `--immutable <taught-artifact>...` passes straight through, so *teaching
+    changes nothing it teaches* is enforceable from the CLI.
+  - Every refusal — unknown flag, missing `--immutable` paths, two targets,
+    nothing discovered — still ends in `CHECK_LESSON=USAGE_ERROR`. Agents are
+    users; a harness never parses prose.
+  - Declared read-only in `agent-context` with `converge_pass: null` (a lesson
+    belongs to no pass), and proven read-only against a real workspace.
+- **The companion ships its own steering prompt**
+  (`skills/pass-to-lesson/references/pass-prompt.md`), the last skill in the
+  chain that owned a contract but not the words for it — same convention as every
+  pass skill: shipped with the package, never copied into a project, so it cannot
+  go stale against the installed version.
+- **`tests/test-cvg-lesson.sh`** (24 rows, hermetic) — byte-parity against the
+  direct checker, the full discovery contract, unmasked `FAIL` pass-through,
+  `--immutable` in both verdicts, help/`agent-context`/`--json` discoverability,
+  and proof that gating mutates nothing. Wired into CI.
+- **Seven rows in the conductor's own suite** (`evidence-to-next-pass`, now 27)
+  covering the advisory line from the other side: silent on a fresh floor, offered
+  once a pass has closed, never ahead of `NEXT_PASS`/`PASS_POST`, and never
+  present in the FULL/NORMAL/FAST descent order — a lesson is not a pass.
+
+### Changed
+- **`cvg next` and `pass N` now name the teaching companion** wherever a pass has
+  closed — advisory only, never sequenced, never blocking, and the machine token
+  stays the last line. A lesson is not a pass, so it has no place in the descent
+  order; but "a pass just closed" is precisely the companion's trigger, and a
+  companion nobody is told about is a companion nobody runs. On a fresh floor
+  there is nothing to teach, so the line is suppressed rather than shown as noise.
+- **`pass-to-lesson` docs caught up with the workspace.** Its artifact map still
+  pointed at the pre-`cvg/` flat layout (`docs/brd-*.md`, `sketch/*.plan`,
+  `tasks/T-*.md`) and numbered Bind as pass 6; it now names the typed folders
+  (`cvg/docs/brd/`, `cvg/sketch/swimlane-*/`, `cvg/tasks/`), the correct pass
+  numbers, and the legacy fallback. Its gate invocation recommended a
+  `.claude/skills/...` path that only exists in some installs — it now recommends
+  the CLI, matching the convention set when the signing ceremony was fixed.
+- **Every pass skill's optional-debrief handoff names the verb** (`cvg lesson`),
+  so the offer to teach is actionable at the point the pass closes.
+- `skills/README.md` said **11 skill packages (9 spine + 2 utility)**; the package
+  has shipped twelve since `evidence-to-next-pass` landed.
+- `readme.md`'s CLI tour was missing both companions — `cvg next` and
+  `cvg lesson` now appear in it.
 
 ---
 

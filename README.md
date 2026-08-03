@@ -249,7 +249,8 @@ do the work; the gate proves it happened.
 Three utilities round out the twelve: [`evidence-to-next-pass`](skills/evidence-to-next-pass/) (the
 sequence layer — derives where the descent stands from workspace evidence, enforces order
 with pre/post hooks, and owns the canonical pass prompts; surfaced as `cvg next`),
-[`pass-to-lesson`](skills/pass-to-lesson/) (teach what a pass just did), and
+[`pass-to-lesson`](skills/pass-to-lesson/) (teach what a pass just did — every component, the
+decision it encodes, what breaks downstream without it; surfaced as `cvg lesson`), and
 [`skill-creator`](skills/skill-creator/) (author + validate new skills).
 The full catalog with per-skill detail: [`skills/README.md`](skills/README.md).
 
@@ -294,6 +295,10 @@ cvg bind --task <spec>          # freeze the execution contract + write fence
 cvg loop --issue <id>           # attempt → verify → repeat, bounded on three axes
 cvg verify --task <spec>        # tier-2: a different-family judge tries to refute
 cvg gate --path <p>             # ask the repo write fence about one path
+
+# ── know where you are · understand what closed ──────────────────────────────
+cvg next                        # which pass is current and which is next, from evidence
+cvg lesson                      # gate the lesson a closed pass earned (optional)
 
 # ── for agents ───────────────────────────────────────────────────────────────
 cvg agent-context               # the whole surface as one JSON manifest

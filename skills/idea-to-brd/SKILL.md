@@ -191,7 +191,7 @@ User: *"I want an internal tool that auto-formats our meeting notes."* The grill
 
 → **`brd-docs-to-tech-req`** (Converge Pass 1, Intent) consumes this BRD exactly as it would a client's — reads it like the engineer who must deliver it, interrogates the engineering questions, and crystallizes the falsifiable tech-spec. Nothing downstream knows or cares that the brief was captured rather than handed over.
 
-*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 
 ## References
 

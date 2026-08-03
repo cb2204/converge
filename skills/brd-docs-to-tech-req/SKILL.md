@@ -246,5 +246,5 @@ User: *"Write the tech-spec — it should use \<some specific database\> and \<s
 
 → **`tech-req-to-adrs`** (Converge Pass 2) consumes this tech-spec (`cvg/docs/tech-spec-*`), reconciles it against the real repo, and records the binding technology decisions as ADRs under `cvg/docs/adrs/`.
 
-*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
 ```

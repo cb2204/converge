@@ -13,6 +13,9 @@
 # the cvg gates decide. It refuses forward motion, it never grants a PASS.
 # Read-only by design — it must never mutate the workspace it reads.
 #
+# It also NAMES the optional teaching companion (cvg lesson) wherever a pass has
+# closed — advisory, never sequenced, never blocking: a lesson is not a pass.
+#
 # Pass 6 (Register) is opt-in: reported, never blocking.
 # Tokens: NEXT_PASS= · PASS_PRE= · PASS_POST= · NEXT_PASS=USAGE_ERROR
 # bash 3.2 safe. Deps: find, grep.
@@ -76,11 +79,24 @@ pass_skill() {
   esac
 }
 
-# Absolute path to a pass's prompt inside the installed package. CVG_TOOL_HOME
-# is exported by the cvg router; standalone runs fall back to this checkout.
+# The installed package root. CVG_TOOL_HOME is exported by the cvg router;
+# standalone runs fall back to this checkout.
+tool_home() {
+  printf '%s' "${CVG_TOOL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
+}
+
+# Absolute path to a pass's prompt inside the installed package.
 prompt_path() {
-  local home="${CVG_TOOL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)}"
-  printf '%s/skills/%s/references/pass-prompt.md' "$home" "$(pass_skill "$1")"
+  printf '%s/skills/%s/references/pass-prompt.md' "$(tool_home)" "$(pass_skill "$1")"
+}
+
+# The teaching companion is NOT a pass: it has no place in the descent order, no
+# lane membership, and it never blocks. It is named here anyway because "a pass
+# just closed" is precisely its trigger, and a companion nobody is told about is
+# a companion nobody runs. Advisory only — it can never change a verdict.
+companion_line() {
+  printf '  teach it   : cvg lesson  (pass-to-lesson · %s/skills/pass-to-lesson/references/pass-prompt.md)\n' \
+    "$(tool_home)"
 }
 
 gate_cmd() {
@@ -164,14 +180,22 @@ case "$CMD" in
       if [ -z "$NEXT" ] && ! has_pass "$p"; then NEXT="$p"; fi
     done
     if has_pass 6; then echo '  [+] pass 6 · Register (opt-in, never blocks)'; fi
+    # Only offer teaching once something has actually closed — on a fresh floor
+    # there is nothing to teach, and an always-on hint is noise, not guidance.
+    CLOSED=""
+    for p in $ORDER; do
+      if has_pass "$p"; then CLOSED="$p"; fi
+    done
     if [ -z "$NEXT" ]; then
       echo 'every pass in the lane has evidence on the floor'
+      companion_line
       printf 'NEXT_PASS=DONE\n'
     else
       echo "next: pass $NEXT · $(pass_name "$NEXT")"
       echo "  skill      : $(pass_skill "$NEXT")"
       echo "  steer with : $(prompt_path "$NEXT")"
       echo "  close with : $(gate_cmd "$NEXT")"
+      if [ -n "$CLOSED" ]; then companion_line; fi
       printf 'NEXT_PASS=%s\n' "$NEXT"
     fi
     ;;
@@ -198,6 +222,7 @@ case "$CMD" in
     if has_pass "$TARGET"; then
       echo "pass $TARGET ($(pass_name "$TARGET")) left its artifact on the floor"
       echo "  authoritative verdict: $(gate_cmd "$TARGET")"
+      companion_line
       printf 'PASS_POST=OK\n'
     else
       echo "pass $TARGET ($(pass_name "$TARGET")) left NO artifact in its folder"

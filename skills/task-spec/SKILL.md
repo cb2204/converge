@@ -227,7 +227,7 @@ Run `scripts/safe-to-delegate.sh --stamp tasks/T-*.md`:
 
 ### Phase 8 — Dispatch
 
-A spec with `signed_off: true` is ready to hand to an autonomous executor. See [runbooks/dispatching-a-task-spec.md](runbooks/dispatching-a-task-spec.md) for the full handoff protocol. *Optional debrief:* **`pass-to-lesson`** teaches the signed-off backlog — every field, the decision it encodes, what breaks downstream without it — before dispatch.
+A spec with `signed_off: true` is ready to hand to an autonomous executor. See [runbooks/dispatching-a-task-spec.md](runbooks/dispatching-a-task-spec.md) for the full handoff protocol. *Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches the signed-off backlog — every field, the decision it encodes, what breaks downstream without it — before dispatch.
 
 The spec's frontmatter carries an `execution_backend:` field that names the canonical
 executor. **It is an OPEN STRING, not a closed enum** (validator treats any single token

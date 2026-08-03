@@ -175,4 +175,4 @@ The transform lane's plan reads: `leg-01` ingest + pin raw sources read-only; `l
 
 → **`sketch-plans-adversarial-review`** (Pass 4, CONSENSUS). It consumes the `sketch/*.plan` files produced here and attacks them **one at a time, leg by leg** — hunting unjustified seams, missing dependencies, plans that contradict an ADR, legs that fail the independence or fold tests, and any altitude leak into task or code detail — sharpens them in place (the diff is the record, objections cite leg IDs), and — at **the barrier** — the owner signs off before the work crosses to task-driven decomposition (Pass 5, `task-spec`, which cuts tasks per leg, 1:N).
 
-*Optional debrief:* **`pass-to-lesson`** teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
+*Optional debrief:* **`pass-to-lesson`** (`cvg lesson`) teaches what this pass just produced — every component, the decision it encodes, what breaks downstream without it — before the descent continues.
