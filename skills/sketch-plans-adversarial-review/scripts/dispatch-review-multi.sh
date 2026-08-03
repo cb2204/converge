@@ -82,7 +82,7 @@ if not logs:
 
 # provenance the REFEREE computes (never trusted from a sub-log)
 inputs = []
-for f in sorted(glob.glob(os.path.join(sketch, "swimlane-*", "*.md"))):
+for f in sorted(glob.glob(os.path.join(sketch, "*", "*.md"))):
     if os.path.basename(os.path.dirname(f)).startswith("."):
         continue
     inputs.append({"path": os.path.relpath(f, sketch),

@@ -27,7 +27,7 @@ metadata:
 | Slot | Contract |
 |------|----------|
 | **IN** | The Pass 2 understanding (held in-session) **+** the ADRs at `docs/adrs/*.md` (each a numbered decision file — e.g. a join-key decision, a date-grain decision, a metric-definition decision). |
-| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/swimlane-<seam>/` holding a **lean PRD index** `swimlane-<seam>.plan.md` **plus one file per leg** `leg-NN-<tech>.md`. The PRD links to its legs; it never embeds their detail. The folder carries the type and the file carries the slug — the same rule the typed `docs/` folders use — while the **stable id stays fully qualified in frontmatter** (`leg: swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
+| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/<seam>/` holding a **lean PRD index** `_lane.md` **plus one file per leg** `leg-NN-<tech>.md`. Nothing inside the folder repeats the folder. The PRD links to its legs; it never embeds their detail. The folder carries the type and the file carries the slug — the same rule the typed `docs/` folders use — while the **stable id stays fully qualified in frontmatter** (`leg: swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
 | **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). Plus the seam-economics hardening: **one steel-thread lane** (H1), per-lane **risk + owner** (H2/H3), stated **seam evolution** (H4), and any cycle **broken and recorded** (H5). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
 
 ## Flags
@@ -65,9 +65,17 @@ Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.
 
 ### The swimlane is a directory: a lean PRD + one file per leg (v0.8.0)
 
-A swimlane is **`sketch/swimlane-<seam>/`**, containing:
+The folder names the seam **once**. `sketch/models/` holds `_lane.md` and
+`leg-01-staging.md` — not `sketch/swimlane-models/swimlane-models.plan.md` and
+`swimlane-models-leg-01-staging.md`, which restated the directory in every
+filename and pushed the only part that differs off to the right. `_lane.md`
+sorts above the legs, and a **lane is recognized by containing a lane PRD, never
+by its directory name** — which is what allows the prefix to go without any gate
+losing the ability to find a swimlane.
 
-- **The PRD — `swimlane-<seam>.plan.md`** — a *lean index*. Field-grounded
+A swimlane is **`sketch/<seam>/`** (legacy `sketch/swimlane-<seam>/` still gated), containing:
+
+- **The PRD — `_lane.md`** — a *lean index*. Field-grounded
   structure (Spec Kit / arc42 / Amazon PR-FAQ): **lane-meta · identity + why ·
   Seam · Architecture** (mermaid `flowchart LR` + adjacent numbered steps —
   dual coding) **· Non-Goals** (the #1 anti-bloat device — explicit
@@ -113,7 +121,7 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 
 ## Gate — confirm before leaving this pass
 
-- [ ] One **`sketch/swimlane-<seam>/`** directory per genuine seam, each holding a lean PRD `swimlane-<seam>.plan.md` + one file per leg `leg-NN-<tech>.md`. (`--check` also accepts the legacy `swimlane-<seam>-leg-NN-<tech>.md` filename, so a workspace written before the rename never reads as EMPTY.)
+- [ ] One **`sketch/<seam>/`** directory per genuine seam, each holding a lean PRD `_lane.md` + one file per leg `leg-NN-<tech>.md`. (`--check` also accepts the legacy `swimlane-<seam>/swimlane-<seam>.plan.md` + `swimlane-<seam>-leg-NN-<tech>.md`, so a workspace written before the rename never reads as EMPTY — the one failure mode that would silently drop a pass's evidence.)
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
 - [ ] **The PRD is a lean index** — lane-meta, Seam, Architecture (mermaid + steps), **Non-Goals**, a Legs-index table linking to each leg file, Dependencies, Build order, Open questions — and holds **no leg detail**.
 - [ ] **Each leg file is complete and atomic** — frontmatter (stable `leg:` key, `parent`, `status`), a single **Responsibility**, **Proves** as **Given/When/Then** (1–3, no evals), Independence, Consumes/Produces, Appetite, Yields.

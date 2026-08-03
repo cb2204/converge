@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # new-plan.sh — Converge Pass 3 (DECOMPOSE): scaffold a swimlane as a directory —
-# one lean PRD index (swimlane-<seam>.plan.md) plus one file per leg
+# one lean PRD index (_lane.md) plus one file per leg
 # (leg-NN-<tech>.md) — or --check the sketch/ tree for altitude
 # drift and structural completeness.
 #
@@ -11,25 +11,30 @@
 # are the invariants --check guards.
 #
 # Usage:
-#   new-plan.sh "capture"                          Scaffold sketch/swimlane-capture/swimlane-capture.plan.md
+#   new-plan.sh "capture"                          Scaffold sketch/capture/_lane.md
 #   new-plan.sh --component "A · Capture" "capture" Set the identity line's component
 #   new-plan.sh --consumes <seam> "serve"          Mark a DOWNSTREAM swimlane + its consumed seam
-#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/swimlane-capture/leg-01-dlt.md
+#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/capture/leg-01-dlt.md
 #   new-plan.sh --dir path/to/sketch ...            Override the sketch directory
 #   new-plan.sh --check                            Lint the sketch/ tree
 #   new-plan.sh --help
 #
-# Layout (dir-per-swimlane — the folder carries the type, the file carries the slug):
+# Layout (dir-per-swimlane — the folder names the seam ONCE, nothing repeats it):
 #   sketch/
-#     swimlane-<seam>/
-#       swimlane-<seam>.plan.md            the PRD (lean index)
+#     <seam>/
+#       _lane.md                           the PRD (lean index; sorts above the legs)
 #       leg-NN-<tech>.md                   one file per leg (full detail)
 #
-# WHY THE LEG FILENAME IS SHORT. The workspace adopted one naming rule — a folder
+#   Legacy, still gated: swimlane-<seam>/swimlane-<seam>.plan.md (+ either leg shape).
+#   A swimlane dir is recognized by CONTAINING a lane PRD, never by its name —
+#   that is what lets the folder drop the prefix without the gate losing the lane.
+#
+# WHY NOTHING REPEATS THE FOLDER. The workspace adopted one naming rule — a folder
 #   per artifact type, the slug on the file (cvg/docs/brd/<slug>.md). sketch/ was
-#   the last place that still repeated its own directory in every filename
-#   (swimlane-models/swimlane-models-leg-01-staging.md), so the same tree taught
-#   two contradictory conventions. The folder already says which swimlane this is.
+#   the last place that still restated its own directory in every filename
+#   (swimlane-models/swimlane-models-leg-01-staging.md), so one tree taught two
+#   contradictory conventions. The folder names the seam once; the PRD is _lane.md
+#   (no seam in it at all) and a leg is leg-NN-<tech>.md.
 #
 # THE ID DID NOT CHANGE. The stable reference key is still the fully-qualified
 #   swimlane-<seam>-leg-NN (2-digit zero-pad) — it lives in each leg's `leg:`
@@ -110,8 +115,16 @@ check_tree() {
 
   for d in "$SKETCH_DIR"/*/; do
     [ -d "$d" ] || continue
+    # A swimlane directory is identified by CONTAINING a lane PRD, not by its
+    # name. That is what lets the folder drop the redundant "swimlane-" prefix
+    # without the gate losing the ability to find a lane at all.
+    #   _lane.md            canonical (sorts above the legs, names no seam twice)
+    #   <anything>.plan.md  legacy (swimlane-<seam>.plan.md)
     prd=""
-    for p in "$d"*.plan.md; do [ -e "$p" ] && prd="$p"; done
+    [ -e "${d}_lane.md" ] && prd="${d}_lane.md"
+    if [ -z "$prd" ]; then
+      for p in "$d"*.plan.md; do [ -e "$p" ] && prd="$p"; done
+    fi
     [ -n "$prd" ] || continue
     found=1
 
@@ -181,7 +194,7 @@ check_tree() {
   done
 
   if [ "$found" -eq 0 ]; then
-    echo "CHECK: no swimlanes found in $SKETCH_DIR/ (expected $SKETCH_DIR/swimlane-<seam>/swimlane-<seam>.plan.md)." >&2
+    echo "CHECK: no swimlanes found in $SKETCH_DIR/ (expected $SKETCH_DIR/<seam>/_lane.md, or the legacy $SKETCH_DIR/swimlane-<seam>/swimlane-<seam>.plan.md)." >&2
     echo "CHECK_PLAN=EMPTY"; return 2
   fi
   if [ "$thread_seen" -eq 0 ]; then
@@ -230,7 +243,8 @@ if [ -n "$LEG" ]; then
   printf '%s' "$LEG" | grep -qE '^[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$' \
     || usage_error "--leg must be NN-<tech>, 2-digit zero-pad + lowercase-kebab tech (e.g. 01-dlt, 04-dbt-bronze)"
   LEG_NN="${LEG%%-*}"
-  DIR="$SKETCH_DIR/swimlane-$SEAM"
+  DIR="$SKETCH_DIR/$SEAM"
+  [ -d "$DIR" ] || DIR="$SKETCH_DIR/swimlane-$SEAM"   # legacy lane dir keeps working
   mkdir -p "$DIR"
   OUT="$DIR/leg-$LEG.md"
   [ -e "$OUT" ] && usage_error "$OUT already exists — edit it, don't re-scaffold"
@@ -293,9 +307,9 @@ fi
 [ -n "$TITLE" ] || usage_error "swimlane title required (e.g. \"capture\")"
 SEAM="$(slugify "$TITLE")"
 [ -n "$SEAM" ] || usage_error "title slugified to empty"
-DIR="$SKETCH_DIR/swimlane-$SEAM"
+DIR="$SKETCH_DIR/$SEAM"
 mkdir -p "$DIR"
-OUT="$DIR/swimlane-$SEAM.plan.md"
+OUT="$DIR/_lane.md"
 [ -e "$OUT" ] && usage_error "$OUT already exists — edit it, don't re-scaffold"
 
 if [ -n "$COMPONENT" ]; then

@@ -25,6 +25,36 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 ## [Unreleased]
 
 ### Changed
+- **The swimlane folder names the seam once, and nothing inside repeats it** —
+  `cvg/sketch/models/_lane.md` + `leg-01-staging.md`, where it used to be
+  `cvg/sketch/swimlane-models/swimlane-models.plan.md` +
+  `swimlane-models-leg-01-staging.md`. Completes the rule the typed `docs/`
+  folders adopted (*a folder per artifact type, the slug on the file*); `sketch/`
+  was the last place still teaching the opposite convention in the same tree.
+  `_lane.md` sorts above the legs and carries no seam name at all.
+  - **A lane is now recognized by CONTAINING a lane PRD, never by its directory
+    name.** That inversion is the whole enabler: six discovery sites keyed off
+    `swimlane-*`, and a folder rename would have made each answer "no swimlanes"
+    — `CHECK_PLAN=EMPTY` from Pass 3, "nothing to gate" from the barrier, and a
+    conductor that silently lost Pass 3 evidence. Converted, all dual-shape:
+    `check-consensus-gate.sh` (PRD glob + provenance re-hash), `dispatch-review.sh`
+    (framing + provenance), `dispatch-review-multi.sh`, the conductor's Pass 3
+    probe, and both `bin/cvg` globs (now one `_cvg_has_lane` helper).
+  - The conductor's probe stays deliberately **loose** — `_lane.md`, a legacy
+    `<seam>.plan.md`, or even a bare leg all count as "Pass 3 left something on
+    the floor", exactly as the old `-path '*swimlane-*'` did. Presence is not a
+    verdict; `cvg decompose` still decides.
+  - **The stable id did not move.** `swimlane-<seam>-leg-NN` lives in each leg's
+    `leg:` frontmatter — what `--check` verifies, what `depends_on` and the
+    objection log reference, what Pass 5 task-specs cite. Filename is human
+    affordance, frontmatter is machine key; conflating them is what produced the
+    redundancy.
+  - Legacy layouts still gate green, proven side by side: fixture `good`
+    (`swimlane-checkout/swimlane-checkout.plan.md` + long legs) beside
+    `good-lane` (`checkout/_lane.md` + short legs).
+- Pass 3 suite 28 → 31 rows; conductor probe rewritten and re-proven at 27 rows.
+
+### Added
 - **The swimlane leg filename drops the prefix it was repeating** —
   `swimlane-models/leg-01-staging.md`, not
   `swimlane-models/swimlane-models-leg-01-staging.md`. The workspace adopted one

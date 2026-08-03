@@ -131,9 +131,27 @@ else:
     ok("fork: B (task-driven, single path) — %s" % ((fork.get("reason") or "")[:60]))
 
 # [5] fork line at the top of EVERY swimlane PRD (dir-per-swimlane)
-prds = sorted(glob.glob(os.path.join(sketch, "swimlane-*", "swimlane-*.plan.md")))
+def lane_dirs(root):
+    """Every swimlane dir under root, as (dir, prd). A lane is identified by
+    CONTAINING a lane PRD — _lane.md (canonical) or <name>.plan.md (legacy) —
+    never by the folder's name, so dropping the redundant "swimlane-" prefix
+    cannot make the barrier silently find nothing to gate."""
+    out = []
+    for d in sorted(glob.glob(os.path.join(root, "*", ""))):
+        if os.path.basename(os.path.dirname(d)).startswith("."):
+            continue
+        lane = os.path.join(d, "_lane.md")
+        if os.path.exists(lane):
+            out.append((d, lane)); continue
+        legacy = sorted(glob.glob(os.path.join(d, "*.plan.md")))
+        if legacy:
+            out.append((d, legacy[-1]))
+    return out
+
+LANES = lane_dirs(sketch)
+prds = [prd for _, prd in LANES]
 if not prds:
-    fail("no swimlane PRDs (%s/swimlane-*/swimlane-*.plan.md) — nothing to gate" % sketch)
+    fail("no swimlane PRDs (%s/<seam>/_lane.md, or the legacy %s/swimlane-*/swimlane-*.plan.md) — nothing to gate" % (sketch, sketch))
 else:
     missing = []
     for p in prds:
@@ -153,8 +171,7 @@ for i in (art.get("inputs", []) or []):
 if not inputs:
     fail("no inputs[] provenance — cannot prove the adversary saw the real plans")
 else:
-    live = sorted(glob.glob(os.path.join(sketch, "swimlane-*", "*.md")))
-    live = [f for f in live if not os.path.basename(os.path.dirname(f)).startswith(".")]
+    live = sorted(f for d, _ in LANES for f in glob.glob(os.path.join(d, "*.md")))
     stale, unseen = [], []
     for f in live:
         rel = os.path.relpath(f, sketch)

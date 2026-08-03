@@ -639,6 +639,21 @@ cvg_setup_signing() {
 # `cvg setup` scans every moving part and reports readiness + the exact next
 # step; `cvg setup tracker <t>` validates a backend and records the CHOICE.
 # Model: fly doctor + stripe projects status + clanker onboarding scan.
+# _cvg_has_lane <sketch-dir> — 0 when the dir holds at least one swimlane.
+# A swimlane is a subdirectory carrying a lane PRD (_lane.md canonical, or the
+# legacy <name>.plan.md); the folder's NAME is never the test, so dropping the
+# redundant "swimlane-" prefix cannot make Pass 3/4 discovery answer "none".
+_cvg_has_lane() {
+  local d p
+  for d in "$1"/*/; do
+    [ -d "$d" ] || continue
+    case "$(basename "$d")" in .*) continue ;; esac
+    [ -e "${d}_lane.md" ] && return 0
+    for p in "$d"*.plan.md; do [ -e "$p" ] && return 0; done
+  done
+  return 1
+}
+
 _cvg_tracker_adapter() { printf '%s/skills/task-specs-to-issues/scripts/adapters/%s.sh\n' "$CVG_HOME_DIR" "$1"; }
 
 cvg_setup_status() {
@@ -1632,14 +1647,14 @@ case "$CMD" in
       DEC_LIST=""
       for D in cvg/sketch sketch; do
         [ -d "$D" ] || continue
-        ls -d "$D"/swimlane-*/ >/dev/null 2>&1 || continue
+        _cvg_has_lane "$D" || continue
         DEC_N=$((DEC_N + 1))
         DEC_DIR="$D"
         DEC_LIST="${DEC_LIST}  ${D}
 "
       done
       if [ "$DEC_N" -eq 0 ]; then
-        ui_err "no swimlane set (sketch/swimlane-*/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
+        ui_err "no swimlane set (sketch/<seam>/_lane.md, or the legacy sketch/swimlane-*/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
         printf 'CHECK_PLAN=USAGE_ERROR\n'
         exit 2
       fi
@@ -1677,11 +1692,11 @@ case "$CMD" in
       REV_N=0
       for D in cvg/sketch sketch; do
         [ -d "$D" ] || continue
-        ls -d "$D"/swimlane-*/ >/dev/null 2>&1 || continue
+        _cvg_has_lane "$D" || continue
         REV_N=$((REV_N + 1)); REV_DIR="$D"
       done
       if [ "$REV_N" -ne 1 ]; then
-        ui_err "no unique swimlane tree (sketch/swimlane-*/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
+        ui_err "no unique swimlane tree (sketch/<seam>/, or the legacy sketch/swimlane-*/) under cvg/ or . from '$PWD' — pass --dir <sketch>"
         printf 'CHECK_CONSENSUS=USAGE_ERROR\n'; exit 2
       fi
     fi

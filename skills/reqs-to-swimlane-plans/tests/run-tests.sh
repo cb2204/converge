@@ -36,14 +36,16 @@ assert_file() { # <name> <file> <must> <must_not>
 
 echo "== --check on dir-per-swimlane fixtures =="
 run_case good           --check --dir "$FIX/good"          -- 0 '^CHECK: OK'            ''
-# Both filename shapes must gate green. 'good' is the LEGACY shape
-# (swimlane-<seam>-leg-NN-<tech>.md, the filename repeating its own directory);
-# 'good-short' is canonical (leg-NN-<tech>.md, the folder carrying the type).
+# Both LAYOUTS must gate green:
+#   good      LEGACY  swimlane-<seam>/swimlane-<seam>.plan.md + swimlane-<seam>-leg-NN-*.md
+#   good-lane CANON   <seam>/_lane.md + leg-NN-*.md   (nothing repeats the folder)
 # Keeping both is the back-compat contract: a workspace written before the
 # rename must never read as EMPTY, which is how a gate silently drops a pass.
-run_case good-short     --check --dir "$FIX/good-short"    -- 0 '^CHECK: OK'            ''
-run_case short-token-ok --check --dir "$FIX/good-short"    -- 0 'CHECK_PLAN=OK'          ''
-assert_file short-keeps-id "$FIX/good-short/swimlane-checkout/leg-01-fastapi.md" '^leg: swimlane-checkout-leg-01' ''
+# The canonical fixture also proves a lane is found by CONTENT (it holds a lane
+# PRD), not by its directory name — the folder no longer says "swimlane" at all.
+run_case good-lane      --check --dir "$FIX/good-lane"     -- 0 '^CHECK: OK'            ''
+run_case lane-token-ok  --check --dir "$FIX/good-lane"     -- 0 'CHECK_PLAN=OK'          ''
+assert_file lane-keeps-id  "$FIX/good-lane/checkout/leg-01-fastapi.md" '^leg: swimlane-checkout-leg-01' ''
 run_case no-thread      --check --dir "$FIX/no-thread"     -- 1 'THREAD.*steel-thread'  '^CHECK: OK'
 run_case no-mermaid     --check --dir "$FIX/no-mermaid"    -- 1 'VISUAL.*mermaid'       '^CHECK: OK'
 run_case no-lanemeta    --check --dir "$FIX/no-lanemeta"   -- 1 "no 'lane-meta:'"       '^CHECK: OK'
@@ -65,17 +67,17 @@ echo "== scaffold =="
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 run_case scaffold-prd     --dir "$TMP/sketch" "capture"                 -- 0 '^Created ' ''
-assert_file prd-seam      "$TMP/sketch/swimlane-capture/swimlane-capture.plan.md" '^## Seam'      ''
-assert_file prd-nongoals  "$TMP/sketch/swimlane-capture/swimlane-capture.plan.md" '^## Non-Goals' ''
-assert_file prd-mermaid   "$TMP/sketch/swimlane-capture/swimlane-capture.plan.md" '```mermaid'    ''
-assert_file prd-lanemeta  "$TMP/sketch/swimlane-capture/swimlane-capture.plan.md" '^lane-meta: thread=' ''
+assert_file prd-seam      "$TMP/sketch/capture/_lane.md" '^## Seam'      ''
+assert_file prd-nongoals  "$TMP/sketch/capture/_lane.md" '^## Non-Goals' ''
+assert_file prd-mermaid   "$TMP/sketch/capture/_lane.md" '```mermaid'    ''
+assert_file prd-lanemeta  "$TMP/sketch/capture/_lane.md" '^lane-meta: thread=' ''
 
 run_case scaffold-leg     --dir "$TMP/sketch" --lane capture --leg 01-dlt -- 0 '^Created ' ''
-assert_file leg-resp      "$TMP/sketch/swimlane-capture/leg-01-dlt.md" '^## Responsibility' ''
-assert_file leg-proves    "$TMP/sketch/swimlane-capture/leg-01-dlt.md" '^## Proves'         ''
+assert_file leg-resp      "$TMP/sketch/capture/leg-01-dlt.md" '^## Responsibility' ''
+assert_file leg-proves    "$TMP/sketch/capture/leg-01-dlt.md" '^## Proves'         ''
 # The filename is short (leg-01-dlt.md) but the STABLE KEY inside it stays
 # fully-qualified (swimlane-capture-leg-01) — that separation is the change.
-assert_file leg-key       "$TMP/sketch/swimlane-capture/leg-01-dlt.md" '^leg: swimlane-capture-leg-01' ''
+assert_file leg-key       "$TMP/sketch/capture/leg-01-dlt.md" '^leg: swimlane-capture-leg-01' ''
 
 run_case scaffold-leg-badfmt  --dir "$TMP/sketch" --lane capture --leg 1-dlt -- 1 'must be NN-<tech>' ''
 run_case scaffold-no-clobber  --dir "$TMP/sketch" "capture"                  -- 1 'already exists'    ''

@@ -134,7 +134,14 @@ has_pass() {
     1) [ -n "$(find "$WS/cvg/docs/tech-spec" -maxdepth 1 -name '*.md' -print 2>/dev/null | head -1)" ] \
        || [ -n "$(find "$WS/cvg/docs" -maxdepth 1 -name 'tech-spec-*.md' -print 2>/dev/null | head -1)" ] ;;
     2) [ -n "$(find "$WS/cvg/docs/adrs" -maxdepth 1 -name '*.md' -print 2>/dev/null | head -1)" ] ;;
-    3) [ -n "$(find "$WS/cvg/sketch" -path '*swimlane-*' -type f -print 2>/dev/null | head -1)" ] ;;
+    # A swimlane is recognized by holding a plan FILE, never by the folder's
+    # name — a name match would lose the pass the moment the folder dropped its
+    # redundant "swimlane-" prefix. Deliberately loose, like the check it
+    # replaced: _lane.md, a legacy <seam>.plan.md, or even a bare leg all count
+    # as "Pass 3 left something on the floor". Presence is not a verdict; the
+    # cvg decompose gate is what decides. (.consensus/ holds .json, so the
+    # *.md filter excludes the objection log without naming it.)
+    3) [ -n "$(find "$WS/cvg/sketch" -mindepth 2 -type f -name '*.md' -print 2>/dev/null | head -1)" ] ;;
     4) [ -f "$WS/cvg/sketch/.consensus/objection-log.json" ] ;;
     5) find "$WS/cvg/tasks" -name 'T-*.md' -print 2>/dev/null \
          | while IFS= read -r f; do

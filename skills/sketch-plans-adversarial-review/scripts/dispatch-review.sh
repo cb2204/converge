@@ -64,9 +64,12 @@ PROMPT="$(mktemp)"; JUDG="$(mktemp)"
 trap 'rm -f "$PROMPT" "$JUDG"' EXIT
 {
   cat "$PLAYBOOK" 2>/dev/null || true
-  echo; echo "=== PLANS TO ATTACK (sketch/swimlane-*/) ==="
-  for f in "$SKETCH_DIR"/swimlane-*/*.md; do
+  echo; echo "=== PLANS TO ATTACK (sketch/<seam>/) ==="
+  # Any non-dot subdir is a lane (.consensus/ holds the log, not plans). Matching
+  # on "swimlane-*" would silently attack nothing once the prefix was dropped.
+  for f in "$SKETCH_DIR"/*/*.md; do
     [ -e "$f" ] || continue
+    case "$(basename "$(dirname "$f")")" in .*) continue ;; esac
     echo; echo "----- $f -----"; cat "$f"
   done
 } > "$PROMPT"
@@ -153,7 +156,7 @@ if judg is None:
     sys.stderr.write("ERROR: adversary produced no parseable judgment JSON (fail-closed)\n"); sys.exit(22)
 # provenance the REFEREE computes (not self-reported)
 inputs = []
-for f in sorted(glob.glob(os.path.join(sketch, "swimlane-*", "*.md"))):
+for f in sorted(glob.glob(os.path.join(sketch, "*", "*.md"))):
     if os.path.basename(os.path.dirname(f)).startswith("."): continue
     rel = os.path.relpath(f, sketch)
     inputs.append({"path": rel, "sha256": hashlib.sha256(open(f, "rb").read()).hexdigest()})
