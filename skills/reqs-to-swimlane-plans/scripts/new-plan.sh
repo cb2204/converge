@@ -63,10 +63,12 @@
 
 set -euo pipefail
 
-# The swimlane tree: canonical cvg/swimlanes/, legacy cvg/swimlanes/ (or a bare
-# swimlanes/). Preference is by CONTENT, not existence — `cvg init` may have created
-# an empty swimlanes/ beside a populated legacy swimlanes/, and picking the empty one
+# The swimlane tree: canonical cvg/swimlanes/, legacy cvg/sketch/ (or a bare
+# sketch/). Preference is by CONTENT, not existence — `cvg init` may have created
+# an empty swimlanes/ beside a populated legacy sketch/, and picking the empty one
 # would answer EMPTY and drop this workspace's Pass 3 evidence.
+# NOTE: the literal "sketch" below is deliberate back-compat. A bulk rename already
+# rewrote this comment once into naming the canonical path twice — leave it alone.
 _lane_tree() {
   local c
   for c in swimlanes sketch; do
@@ -91,7 +93,13 @@ usage() { sed -n '11,20p' "$0"; }
 # SQL_RE — a SQL statement opening a line (the SELECT/handler-body leak).
 SQL_RE='^[[:space:]]*(SELECT|INSERT[[:space:]]+INTO|UPDATE|DELETE[[:space:]]+FROM|CREATE[[:space:]]+(TABLE|VIEW|OR[[:space:]]+REPLACE)|WITH[[:space:]]+[A-Za-z_].*[[:space:]]+AS[[:space:]]*\(|MERGE[[:space:]]+INTO)[[:space:]]'
 # TASK_RE — an atomic task id or an eval block; tasks live at tasks/T-*.md (Pass 5).
-TASK_RE='(^[[:space:]]*[-*>]?[[:space:]]*(Task|T-[0-9]{6,})[-: ]|^[[:space:]]*(eval|acceptance[_-]?eval|bash[_-]?eval)[[:space:]]*:)'
+# The bare word "Task" used to be enough to trip this, which false-positived on
+# Converge's OWN noun: the fork declaration the Pass 4 gate demands reads most
+# naturally as "the plans become Task-Specs at Pass 5", and a line opening with
+# that phrase was reported as an atomic-task leak. A real leak carries an ID or a
+# label, so require one: a number/hash after "Task", or the T-NNNNNN id shape.
+# Prose may now say Task-Spec; it still may not smuggle in "Task 4:" or "T-20260803-x".
+TASK_RE='(^[[:space:]]*[-*>]?[[:space:]]*(Task[[:space:]]*[#0-9]|T-[0-9]{6,})[-: ]?|^[[:space:]]*(eval|acceptance[_-]?eval|bash[_-]?eval)[[:space:]]*:)'
 
 # PRD sections that must be present (newline-delimited; spaces inside a pattern).
 REQUIRED_PRD='Seam

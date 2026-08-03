@@ -155,6 +155,55 @@ for L in FULL NORMAL FAST; do
 done
 rm -rf "$T5"
 
+# --- THE BARRIER: evidence without consent must not advance the descent ------
+# The 2026-08-03 regression. An objection log EXISTS the moment the adversary
+# runs, so pass 4 read as complete while cvg review --check said FAIL with seven
+# objections open. `next` is what an autonomous runner consults, so it pointed
+# straight past the last human sign-off. Evidence is presence; consent is not.
+T6="$(mktemp -d -t conductor-tests6.XXXXXX)"
+git -C "$T6" init --quiet
+( cd "$T6" && CVG_PROJECT_ROOT="$T6" bash "$REPO/bin/cvg" init >/dev/null )
+touch "$T6/cvg/docs/brd/x.md" "$T6/cvg/docs/tech-spec/x.md" "$T6/cvg/docs/adrs/adr-001.md"
+mkdir -p "$T6/cvg/swimlanes/core" && touch "$T6/cvg/swimlanes/core/_lane.md"
+mkdir -p "$T6/cvg/swimlanes/.consensus"
+# Downstream evidence too, so the refusal is proven to override later passes and
+# not merely to fill a gap: a signed spec, a bind profile and a receipt all exist.
+printf -- '---\nstatus: ready\nsigned_off: true\n---\n' > "$T6/cvg/tasks/T-20260803-x.md"
+touch "$T6/cvg/execution/x.profile.yaml"; echo '{}' > "$T6/cvg/receipts/x.json"
+
+# an objection nobody decided
+cat > "$T6/cvg/swimlanes/.consensus/objection-log.json" <<'JSON'
+{"objections":[{"id":"C1","severity":"critical",
+  "proposal":{"disposition":"FIX","reason":"the read-only adversary did not implement the fix"}}]}
+JSON
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -q '^NEXT_PASS=4$' \
+  && ok "an UNDECIDED objection log does not advance past the barrier" \
+  || bad "next must stay at 4 while the barrier is open ($OUT)"
+printf '%s' "$OUT" | grep -q '\[!\] pass 4' \
+  && ok "the board marks the barrier [!] — artifact present, consent absent" \
+  || bad "pass 4 should be marked [!] while objections are undecided"
+OUT="$(cd "$T6" && bash "$ENGINE" pre 5 2>&1)" || true
+printf '%s' "$OUT" | grep -q '^PASS_PRE=MISSING$' \
+  && ok "the pre-hook refuses pass 5 behind an unsigned barrier (fail-closed)" \
+  || bad "pre 5 must refuse while the barrier is open ($OUT)"
+
+# the SAME log, now carrying an owner decision
+cat > "$T6/cvg/swimlanes/.consensus/objection-log.json" <<'JSON'
+{"objections":[{"id":"C1","severity":"critical",
+  "proposal":{"disposition":"FIX","reason":"adversary advice"},
+  "resolution":{"disposition":"FIX","decided_by":"owner","decided_at":"2026-08-03T12:00:00Z"}}]}
+JSON
+OUT="$(cd "$T6" && bash "$ENGINE" next 2>&1)"
+printf '%s' "$OUT" | grep -qE '^NEXT_PASS=(DONE|5|7|8)$' \
+  && ok "once decided, the barrier stops blocking and the descent moves on" \
+  || bad "a decided log must let next advance ($OUT)"
+OUT="$(cd "$T6" && bash "$ENGINE" pre 5 2>&1)"
+printf '%s' "$OUT" | grep -q '^PASS_PRE=OK$' \
+  && ok "the pre-hook opens once a human has decided" \
+  || bad "pre 5 should be OK after the barrier closes ($OUT)"
+rm -rf "$T6"
+
 run 2 bogus && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \
   && ok "unknown verb is a usage error (exit 2)" || bad "unknown verb must exit 2"
 run 2 next --lane WARP && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \

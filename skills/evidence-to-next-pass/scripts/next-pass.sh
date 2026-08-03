@@ -16,6 +16,10 @@
 # It also NAMES the optional teaching companion (cvg lesson) wherever a pass has
 # closed — advisory, never sequenced, never blocking: a lesson is not a pass.
 #
+# ONE EXCEPTION to "presence is not a verdict": an unsigned THE BARRIER (pass 4 —
+# an objection log with undecided objections) marks [!] and stops `next`/`pre`
+# from naming anything beyond it. Still no gate is run; it is a structural read.
+#
 # Pass 6 (Register) is opt-in: reported, never blocking.
 # Tokens: NEXT_PASS= · PASS_PRE= · PASS_POST= · NEXT_PASS=USAGE_ERROR
 # bash 3.2 safe. Deps: find, grep.
@@ -157,7 +161,32 @@ has_pass() {
   esac
 }
 
-mark() { if has_pass "$1"; then printf '+'; else printf '.'; fi; }
+# --- THE BARRIER is the one pass whose evidence can exist while CONSENT does not.
+# Pass 4's artifact is an objection log, and a log full of objections nobody has
+# decided is not consensus — it is the opposite. On 2026-08-03 this conductor said
+# NEXT_PASS=5 while cvg review --check said CHECK_CONSENSUS=FAIL with seven
+# objections open, two CRITICAL. "Presence is not a verdict" is right for passes
+# 0-3, but Pass 4 is the last human sign-off before machines take over, and `next`
+# is exactly the surface an autonomous loop consults to decide what to do. Pointing
+# it past an unsigned barrier is the one place that rule becomes dangerous.
+#
+# This stays a STRUCTURAL read — no gate is executed and no verdict is invented,
+# the same class of probe as "does a signed_off spec exist" for pass 5. It counts
+# objections against recorded owner decisions; deliberately coarse, because
+# cvg review --check remains the authority on whether consensus actually holds.
+barrier_open() {
+  local log="$LANES/.consensus/objection-log.json" n_obj n_dec
+  [ -f "$log" ] || return 1
+  n_obj="$(grep -c '"severity"' "$log" 2>/dev/null)" || n_obj=0
+  n_dec="$(grep -c '"decided_by"' "$log" 2>/dev/null)" || n_dec=0
+  [ "${n_obj:-0}" -gt "${n_dec:-0}" ]
+}
+
+# '!' marks a pass whose artifact is on the floor but whose consent is not.
+mark() {
+  if [ "$1" = "4" ] && barrier_open; then printf '!'; return 0; fi
+  if has_pass "$1"; then printf '+'; else printf '.'; fi
+}
 
 # --- argument parsing --------------------------------------------------------
 CMD="${1:-}"
@@ -200,6 +229,18 @@ case "$CMD" in
       if [ -z "$NEXT" ] && ! has_pass "$p"; then NEXT="$p"; fi
     done
     if has_pass 6; then echo '  [+] pass 6 · Register (opt-in, never blocks)'; fi
+    # Refuse to look past an unsigned barrier, even when later passes have
+    # evidence: whatever is downstream was built on a plan nobody signed.
+    case " $ORDER " in
+      *" 4 "*)
+        if barrier_open; then
+          NEXT=4
+          echo '  ^ THE BARRIER is open: the objection log carries objections with no'
+          echo '    owner decision. Nothing past pass 4 is dispatchable until it closes.'
+          echo '    decide: cvg review --resolve <id|all> --fix   (or --accept --owner N --risk W)'
+          echo '    then  : cvg review --check'
+        fi ;;
+    esac
     # Only offer teaching once something has actually closed — on a fresh floor
     # there is nothing to teach, and an always-on hint is noise, not guidance.
     CLOSED=""
@@ -221,6 +262,19 @@ case "$CMD" in
     ;;
   pre)
     [ -n "$TARGET" ] || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
+    # An unsigned barrier closes every door behind it. This is the hook an
+    # autonomous runner calls before starting work, so it is the last chance to
+    # stop a machine building on plans no human accepted.
+    case " $ORDER " in
+      *" 4 "*)
+        if [ "$TARGET" -gt 4 ] 2>/dev/null && barrier_open; then
+          echo "pass $TARGET ($(pass_name "$TARGET")) may not start — THE BARRIER (pass 4) has objections with no owner decision."
+          echo "  decide: cvg review --resolve <id|all> --fix   (or --accept --owner N --risk W)"
+          echo "  then  : cvg review --check   (it, not this hook, is the authority)"
+          printf 'PASS_PRE=MISSING\n'
+          exit 1
+        fi ;;
+    esac
     MISSING=""
     for p in $ORDER; do
       [ "$p" = "$TARGET" ] && break

@@ -25,6 +25,30 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 ## [Unreleased]
 
 ### Fixed
+- **The conductor stops walking past an unsigned barrier.** `cvg next` reported
+  `NEXT_PASS=5` while `cvg review --check` reported `CHECK_CONSENSUS=FAIL` with
+  seven objections open, two CRITICAL — because Pass 4's probe only asked whether
+  an objection log EXISTS, and a log exists the moment the adversary runs.
+  "Presence is not a verdict" is right for passes 0-3; Pass 4 is the last human
+  sign-off, and `next`/`pre` are exactly what an autonomous runner consults to
+  decide what to do next. This was the one place that rule became dangerous.
+  - The board now marks an unsigned barrier **`[!]`** — artifact present, consent
+    absent — instead of `[+]`.
+  - `next` refuses to name any pass beyond it, **even when later passes already
+    have evidence**: whatever is downstream was built on a plan nobody signed.
+  - `pre <N>` for N past 4 answers `PASS_PRE=MISSING` with the remedy. That hook
+    is the last thing standing between a machine and plans no human accepted.
+  - Still a **structural read** — no gate is executed, no verdict invented. It
+    counts objections against recorded owner decisions, the same class of probe as
+    "does a signed_off spec exist" for pass 5; `cvg review --check` stays the
+    authority. Conductor suite 27 → 32 rows, including proof that a *decided* log
+    releases the descent again.
+- **The Pass 3 altitude guard no longer trips on Converge's own noun.** The bare
+  word "Task" at the head of a line read as an atomic-task leak, so the fork
+  declaration the Pass 4 gate *demands* — most naturally worded "the plans become
+  Task-Specs at Pass 5" — failed `CHECK_PLAN`. A real leak carries an ID or label,
+  so the pattern now requires one (`Task 4:`, `T-20260803-x`). Both directions
+  pinned: prose naming Task-Specs passes, a real task ID still drifts. 31 → 33 rows.
 - **THE BARRIER NO LONGER PASSES ITSELF.** Pass 4 could be closed by dispatching
   the adversary twice. The gate asked "does every objection carry a disposition?"
   — and the read-only adversary stamped `disposition: FIX` on every objection it

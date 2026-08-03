@@ -44,6 +44,15 @@ run_case good           --check --dir "$FIX/good"          -- 0 '^CHECK: OK'    
 # The canonical fixture also proves a lane is found by CONTENT (it holds a lane
 # PRD), not by its directory name — the folder no longer says "swimlane" at all.
 run_case good-lane      --check --dir "$FIX/good-lane"     -- 0 '^CHECK: OK'            ''
+# F-009: prose may name Converge's own noun; only a real task ID or eval leaks.
+# The fork declaration the Pass 4 gate DEMANDS reads "…become Task-Specs at Pass 5",
+# and that used to fail the altitude guard.
+S="$(mktemp -d -t p3-noun.XXXXXX)"; cp -R "$FIX/good-lane/." "$S/"
+printf '\n> Fork: B — task-driven. The plans become Task-Specs at Pass 5.\n' >> "$S/checkout/_lane.md"
+run_case prose-names-taskspec --check --dir "$S" -- 0 'CHECK_PLAN=OK' 'DRIFT'
+printf '\nTask 4: wire the handler\n' >> "$S/checkout/_lane.md"
+run_case real-task-id-still-drifts --check --dir "$S" -- 1 'atomic task' '^CHECK_PLAN=OK'
+rm -rf "$S"
 run_case lane-token-ok  --check --dir "$FIX/good-lane"     -- 0 'CHECK_PLAN=OK'          ''
 assert_file lane-keeps-id  "$FIX/good-lane/checkout/leg-01-fastapi.md" '^leg: swimlane-checkout-leg-01' ''
 run_case no-thread      --check --dir "$FIX/no-thread"     -- 1 'THREAD.*steel-thread'  '^CHECK: OK'
