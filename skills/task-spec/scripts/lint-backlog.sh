@@ -11,9 +11,17 @@
 # Usage:
 #   bash lint-backlog.sh [--help]
 #
+# Token (last stdout line): LINT=OK | WARN | ISSUES | UNSUPPORTED
+#
 # Exit codes:
 #   0 — no issues
 #   1 — one or more issues found
+#   3 — cannot run here (needs bash 4+ for associative arrays; see LINT=UNSUPPORTED)
+#
+# WHY THE TOKEN: every other Converge surface ends with a machine token, and this
+# one did not — so a Manager reading `cvg lint` could not tell a clean backlog from
+# a lint that never ran. WARN and ISSUES both exit 1, as before; the token is what
+# distinguishes them, so no caller's exit-code branch changes.
 
 set -euo pipefail
 
@@ -21,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
-ts_require_bash4 "$@"
+TS_BASH4_TOKEN="LINT=UNSUPPORTED" ts_require_bash4 "$@"
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   echo "Usage: bash lint-backlog.sh [--help]"
@@ -430,8 +438,14 @@ done
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
-if [[ $ERRORS -gt 0 || $WARNINGS -gt 0 ]]; then
+if [[ $ERRORS -gt 0 ]]; then
+  echo "LINT=ISSUES"
+  exit 1
+fi
+if [[ $WARNINGS -gt 0 ]]; then
+  echo "LINT=WARN"
   exit 1
 fi
 
+echo "LINT=OK"
 exit 0

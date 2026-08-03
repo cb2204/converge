@@ -294,6 +294,8 @@ cvg setup                       # readiness board with your exact next step
 cvg setup signing               # repo-private HMAC key — specs become signable
 cvg setup tracker linear        # connect a board; the key goes to the OS keychain
 cvg doctor                      # engine readiness: ≥2 engines, ≥1 cross-family
+cvg doctor plugin               # is this project loading a STALE Converge?
+cvg doctor evidence             # can git show the floor the gates stand on?
 
 # ── design (passes 0–4) ──────────────────────────────────────────────────────
 cvg capture                     # Pass 0 gate: the BRD exit contract
@@ -301,6 +303,8 @@ cvg intent                      # Pass 1 gate: testable requirements
 cvg structure                   # Pass 2 gate: the ADR set
 cvg decompose                   # Pass 3 gate: the swimlane tree
 cvg review --adversary codex    # Pass 4 dispatch: a cross-family model attacks the plan
+cvg review --timeout 900        # …raise the wall-clock cap; a big plan set needs it
+cvg review --resolve C7 --fix   # record the OWNER's decision on one objection
 cvg review --check              # Pass 4 gate: objections resolved, provenance intact
 cvg lane "what you'll build"    # route the work: FAST | NORMAL | FULL
 
@@ -310,8 +314,12 @@ cvg tasks new <slug> <effort>   # scaffold a Task-Spec — you write the evals F
 cvg tasks validate <spec>       # structure + six-tier sizing gate
 cvg tasks gate --stamp <spec>   # sign-off: VERDICT + the HMAC seal
 cvg tasks dod <spec>            # definition of done + traceability matrix
+cvg tasks rebuild-state         # re-derive _state.yaml from the specs' frontmatter
 cvg eval <spec>                 # run the spec's own evals
 cvg lint                        # lint the whole backlog: cycles, overlaps
+                                #   ⚠ needs bash 4+ (associative arrays). Stock
+                                #   macOS ships 3.2 → LINT=UNSUPPORTED, exit 3.
+                                #   `brew install bash` and it re-execs itself.
 
 # ── board (pass 6, opt-in) ───────────────────────────────────────────────────
 cvg register                    # specs → tracker issues, 1:1, deps as blocked-by

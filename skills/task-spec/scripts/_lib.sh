@@ -866,6 +866,12 @@ ts_compute_signoff_sig() {
 #   - Otherwise, look for a bash 4+ on PATH and re-exec the calling script
 #     under it (preserving "$@"). $TS_BASH4_REEXEC guards against re-exec loops.
 #   - If no bash 4+ is found, print a one-line remediation and exit 3.
+#
+# TS_BASH4_TOKEN (optional, set by the caller before invoking): a machine token to
+# print on stdout when the guard bails. Every other Converge surface ends with a
+# token as its last stdout line, and a caller that dies inside a shared helper was
+# the one place that contract broke — a Manager saw a bare non-zero exit with
+# nothing to branch on. The variable is opt-in, so existing callers are unchanged.
 ts_require_bash4() {
   if [[ "${BASH_VERSINFO[0]:-0}" -ge 4 ]]; then
     return 0
@@ -873,6 +879,7 @@ ts_require_bash4() {
 
   if [[ -n "${TS_BASH4_REEXEC:-}" ]]; then
     echo "task-spec: requires bash 4+; on macOS run: brew install bash, then re-run this script with that bash" >&2
+    [[ -n "${TS_BASH4_TOKEN:-}" ]] && echo "$TS_BASH4_TOKEN"
     exit 3
   fi
 
@@ -887,6 +894,7 @@ ts_require_bash4() {
   fi
 
   echo "task-spec: requires bash 4+; on macOS run: brew install bash, then re-run this script with that bash" >&2
+  [[ -n "${TS_BASH4_TOKEN:-}" ]] && echo "$TS_BASH4_TOKEN"
   exit 3
 }
 
