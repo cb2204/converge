@@ -1,13 +1,23 @@
-import { Sparkle } from "@phosphor-icons/react";
-
 export function BrandMark() {
   return (
-    <div className="brand" aria-label="Converge Control Room">
-      <span className="brand__mark" aria-hidden="true">
-        <Sparkle weight="duotone" />
+    <div className="brand" role="img" aria-label="Converge Control Room">
+      <picture aria-hidden="true">
+        <source
+          media="(max-width: 760px)"
+          srcSet="/brand/converge-icon-color-light.svg"
+          width="36"
+          height="36"
+        />
+        <img
+          src="/brand/converge-lockup-color-light.svg"
+          alt=""
+          width="190"
+          height="48"
+        />
+      </picture>
+      <span className="brand__surface" aria-hidden="true">
+        Control Room
       </span>
-      <span className="brand__word">Converge</span>
-      <span className="brand__surface">Control Room</span>
     </div>
   );
 }

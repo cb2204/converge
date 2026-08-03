@@ -63,6 +63,9 @@ export function EvidencePanel({ snapshot, pass }: EvidencePanelProps) {
   const [objectionIndex, setObjectionIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [expandedEvidenceKinds, setExpandedEvidenceKinds] = useState<
+    Set<string>
+  >(new Set());
   const [artifact, setArtifact] = useState<ArtifactState>({
     status: "idle",
     document: null,
@@ -85,6 +88,7 @@ export function EvidencePanel({ snapshot, pass }: EvidencePanelProps) {
   useEffect(() => {
     artifactAbort.current?.abort();
     setObjectionIndex(0);
+    setExpandedEvidenceKinds(new Set());
     setArtifact({
       status: "idle",
       document: null,
@@ -349,26 +353,45 @@ export function EvidencePanel({ snapshot, pass }: EvidencePanelProps) {
             {Object.entries(evidenceGroups).map(([kind, items]) => (
               <div key={kind} className="evidence-group">
                 <span>{kind}</span>
-                {items.slice(0, 5).map((item) => (
+                {items
+                  .slice(
+                    0,
+                    expandedEvidenceKinds.has(kind) ? items.length : 5,
+                  )
+                  .map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={(event) =>
+                        void openArtifact(item, event.currentTarget)
+                      }
+                    >
+                      <FileText aria-hidden="true" />
+                      <span>
+                        <strong>{item.label}</strong>
+                        <small>{item.path}</small>
+                      </span>
+                      <ArrowRight aria-hidden="true" />
+                    </button>
+                  ))}
+                {items.length > 5 ? (
                   <button
                     type="button"
-                    key={item.id}
-                    onClick={(event) =>
-                      void openArtifact(item, event.currentTarget)
+                    className="evidence-group__toggle"
+                    aria-expanded={expandedEvidenceKinds.has(kind)}
+                    onClick={() =>
+                      setExpandedEvidenceKinds((current) => {
+                        const next = new Set(current);
+                        if (next.has(kind)) next.delete(kind);
+                        else next.add(kind);
+                        return next;
+                      })
                     }
                   >
-                    <FileText aria-hidden="true" />
-                    <span>
-                      <strong>{item.label}</strong>
-                      <small>{item.path}</small>
-                    </span>
-                    <ArrowRight aria-hidden="true" />
+                    {expandedEvidenceKinds.has(kind)
+                      ? "Show fewer"
+                      : `Show all ${items.length}`}
                   </button>
-                ))}
-                {items.length > 5 ? (
-                  <small className="evidence-group__more">
-                    +{items.length - 5} more in this group
-                  </small>
                 ) : null}
               </div>
             ))}

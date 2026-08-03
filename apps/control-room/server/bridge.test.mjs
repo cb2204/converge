@@ -233,6 +233,15 @@ test("snapshot keeps review, gate, blocking questions, and CLI authorization sep
   assert.equal(first.authorization.state, "allowed");
   assert.equal(first.authorization.nextPassId, "pass-5");
   assert.equal(first.method.activePassId, "pass-5");
+  const knownPassIds = new Set(first.method.passes.map((pass) => pass.id));
+  assert.ok(first.activity.length > 0);
+  assert.ok(
+    first.activity.every(
+      (activity) =>
+        typeof activity.passId === "string" &&
+        knownPassIds.has(activity.passId),
+    ),
+  );
 
   const consensus = first.method.passes.find((pass) => pass.id === "pass-4");
   assert.equal(consensus.gate.verdict, "OK");

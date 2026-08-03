@@ -229,7 +229,11 @@ export function App() {
           <EvidencePanel snapshot={snapshot} pass={selectedPass} />
         </div>
 
-        <ActivityRail items={snapshot.activity} />
+        <ActivityRail
+          items={snapshot.activity}
+          selectedPassId={selectedPass.id}
+          onSelectPass={setSelectedPassId}
+        />
 
         <footer className="control-room__footer">
           <span>

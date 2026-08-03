@@ -512,6 +512,7 @@ export const fallbackSnapshot = {
   activity: [
     {
       id: "activity-passes-0-3",
+      passId: "pass-3",
       time: "2026-08-03T17:35:11Z",
       label: "Design lineage recorded",
       detail: "Passes 0–3 closed with canonical brief, specification, ADRs, and eleven swimlane plans.",
@@ -520,6 +521,7 @@ export const fallbackSnapshot = {
     },
     {
       id: "activity-review-round-1",
+      passId: "pass-4",
       time: "2026-08-03T19:11:05Z",
       label: "Cross-family attack completed",
       detail: "Codex stamped seven objections: two critical and five high severity.",
@@ -528,6 +530,7 @@ export const fallbackSnapshot = {
     },
     {
       id: "activity-review-round-2",
+      passId: "pass-4",
       time: "2026-08-03T19:27:53Z",
       label: "Round-two review remains REVISE",
       detail: "Seven fixes were applied, but the adversary record still carries seven open FIX dispositions and six build-blocking questions.",
@@ -536,6 +539,7 @@ export const fallbackSnapshot = {
     },
     {
       id: "activity-consensus-gate",
+      passId: "pass-4",
       time: "2026-08-03T19:39:24Z",
       label: "Formal gate returned green",
       detail: "cvg review --check returned CHECK_CONSENSUS=OK; this is shown independently from the artifact verdict.",
@@ -544,6 +548,7 @@ export const fallbackSnapshot = {
     },
     {
       id: "activity-next-pass",
+      passId: "pass-5",
       time: "2026-08-03T19:39:24Z",
       label: "Tasking selected as the frontier",
       detail: "cvg next returned NEXT_PASS=5. The backlog projection still contains zero tasks.",

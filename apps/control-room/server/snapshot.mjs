@@ -476,6 +476,7 @@ export async function buildWorkspaceSnapshot({
     .filter((pass) => pass.gate.ok !== null || pass.status === "active")
     .map((pass) => ({
       id: `activity-${pass.id}`,
+      passId: pass.id,
       time: latestEvidenceTime(evidence.byPass[pass.id] ?? [], fallbackTime),
       label:
         pass.status === "active"

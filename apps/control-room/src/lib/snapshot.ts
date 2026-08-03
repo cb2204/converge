@@ -99,10 +99,15 @@ function isReview(value: unknown): value is ReviewState | null {
   );
 }
 
-function isActivity(value: unknown): value is ActivityItem {
+function isActivity(
+  value: unknown,
+  passIds: ReadonlySet<string>,
+): value is ActivityItem {
   return (
     isRecord(value) &&
     hasString(value, "id") &&
+    (value.passId === undefined ||
+      (typeof value.passId === "string" && passIds.has(value.passId))) &&
     hasString(value, "time") &&
     !Number.isNaN(Date.parse(value.time as string)) &&
     hasString(value, "label") &&
@@ -168,7 +173,7 @@ export function isWorkspaceSnapshot(
     isNullableString(value.authorization.command) &&
     hasString(value.authorization, "rationale") &&
     Array.isArray(value.activity) &&
-    value.activity.every(isActivity) &&
+    value.activity.every((activity) => isActivity(activity, passIds)) &&
     Array.isArray(value.warnings) &&
     value.warnings.every((warning) => typeof warning === "string")
   );

@@ -93,6 +93,7 @@ export interface ReviewState {
 
 export interface ActivityItem {
   id: string;
+  passId?: string;
   time: string;
   label: string;
   detail: string;

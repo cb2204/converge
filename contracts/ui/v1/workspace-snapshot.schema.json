@@ -245,6 +245,7 @@
       "required": ["id", "time", "label", "detail", "tone", "source"],
       "properties": {
         "id": { "type": "string" },
+        "passId": { "type": "string" },
         "time": { "type": "string" },
         "label": { "type": "string" },
         "detail": { "type": "string" },
