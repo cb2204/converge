@@ -32,9 +32,9 @@ _fleet.jsonl
 # Build artifacts
 dist/
 node_modules/
-apps/control-room/dist/
-apps/control-room/.vite/
-apps/control-room/*.tsbuildinfo
+apps/cockpit/dist/
+apps/cockpit/.vite/
+apps/cockpit/*.tsbuildinfo
 
 # Browser QA output is local evidence, not product source.
 output/playwright/

@@ -7,11 +7,16 @@
     "cvg-install": "install.sh"
   },
   "scripts": {
-    "control-room:install": "npm --prefix apps/control-room install",
-    "control-room:dev": "npm --prefix apps/control-room run dev --",
-    "control-room:build": "npm --prefix apps/control-room run build",
-    "control-room:check": "npm --prefix apps/control-room run check",
-    "control-room:start": "npm --prefix apps/control-room run start --"
+    "cockpit:install": "npm --prefix apps/cockpit install",
+    "cockpit:dev": "npm --prefix apps/cockpit run dev --",
+    "cockpit:build": "npm --prefix apps/cockpit run build",
+    "cockpit:check": "npm --prefix apps/cockpit run check",
+    "cockpit:start": "npm --prefix apps/cockpit run start --",
+    "control-room:install": "npm --prefix apps/cockpit install",
+    "control-room:dev": "npm --prefix apps/cockpit run dev --",
+    "control-room:build": "npm --prefix apps/cockpit run build",
+    "control-room:check": "npm --prefix apps/cockpit run check",
+    "control-room:start": "npm --prefix apps/cockpit run start --"
   },
   "files": [
     "bin/",

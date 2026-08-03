@@ -18,7 +18,7 @@ Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one re
 [Quickstart](#-quickstart-your-first-gated-task) ·
 [Steer from chat](#-steering-the-factory-from-chat) ·
 [How it works](#-how-it-works) ·
-[Control Room](#-control-room) ·
+[Cockpit](#-cockpit) ·
 [The passes](#-the-nine-passes) ·
 [The CLI](#-the-cvg-cli) ·
 [Docs](#-documentation)
@@ -62,27 +62,31 @@ because the referee is plain bash + stdlib Python, the same install serves every
   every harness's native discovery directory. The same signed spec dispatches to any of them —
   and the gate that scores the work is identical.
 
-## ✦ Control Room
+## ✦ Cockpit
 
-The optional [Control Room](apps/control-room/) makes a workspace observable
+The repository-first [Cockpit](apps/cockpit/) makes a workspace observable
 without creating a second source of truth. It renders the real nine-pass
-lineage, evidence, gate verdicts, adversarial objections, and the command
-authorized by `cvg next`. The CLI still owns execution and proof; V0 is
-deliberately read-only.
+lineage, work queue, execution runs, evidence, receipts, health, adversarial
+objections, and the command authorized by `cvg`. The CLI still owns execution
+and proof; Cockpit v1 is deliberately read-only.
 
 ```bash
-npm run control-room:install
-npm run control-room:dev -- \
+npm run cockpit:install
+npm run cockpit:dev -- \
   --cvg-home "$PWD" \
   --project-root /absolute/path/to/your/converge-workspace
 ```
 
-The local bridge accepts only fixed read-only CLI/Git operations, binds to
-loopback, and exposes only evidence already present in the workspace snapshot.
+The local bridge invokes only `cvg snapshot --json`, binds to loopback, and
+exposes only evidence already present in that CLI-owned workspace snapshot.
 Artifact previews are bound to the snapshot and SHA-256 so changed bytes cannot
 masquerade as captured proof. See the
-[Control Room guide](apps/control-room/README.md) for the architecture,
+[Cockpit guide](apps/cockpit/README.md) for the architecture,
 contract, production build, and verification commands.
+
+The legacy `control-room:*` npm scripts remain aliases for one release. Cockpit
+is not included in the published zero-runtime-dependency Converge package while
+the live proving-ground cases are still being completed.
 
 ## 📦 Install
 

@@ -167,6 +167,9 @@ jobs:
       - name: cvg json envelope
         run: bash tests/test-cvg-json-envelope.sh
 
+      - name: cvg snapshot — canonical Cockpit read model
+        run: bash tests/test-cvg-snapshot.sh
+
       - name: cvg doctor plugin — a project must not load a stale Converge
         # The drift that let a use case run four green gates on skills eight
         # commits old. Hermetic: a throwaway CLAUDE_CONFIG_DIR with a local git
@@ -267,3 +270,37 @@ jobs:
             exit 1
           fi
           echo "clean — no shipped or intentionally untracked path depends on the removed proving ground"
+
+  cockpit:
+    name: cockpit (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/cockpit/package-lock.json
+
+      - name: install Cockpit dependencies
+        run: npm ci --prefix apps/cockpit
+
+      - name: type, contract, bridge, and component checks
+        run: npm run cockpit:check
+
+      - name: production build
+        run: npm run cockpit:build
+
+      - name: install Chromium
+        working-directory: apps/cockpit
+        run: npx playwright install --with-deps chromium
+
+      - name: browser and accessibility verification
+        working-directory: apps/cockpit
+        run: npm run test:browser
