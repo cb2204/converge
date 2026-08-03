@@ -48,6 +48,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --help|-h)       sed -n '2,20p' "$0"; exit 0 ;;
     --adversary)     ADVLIST="${2:?}"; shift 2 ;;
+    # A wall-clock cap that only worked for ONE engine would be a trap: the
+    # merged path is the slower one, so it needs the cap more, not less.
+    --timeout)       TIMEOUT_SECS="${2:?}"; shift 2 ;;
     --dir)           SKETCH_DIR="${2:?}"; shift 2 ;;
     --out)           OUT="${2:?}"; shift 2 ;;
     --author-family) AUTHOR_FAMILY="${2:?}"; shift 2 ;;
@@ -72,7 +75,8 @@ for adv in "$@"; do
   echo "cvg review · multi · dispatch → $adv" >&2
   rc=0
   out="$(bash "$SINGLE" --adversary "$adv" --dir "$SKETCH_DIR" \
-           --out "$TMP/$adv.json" --author-family "$AUTHOR_FAMILY")" || rc=$?
+           --out "$TMP/$adv.json" --author-family "$AUTHOR_FAMILY" \
+           ${TIMEOUT_SECS:+--timeout "$TIMEOUT_SECS"})" || rc=$?
   tok="$(printf '%s\n' "$out" | grep -E '^REVIEW=' | tail -1 || true)"
   echo "    $adv → ${tok:-REVIEW=?} (exit $rc)" >&2
   printf '%s\n' "$tok" | grep -q 'REVIEW=SKIP' && SKIPS=$((SKIPS + 1)) || true
