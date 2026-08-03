@@ -27,7 +27,7 @@ metadata:
 | Slot | Contract |
 |------|----------|
 | **IN** | The Pass 2 understanding (held in-session) **+** the ADRs at `docs/adrs/*.md` (each a numbered decision file — e.g. a join-key decision, a date-grain decision, a metric-definition decision). |
-| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/swimlane-<seam>/` holding a **lean PRD index** `swimlane-<seam>.plan.md` **plus one file per leg** `swimlane-<seam>-leg-NN-<tech>.md`. The PRD links to its legs; it never embeds their detail. Filenames are the fully-qualified ids (stable key `swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
+| **OUT** | **One directory per swimlane** under `sketch/`: `sketch/swimlane-<seam>/` holding a **lean PRD index** `swimlane-<seam>.plan.md` **plus one file per leg** `leg-NN-<tech>.md`. The PRD links to its legs; it never embeds their detail. The folder carries the type and the file carries the slug — the same rule the typed `docs/` folders use — while the **stable id stays fully qualified in frontmatter** (`leg: swimlane-<seam>-leg-NN`; `<tech>` a swappable label). |
 | **GATE** | One plan per genuine seam, each listing **features / dependencies / build-order / proving-tests** and inheriting the relevant ADR decisions; the downstream lane names the exact upstream interface it consumes; **plan altitude held** (no tasks, no implementation code). Plus the seam-economics hardening: **one steel-thread lane** (H1), per-lane **risk + owner** (H2/H3), stated **seam evolution** (H4), and any cycle **broken and recorded** (H5). See the full checklist under [Gate](#gate--confirm-before-leaving-this-pass). |
 
 ## Flags
@@ -56,14 +56,14 @@ From the loaded Pass 2 understanding and the ADRs, split what is being built int
 Write one sketch plan per seam under `sketch/`. **One lane, one plan, one focus.** Each plan should carry:
 
 1. **Identity + lane-meta line** — which component this is (e.g. A · Transform / B · Serve), its input/output contract, and the greppable **`lane-meta: thread=<yes|no> · risk=<low|med|high> · owner=<stream>`** line. **`owner` (H3 — Conway)** names the single stream/team that owns the lane (or `shared`/`platform`); a seam that splits one owner or fuses two is a coordination smell — flag it, because architecture mirrors the org's communication structure.
-2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN-<tech>`** in build order (`leg-01-dlt`, `leg-04-dbt-bronze`, `leg-01-fastapi`; fully-qualified `swimlane-<seam>-leg-NN-<tech>` when cited outside the plan). **Nomenclature (field-grounded):** the **stable reference key is `swimlane-<seam>-leg-NN`** (2-digit zero-pad so ids sort); the **`<tech>` is a lowercase-kebab tool slug appended as a *swappable display label*, never part of the key** — swapping DuckLake→Iceberg or dlt→Airbyte must not break a single cross-reference (embedding volatile tech in an identifier is the classic id anti-pattern). Each leg carries **one responsibility in prose** + **one proving-test cluster** (what its tests assert, never test code), is **independently finishable** (buildable/provable without any later leg), and is **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No quotas. See `references/legs.md`.
+2. **Legs — the lane's named stretches** — the pieces inside the lane, each named **`leg-NN-<tech>`** in build order (`leg-01-dlt`, `leg-04-dbt-bronze`, `leg-01-fastapi` — which is also the filename, since the folder already names the swimlane; cited outside the plan by the fully-qualified key `swimlane-<seam>-leg-NN`). **Nomenclature (field-grounded):** the **stable reference key is `swimlane-<seam>-leg-NN`** (2-digit zero-pad so ids sort); the **`<tech>` is a lowercase-kebab tool slug appended as a *swappable display label*, never part of the key** — swapping DuckLake→Iceberg or dlt→Airbyte must not break a single cross-reference (embedding volatile tech in an identifier is the classic id anti-pattern). Each leg carries **one responsibility in prose** + **one proving-test cluster** (what its tests assert, never test code), is **independently finishable** (buildable/provable without any later leg), and is **sized to one build-order step + one context window** — bigger is two legs; two stretches sharing one proving test are one leg. No quotas. See `references/legs.md`.
 3. **The consumed interface + seam evolution (downstream lanes only)** — the exact upstream tables/columns/fields this lane reads, so the seam is explicit. A downstream lane names precisely which published outputs each endpoint/tool/consumer reads and **never reaches below the seam** into an upstream lane's internals. **Seam evolution (H4):** the frozen contract *will* change — state how safely. Additive changes (a new column/field/endpoint) are non-breaking; renames, removals, and newly-required fields are **breaking** and need a coexistence window before this lane cuts over. Recommend a consumer-driven contract test the upstream must keep green, so a later change can't silently break this lane.
 4. **Dependencies** — a small DAG showing the build order between the lane's own pieces and its inbound seam.
 5. **Build order** — a sane sequence, with the gating input called out (for example, a frozen acceptance-question set may gate the output layer and the final serving surface).
 6. **Tests that prove each leg** — at plan altitude: *what* each test asserts, keyed by leg (`leg-NN`), not the test code. The leg never carries an eval — the eval binds at Pass 5, when the leg yields its **1:N task-specs** (the leg's responsibility becomes the task's intent, its proving-test cluster the eval seeds).
 7. **Open questions** — anything the ADRs do not cover, with an owner and whether it blocks the build. Surface it here; do not invent the answer inside the plan.
 
-### The swimlane is a directory: a lean PRD + one file per leg (v0.7.0)
+### The swimlane is a directory: a lean PRD + one file per leg (v0.8.0)
 
 A swimlane is **`sketch/swimlane-<seam>/`**, containing:
 
@@ -75,7 +75,7 @@ A swimlane is **`sketch/swimlane-<seam>/`**, containing:
   line of responsibility each) **· Dependencies · Build order · Open questions ·
   Spec traceability.** The PRD holds **no leg detail** — it stays black-box
   altitude so it never bloats as legs grow.
-- **One file per leg — `swimlane-<seam>-leg-NN-<tech>.md`** — atomic and
+- **One file per leg — `leg-NN-<tech>.md`** — atomic and
   independently evolvable. Structure (Spec Kit user-story / INVEST / Gherkin /
   Shape Up): **frontmatter** (`leg:` the stable key, `parent`, `swimlane`,
   `status`, `spec_ref`, `depends_on`) **· Responsibility** (one job) **· Proves**
@@ -113,12 +113,12 @@ Run the [Gate checklist](#gate--confirm-before-leaving-this-pass). When every bo
 
 ## Gate — confirm before leaving this pass
 
-- [ ] One **`sketch/swimlane-<seam>/`** directory per genuine seam, each holding a lean PRD `swimlane-<seam>.plan.md` + one file per leg `swimlane-<seam>-leg-NN-<tech>.md`.
+- [ ] One **`sketch/swimlane-<seam>/`** directory per genuine seam, each holding a lean PRD `swimlane-<seam>.plan.md` + one file per leg `leg-NN-<tech>.md`. (`--check` also accepts the legacy `swimlane-<seam>-leg-NN-<tech>.md` filename, so a workspace written before the rename never reads as EMPTY.)
 - [ ] The split follows a natural seam — by feature or component — and each boundary is **justified**, not a guess and not a quota.
 - [ ] **The PRD is a lean index** — lane-meta, Seam, Architecture (mermaid + steps), **Non-Goals**, a Legs-index table linking to each leg file, Dependencies, Build order, Open questions — and holds **no leg detail**.
 - [ ] **Each leg file is complete and atomic** — frontmatter (stable `leg:` key, `parent`, `status`), a single **Responsibility**, **Proves** as **Given/When/Then** (1–3, no evals), Independence, Consumes/Produces, Appetite, Yields.
 - [ ] **Links are bidirectional and consistent** — every leg file is referenced in the PRD index (no orphan) and every index row has a file (no dangling); legs are **contiguous** `leg-01..leg-0N` across the files.
-- [ ] **Leg nomenclature holds** — in-plan `leg-NN-<tech>`, fully-qualified `swimlane-<seam>-leg-NN-<tech>`; the stable key is `swimlane-<seam>-leg-NN` and `<tech>` is a swappable label, **never** part of the key.
+- [ ] **Leg nomenclature holds** — the **filename** is `leg-NN-<tech>.md` (the folder already names the swimlane, so repeating it in every file only pushes the part that differs to the right); the **stable key** is the fully-qualified `swimlane-<seam>-leg-NN`, carried in the leg's `leg:` frontmatter and used by every cross-reference (`depends_on`, the objection log, Pass 5 task-specs). Filename is human affordance, frontmatter is machine key — conflating the two is what produced the redundancy. `<tech>` is a swappable label, **never** part of the key.
 - [ ] Each leg carries one responsibility in prose + one proving-test cluster, is **independently finishable**, and fits one context window — bigger is two legs; two stretches sharing one proving test are one leg.
 - [ ] No leg carries an eval — the eval binds at the task-spec; each leg yields **1:N task-specs** at Pass 5 and is cited by them (`swimlane-<seam>-leg-NN`).
 - [ ] Each plan inherits the relevant `docs/adrs/*` decisions and **contradicts none** of them.

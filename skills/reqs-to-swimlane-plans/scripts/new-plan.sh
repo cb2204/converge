@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # new-plan.sh — Converge Pass 3 (DECOMPOSE): scaffold a swimlane as a directory —
 # one lean PRD index (swimlane-<seam>.plan.md) plus one file per leg
-# (swimlane-<seam>-leg-NN-<tech>.md) — or --check the sketch/ tree for altitude
+# (leg-NN-<tech>.md) — or --check the sketch/ tree for altitude
 # drift and structural completeness.
 #
 # The swimlane PRD is a lean INDEX: it names the seam, shows the architecture, and
@@ -14,21 +14,34 @@
 #   new-plan.sh "capture"                          Scaffold sketch/swimlane-capture/swimlane-capture.plan.md
 #   new-plan.sh --component "A · Capture" "capture" Set the identity line's component
 #   new-plan.sh --consumes <seam> "serve"          Mark a DOWNSTREAM swimlane + its consumed seam
-#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/swimlane-capture/swimlane-capture-leg-01-dlt.md
+#   new-plan.sh --lane capture --leg 01-dlt         Scaffold sketch/swimlane-capture/leg-01-dlt.md
 #   new-plan.sh --dir path/to/sketch ...            Override the sketch directory
 #   new-plan.sh --check                            Lint the sketch/ tree
 #   new-plan.sh --help
 #
-# Layout (dir-per-swimlane; fully-qualified filenames = the ids):
+# Layout (dir-per-swimlane — the folder carries the type, the file carries the slug):
 #   sketch/
 #     swimlane-<seam>/
 #       swimlane-<seam>.plan.md            the PRD (lean index)
-#       swimlane-<seam>-leg-NN-<tech>.md   one file per leg (full detail)
+#       leg-NN-<tech>.md                   one file per leg (full detail)
 #
-# Nomenclature: the STABLE reference key is swimlane-<seam>-leg-NN (2-digit
-#   zero-pad); <tech> is a swappable display label appended in the filename, NEVER
-#   part of the key. Legs are contiguous leg-01..leg-0N. Each leg yields 1:N
-#   task-specs at Pass 5B. See references/legs.md.
+# WHY THE LEG FILENAME IS SHORT. The workspace adopted one naming rule — a folder
+#   per artifact type, the slug on the file (cvg/docs/brd/<slug>.md). sketch/ was
+#   the last place that still repeated its own directory in every filename
+#   (swimlane-models/swimlane-models-leg-01-staging.md), so the same tree taught
+#   two contradictory conventions. The folder already says which swimlane this is.
+#
+# THE ID DID NOT CHANGE. The stable reference key is still the fully-qualified
+#   swimlane-<seam>-leg-NN (2-digit zero-pad) — it lives in each leg's `leg:`
+#   frontmatter, is what --check verifies, and is what a Pass 5B task-spec cites.
+#   Only the filename dropped the redundancy. <tech> stays a swappable display
+#   label, NEVER part of the key. Legs are contiguous leg-01..leg-0N. Each leg
+#   yields 1:N task-specs at Pass 5B. See references/legs.md.
+#
+# --check accepts BOTH filename shapes (new first, legacy second), because the
+#   gate is the discovery key: a rename that the gate did not already understand
+#   would report CHECK_PLAN=EMPTY and silently drop a workspace's Pass 3 evidence
+#   mid-migration. Same additive rule the typed docs/ folders shipped under.
 #
 # Internal structure (field-grounded — Spec Kit / arc42 / Amazon PR-FAQ / INVEST /
 #   Gherkin / Shape Up / ADR): PRD = lane-meta / identity+why / Seam / Architecture
@@ -130,9 +143,13 @@ check_tree() {
       grep -qiE 'seam evolution|additive|breaking' "$prd" || { echo "SEAM   $prd — downstream lane names a consumed seam but no evolution rule (H4)."; rc=1; }
     fi
 
-    # Leg files in this swimlane dir
+    # Leg files in this swimlane dir. Two accepted shapes, canonical first:
+    #   leg-NN-<tech>.md                  the folder carries the type, the file the slug
+    #   swimlane-<seam>-leg-NN-<tech>.md  legacy — the filename repeated its directory
+    # The two globs are mutually exclusive (a name starting with "leg-" has nothing
+    # before "-leg-"), so no leg is counted twice into the contiguity check.
     local has_leg=0 leg_nums=""
-    for lf in "$d"*-leg-*.md; do
+    for lf in "$d"leg-*.md "$d"*-leg-*.md; do
       [ -e "$lf" ] || continue
       has_leg=1
       altitude_drift "$lf" || rc=1
@@ -148,7 +165,7 @@ check_tree() {
     done
 
     if [ "$has_leg" -eq 0 ]; then
-      echo "WEAK   $d — no leg files (swimlane-<seam>-leg-NN-<tech>.md); a swimlane is its PRD + its legs."; rc=1
+      echo "WEAK   $d — no leg files (leg-NN-<tech>.md, or the legacy swimlane-<seam>-leg-NN-<tech>.md); a swimlane is its PRD + its legs."; rc=1
     else
       local leg_sorted leg_cnt leg_first leg_last leg_expect
       leg_sorted="$(printf '%s\n' "$leg_nums" | grep -v '^$' | sort -u)"
@@ -215,7 +232,7 @@ if [ -n "$LEG" ]; then
   LEG_NN="${LEG%%-*}"
   DIR="$SKETCH_DIR/swimlane-$SEAM"
   mkdir -p "$DIR"
-  OUT="$DIR/swimlane-$SEAM-leg-$LEG.md"
+  OUT="$DIR/leg-$LEG.md"
   [ -e "$OUT" ] && usage_error "$OUT already exists — edit it, don't re-scaffold"
   cat > "$OUT" <<EOF
 ---
@@ -317,7 +334,7 @@ $IDENTITY — its purpose in one line (the problem this slice solves).
 Input contract: \`<upstream>.*\`. Output contract: \`<downstream>.*\` (the seam the next lane consumes).
 
 > **This is the swimlane PRD — a lean INDEX over the legs.** Each leg's full detail
-> lives in its own file (\`swimlane-$SEAM-leg-NN-<tech>.md\`). Keep this at black-box
+> lives in its own file (\`leg-NN-<tech>.md\`, keyed \`swimlane-$SEAM-leg-NN\`). Keep this at black-box
 > altitude: interfaces, the seam, the DAG, links — never leg detail, never SQL, never evals.
 
 ## Seam
@@ -351,8 +368,8 @@ Step-by-step:
 
 | Leg | Responsibility (one line) | File |
 |---|---|---|
-| **leg-01-<tech>** | <one line> | [swimlane-$SEAM-leg-01-<tech>.md](swimlane-$SEAM-leg-01-<tech>.md) |
-| **leg-02-<tech>** | <one line> | [swimlane-$SEAM-leg-02-<tech>.md](swimlane-$SEAM-leg-02-<tech>.md) |
+| **leg-01-<tech>** | <one line> | [leg-01-<tech>.md](leg-01-<tech>.md) |
+| **leg-02-<tech>** | <one line> | [leg-02-<tech>.md](leg-02-<tech>.md) |
 
 Stable keys: \`swimlane-$SEAM-leg-01/02\` — the \`<tech>\` suffix is a swappable label.
 

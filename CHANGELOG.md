@@ -24,6 +24,42 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
 
 ## [Unreleased]
 
+### Changed
+- **The swimlane leg filename drops the prefix it was repeating** —
+  `swimlane-models/leg-01-staging.md`, not
+  `swimlane-models/swimlane-models-leg-01-staging.md`. The workspace adopted one
+  naming rule when the typed `docs/` folders shipped — *a folder per artifact
+  type, the slug on the file* — and `sketch/` was the last place still restating
+  its own directory in every filename. In a narrow sidebar that pushed the only
+  part that differs (`rule-checks`, `money-audit`, `rebuild-proof`) about 26
+  characters right, so you read the same prefix three times to find the one word
+  that isn't shared. The folder already says which swimlane this is.
+  - **The id did not change.** The stable key is still the fully-qualified
+    `swimlane-<seam>-leg-NN`, carried in each leg's `leg:` frontmatter — which is
+    what `--check` verifies, what `depends_on` and the Pass 4 objection log
+    reference, and what a Pass 5 task-spec cites. Filename is human affordance,
+    frontmatter is machine key; conflating the two is what produced the
+    redundancy in the first place.
+  - **`--check` accepts both shapes**, canonical first, legacy second. This is
+    load-bearing, not politeness: the gate IS the discovery key, so a rename it
+    did not already understand reports `CHECK_PLAN=EMPTY` — which reads as "this
+    workspace never ran Pass 3" and silently drops the pass's evidence from the
+    conductor mid-migration. Proven by keeping the legacy `good` fixture green
+    beside a new canonical `good-short` twin.
+  - Pass 4 needed no change: `dispatch-review.sh`, `dispatch-review-multi.sh` and
+    `check-consensus-gate.sh` glob `swimlane-*/*.md`, a wildcard over files, so
+    short leg names flow through the attack framing and the provenance re-hash
+    unchanged (verified: 11 files, 3 PRDs still discovered in uc-01).
+  - Deliberately NOT done: dropping `swimlane-` from the *directory* and renaming
+    the PRD to `_lane.md`. That is a much wider change — six discovery sites key
+    off the folder name (`check-consensus-gate.sh` PRD glob + provenance glob,
+    both dispatch scripts, the conductor's Pass 3 evidence probe, and two globs
+    in `bin/cvg decompose`) and each needs dual-shape support or Pass 3 evidence
+    disappears. Scoped separately rather than half-landed.
+- Pass 3 suite 28 → 31 rows: the three scaffolder-output rows now assert the new
+  filename, plus a canonical-shape fixture that gates `CHECK_PLAN=OK` and a row
+  proving the short filename still carries the qualified id.
+
 ### Added
 - **`cvg lesson` — the teaching companion finally has a CLI door.**
   `pass-to-lesson` was the only skill in the package with no verb: it shipped a
