@@ -1,0 +1,50 @@
+{
+  "name": "Converge",
+  "identity": "Settlement Fold",
+  "version": "1.0.0",
+  "colors": {
+    "factoryBlack": "#070A0F",
+    "carbon": "#111720",
+    "graphite": "#29313A",
+    "steel": "#8D99A6",
+    "proofIvory": "#F5F2EA",
+    "cleanWhite": "#FFFFFF",
+    "forgeGold": "#F3B64C",
+    "settlementMint": "#73E2C3",
+    "verdictCoral": "#FF6B64"
+  },
+  "semantic": {
+    "brandAccent": "#F3B64C",
+    "bound": "#F3B64C",
+    "settled": "#73E2C3",
+    "red": "#FF6B64"
+  },
+  "typography": {
+    "display": [
+      "Avenir Next",
+      "Inter",
+      "ui-sans-serif",
+      "system-ui",
+      "sans-serif"
+    ],
+    "mono": [
+      "Menlo",
+      "IBM Plex Mono",
+      "ui-monospace",
+      "monospace"
+    ],
+    "wordmark": "Custom vector geometry"
+  },
+  "minimumSize": {
+    "iconDigitalPx": 24,
+    "faviconPx": 16,
+    "lockupDigitalWidthPx": 180,
+    "iconPrintMm": 8
+  },
+  "preferredApplications": {
+    "primaryDarkSurface": "#070A0F",
+    "secondaryDarkSurface": "#111720",
+    "primaryLightSurface": "#F5F2EA",
+    "brandAccent": "#F3B64C"
+  }
+}

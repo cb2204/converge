@@ -1,0 +1,21 @@
+:root {
+  --converge-factory-black: #070a0f;
+  --converge-carbon: #111720;
+  --converge-graphite: #29313a;
+  --converge-steel: #8d99a6;
+  --converge-proof-ivory: #f5f2ea;
+  --converge-white: #ffffff;
+  --converge-forge-gold: #f3b64c;
+  --converge-settlement-mint: #73e2c3;
+  --converge-verdict-coral: #ff6b64;
+
+  --converge-brand-accent: var(--converge-forge-gold);
+  --converge-state-bound: var(--converge-forge-gold);
+  --converge-state-settled: var(--converge-settlement-mint);
+  --converge-state-red: var(--converge-verdict-coral);
+
+  --converge-font-display:
+    "Avenir Next", Inter, ui-sans-serif, system-ui, sans-serif;
+  --converge-font-mono:
+    Menlo, "IBM Plex Mono", ui-monospace, monospace;
+}

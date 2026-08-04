@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title">
+  <title id="title">converge-github-social-preview-1280x640</title>
+  <rect width="1280" height="640" fill="#070A0F"/>
+     <g stroke="#F5F2EA" stroke-width="1" opacity="0.045"><path d="M0 0V640"/><path d="M64 0V640"/><path d="M128 0V640"/><path d="M192 0V640"/><path d="M256 0V640"/><path d="M320 0V640"/><path d="M384 0V640"/><path d="M448 0V640"/><path d="M512 0V640"/><path d="M576 0V640"/><path d="M640 0V640"/><path d="M704 0V640"/><path d="M768 0V640"/><path d="M832 0V640"/><path d="M896 0V640"/><path d="M960 0V640"/><path d="M1024 0V640"/><path d="M1088 0V640"/><path d="M1152 0V640"/><path d="M1216 0V640"/><path d="M1280 0V640"/><path d="M0 0H1280"/><path d="M0 64H1280"/><path d="M0 128H1280"/><path d="M0 192H1280"/><path d="M0 256H1280"/><path d="M0 320H1280"/><path d="M0 384H1280"/><path d="M0 448H1280"/><path d="M0 512H1280"/><path d="M0 576H1280"/><path d="M0 640H1280"/></g>
+     <g fill="none" stroke="#F3B64C" stroke-width="2"><path d="M0 50.0 C207.9 50.0, 430.6 320.0, 665.6 320" opacity="0.14"/><path d="M0 91.5 C233.9 91.5, 415.7 320.0, 665.6 320" opacity="0.16"/><path d="M0 133.1 C259.8 133.1, 400.9 320.0, 665.6 320" opacity="0.18"/><path d="M0 174.6 C207.9 174.6, 386.0 320.0, 665.6 320" opacity="0.19"/><path d="M0 216.2 C233.9 216.2, 430.6 320.0, 665.6 320" opacity="0.21"/><path d="M0 257.7 C259.8 257.7, 415.7 320.0, 665.6 320" opacity="0.23"/><path d="M0 299.2 C207.9 299.2, 400.9 320.0, 665.6 320" opacity="0.25"/><path d="M0 340.8 C233.9 340.8, 386.0 320.0, 665.6 320" opacity="0.27"/><path d="M0 382.3 C259.8 382.3, 430.6 320.0, 665.6 320" opacity="0.28"/><path d="M0 423.8 C207.9 423.8, 415.7 320.0, 665.6 320" opacity="0.30"/><path d="M0 465.4 C233.9 465.4, 400.9 320.0, 665.6 320" opacity="0.32"/><path d="M0 506.9 C259.8 506.9, 386.0 320.0, 665.6 320" opacity="0.34"/><path d="M0 548.5 C207.9 548.5, 430.6 320.0, 665.6 320" opacity="0.36"/><path d="M0 590.0 C233.9 590.0, 415.7 320.0, 665.6 320" opacity="0.37"/></g>
+     <g transform="translate(88 153.6) scale(0.52)" fill="none" stroke="#F5F2EA" stroke-width="15" stroke-linecap="square" stroke-linejoin="round" opacity="1">
+    <path d="M82 18 H24 V102 H82" transform="translate(0 0)"/>
+<path d="M26 18 H78 V102 H26 Z" transform="translate(134 0)"/>
+<path d="M22 102 V18 L80 102 V18" transform="translate(268 0)"/>
+<path d="M18 18 L50 102 L82 18" transform="translate(402 0)"/>
+<path d="M82 18 H24 V102 H82 M24 60 H72" transform="translate(536 0)"/>
+<path d="M22 102 V18 H72 V58 H22 M57 58 L84 102" transform="translate(670 0)"/>
+<path d="M82 36 V18 H24 V102 H82 V64 H58" transform="translate(804 0)"/>
+<path d="M82 18 H24 V102 H82 M24 60 H72" transform="translate(938 0)"/>
+  </g>
+     <text x="92" y="409.6" fill="#F5F2EA" font-family="Avenir Next" font-size="38" font-weight="500">Compile intent into shipped software.</text>
+     <text x="92" y="499.20000000000005" fill="#F3B64C" font-family="Menlo" font-size="22" letter-spacing="3">DONE IS PROVEN.</text>
+     <g transform="translate(830 145.92) scale(0.34)" opacity="1" stroke-linejoin="round">
+    <path d="M512 72 L832 256 L832 332 L714 400 L714 338 L512 222 L310 338 L310 570 L512 686 L714 570 L714 510 L832 442 L832 652 L512 836 L192 652 L192 256 Z" fill="#F5F2EA" stroke="#F5F2EA" stroke-width="20"/>
+    <path d="M714 188 L832 256 L714 324 Z" fill="#F3B64C" stroke="#F3B64C" stroke-width="12"/>
+  </g>
+</svg>

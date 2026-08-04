@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converge · Owner’s Handbook · Design Proof · Pages 01–05</title>
+<meta name="description" content="Design proof for the Converge Owner’s Handbook — Settlement Fold brand system. First five pages.">
+<link rel="icon" href="converge-icon-color-light.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="converge-brand.css">
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     Converge Owner’s Handbook — Design Proof (pp. 01–05)
+     Brand: Settlement Fold · tokens from brand-kit-v1
+     ───────────────────────────────────────────────────────────── */
+  :root {
+    --factory-black: var(--converge-factory-black, #070a0f);
+    --carbon: var(--converge-carbon, #111720);
+    --graphite: var(--converge-graphite, #29313a);
+    --steel: var(--converge-steel, #8d99a6);
+    --ivory: var(--converge-proof-ivory, #f5f2ea);
+    --white: var(--converge-white, #ffffff);
+    --gold: var(--converge-forge-gold, #f3b64c);
+    --mint: var(--converge-settlement-mint, #73e2c3);
+    --coral: var(--converge-verdict-coral, #ff6b64);
+
+    --gold-soft: rgba(243, 182, 76, 0.12);
+    --mint-soft: rgba(115, 226, 195, 0.12);
+    --coral-soft: rgba(255, 107, 100, 0.12);
+    --line: rgba(141, 153, 166, 0.16);
+    --line-strong: rgba(141, 153, 166, 0.32);
+    --grid: rgba(243, 182, 76, 0.035);
+
+    --sans: "Avenir Next", Inter, ui-sans-serif, system-ui, sans-serif;
+    --mono: Menlo, "IBM Plex Mono", ui-monospace, monospace;
+
+    --page-pad: clamp(28px, 4.5vw, 64px);
+    --max: 1120px;
+  }
+
+  * { box-sizing: border-box; }
+  html {
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    background: var(--factory-black);
+    color: var(--ivory);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* subtle film grain */
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ── page shell ── */
+  .page {
+    position: relative;
+    min-height: 100dvh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    padding: var(--page-pad);
+    overflow: hidden;
+  }
+  .page-inner {
+    position: relative;
+    z-index: 2;
+    width: min(100%, var(--max));
+    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* background geometry */
+  .page-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .page-bg .grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%);
+  }
+  .page-bg .glow {
+    position: absolute;
+    width: 55vw;
+    height: 55vw;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.18;
+  }
+  .page-bg .glow-gold {
+    top: -10%;
+    right: -8%;
+    background: var(--gold);
+  }
+  .page-bg .glow-mint {
+    bottom: -15%;
+    left: -10%;
+    background: var(--mint);
+    opacity: 0.08;
+  }
+
+  /* ── chrome ── */
+  .chrome-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: clamp(28px, 4vh, 48px);
+  }
+  .chrome-top .mark {
+    height: 28px;
+    width: auto;
+    display: block;
+  }
+  .chrome-top .meta {
+    font: 500 10px/1 var(--mono);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .chrome-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: auto;
+    padding-top: clamp(24px, 3vh, 40px);
+    border-top: 1px solid var(--line);
+  }
+  .chrome-bottom .proof {
+    font: 500 10px/1.4 var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .chrome-bottom .proof em {
+    font-style: normal;
+    color: var(--gold);
+  }
+  .page-num {
+    font: 600 11px/1 var(--mono);
+    letter-spacing: 0.12em;
+    color: var(--ivory);
+  }
+  .page-num span {
+    color: var(--steel);
+    font-weight: 400;
+  }
+
+  /* ── type ── */
+  .eyebrow {
+    font: 600 11px/1.3 var(--mono);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-weight: 600;
+    font-size: clamp(42px, 7.2vw, 84px);
+    line-height: 0.96;
+    letter-spacing: -0.04em;
+    margin: 0 0 20px;
+    color: var(--ivory);
+    text-wrap: balance;
+  }
+  h1 .gold { color: var(--gold); }
+  h2 {
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin: 0 0 16px;
+    color: var(--ivory);
+    text-wrap: balance;
+  }
+  .lead {
+    font-size: clamp(17px, 1.6vw, 20px);
+    line-height: 1.55;
+    color: var(--steel);
+    max-width: 38em;
+    margin: 0;
+  }
+  .lead strong {
+    color: var(--ivory);
+    font-weight: 500;
+  }
+  p {
+    margin: 0 0 12px;
+    color: var(--steel);
+  }
+  p strong { color: var(--ivory); font-weight: 500; }
+  .mono {
+    font-family: var(--mono);
+    font-size: 0.9em;
+    color: var(--gold);
+  }
+
+  /* ── cards & grids ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .card {
+    background: color-mix(in srgb, var(--carbon) 88%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    backdrop-filter: blur(8px);
+  }
+  .card.gold-edge { border-top: 2px solid var(--gold); }
+  .card.mint-edge { border-top: 2px solid var(--mint); }
+  .card.coral-edge { border-top: 2px solid var(--coral); }
+  .card .label {
+    font: 600 10px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+    color: var(--ivory);
+  }
+  .card p {
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .card code, code.token {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mint);
+    background: var(--mint-soft);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* ── cover special ── */
+  .cover {
+    justify-content: center;
+  }
+  .cover .page-inner {
+    justify-content: center;
+    max-width: 980px;
+  }
+  .cover-icon {
+    width: clamp(72px, 10vw, 104px);
+    height: auto;
+    margin-bottom: 32px;
+    filter: drop-shadow(0 0 40px rgba(243, 182, 76, 0.25));
+  }
+  .cover h1 {
+    font-size: clamp(48px, 9vw, 96px);
+    margin-bottom: 12px;
+  }
+  .cover .subtitle {
+    font: 500 14px/1.4 var(--mono);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin: 0 0 36px;
+  }
+  .cover .tagline {
+    font-size: clamp(18px, 2.2vw, 24px);
+    line-height: 1.4;
+    color: var(--ivory);
+    max-width: 22em;
+    margin: 0 0 8px;
+  }
+  .cover .tagline em {
+    font-style: normal;
+    color: var(--gold);
+  }
+  .cover .proof-line {
+    font: 500 13px/1.4 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mint);
+    margin: 0 0 48px;
+  }
+  .cover-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 28px;
+    font: 500 11px/1.4 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .cover-meta b {
+    color: var(--ivory);
+    font-weight: 500;
+  }
+
+  /* ── pass spine ── */
+  .spine {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 8px;
+    margin: 8px 0 20px;
+  }
+  .spine-node {
+    background: var(--carbon);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    min-height: 92px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .spine-node.barrier {
+    border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+    background: linear-gradient(180deg, var(--gold-soft), transparent 70%), var(--carbon);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 20%, transparent);
+  }
+  .spine-node.corner {
+    border-color: color-mix(in srgb, var(--mint) 40%, transparent);
+  }
+  .spine-node .n {
+    font: 600 11px/1 var(--mono);
+    color: var(--gold);
+  }
+  .spine-node .name {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ivory);
+    line-height: 1.2;
+  }
+  .spine-node .skill {
+    font: 400 9px/1.2 var(--mono);
+    color: var(--steel);
+    word-break: break-all;
+  }
+
+  /* ── actor diagram ── */
+  .actors {
+    display: grid;
+    grid-template-columns: 1.1fr auto 1fr auto 1fr;
+    gap: 12px;
+    align-items: stretch;
+    margin: 8px 0 18px;
+  }
+  .actor {
+    background: var(--carbon);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 18px;
+  }
+  .actor.you {
+    border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+    background:
+      linear-gradient(160deg, var(--gold-soft), transparent 55%),
+      var(--carbon);
+  }
+  .actor .role {
+    font: 600 10px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+  .actor h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .actor p {
+    font-size: 13px;
+    margin: 0;
+  }
+  .arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold);
+    font: 500 18px/1 var(--mono);
+    opacity: 0.7;
+  }
+
+  /* ── callout ── */
+  .callout {
+    border-left: 3px solid var(--gold);
+    background: color-mix(in srgb, var(--carbon) 70%, transparent);
+    border-radius: 0 12px 12px 0;
+    padding: 14px 18px;
+    margin: 16px 0 0;
+  }
+  .callout p {
+    margin: 0;
+    color: var(--ivory);
+    font-size: 14.5px;
+  }
+  .callout p span {
+    color: var(--steel);
+  }
+
+  /* ── kpis ── */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 22px 0;
+  }
+  .kpi {
+    background: var(--carbon);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 14px;
+  }
+  .kpi b {
+    display: block;
+    font-size: clamp(26px, 3vw, 34px);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--ivory);
+    line-height: 1;
+  }
+  .kpi b.gold { color: var(--gold); }
+  .kpi b.mint { color: var(--mint); }
+  .kpi span {
+    display: block;
+    margin-top: 8px;
+    font: 500 10px/1.3 var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  /* ── proof note ── */
+  .design-note {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--line-strong);
+  }
+  .swatch-label {
+    font: 400 9px/1.2 var(--mono);
+    color: var(--steel);
+    margin-top: 4px;
+    text-align: center;
+  }
+  .swatch-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── nav dots ── */
+  .nav-dots {
+    position: fixed;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .nav-dots a {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--graphite);
+    border: 1px solid var(--line-strong);
+    text-indent: -9999px;
+    overflow: hidden;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .nav-dots a:hover,
+  .nav-dots a:focus-visible {
+    background: var(--gold);
+    transform: scale(1.25);
+    outline: none;
+  }
+
+  /* ── responsive ── */
+  @media (max-width: 900px) {
+    .grid-4, .spine { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-3, .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .actors {
+      grid-template-columns: 1fr;
+    }
+    .arrow { transform: rotate(90deg); padding: 4px 0; }
+    .design-note { grid-template-columns: 1fr; }
+    .nav-dots { display: none; }
+  }
+  @media (max-width: 560px) {
+    .grid-2, .grid-3, .grid-4, .kpis, .spine {
+      grid-template-columns: 1fr;
+    }
+    .chrome-top .mark { height: 22px; }
+  }
+  @media print {
+    html { scroll-snap-type: none; }
+    .page {
+      min-height: auto;
+      height: 100vh;
+      page-break-after: always;
+      break-after: page;
+    }
+    .nav-dots, body::before { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav-dots" aria-label="Pages">
+  <a href="#p01" title="01 Cover">01</a>
+  <a href="#p02" title="02 Thesis">02</a>
+  <a href="#p03" title="03 Three layers">03</a>
+  <a href="#p04" title="04 Nine passes">04</a>
+  <a href="#p05" title="05 How to read">05</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 01 · COVER
+     ═══════════════════════════════════════════════════════════ -->
+<section class="page cover" id="p01" aria-label="Page 1 — Cover">
+  <div class="page-bg" aria-hidden="true">
+    <div class="grid"></div>
+    <div class="glow glow-gold"></div>
+    <div class="glow glow-mint"></div>
+  </div>
+  <div class="page-inner">
+    <img class="cover-icon" src="converge-icon-color-light.svg" width="104" height="104" alt="Converge mark">
+    <p class="eyebrow">Owner’s handbook · design proof</p>
+    <h1>Converge</h1>
+    <p class="subtitle">From intent to evidence · v0.1</p>
+    <p class="tagline">Compile intent into<br><em>shipped software.</em></p>
+    <p class="proof-line">Done is proven.</p>
+    <div class="cover-meta">
+      <span><b>Identity</b> · Settlement Fold</span>
+      <span><b>Audience</b> · Owners &amp; operators</span>
+      <span><b>Scope</b> · Pages 01–05 of full handbook</span>
+      <span><b>Status</b> · Design system lock</span>
+    </div>
+    <div class="chrome-bottom" style="margin-top:48px; border-top-color: var(--line);">
+      <div class="proof">Proof line · <em>Done is proven</em></div>
+      <div class="page-num">01 <span>/ 05</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 02 · THESIS
+     ═══════════════════════════════════════════════════════════ -->
+<section class="page" id="p02" aria-label="Page 2 — Thesis">
+  <div class="page-bg" aria-hidden="true">
+    <div class="grid"></div>
+    <div class="glow glow-gold" style="opacity:0.1; width:40vw; height:40vw;"></div>
+  </div>
+  <div class="page-inner">
+    <div class="chrome-top">
+      <img class="mark" src="converge-lockup-color-light.svg" alt="Converge">
+      <div class="meta">Owner’s handbook</div>
+    </div>
+
+    <p class="eyebrow">01 · Thesis</p>
+    <h2>Autonomy needs a<br><span style="color:var(--gold)">method spine.</span></h2>
+    <p class="lead">
+      <strong>Converge compiles intent into software</strong> through nine gated passes.
+      Agents do the building. Machines do the checking.
+      You own judgment — never the other way around.
+    </p>
+
+    <div class="kpis">
+      <div class="kpi"><b class="gold">9</b><span>Spine passes</span></div>
+      <div class="kpi"><b>12</b><span>Installable skills</span></div>
+      <div class="kpi"><b class="mint">1</b><span>Referee CLI</span></div>
+      <div class="kpi"><b>0</b><span>Model credentials in cvg</span></div>
+    </div>
+
+    <div class="grid-3">
+      <article class="card gold-edge">
+        <div class="label">The factory</div>
+        <h3>Dark factory model</h3>
+        <p>A raw idea enters a production line. Autonomous agents build; deterministic gates prove. Done is a machine state, not a claim.</p>
+      </article>
+      <article class="card">
+        <div class="label">The unit</div>
+        <h3>Task-Spec</h3>
+        <p>Self-verifying markdown with runnable evals, budgets, and an HMAC seal. Evals define done before work begins.</p>
+      </article>
+      <article class="card mint-edge">
+        <div class="label">The referee</div>
+        <h3><span class="mono">cvg</span> CLI</h3>
+        <p>Frames, dispatches, gates. Holds zero API keys. Every verdict ends in one greppable token.</p>
+      </article>
+    </div>
+
+    <div class="callout">
+      <p>
+        Convergence is not unanimity.
+        <span> It is the point where intent, architecture, plan, authority, and evidence agree well enough to proceed under an explicit risk policy.</span>
+      </p>
+    </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Brand accent · <em>Forge Gold</em> · #F3B64C</div>
+      <div class="page-num">02 <span>/ 05</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 03 · THREE LAYERS
+     ═══════════════════════════════════════════════════════════ -->
+<section class="page" id="p03" aria-label="Page 3 — Three layers">
+  <div class="page-bg" aria-hidden="true">
+    <div class="grid"></div>
+  </div>
+  <div class="page-inner">
+    <div class="chrome-top">
+      <img class="mark" src="converge-lockup-color-light.svg" alt="Converge">
+      <div class="meta">Skill · chat · CLI</div>
+    </div>
+
+    <p class="eyebrow">02 · System shape</p>
+    <h2>Three layers. One truth.</h2>
+    <p class="lead">
+      The skill teaches. The agent writes. The CLI scores.
+      <strong>Disk evidence survives the session</strong> — chat does not.
+    </p>
+
+    <div class="actors" style="margin-top:28px;">
+      <div class="actor you">
+        <div class="role">You · owner</div>
+        <h3>Intent &amp; judgment</h3>
+        <p>Answer decisions. Sign canonical. Close the barrier. Read tokens — never vibes.</p>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="actor">
+        <div class="role">Chat agent</div>
+        <h3>Execution surface</h3>
+        <p>Loads <span class="mono">SKILL.md</span>, runs frontier rounds, writes <span class="mono">cvg/</span>, invokes gates.</p>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="actor">
+        <div class="role">cvg referee</div>
+        <h3>Deterministic gates</h3>
+        <p>Byte-exact pass-through to proven scripts. No LLM. Greppable tokens only.</p>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:8px;">
+      <article class="card">
+        <div class="label">Skill package</div>
+        <h3>How work is done</h3>
+        <p>Installable doctrine: steps, templates, gate scripts, <span class="mono">pass-prompt.md</span>. Ships with the package — never copied into your project as stale copies.</p>
+      </article>
+      <article class="card gold-edge">
+        <div class="label">Workspace · cvg/</div>
+        <h3>Where truth lives</h3>
+        <p><span class="mono">docs/</span> · <span class="mono">swimlanes/</span> · <span class="mono">tasks/</span> · <span class="mono">execution/</span> · <span class="mono">loop/</span> · <span class="mono">receipts/</span>. Position is derived from folders, not memory.</p>
+      </article>
+    </div>
+
+    <div class="callout">
+      <p>
+        Rule of thumb.
+        <span> Skill writes · CLI scores · folders remember · you decide.</span>
+      </p>
+    </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">State color · <em>Settlement Mint</em> · settled / pass</div>
+      <div class="page-num">03 <span>/ 05</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 04 · NINE PASSES
+     ═══════════════════════════════════════════════════════════ -->
+<section class="page" id="p04" aria-label="Page 4 — Nine passes">
+  <div class="page-bg" aria-hidden="true">
+    <div class="grid"></div>
+    <div class="glow glow-gold" style="opacity:0.08; top:auto; bottom:-20%; right:10%;"></div>
+  </div>
+  <div class="page-inner">
+    <div class="chrome-top">
+      <img class="mark" src="converge-lockup-color-light.svg" alt="Converge">
+      <div class="meta">The descent</div>
+    </div>
+
+    <p class="eyebrow">03 · The spine</p>
+    <h2>Nine gates. One barrier.</h2>
+    <p class="lead">
+      Design half makes intent precise.
+      <strong>Pass 4 is the last human sign-off</strong> before machines own the build half.
+    </p>
+
+    <div class="spine" style="margin-top:28px;" role="list">
+      <div class="spine-node" role="listitem">
+        <div class="n">0</div>
+        <div class="name">Capture</div>
+        <div class="skill">optional</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">1</div>
+        <div class="name">Intent</div>
+        <div class="skill">tech-spec</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">2</div>
+        <div class="name">Structure</div>
+        <div class="skill">ADRs</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">3</div>
+        <div class="name">Decompose</div>
+        <div class="skill">swimlanes</div>
+      </div>
+      <div class="spine-node barrier" role="listitem">
+        <div class="n">4</div>
+        <div class="name">Consensus</div>
+        <div class="skill">barrier</div>
+      </div>
+      <div class="spine-node corner" role="listitem">
+        <div class="n">5</div>
+        <div class="name">Tasking</div>
+        <div class="skill">cornerstone</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">6</div>
+        <div class="name">Register</div>
+        <div class="skill">opt-in</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">7</div>
+        <div class="name">Bind</div>
+        <div class="skill">contract</div>
+      </div>
+      <div class="spine-node" role="listitem">
+        <div class="n">8</div>
+        <div class="name">Loop</div>
+        <div class="skill">settle</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <article class="card gold-edge">
+        <div class="label">Phase 1 · Design · 0–4</div>
+        <h3>Human-led precision</h3>
+        <p>BRD → falsifiable requirements → terrain ADRs → swimlane plans → cross-family attack. You grill, approve, and sign the barrier.</p>
+      </article>
+      <article class="card mint-edge">
+        <div class="label">Phase 2 · Build · 5–8</div>
+        <h3>Machine-led proof</h3>
+        <p>Sealed Task-Specs → optional board → runtime contract → attempt / verify / settle. Only named terminal states count as success.</p>
+      </article>
+    </div>
+
+    <div class="grid-3" style="margin-top:14px;">
+      <article class="card">
+        <div class="label">Lane · FAST</div>
+        <h3>5 → 7 → 8</h3>
+        <p>Small, reversible. Never auth, money, or new seams.</p>
+      </article>
+      <article class="card">
+        <div class="label">Lane · NORMAL</div>
+        <h3>1 · 2 · 5 · 7 · 8</h3>
+        <p>Most features. Intent + structure without full design theatre.</p>
+      </article>
+      <article class="card">
+        <div class="label">Lane · FULL</div>
+        <h3>0 → 8</h3>
+        <p>New product, new seam, backbone. Nothing waived.</p>
+      </article>
+    </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Barrier highlighted in <em>Forge Gold</em> · cornerstone in mint</div>
+      <div class="page-num">04 <span>/ 05</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE 05 · HOW TO READ + DESIGN SYSTEM
+     ═══════════════════════════════════════════════════════════ -->
+<section class="page" id="p05" aria-label="Page 5 — How to read">
+  <div class="page-bg" aria-hidden="true">
+    <div class="grid"></div>
+  </div>
+  <div class="page-inner">
+    <div class="chrome-top">
+      <img class="mark" src="converge-lockup-color-light.svg" alt="Converge">
+      <div class="meta">Design system lock</div>
+    </div>
+
+    <p class="eyebrow">04 · Reading this book · design proof</p>
+    <h2>These five pages lock the system.</h2>
+    <p class="lead">
+      Before the full handbook (every pass, every gate, worked example),
+      confirm this visual language. <strong>Content continues only after you approve the design.</strong>
+    </p>
+
+    <div class="design-note" style="margin-top:28px;">
+      <article class="card gold-edge">
+        <div class="label">Brand tokens in use</div>
+        <h3>Settlement Fold palette</h3>
+        <div class="swatches">
+          <div class="swatch-wrap"><div class="swatch" style="background:#070A0F; border-color:#29313A"></div><div class="swatch-label">Factory</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#111720"></div><div class="swatch-label">Carbon</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#29313A"></div><div class="swatch-label">Graphite</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#8D99A6"></div><div class="swatch-label">Steel</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#F5F2EA"></div><div class="swatch-label">Ivory</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#F3B64C"></div><div class="swatch-label">Gold</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#73E2C3"></div><div class="swatch-label">Mint</div></div>
+          <div class="swatch-wrap"><div class="swatch" style="background:#FF6B64"></div><div class="swatch-label">Coral</div></div>
+        </div>
+        <p style="margin-top:14px;">Gold = brand / barrier / bound. Mint = settled / pass. Coral = red / refused. Never use mint or coral as the primary logo accent.</p>
+      </article>
+      <article class="card">
+        <div class="label">Typography</div>
+        <h3>Display · mono</h3>
+        <p style="margin-bottom:12px;"><strong style="color:var(--ivory); font-size:20px; letter-spacing:-0.03em;">Avenir Next / Inter</strong><br>UI, titles, body — geometric, calm, precise.</p>
+        <p><code class="token" style="font-size:12px;">IBM Plex Mono · Menlo</code><br><span style="display:block;margin-top:8px;">Tokens, gates, labels, page chrome. Technical truth in mono.</span></p>
+        <p style="margin-top:14px;">Wordmark is custom vector geometry — never retyped.</p>
+      </article>
+    </div>
+
+    <div class="grid-3" style="margin-top:14px;">
+      <article class="card">
+        <div class="label">Next · if approved</div>
+        <h3>Pages 06–…</h3>
+        <p>Pass 0–8 deep dives, operating layer, worked FULL descent, owner checklists — same system.</p>
+      </article>
+      <article class="card">
+        <div class="label">Format</div>
+        <h3>HTML · print · PDF</h3>
+        <p>Scroll-snap pages now. Print/PDF export via browser when the set is complete.</p>
+      </article>
+      <article class="card coral-edge">
+        <div class="label">Your call</div>
+        <h3>Lock or revise</h3>
+        <p>Adjust density, light mode, type scale, or page rhythm before we expand the full book.</p>
+      </article>
+    </div>
+
+    <div class="callout" style="margin-top:18px;">
+      <p>
+        Open this file.
+        <span> <span class="mono" style="color:var(--gold);">docs/handbook/owner-handbook-proof.html</span> — scroll or use the right-edge dots. Reply with design feedback; full content waits on your lock.</span>
+      </p>
+    </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Source · <em>brand-kit-v1</em> · Settlement Fold</div>
+      <div class="page-num">05 <span>/ 05</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
