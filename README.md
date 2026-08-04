@@ -304,6 +304,8 @@ cvg setup                       # readiness board with your exact next step
 cvg setup signing               # repo-private HMAC key — specs become signable
 cvg setup tracker linear        # connect a board; the key goes to the OS keychain
 cvg doctor                      # engine readiness: ≥2 engines, ≥1 cross-family
+cvg doctor host                 # can THIS machine sign, bind, loop and settle?
+                                #   names the verbs each missing tool blocks
 cvg doctor plugin               # is this project loading a STALE Converge?
 cvg doctor evidence             # can git show the floor the gates stand on?
 

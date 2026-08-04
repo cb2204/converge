@@ -29,6 +29,37 @@ echo "=================================================================="
 echo "Pass 8 · the loop kernel"
 echo "=================================================================="
 
+# --- PRECONDITION: this suite needs a host that can SIGN a spec ---------------
+# new_ws() below stamps the fixture with safe-to-delegate and then binds it, both
+# with output discarded. safe-to-delegate passes --shellcheck-evals unconditionally,
+# so on a host without shellcheck the stamp BLOCKS, signed_off stays false, bind
+# refuses the unsigned spec, no execution profile is written, and every row that
+# needs a real loop lands TASK_LOOP=ERROR. That is 29 of 52 rows red for a reason
+# that has nothing to do with the loop — and it survived a bisect across three
+# commits, one of which CI had passed, because CI installs shellcheck explicitly.
+#
+# A suite that cannot run should say SO, once, at the top. The repo already makes
+# this argument about secret-gated CI jobs: a silently-skipped gate is worse than
+# no gate. A silently-swallowed prerequisite is the same defect wearing a green
+# hat — every row fails, so nothing looks like a precondition.
+for _need in git shellcheck python3; do
+  command -v "$_need" >/dev/null 2>&1 && continue
+  echo
+  echo "  UNRUNNABLE — '$_need' is not on PATH, and this suite cannot work without it."
+  case "$_need" in
+    shellcheck)
+      echo "    safe-to-delegate always passes --shellcheck-evals, so the fixture's spec"
+      echo "    cannot be SIGNED; bind then refuses it and every loop row lands ERROR."
+      echo "    fix: brew install shellcheck   (or apt-get install shellcheck)" ;;
+    *)
+      echo "    fix: install $_need and re-run." ;;
+  esac
+  echo "    Diagnose the whole toolchain at once with:  cvg doctor host"
+  echo
+  echo "LOOP_KERNEL_TESTS=UNRUNNABLE"
+  exit 3
+done
+
 # A workspace whose task is RED, in a repo of its own.
 new_ws() {
   W="$(mktemp -d -t cvg-loopws.XXXXXX)"

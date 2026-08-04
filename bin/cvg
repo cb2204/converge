@@ -1164,6 +1164,124 @@ PY
 # Early exploration without git is legitimate; settling without it is not. So this
 # fails closed and says which pass's evidence is at risk.
 #
+# cvg doctor host — can THIS MACHINE run the delegation path at all?
+#
+# WHY THIS EXISTS. `shellcheck` was absent from a shell's PATH. What happened next:
+#
+#   safe-to-delegate.sh passes --shellcheck-evals UNCONDITIONALLY (line 157), so the
+#   delegation gate BLOCKED → the spec was never stamped, signed_off stayed false
+#   → `cvg bind` refuses an unsigned spec, so no execution profile was written
+#   → `cvg loop` reported "Pass 6 runtime contract is missing … next: cvg bind"
+#
+# Every one of those messages was CORRECT and none of them was the cause. The cause
+# was three verbs upstream and invisible from any of them, and it cost an hour of
+# bisecting commits — including one that CI had passed — before anyone ran the first
+# failing step and read its output. A missing prerequisite should be one command to
+# find, not a bisection.
+#
+# So this checks the toolchain Converge itself needs and, for anything missing, names
+# THE VERBS IT BLOCKS. "shellcheck: MISSING" is not the finding; "you cannot sign a
+# spec, therefore cannot bind, therefore cannot loop" is.
+#
+# Deliberately pure bash: a host doctor must not depend on the tools it is auditing.
+# python3 is one of the things it checks, so it cannot be used to do the checking.
+#
+# Read-only. Token: DOCTOR_HOST=OK|DEGRADED|MISSING
+cvg_doctor_host() {
+  _dh_missing=0   # a REQUIRED tool is absent → fails closed
+  _dh_degraded=0  # an optional-but-load-bearing tool is absent
+
+  printf '== %scvg doctor host%s · can this machine run the delegation path? ==\n\n' \
+    "$UI_BOLD" "$UI_RESET"
+
+  _dh_row() { # _dh_row <state> <tool> <detail> <blocks>
+    case "$1" in
+      ok)      printf '  %sok%s       %-11s %s\n' "$UI_GREEN" "$UI_RESET" "$2" "$3" ;;
+      MISSING) printf '  %sMISSING%s  %-11s %s\n' "$UI_RED" "$UI_RESET" "$2" "$3"
+               [ -n "$4" ] && printf '           %sblocks:%s %s\n' "$UI_DIM" "$UI_RESET" "$4" ;;
+      warn)    printf '  %swarn%s     %-11s %s\n' "$UI_YELLOW" "$UI_RESET" "$2" "$3"
+               [ -n "$4" ] && printf '           %sblocks:%s %s\n' "$UI_DIM" "$UI_RESET" "$4" ;;
+    esac
+  }
+
+  # --- git: provenance, settlement, and worktree isolation all rest on it -----
+  if command -v git >/dev/null 2>&1; then
+    _dh_row ok git "$(git --version 2>/dev/null | awk '{print $3}')"
+  else
+    _dh_row MISSING git "not on PATH" \
+      "everything — Pass 4 provenance, Pass 8 settlement, worktree isolation"
+    _dh_missing=1
+  fi
+
+  # --- the running bash. 3.2 is the declared floor and macOS still ships it ---
+  _dh_row ok bash "${BASH_VERSION:-unknown} (portability floor is 3.2)"
+
+  # --- a bash 4 ANYWHERE: lint-backlog.sh and query-metrics.sh need one -------
+  # F-021: `cvg lint` uses associative arrays. On a stock-macOS host it cannot run
+  # at all, and the README advertised it without a caveat until this was found.
+  _dh_b4=""
+  for _dh_c in bash /opt/homebrew/bin/bash /usr/local/bin/bash /bin/bash; do
+    _dh_m="$("$_dh_c" -c 'echo ${BASH_VERSINFO[0]}' 2>/dev/null || echo 0)"
+    case "$_dh_m" in ''|*[!0-9]*) _dh_m=0 ;; esac
+    if [ "$_dh_m" -ge 4 ]; then _dh_b4="$_dh_c"; break; fi
+  done
+  if [ -n "$_dh_b4" ]; then
+    _dh_row ok 'bash 4+' "$_dh_b4"
+  else
+    _dh_row warn 'bash 4+' "none found — brew install bash" \
+      "cvg lint (LINT=UNSUPPORTED, exit 3) · cvg tasks metrics"
+    _dh_degraded=1
+  fi
+
+  # --- python3: every gate script and the whole task-spec engine --------------
+  if command -v python3 >/dev/null 2>&1; then
+    _dh_pv="$(python3 -c 'import sys;print("%d.%d.%d"%sys.version_info[:3])' 2>/dev/null || echo unknown)"
+    _dh_row ok python3 "$_dh_pv (3.8+; CI pins 3.12)"
+  else
+    _dh_row MISSING python3 "not on PATH" \
+      "every pass gate — validate, gate, bind, doctor, snapshot"
+    _dh_missing=1
+  fi
+
+  # --- shellcheck: the one that cost the hour --------------------------------
+  if command -v shellcheck >/dev/null 2>&1; then
+    _dh_row ok shellcheck "$(shellcheck --version 2>/dev/null | awk '/^version:/{print $2}')"
+  else
+    _dh_row MISSING shellcheck "not on PATH — brew install shellcheck" \
+      "cvg tasks gate (always passes --shellcheck-evals) → so no spec can be
+           SIGNED → so cvg bind refuses it → so cvg loop has no runtime contract"
+    _dh_missing=1
+  fi
+
+  # --- a sha256 tool: Pass 4 provenance and the HMAC envelope ----------------
+  if command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; then
+    _dh_row ok sha256 "$(command -v shasum 2>/dev/null || command -v sha256sum)"
+  else
+    _dh_row MISSING sha256 "neither shasum nor sha256sum" \
+      "Pass 4 plan provenance · the sign-off HMAC envelope"
+    _dh_missing=1
+  fi
+
+  printf '\n'
+  if [ "$_dh_missing" -ne 0 ]; then
+    printf '%sGATE: MISSING%s — a required tool is absent. The failure it produces will\n' \
+      "$UI_RED" "$UI_RESET"
+    printf '  surface several verbs downstream with a message that names the SYMPTOM,\n'
+    printf '  not this cause. Install the tools above before delegating anything.\n'
+    printf 'DOCTOR_HOST=MISSING\n'
+    return 1
+  fi
+  if [ "$_dh_degraded" -ne 0 ]; then
+    printf '%sGATE: DEGRADED%s — the delegation path works; some verbs above do not.\n' \
+      "$UI_YELLOW" "$UI_RESET"
+    printf 'DOCTOR_HOST=DEGRADED\n'
+    return 0
+  fi
+  printf '%sGATE: OK%s — this host can sign, bind, loop and settle.\n' "$UI_GREEN" "$UI_RESET"
+  printf 'DOCTOR_HOST=OK\n'
+  return 0
+}
+
 # Read-only. Token: DOCTOR_EVIDENCE=OK|UNTRACKED|NOT_GIT|ERROR
 cvg_doctor_evidence() {
   CVG_DE_ROOT="$CVG_PROJECT_ROOT_DIR" python3 - <<'PY'
@@ -1420,6 +1538,10 @@ cmd_help() {
   printf '  review … [--timeout N]   raise the dispatch wall-clock cap (default 300s;\n'
   printf '                           a large plan set needs more). Fail-closed either way\n'
   printf '  doctor                   engine readiness for Pass 4 dispatch (DOCTOR token)\n'
+  printf '  doctor host              can THIS MACHINE sign, bind, loop and settle? git,\n'
+  printf '                           bash, bash 4+, python3, shellcheck, sha256 — and for\n'
+  printf '                           anything missing, the VERBS IT BLOCKS. Run this first\n'
+  printf '                           when a gate fails for a reason that makes no sense\n'
   printf '  doctor evidence          can git show the floor the gates stand on? Pass 4\n'
   printf '                           stamps provenance over plan FILES, Pass 8 settles by\n'
   printf '                           COMMITTING, and cvg lesson --immutable reads git —\n'
@@ -2328,9 +2450,18 @@ case "$CMD" in
         fi
         cvg_doctor_plugin
         ;;
+      host)
+        shift
+        if [ $# -gt 0 ]; then
+          ui_err "cvg doctor host takes no arguments"
+          printf 'DOCTOR_HOST=ERROR\n'
+          exit 2
+        fi
+        cvg_doctor_host
+        ;;
       "") exec bash "$CVG_HOME_DIR/skills/sketch-plans-adversarial-review/scripts/doctor.sh" ;;
       *)
-        ui_err "unknown doctor subject '${1}' — expected: (none) | runtime-contract | plugin | evidence"
+        ui_err "unknown doctor subject '${1}' — expected: (none) | host | runtime-contract | plugin | evidence"
         printf 'DOCTOR=USAGE_ERROR\n'
         exit 2
         ;;
@@ -2526,6 +2657,7 @@ m = {
     c("transition <id> <state>", "5B", "task-spec/transition-status.sh", ["status change"], True, "cvg transition T-...md done", "Move a task between statuses (locked + logged)."),
     c("next [--lane FULL|NORMAL|FAST]", None, "evidence-to-next-pass/next-pass.sh", ["NEXT_PASS=0-8|DONE"], False, "cvg next", "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."),
     c("snapshot", None, "native (bin/cvg-snapshot.py)", ["WorkspaceSnapshot 3.0 at data.snapshot under --json"], False, "cvg snapshot --json", "Build the deterministic, offline-safe, read-only cockpit contract from canonical repository evidence. The stable snapshotId excludes observation timestamps; artifacts are digest-bound references only, layout stays frontend-owned, optional domains report unavailable, and any core method/gate failure fails closed."),
+    c("doctor host", None, "native (pure bash — it must not depend on what it audits)", ["DOCTOR_HOST=OK|DEGRADED|MISSING|ERROR"], False, "cvg doctor host", "Can THIS MACHINE run the delegation path? Checks git, the running bash, a bash 4+ (cvg lint needs one), python3, shellcheck and a sha256 tool — and for anything missing, NAMES THE VERBS IT BLOCKS. Written after shellcheck's absence produced this chain: safe-to-delegate passes --shellcheck-evals unconditionally, so the gate BLOCKED and no spec could be signed; cvg bind refuses an unsigned spec, so no execution profile was written; cvg loop then reported a missing runtime contract. Every message in that chain was correct and none of them was the cause, which sat three verbs upstream and cost an hour of bisecting — including a commit CI had passed, because CI installs shellcheck explicitly. Fails closed at exit 1 when a required tool is absent; DEGRADED when only an optional-but-load-bearing one is. Read-only."),
     c("doctor evidence", None, "native (git ls-files --others over the cvg/ workspace)", ["DOCTOR_EVIDENCE=OK|UNTRACKED|NOT_GIT|ERROR"], False, "cvg doctor evidence", "Can git show the floor the gates are standing on? Three parts of the method assume the workspace is version-controlled and none of them checks: Pass 4 stamps sha256 provenance over the plan FILES, Pass 8 settles by COMMITTING (staging from the capability envelope's fs.write grant, receipt written last), and `cvg lesson --immutable` proves teaching changed nothing by reading `git status --porcelain`. Found live: a workspace ran four green gates while its entire descent — BRD, tech-spec, six ADRs, eleven legs — was untracked, one `git clean` from gone, with every provenance claim resting on nothing. Reports per artifact folder and NAMES THE PASS at risk, because \"3 untracked files\" says less than \"Pass 4 cannot prove provenance\". Exploring without git is legitimate; settling is not, so NOT_GIT and UNTRACKED both fail closed at exit 1. Read-only."),
     c("doctor plugin", None, "native (plugin install record + content fingerprint)", ["DOCTOR_PLUGIN=OK|STALE|UNMANAGED|ERROR"], False, "cvg doctor plugin", "Answer the one question that makes every other verdict falsifiable: is the Converge a CONSUMING PROJECT loads the same Converge as its source? Compares the plugin install record's gitCommitSha against the marketplace clone's HEAD, and — the real claim — fingerprints the loaded tree against that clone's content. STALE means a project is running skills that are not the source, which is invisible otherwise: the cache path is keyed by version, so while VERSION does not move an update resolves to the same directory and keeps serving the stale copy. Also warns when you are running a different copy (a dev checkout) than projects load, because green gates there prove nothing about the plugin. UNMANAGED (exit 0) when there is no plugin install to compare. Read-only and offline by design — it never fetches, since a network-dependent doctor lies when offline."),
     c("lesson [<file>] [--immutable <path>...]", None, "pass-to-lesson/check-lesson.sh", ["CHECK_LESSON=PASS|FAIL|USAGE_ERROR"], False, "cvg lesson cvg/docs/lessons/lesson-pass-1-billing.md", "The teaching companion's gate — optional, invocable after ANY pass closes, and it never blocks the descent. Converge delegates the writing of every artifact but not the understanding of it: this gates the lesson a pass earned (all seven sections by exact name, 'what breaks downstream' on every component block, a non-empty decisions table, 3-5 check-yourself questions, and well-formed teaching-mode sections when the lesson declares modes). With --immutable <taught-artifact>... it proves teaching changed nothing it taught (clean git status; outside a repo it warns and skips). Discovery finds cvg/docs/lessons/ then legacy docs/lessons/ when no path is given; lessons accumulate by design, so more than one is a usage error naming them all rather than a non-deterministic newest-wins guess. Steering prompt: skills/pass-to-lesson/references/pass-prompt.md. What the gate cannot see stays human: that every emitted artifact is actually taught, that each rejected alternative is real, and that the owner restated it in their own words."),
