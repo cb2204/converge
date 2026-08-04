@@ -65,10 +65,11 @@ because the referee is plain bash + stdlib Python, the same install serves every
 ## ✦ Cockpit
 
 The repository-first [Cockpit](apps/cockpit/) makes a workspace observable
-without creating a second source of truth. It renders the real nine-pass
-lineage, work queue, execution runs, evidence, receipts, health, adversarial
-objections, and the command authorized by `cvg`. The CLI still owns execution
-and proof; Cockpit v1 is deliberately read-only.
+without creating a second source of truth. Its nine views cover Ask, Overview,
+Journey, Decompose, Work, Runs, Docs, Activity, and Health: the real nine-pass
+lineage, typed seams and delivery legs, work queue, attempts, readable
+documents, receipts, health, adversarial objections, and the current frontier
+authorized by `cvg`. The CLI still owns execution and proof.
 
 ```bash
 npm run cockpit:install
@@ -77,10 +78,19 @@ npm run cockpit:dev -- \
   --project-root /absolute/path/to/your/converge-workspace
 ```
 
-The local bridge invokes only `cvg snapshot --json`, binds to loopback, and
-exposes only evidence already present in that CLI-owned workspace snapshot.
-Artifact previews are bound to the snapshot and SHA-256 so changed bytes cannot
-masquerade as captured proof. See the
+The observation path invokes only `cvg snapshot --json`, binds to loopback, and
+exposes the CLI-owned `WorkspaceSnapshot 3.0`. Artifact previews are bound to
+the snapshot and SHA-256 so changed bytes cannot masquerade as the bytes that
+were observed.
+
+Ask Converge is a separate, optional ACP interpretation path. It sends a bounded
+snapshot summary, selected entity, and explicitly selected artifact text to the
+chosen provider. Claude must enter plan mode with built-in tools disabled before
+prompting, launches outside the workspace, receives no client MCP servers, and
+has permission requests rejected. The Codex choice remains visible but blocked
+because the pinned ACP adapter cannot suppress its local read/search tools.
+Agent prose is interpretation, never a gate verdict, receipt, or proof;
+provider retention policies still apply. See the
 [Cockpit guide](apps/cockpit/README.md) for the architecture,
 contract, production build, and verification commands.
 

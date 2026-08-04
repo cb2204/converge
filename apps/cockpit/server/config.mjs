@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(SERVER_DIR, "..");
+export const UNVERIFIED_CLAUDE_ACP_OVERRIDE =
+  "Claude is disabled because custom ACP adapter overrides are not verified for context-only operation.";
 
 function takeValue(argv, index, flag) {
   const value = argv[index + 1];
@@ -20,6 +22,8 @@ export function parseServerArgs(argv = []) {
     projectRoot: undefined,
     host: "127.0.0.1",
     port: 4174,
+    codexAcpBin: undefined,
+    claudeAcpBin: undefined,
     serveDist: false,
     help: false,
   };
@@ -47,6 +51,16 @@ export function parseServerArgs(argv = []) {
       index += 1;
     } else if (argument.startsWith("--port=")) {
       parsed.port = Number(argument.slice("--port=".length));
+    } else if (argument === "--codex-acp-bin") {
+      parsed.codexAcpBin = takeValue(argv, index, argument);
+      index += 1;
+    } else if (argument.startsWith("--codex-acp-bin=")) {
+      parsed.codexAcpBin = argument.slice("--codex-acp-bin=".length);
+    } else if (argument === "--claude-acp-bin") {
+      parsed.claudeAcpBin = takeValue(argv, index, argument);
+      index += 1;
+    } else if (argument.startsWith("--claude-acp-bin=")) {
+      parsed.claudeAcpBin = argument.slice("--claude-acp-bin=".length);
     } else if (argument === "--serve-dist") {
       parsed.serveDist = true;
     } else if (argument === "--help" || argument === "-h") {
@@ -105,6 +119,22 @@ export async function resolveServerConfig({
     requireDirectory(projectRootInput, "CVG_PROJECT_ROOT"),
   ]);
   const cvgBin = path.join(cvgHome, "bin", "cvg");
+  const claudeAcpOverrideSource =
+    args.claudeAcpBin !== undefined
+      ? "cli"
+      : env.CVG_ACP_CLAUDE_BIN !== undefined
+        ? "environment"
+        : null;
+  const codexAcpBin = path.resolve(
+    args.codexAcpBin ??
+      env.CVG_ACP_CODEX_BIN ??
+      path.join(APP_ROOT, "node_modules", ".bin", "codex-acp"),
+  );
+  const claudeAcpBin = path.resolve(
+    args.claudeAcpBin ??
+      env.CVG_ACP_CLAUDE_BIN ??
+      path.join(APP_ROOT, "node_modules", ".bin", "claude-agent-acp"),
+  );
 
   try {
     await access(cvgBin, constants.X_OK);
@@ -117,6 +147,15 @@ export async function resolveServerConfig({
     cvgHome,
     projectRoot,
     cvgBin,
+    codexAcpBin,
+    claudeAcpBin,
+    claudeAcpContextIsolation:
+      claudeAcpOverrideSource === null ? "verified" : "unsupported",
+    claudeAcpBlockedReason:
+      claudeAcpOverrideSource === null
+        ? null
+        : UNVERIFIED_CLAUDE_ACP_OVERRIDE,
+    claudeAcpOverrideSource,
     host: args.host,
     port: args.port,
     serveDist: args.serveDist,
@@ -137,5 +176,7 @@ Required:
 Options:
   --host <loopback>      127.0.0.1 (default), localhost, or ::1
   --port <number>        4174 by default
+  --codex-acp-bin <path> Override the pinned Codex ACP adapter
+  --claude-acp-bin <path> Override Claude ACP (blocked in Ask until verified)
   --serve-dist           Serve the built client from dist/
 `;

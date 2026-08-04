@@ -55,14 +55,14 @@ export function RunsSurface({
     <section className="surface surface--runs" aria-labelledby="runs-title">
       <header className="surface-header">
         <div>
-          <span>Durable execution</span>
+          <span>Current observed execution state</span>
           <h1 id="runs-title">Runs</h1>
         </div>
         <div className="surface-header__stat">
           <Gauge aria-hidden="true" />
           <span>
             <strong>{snapshot.execution.runs.length}</strong>
-            observed attempts
+            execution records
           </span>
         </div>
       </header>
@@ -70,15 +70,15 @@ export function RunsSurface({
       {snapshot.execution.availability === "unavailable" ? (
         <div className="surface-state">
           <Hourglass size={28} weight="fill" aria-hidden="true" />
-          <strong>Run history unavailable</strong>
-          <p>The snapshot does not expose execution records.</p>
+          <strong>Execution state unavailable</strong>
+          <p>The current snapshot does not expose execution records.</p>
         </div>
       ) : snapshot.execution.availability === "empty" ||
         snapshot.execution.runs.length === 0 ? (
         <div className="surface-state">
           <Hourglass size={28} weight="fill" aria-hidden="true" />
-          <strong>No attempts recorded</strong>
-          <p>Runs will appear after a task is bound and executed.</p>
+          <strong>No execution records observed</strong>
+          <p>Current records appear after a task is bound and execution state is projected.</p>
         </div>
       ) : (
         <div className="run-lanes">
@@ -91,7 +91,7 @@ export function RunsSurface({
                 <header>
                   <span>{group.taskId === "unbound" ? "Unbound" : group.taskId}</span>
                   <strong>{task?.title ?? "Execution record"}</strong>
-                  <small>{group.runs.length} attempts</small>
+                  <small>{group.runs.length} current record{group.runs.length === 1 ? "" : "s"}</small>
                 </header>
                 <ol>
                   {group.runs.map((run, index) => {

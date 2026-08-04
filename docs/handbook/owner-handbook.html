@@ -1,0 +1,1166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converge · Owner's Handbook · Complete v2</title>
+<meta name="description" content="Complete Converge owner handbook — Settlement Fold. Full curriculum, diagrams, tables, fixed layout.">
+<link rel="icon" href="converge-icon-color-light.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="converge-brand.css">
+<style>
+:root{
+  --factory-black:var(--converge-factory-black,#070a0f);
+  --carbon:var(--converge-carbon,#111720);
+  --graphite:var(--converge-graphite,#29313a);
+  --steel:var(--converge-steel,#8d99a6);
+  --ivory:var(--converge-proof-ivory,#f5f2ea);
+  --gold:var(--converge-forge-gold,#f3b64c);
+  --mint:var(--converge-settlement-mint,#73e2c3);
+  --coral:var(--converge-verdict-coral,#ff6b64);
+  --gold-soft:rgba(243,182,76,.12);
+  --mint-soft:rgba(115,226,195,.12);
+  --coral-soft:rgba(255,107,100,.12);
+  --line:rgba(141,153,166,.16);
+  --line-strong:rgba(141,153,166,.32);
+  --grid:rgba(243,182,76,.04);
+  --sans:"Avenir Next",Inter,ui-sans-serif,system-ui,sans-serif;
+  --mono:Menlo,"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--factory-black);color:var(--ivory);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body::before{content:"";pointer-events:none;position:fixed;inset:0;z-index:100;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.deck{width:100%}
+.slide{position:relative;width:100%;height:100dvh;height:100vh;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;display:flex;flex-direction:column;padding:32px 44px 24px}
+.page-bg{position:absolute;inset:0;z-index:0;pointer-events:none}
+.page-bg .grid{position:absolute;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse 75% 65% at 50% 40%,#000 15%,transparent 75%)}
+.page-bg .glow{position:absolute;width:48vw;height:48vw;border-radius:50%;filter:blur(90px);opacity:.12}
+.page-bg .glow-gold{top:-12%;right:-10%;background:var(--gold)}
+.inner{position:relative;z-index:2;width:min(100%,1180px);margin:0 auto;flex:1;display:flex;flex-direction:column;min-height:0}
+
+.chrome-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0}
+.chrome-top .mark{height:22px;width:auto}
+.chrome-top .meta{font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--steel)}
+.chrome-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:12px;border-top:1px solid var(--line);flex-shrink:0}
+.chrome-bottom .proof{font:500 10px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
+.chrome-bottom .proof em{font-style:normal;color:var(--gold)}
+.page-num{font:600 11px/1 var(--mono);letter-spacing:.1em;color:var(--ivory)}
+.page-num span{color:var(--steel);font-weight:400}
+
+.eyebrow{font:600 10px/1.2 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+h1{font-weight:600;font-size:clamp(40px,6.5vw,78px);line-height:.96;letter-spacing:-.04em;margin:0 0 10px}
+h1 em,.gold{color:var(--gold);font-style:normal}
+h2{font-weight:600;font-size:clamp(24px,3.2vw,36px);line-height:1.08;letter-spacing:-.03em;margin:0 0 8px}
+.lead{font-size:clamp(14px,1.25vw,16.5px);line-height:1.48;color:var(--steel);max-width:48em;margin:0 0 4px}
+.lead strong{color:var(--ivory);font-weight:500}
+.mono{font-family:var(--mono);font-size:.9em;color:var(--gold)}
+.mt{margin-top:12px!important}
+
+.cover{justify-content:center;padding-top:40px}
+.cover .inner{justify-content:center;max-width:920px}
+.cover-icon{width:84px;height:auto;margin-bottom:18px;filter:drop-shadow(0 0 36px rgba(243,182,76,.28))}
+.cover .subtitle{font:500 12px/1.3 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--steel);margin:0 0 24px}
+.cover .tagline{font-size:clamp(18px,2vw,24px);line-height:1.35;color:var(--ivory);margin:0 0 8px}
+.cover .tagline em{font-style:normal;color:var(--gold)}
+.cover .proof-line{font:500 12px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mint);margin:0 0 32px}
+.cover-meta{display:flex;flex-wrap:wrap;gap:10px 22px;font:500 10px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--steel)}
+.cover-meta b{color:var(--ivory);font-weight:500}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.split{display:grid;grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);gap:16px;align-items:start}
+.card{background:color-mix(in srgb,var(--carbon) 90%,transparent);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.card.gold-edge{border-top:2px solid var(--gold)}
+.card.mint-edge{border-top:2px solid var(--mint)}
+.card.coral-edge{border-top:2px solid var(--coral)}
+.card .label{font:600 9px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.card h3{font-size:14px;font-weight:600;letter-spacing:-.02em;margin:0 0 5px;color:var(--ivory)}
+.card p{font-size:12px;line-height:1.42;margin:0;color:var(--steel)}
+.card p strong{color:var(--ivory);font-weight:500}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}
+.kpi{background:var(--carbon);border:1px solid var(--line);border-radius:11px;padding:11px}
+.kpi b{display:block;font-size:26px;font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--ivory)}
+.kpi b.gold{color:var(--gold)}.kpi b.mint{color:var(--mint)}
+.kpi span{display:block;margin-top:5px;font:500 9px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+
+/* ── FIXED STEPS: body always in column 2 ── */
+.steps{display:grid;gap:7px;counter-reset:st}
+.step{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  gap:10px;
+  align-items:start;
+  background:var(--carbon);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 12px;
+  counter-increment:st;
+  min-width:0;
+}
+.step::before{
+  content:counter(st,decimal-leading-zero);
+  font:700 11px/1.2 var(--mono);
+  color:var(--gold);
+  padding-top:2px;
+  grid-column:1;
+  grid-row:1;
+}
+.step-body{
+  grid-column:2;
+  min-width:0; /* allow text wrap inside fr column, not 28px */
+}
+.step-body strong{display:block;font-size:12.5px;color:var(--ivory);font-weight:600;line-height:1.3}
+.step-body p{margin:3px 0 0;font-size:11.5px;color:var(--steel);line-height:1.42}
+
+.callout{border-left:3px solid var(--gold);background:color-mix(in srgb,var(--carbon) 75%,transparent);border-radius:0 10px 10px 0;padding:10px 12px}
+.callout p{margin:0;font-size:12.5px;color:var(--ivory);line-height:1.42}
+.callout p span{color:var(--steel)}
+
+.tablebox{overflow:hidden;background:var(--carbon);border:1px solid var(--line);border-radius:12px;min-width:0}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{text-align:left;background:color-mix(in srgb,var(--graphite) 50%,var(--carbon));color:var(--steel);padding:7px 10px;font:600 9px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--line-strong)}
+td{padding:7px 10px;border-bottom:1px solid var(--line);color:var(--steel);vertical-align:top;line-height:1.35}
+td strong{color:var(--ivory);font-weight:500}
+tr:last-child td{border-bottom:0}
+.compact table{font-size:11px}
+.compact th,.compact td{padding:5px 9px}
+
+.chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chain-node{background:var(--carbon);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-weight:600;font-size:12px;color:var(--ivory)}
+.chain-node.gold{border-color:color-mix(in srgb,var(--gold) 50%,transparent);color:var(--gold)}
+.chain-node span{display:block;font:500 9px/1.2 var(--mono);color:var(--steel);margin-top:3px;font-weight:400}
+.chain-arr{color:var(--gold);font:500 14px var(--mono)}
+
+ul.chk{margin:0;padding:0;list-style:none}
+ul.chk li{position:relative;padding:4px 0 4px 16px;font-size:12px;color:var(--steel);line-height:1.4}
+ul.chk li::before{content:"";position:absolute;left:0;top:9px;width:7px;height:7px;border-radius:2px;border:1px solid var(--gold);background:var(--gold-soft)}
+ul.chk li strong{color:var(--ivory);font-weight:500}
+
+.diagram-wrap{width:100%;min-width:0}
+.diagram{width:100%;height:auto;display:block;max-height:150px}
+.diagram-md{max-height:200px}
+.diagram-v{max-height:280px;width:100%}
+
+.deck-dots{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;gap:5px;max-height:80vh;overflow:auto}
+.deck-dots a{width:6px;height:6px;border-radius:50%;background:var(--graphite);border:1px solid var(--line-strong);flex-shrink:0}
+.deck-dots a:hover{background:var(--gold)}
+
+html.capture-mode .slide{opacity:1!important;transform:none!important;transition:none!important;height:900px!important;width:1440px!important;padding:28px 40px 22px}
+html.capture-mode .deck-dots,html.capture-mode .deck-progress,html.capture-mode .deck-counter,html.capture-mode .deck-hints{display:none!important}
+html.capture-mode body::before{display:none!important}
+
+@media print{
+  html{scroll-snap-type:none}
+  .slide{height:100vh;page-break-after:always;break-after:page}
+  .deck-dots,body::before{display:none}
+}
+</style>
+<script>
+  (function () {
+    if (new URLSearchParams(location.search).get('capture') !== '1') return;
+    document.documentElement.classList.add('capture-mode');
+    window.addEventListener('load', async () => {
+      try { await document.fonts.ready; } catch (_) {}
+      await new Promise(r => setTimeout(r, 600));
+      window.__captureReady = true;
+    });
+  })();
+</script>
+</head>
+<body>
+<nav class="deck-dots" aria-label="Slides"><a href="#s01" title="Slide 1"></a><a href="#s02" title="Slide 2"></a><a href="#s03" title="Slide 3"></a><a href="#s04" title="Slide 4"></a><a href="#s05" title="Slide 5"></a><a href="#s06" title="Slide 6"></a><a href="#s07" title="Slide 7"></a><a href="#s08" title="Slide 8"></a><a href="#s09" title="Slide 9"></a><a href="#s10" title="Slide 10"></a><a href="#s11" title="Slide 11"></a><a href="#s12" title="Slide 12"></a><a href="#s13" title="Slide 13"></a><a href="#s14" title="Slide 14"></a><a href="#s15" title="Slide 15"></a><a href="#s16" title="Slide 16"></a><a href="#s17" title="Slide 17"></a><a href="#s18" title="Slide 18"></a><a href="#s19" title="Slide 19"></a><a href="#s20" title="Slide 20"></a><a href="#s21" title="Slide 21"></a><a href="#s22" title="Slide 22"></a><a href="#s23" title="Slide 23"></a><a href="#s24" title="Slide 24"></a><a href="#s25" title="Slide 25"></a><a href="#s26" title="Slide 26"></a><a href="#s27" title="Slide 27"></a><a href="#s28" title="Slide 28"></a><a href="#s29" title="Slide 29"></a><a href="#s30" title="Slide 30"></a><a href="#s31" title="Slide 31"></a><a href="#s32" title="Slide 32"></a><a href="#s33" title="Slide 33"></a><a href="#s34" title="Slide 34"></a><a href="#s35" title="Slide 35"></a><a href="#s36" title="Slide 36"></a><a href="#s37" title="Slide 37"></a><a href="#s38" title="Slide 38"></a></nav>
+<div class="deck" id="deck">
+
+<section class="slide cover" data-page="01" id="s01">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+
+
+  <img class="cover-icon" src="converge-icon-color-light.svg" width="92" height="92" alt="">
+  <p class="eyebrow">Owner's handbook · complete edition · v2</p>
+  <h1>Converge</h1>
+  <p class="subtitle">From intent to evidence · every pass · every relationship</p>
+  <p class="tagline">Compile intent into<br><em>shipped software.</em></p>
+  <p class="proof-line">Done is proven.</p>
+  <div class="cover-meta">
+    <span><b>Identity</b> · Settlement Fold</span>
+    <span><b>Audience</b> · Owners &amp; operators</span>
+    <span><b>Spine</b> · Passes 0–8 + operating layer</span>
+    <span><b>Depth</b> · skill · chat · CLI · gates</span>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Proof line · <em>Done is proven</em></div>
+      <div class="page-num">01 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="02" id="s02">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Orientation</div></div>
+
+  <p class="eyebrow">00 · How to use this book</p>
+  <h2>You are the owner. Agents write. Gates prove.</h2>
+  <p class="lead">This handbook transfers the full Converge curriculum: every pass, the relationships between <strong>skill · chat interface · cvg CLI</strong>, architecture diagrams, procedures, and owner checklists.</p>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">Rule of thumb</div><h3>Four truths</h3><p>Skill writes · CLI scores · folders remember · <strong>you decide</strong>.</p></article><article class="card"><div class="label">How to read</div><h3>Tokens over vibes</h3><p>A pass is done when the greppable gate token says so — never when work “feels finished.”</p></article><article class="card mint-edge"><div class="label">Structure</div><h3>Chapters</h3><p>Thesis → system → operating layer → each pass vertical → worked example → recovery.</p></article></div>
+  <div class="callout mt"><p>Converged ≠ “feels done.” <span>Converged = gate token green + your required sign-offs.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">02 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="03" id="s03">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Thesis</div></div>
+
+  <p class="eyebrow">01 · Thesis</p>
+  <h2>Autonomy needs a<br><span class="gold">method spine.</span></h2>
+  <p class="lead"><strong>Converge compiles intent into software</strong> through nine gated passes. Agents build. Machines check. Completion is a state-machine invariant — not an agent’s claim.</p>
+  <div class="kpis mt">
+    <div class="kpi"><b class="gold">9</b><span>Spine passes</span></div>
+    <div class="kpi"><b>12</b><span>Skills (9+3 util)</span></div>
+    <div class="kpi"><b class="mint">1</b><span>Referee CLI</span></div>
+    <div class="kpi"><b>0</b><span>Keys in cvg</span></div>
+  </div>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">Before</div><h3>Fragmented intent</h3><p>Chat, tickets, unspoken assumptions. Success is narrated after the fact.</p></article><article class="card"><div class="label">Through</div><h3>Versioned altitude</h3><p>Each pass emits a durable artifact with entry/exit criteria and an executable gate.</p></article><article class="card mint-edge"><div class="label">After</div><h3>Named terminal truth</h3><p>Work ends in greppable states: SETTLED, BLOCKED, EXHAUSTED — never “I got tired.”</p></article></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">03 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="04" id="s04">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Non-negotiables</div></div>
+
+  <p class="eyebrow">01 · Why it's different</p>
+  <h2>Five non‑negotiables</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>The eval decides done.</strong><p>A task cannot settle until its evals exit 0. The maximal stub attack (all specs faked) lands all RED.</p></div></div><div class="step"><div class="step-body"><strong>The referee is never a player.</strong><p><span class="mono">cvg</span> holds no API keys and calls no models. Engine CLIs authenticate themselves; the referee only frames, dispatches, and gates.</p></div></div><div class="step"><div class="step-body"><strong>Cross-family when it matters.</strong><p>Pass 4 adversary + Pass 8 tier-2 verify send work to a different model family, prompted to refute — including holdouts the builder never saw.</p></div></div><div class="step"><div class="step-body"><strong>A loop with brakes.</strong><p>Three-axis budgets (iterations · wall-clock · tokens) + stagnation. Only SETTLED, LOCAL_SETTLED, and NO_OP exit zero.</p></div></div><div class="step"><div class="step-body"><strong>Evidence over memory.</strong><p>Position is derived from <span class="mono">cvg/</span> folders. Sessions die; disks don’t. <span class="mono">cvg next</span> never trusts chat scrollback.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">04 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="05" id="s05">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Architecture</div></div>
+
+  <p class="eyebrow">02 · System architecture</p>
+  <h2>Four planes + runtime</h2>
+  <p class="lead">Human authority enters; machine evidence returns. Each plane has a different source of truth and failure mode.</p>
+  <div class="diagram-wrap mt">
+<svg class="diagram diagram-md" viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System architecture planes">
+  <rect x="400" y="8" width="300" height="44" rx="10" fill="#443614" stroke="#F3B64C"/>
+  <text x="550" y="36" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">HUMAN AUTHORITY · goals · risk · approvals</text>
+  <path d="M550 52 L550 68" stroke="#F3B64C" stroke-width="1.5"/>
+  <rect x="80" y="72" width="200" height="56" rx="10" fill="#17324a" stroke="#5b9bd5"/>
+  <text x="180" y="98" text-anchor="middle" fill="#e8f2fb" font-family="Inter,sans-serif" font-size="12" font-weight="600">METHOD</text>
+  <text x="180" y="116" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="10">Passes 0–8</text>
+  <rect x="320" y="72" width="200" height="56" rx="10" fill="#17324a" stroke="#5b9bd5"/>
+  <text x="420" y="98" text-anchor="middle" fill="#e8f2fb" font-family="Inter,sans-serif" font-size="12" font-weight="600">SKILLS</text>
+  <text x="420" y="116" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="10">role procedures</text>
+  <rect x="560" y="72" width="200" height="56" rx="10" fill="#17324a" stroke="#5b9bd5"/>
+  <text x="660" y="98" text-anchor="middle" fill="#e8f2fb" font-family="Inter,sans-serif" font-size="12" font-weight="600">STATE · cvg/</text>
+  <text x="660" y="116" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="10">canonical artifacts</text>
+  <rect x="800" y="72" width="200" height="56" rx="10" fill="#443614" stroke="#F3B64C"/>
+  <text x="900" y="98" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">CONTROL · cvg</text>
+  <text x="900" y="116" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="10">gates · bindings</text>
+  <path d="M180 128 L180 150 L420 150 L420 128" stroke="rgba(141,153,166,.4)" fill="none"/>
+  <path d="M660 128 L660 150 L900 150 L900 128" stroke="rgba(141,153,166,.4)" fill="none"/>
+  <path d="M550 150 L550 168" stroke="#F3B64C" stroke-width="1.5"/>
+  <rect x="300" y="172" width="500" height="48" rx="10" fill="#153c2c" stroke="#73E2C3"/>
+  <text x="550" y="201" text-anchor="middle" fill="#e7fff3" font-family="Inter,sans-serif" font-size="13" font-weight="600">RUNTIME · harness · workers · tools → EVIDENCE · evals · stamps · receipts</text>
+  <path d="M550 220 L550 238" stroke="#73E2C3" stroke-width="1.5"/>
+  <rect x="360" y="242" width="380" height="32" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+  <text x="550" y="263" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="10">feedback loop → human authority</text>
+</svg></div>
+  <div class="callout mt"><p>Fail-closed hierarchy. <span>Missing authority, failed checks, invalid seals, or unresolved objections block the unattended path. Waivers stay visible and owner-owned.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">05 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="06" id="s06">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Three layers</div></div>
+
+  <p class="eyebrow">02 · Skill · chat · CLI</p>
+  <h2>Three layers. One truth.</h2>
+  <p class="lead">One play, three roles. They never swap jobs. Disk evidence survives the session — chat does not.</p>
+  <div class="diagram-wrap mt">
+<svg class="diagram diagram-md" viewBox="0 0 1100 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skill chat CLI layers">
+  <rect x="20" y="30" width="240" height="140" rx="14" fill="#111720" stroke="#F3B64C" stroke-width="1.6"/>
+  <text x="140" y="62" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="10" letter-spacing="1.5">YOU · OWNER</text>
+  <text x="140" y="95" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="16" font-weight="600">Intent &amp; judgment</text>
+  <text x="140" y="120" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">Sign · barrier · stamps</text>
+  <text x="140" y="140" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">Read tokens, not vibes</text>
+
+  <path d="M275 100 L305 100" stroke="#F3B64C" stroke-width="2"/><polygon points="305,96 318,100 305,104" fill="#F3B64C"/>
+
+  <rect x="330" y="30" width="240" height="140" rx="14" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+  <text x="450" y="62" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="10" letter-spacing="1.5">CHAT AGENT</text>
+  <text x="450" y="95" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="16" font-weight="600">Execution surface</text>
+  <text x="450" y="120" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">SKILL.md · grill · write cvg/</text>
+  <text x="450" y="140" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">Invoke gates when steered</text>
+
+  <path d="M585 100 L615 100" stroke="#F3B64C" stroke-width="2"/><polygon points="615,96 628,100 615,104" fill="#F3B64C"/>
+
+  <rect x="640" y="30" width="240" height="140" rx="14" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+  <text x="760" y="62" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="10" letter-spacing="1.5">CVG REFEREE</text>
+  <text x="760" y="95" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="16" font-weight="600">Deterministic gates</text>
+  <text x="760" y="120" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">No API keys · no LLM</text>
+  <text x="760" y="140" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="11">Greppable tokens only</text>
+
+  <path d="M895 100 L925 100" stroke="#73E2C3" stroke-width="2"/><polygon points="925,96 938,100 925,104" fill="#73E2C3"/>
+  <rect x="950" y="50" width="130" height="100" rx="12" fill="#0f2a24" stroke="#73E2C3"/>
+  <text x="1015" y="95" text-anchor="middle" fill="#73E2C3" font-family="Menlo,monospace" font-size="11">DISK</text>
+  <text x="1015" y="118" text-anchor="middle" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">cvg/ truth</text>
+</svg></div>
+  <div class="tablebox compact"><table><thead><tr><th>Layer</th><th>Does</th><th>Does not</th></tr></thead><tbody><tr><td><strong>Skill</strong></td><td>Teaches how to interview, draft, gate</td><td>Run itself; hold credentials</td></tr><tr><td><strong>Chat agent</strong></td><td>Does the work; writes <span class="mono">cvg/</span>; runs gates</td><td>Own business truth; sign for you</td></tr><tr><td><strong>cvg CLI</strong></td><td>Finds files; runs gate scripts; prints tokens</td><td>Write product code; call models</td></tr><tr><td><strong>You</strong></td><td>Decisions, canonical, barrier, stamps</td><td>Memorize every flag (agent can drive)</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">06 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="07" id="s07">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Workspace</div></div>
+
+  <p class="eyebrow">02 · Control plane</p>
+  <h2>The <span class="mono">cvg/</span> workspace</h2>
+  <p class="lead">Everything Converge “remembers” is folders on disk. <span class="mono">cvg/</span> is the workspace — not always the git root.</p>
+  <div class="diagram-wrap mt">
+<svg class="diagram diagram-md" viewBox="0 0 1100 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Workspace folders">
+
+    <rect x="30" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="90" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 0</text>
+    <text x="90" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">docs/brd</text>
+    <text x="90" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="165" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="225" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 1</text>
+    <text x="225" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">tech-spec</text>
+    <text x="225" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="300" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="360" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 2</text>
+    <text x="360" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">adrs</text>
+    <text x="360" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="435" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="495" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 3–4</text>
+    <text x="495" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">swimlanes</text>
+    <text x="495" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="570" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="630" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 5</text>
+    <text x="630" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">tasks</text>
+    <text x="630" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="705" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="765" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 7</text>
+    <text x="765" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">execution</text>
+    <text x="765" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+    <rect x="840" y="50" width="120" height="130" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+    <text x="900" y="90" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="11">pass 8</text>
+    <text x="900" y="120" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="13" font-weight="600">loop+</text>
+    <text x="900" y="145" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">cvg/</text>
+  <text x="550" y="220" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="11">+ .cvg/gate.yaml · brain/ · receipts/ · lessons/</text>
+</svg></div>
+  <div class="tablebox compact"><table><thead><tr><th>Path</th><th>Pass</th><th>Content</th></tr></thead><tbody><tr><td><span class="mono">.cvg/gate.yaml</span></td><td>init</td><td>Write fence a Task-Spec cannot widen</td></tr><tr><td><span class="mono">cvg/docs/brd/</span></td><td>0</td><td>BRD or no-go</td></tr><tr><td><span class="mono">cvg/docs/tech-spec/</span></td><td>1</td><td>Falsifiable requirements</td></tr><tr><td><span class="mono">cvg/docs/adrs/</span></td><td>2</td><td>Terrain ADRs + CONTEXT.md</td></tr><tr><td><span class="mono">cvg/swimlanes/</span></td><td>3–4</td><td>Plans + objection log</td></tr><tr><td><span class="mono">cvg/tasks/</span></td><td>5</td><td>Sealed Task-Specs</td></tr><tr><td><span class="mono">cvg/execution/</span></td><td>7</td><td>Profiles + adapters</td></tr><tr><td><span class="mono">cvg/loop/ · receipts/</span></td><td>8</td><td>Checkpoints + settlement</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">07 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="08" id="s08">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Setup</div></div>
+
+  <p class="eyebrow">02 · First day</p>
+  <h2>Stand up the factory</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>cvg init</strong><p>Creates workspace + <span class="mono">.cvg/gate.yaml</span>. Idempotent · <span class="mono">CVG_INIT=OK|UNCHANGED</span>.</p></div></div><div class="step"><div class="step-body"><strong>cvg setup signing</strong><p>Repo-private HMAC key so Task-Specs can be sealed. Never commit the key. Mode 0600 under Git-private state.</p></div></div><div class="step"><div class="step-body"><strong>cvg setup</strong><p>Readiness board + exact next step · <span class="mono">SETUP=READY|INCOMPLETE</span>.</p></div></div><div class="step"><div class="step-body"><strong>Optional integrations</strong><p><span class="mono">setup tracker · setup key · setup repo · setup harness · doctor</span>. Secrets stay out of <span class="mono">.cvg/</span> — only choices are recorded.</p></div></div></div>
+  <div class="callout mt"><p>Two roots. <span><span class="mono">CVG_HOME</span> = installed Converge package. <span class="mono">CVG_PROJECT_ROOT</span> = consuming project. Workspace may sit below the git root.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">08 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="09" id="s09">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Lanes</div></div>
+
+  <p class="eyebrow">02 · Ceremony router</p>
+  <h2>Lanes route. They never waive.</h2>
+  <p class="lead"><span class="mono">cvg lane "…"</span> picks how much of the spine a change earns. Same final bar everywhere: green eval + path guard.</p>
+  <div class="grid-3 mt"><article class="card"><div class="label">FAST</div><h3>5 → 7 → 8</h3><p>Typo, rename, one-file fix. Small &amp; reversible only.</p></article><article class="card gold-edge"><div class="label">NORMAL</div><h3>1 · 2 · 5 · 7 · 8</h3><p>Most features. Intent + structure without full design theatre.</p></article><article class="card"><div class="label">FULL</div><h3>0 → 8</h3><p>New idea, new seam, backbone, architecture.</p></article></div>
+  <div class="tablebox compact"><table><thead><tr><th>Hard floor</th><th>Effect</th></tr></thead><tbody><tr><td>auth · money · migrations · secrets · public API</td><td><strong>Never FAST</strong></td></tr><tr><td>irreversible / production delete · purge · rotate</td><td><strong>Never FAST</strong></td></tr><tr><td>new service · new seam · greenfield · architecture</td><td><strong>Forces FULL</strong></td></tr><tr><td>unsigned eval / no sealed spec</td><td><strong>No lane dispatches</strong></td></tr><tr><td>>5 files tightens FAST→NORMAL · >15 → FULL pressure</td><td>File counts only ever <strong>tighten</strong></td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">09 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="10" id="s10">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Conductor</div></div>
+
+  <p class="eyebrow">02 · evidence-to-next-pass</p>
+  <h2><span class="mono">cvg next</span> — the descent conductor</h2>
+  <p class="lead">Derives where the descent stands from workspace evidence. No state file. No memory. No drift between sessions.</p>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">next</div><h3>Where am I?</h3><p>Evidence board · <span class="mono">NEXT_PASS=N|DONE</span> · skill + <span class="mono">pass-prompt.md</span> path · closing gate</p></article><article class="card"><div class="label">pre N</div><h3>May pass N start?</h3><p>Fail-closed door. Prior lane passes must leave artifacts. <span class="mono">PASS_PRE=OK|MISSING</span></p></article><article class="card mint-edge"><div class="label">post N</div><h3>Did N land?</h3><p>Folder filled? <span class="mono">PASS_POST=OK|INCOMPLETE</span> — then still run the authoritative <span class="mono">cvg</span> gate.</p></article></div>
+  <div class="callout mt"><p>Critical rule. <span><strong>Evidence presence is not a verdict.</strong> A BRD file existing ≠ <span class="mono">CHECK_BRD=PASS</span>. Conductor sequences; gates decide. Pre can block forward; it can never grant a pass.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">10 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="11" id="s11">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Teaching</div></div>
+
+  <p class="eyebrow">02 · pass-to-lesson</p>
+  <h2>Own the understanding</h2>
+  <p class="lead">Optional after any pass. Never blocks the descent. Prevents “the autonomous did it” as an answer to “why is it shaped this way?”</p>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">Four-part treatment</div><h3>Every component</h3><p>What it is · why shaped · decision encoded · <strong>what breaks downstream without it</strong>.</p></article><article class="card"><div class="label">Durable file</div><h3>cvg/docs/lessons/</h3><p>Survives chat. Onboarding + pre-read for client calls.</p></article><article class="card mint-edge"><div class="label">Gate</div><h3>cvg lesson</h3><p>Seven sections · decisions table · 3–5 quiz Qs · <span class="mono">CHECK_LESSON=PASS</span>. Optional <span class="mono">--immutable</span>.</p></article></div>
+  <div class="callout mt"><p>Explain, never reopen. <span>Disagreements become change requests on the owning pass — not silent edits to gated artifacts.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">11 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="12" id="s12">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">The spine</div></div>
+
+  <p class="eyebrow">03 · Pass map</p>
+  <h2>Nine gates. One barrier.</h2>
+  <p class="lead">Design half (0–4) makes intent precise. <strong>Pass 4 is the last human design sign-off.</strong> Build half (5–8) is machine-led proof.</p>
+  <div class="diagram-wrap mt">
+<svg class="diagram" viewBox="0 0 1100 160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nine pass spine">
+  <defs>
+    <linearGradient id="gBarrier" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#F3B64C" stop-opacity=".25"/><stop offset="100%" stop-color="#111720" stop-opacity="0"/></linearGradient>
+  </defs>
+
+    <rect x="20" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="74" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">0</text>
+    <text x="74" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Capture</text>
+    <text x="74" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">opt</text>
+    <path d="M132 80 L138 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="140" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="194" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">1</text>
+    <text x="194" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Intent</text>
+    <text x="194" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">spec</text>
+    <path d="M252 80 L258 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="260" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="314" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">2</text>
+    <text x="314" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Structure</text>
+    <text x="314" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">ADRs</text>
+    <path d="M372 80 L378 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="380" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="434" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">3</text>
+    <text x="434" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Decompose</text>
+    <text x="434" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">plans</text>
+    <path d="M492 80 L498 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="500" y="24" width="108" height="112" rx="12" fill="url(#gBarrier)" stroke="#F3B64C" stroke-width="1.8"/>
+    <text x="554" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">4</text>
+    <text x="554" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Consensus</text>
+    <text x="554" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">BARRIER</text>
+    <path d="M612 80 L618 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="620" y="24" width="108" height="112" rx="12" fill="#111720" stroke="#73E2C3" stroke-width="1"/>
+    <text x="674" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">5</text>
+    <text x="674" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Tasking</text>
+    <text x="674" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">seal</text>
+    <path d="M732 80 L738 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="740" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="794" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">6</text>
+    <text x="794" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Register</text>
+    <text x="794" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">opt</text>
+    <path d="M852 80 L858 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="860" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="914" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">7</text>
+    <text x="914" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Bind</text>
+    <text x="914" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">contract</text>
+    <path d="M972 80 L978 80" stroke="#F3B64C" stroke-width="1.5" opacity=".5"/>
+    <rect x="980" y="24" width="108" height="112" rx="12" fill="#111720" stroke="rgba(141,153,166,.35)" stroke-width="1"/>
+    <text x="1034" y="52" text-anchor="middle" fill="#F3B64C" font-family="Menlo,monospace" font-size="13" font-weight="700">8</text>
+    <text x="1034" y="78" text-anchor="middle" fill="#F5F2EA" font-family="Inter,sans-serif" font-size="12" font-weight="600">Loop</text>
+    <text x="1034" y="100" text-anchor="middle" fill="#8D99A6" font-family="Menlo,monospace" font-size="9">settle</text>
+
+</svg></div>
+  <div class="grid-2 mt"><article class="card gold-edge"><div class="label">Phase 1 · Design</div><h3>Human-led 0–4</h3><p>BRD → requirements → ADRs → plans → cross-family attack. You grill, approve, sign the barrier.</p></article><article class="card mint-edge"><div class="label">Phase 2 · Build</div><h3>Machine-led 5–8</h3><p>Sealed Task-Specs → optional board → bind → attempt/verify/settle under budgets.</p></article></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">12 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="13" id="s13">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass ↔ CLI map</div></div>
+
+  <p class="eyebrow">03 · Master cheat sheet</p>
+  <h2>Pass · skill · CLI · token · evidence</h2>
+  <div class="tablebox compact"><table><thead><tr><th>#</th><th>Pass</th><th>Skill</th><th>CLI</th><th>Token</th><th>Evidence</th></tr></thead><tbody><tr><td>0</td><td>Capture</td><td>idea-to-brd</td><td>cvg capture</td><td>CHECK_BRD</td><td>docs/brd/</td></tr><tr><td>1</td><td>Intent</td><td>brd-docs-to-tech-req</td><td>cvg intent</td><td>CHECK_TECH_SPEC</td><td>docs/tech-spec/</td></tr><tr><td>2</td><td>Structure</td><td>tech-req-to-adrs</td><td>cvg structure</td><td>CHECK_ADR</td><td>docs/adrs/</td></tr><tr><td>3</td><td>Decompose</td><td>reqs-to-swimlane-plans</td><td>cvg decompose</td><td>CHECK_PLAN</td><td>swimlanes/</td></tr><tr><td>4</td><td>Consensus</td><td>sketch-plans-adversarial-review</td><td>cvg review</td><td>CHECK_CONSENSUS</td><td>.consensus/</td></tr><tr><td>5</td><td>Tasking</td><td>task-spec</td><td>cvg tasks *</td><td>TIER=1</td><td>tasks/</td></tr><tr><td>6</td><td>Register</td><td>task-specs-to-issues</td><td>cvg register</td><td>CHECK_REGISTER</td><td>tracker</td></tr><tr><td>7</td><td>Bind</td><td>task-to-runtime-contract</td><td>cvg bind</td><td>CHECK_RUNTIME_CONTRACT</td><td>execution/</td></tr><tr><td>8</td><td>Loop</td><td>task-loop</td><td>cvg loop</td><td>TASK_LOOP</td><td>loop/ · receipts/</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">13 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="14" id="s14">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 0 · Capture</div></div>
+
+  <p class="eyebrow">Pass 0 · idea-to-brd · optional</p>
+  <h2>Capture — raw idea → BRD</h2>
+  <p class="lead">Turn a founder thought into a <strong>brief in the owner’s voice</strong> — or a durable no-go. Never the tech-spec. Never architecture.</p>
+  <div class="split mt">
+    <div>
+      <svg class="diagram diagram-v" viewBox="0 0 400 338" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pass 0 flow">
+      <rect x="40" y="8" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="24" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">IN</text>
+      <text x="56" y="36" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Raw idea · voice note · whiteboard</text>
+      <path d="M200 44 L200 54" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,50 200,54 204,50" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="54" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="70" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">1 · Scope-check</text>
+      <text x="56" y="82" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">One idea? Slice multi-headed</text>
+      <path d="M200 90 L200 100" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,96 200,100 204,96" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="100" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="116" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">2 · Grill</text>
+      <text x="56" y="128" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Frontier rounds + defaults</text>
+      <path d="M200 136 L200 146" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,142 200,146 204,142" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="146" width="320" height="36" rx="8" fill="#111720" stroke="#FF6B64"/>
+      <text x="56" y="162" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">2b · No-go?</text>
+      <text x="56" y="174" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Do-nothing tolerable → park</text>
+      <path d="M200 182 L200 192" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,188 200,192 204,188" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="192" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="208" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">3 · Draft BRD</text>
+      <text x="56" y="220" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Owner voice · provenance tags</text>
+      <path d="M200 228 L200 238" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,234 200,238 204,234" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="238" width="320" height="36" rx="8" fill="#111720" stroke="#F3B64C"/>
+      <text x="56" y="254" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">4 · Gate</text>
+      <text x="56" y="266" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">YOU set canonical</text>
+      <path d="M200 274 L200 284" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,280 200,284 204,280" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="284" width="320" height="36" rx="8" fill="#111720" stroke="#73E2C3"/>
+      <text x="56" y="300" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">OUT</text>
+      <text x="56" y="312" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">CHECK_BRD=PASS → Pass 1</text>
+      </svg>
+    </div>
+    <div>
+      <div class="tablebox compact"><table><thead><tr><th></th><th>Contract</th></tr></thead><tbody><tr><td>Skill</td><td>idea-to-brd</td></tr><tr><td>CLI</td><td><span class="mono">cvg capture [--draft|--no-go]</span></td></tr><tr><td>Token</td><td><span class="mono">CHECK_BRD=PASS|FAIL|DRAFT_OK|NOGO_OK</span></td></tr><tr><td>Skip when</td><td>Client BRD already exists → enter Pass 1</td></tr><tr><td>Altitude</td><td>Problem only — no requirements, no stack</td></tr></tbody></table></div>
+      <div class="callout mt"><p>Anti-pattern. <span>“Too small for a BRD” is forbidden. Small ideas hide the costliest assumptions. Half-page BRDs still gate.</span></p></div>
+    </div>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">14 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="15" id="s15">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 0 · Procedure</div></div>
+
+  <p class="eyebrow">Pass 0 · every step</p>
+  <h2>Scope-check → grill → draft → gate</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>1 · Scope-check</strong><p>Is this one idea or four platforms? Flag decomposition first. Look up facts in the repo / <span class="mono">cvg/docs/</span> — never burn questions on what files know.</p></div></div><div class="step"><div class="step-body"><strong>2 · Grill · frontier rounds</strong><p>Design tree: pain · do-nothing · goal · scope · success · constraints · pre-mortem. Each round: numbered questions + recommended defaults. One reply answers the whole round (dictation-friendly).</p></div></div><div class="step"><div class="step-body"><strong>Numbers carry provenance</strong><p>Every number tagged <span class="mono">(measured)</span> · <span class="mono">(estimated)</span> · <span class="mono">(guessed)</span>. A guess spawns an owned open question. Never invent “measured” under pressure.</p></div></div><div class="step"><div class="step-body"><strong>2b · No-go exit</strong><p>If do-nothing is fine → <span class="mono">cvg/docs/no-go/&lt;slug&gt;.md</span> (idea · date · owner · why · reopen condition) · <span class="mono">cvg capture --no-go</span>. Cheapest kill in the whole descent.</p></div></div><div class="step"><div class="step-body"><strong>3 · Draft</strong><p><span class="mono">cvg/docs/brd/&lt;slug&gt;.md</span> from template. Executive summary last (≤60 words). Sign-off present as <span class="mono">_pending_</span> until you flip to canonical.</p></div></div><div class="step"><div class="step-body"><strong>4 · Gate</strong><p><span class="mono">cvg capture --draft</span> while writing (never authorizes handoff). You set <strong>canonical + real ISO date</strong>. <span class="mono">cvg capture</span> → <span class="mono">CHECK_BRD=PASS</span>.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">15 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="16" id="s16">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 0 · Owner</div></div>
+
+  <p class="eyebrow">Pass 0 · your role</p>
+  <h2>Owner checklist · Capture</h2>
+  <div class="grid-2 mt">
+    <article class="card gold-edge"><div class="label">During grill</div><ul class="chk"><li>Answer rounds in one block when possible</li><li>Prefer honest <span class="mono">(guessed)</span> over invented certainty</li><li>Say “don’t build it” if do-nothing is fine</li><li>Name one <strong>decider</strong> if many stakeholders</li></ul></article>
+    <article class="card mint-edge"><div class="label">To leave Pass 0</div><ul class="chk"><li>Sounds like you, not a requirements doc</li><li>Scope Out is real (not empty / “none”)</li><li>Every open question has a named owner</li><li>You set Sign-off to <strong>canonical</strong> + real date</li><li><span class="mono">CHECK_BRD=PASS</span></li></ul></article>
+  </div>
+  <div class="callout mt"><p>Forbidden altitude. <span>No “system shall,” no stack decisions, no architecture. Park tech preferences as open questions for Pass 3.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">16 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="17" id="s17">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 1 · Intent</div></div>
+
+  <p class="eyebrow">Pass 1 · brd-docs-to-tech-req</p>
+  <h2>Intent — BRD → testable requirements</h2>
+  <p class="lead">Answer: <strong>what are we building, and how will we know it works?</strong> Never how it is built. Gate is falsifiability, not completeness.</p>
+  <div class="split mt">
+    <div>
+      <svg class="diagram diagram-v" viewBox="0 0 400 338" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pass 1 flow">
+      <rect x="40" y="8" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="24" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">IN</text>
+      <text x="56" y="36" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Signed BRD (or client brief)</text>
+      <path d="M200 44 L200 54" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,50 200,54 204,50" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="54" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="70" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">1 · Understand</text>
+      <text x="56" y="82" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">One-paragraph problem restatement</text>
+      <path d="M200 90 L200 100" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,96 200,100 204,96" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="100" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="116" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">1.5 · Prior art</text>
+      <text x="56" y="128" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Problem-level only — no schemas</text>
+      <path d="M200 136 L200 146" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,142 200,146 204,142" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="146" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="162" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">2 · Interrogate</text>
+      <text x="56" y="174" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">2–3 high-leverage decisions</text>
+      <path d="M200 182 L200 192" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,188 200,192 204,188" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="192" width="320" height="36" rx="8" fill="#111720" stroke="#FF6B64"/>
+      <text x="56" y="208" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">Gap register</text>
+      <text x="56" y="220" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Blockers need substantive resolution</text>
+      <path d="M200 228 L200 238" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,234 200,238 204,234" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="238" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="254" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">3 · Crystallize</text>
+      <text x="56" y="266" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">R-n · current→target · entities</text>
+      <path d="M200 274 L200 284" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,280 200,284 204,280" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="284" width="320" height="36" rx="8" fill="#111720" stroke="#73E2C3"/>
+      <text x="56" y="300" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">OUT</text>
+      <text x="56" y="312" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">CHECK_TECH_SPEC=PASS</text>
+      </svg>
+    </div>
+    <div>
+      <div class="tablebox compact"><table><thead><tr><th></th><th>Contract</th></tr></thead><tbody><tr><td>CLI</td><td><span class="mono">cvg intent [--draft]</span></td></tr><tr><td>Token</td><td><span class="mono">CHECK_TECH_SPEC=PASS|…</span></td></tr><tr><td>Out</td><td><span class="mono">cvg/docs/tech-spec/</span></td></tr><tr><td>Boundary</td><td>Pass 0 = stakeholder voice · Pass 1 = how-well</td></tr><tr><td>Stack</td><td>Forbidden — Pass 3 / ADR territory</td></tr></tbody></table></div>
+      <div class="callout mt"><p>Ambiguity left here. <span>Is inherited by every later pass. A soft Pass 1 makes ADRs, plans, tasks, and evals soft.</span></p></div>
+    </div>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">17 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="18" id="s18">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 1 · Falsifiable</div></div>
+
+  <p class="eyebrow">Pass 1 · rewrite pattern</p>
+  <h2>Vague → falsifiable</h2>
+  <p class="lead">A requirement needs all three: <strong>measured quantity · threshold with unit · input condition</strong>. Else → owned open assumption.</p>
+  <div class="tablebox compact"><table><thead><tr><th>Vague (fails)</th><th>Falsifiable (spirit of the gate)</th></tr></thead><tbody><tr><td>“Dashboard should be fast”</td><td>Revenue-by-month ≤ 3s p95 over 12 months of orders</td></tr><tr><td>“Data reasonably fresh”</td><td>Facts ≤ 15 min lag, ≥ 99% of the day</td></tr><tr><td>“Accurate reports”</td><td>Reconciled revenue matches ledger within $0.01 / closed day</td></tr><tr><td>“Use DuckDB + dbt”</td><td>Park as Pass 3 preference — not a requirement body line</td></tr></tbody></table></div>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Ids are forever</strong><p><span class="mono">R-n</span> requirements · <span class="mono">W-n</span> wishes/wonts. Never renumber casually — ADRs and evals cite them.</p></div></div><div class="step"><div class="step-body"><strong>Priorities</strong><p>Not everything is <span class="mono">must</span>. Use should/could/wont. Deliberate exclusions are honest.</p></div></div><div class="step"><div class="step-body"><strong>Blocker gaps</strong><p>Gate fails closed on missing/blank/sentinel resolutions (TBD, pending, open). Chase the named owner.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">18 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="19" id="s19">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 2 · Structure</div></div>
+
+  <p class="eyebrow">Pass 2 · tech-req-to-adrs</p>
+  <h2>Structure — ground the terrain</h2>
+  <p class="lead">Lower altitude from <em>what to build</em> to <strong>what is true about the system we build on</strong>.</p>
+  <div class="split mt">
+    <div>
+      <svg class="diagram diagram-v" viewBox="0 0 400 292" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pass 2 flow">
+      <rect x="40" y="8" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="24" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">IN</text>
+      <text x="56" y="36" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Tech-spec + live repo</text>
+      <path d="M200 44 L200 54" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,50 200,54 204,50" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="54" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="70" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">1 · Name ground</text>
+      <text x="56" y="82" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Greenfield / brownfield · 0000</text>
+      <path d="M200 90 L200 100" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,96 200,100 204,96" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="100" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="116" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">2 · Ground</text>
+      <text x="56" y="128" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Run system · reconcile · schema</text>
+      <path d="M200 136 L200 146" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,142 200,146 204,142" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="146" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="162" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">3 · Record ADRs</text>
+      <text x="56" y="174" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Fact + evidence + consequence</text>
+      <path d="M200 182 L200 192" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,188 200,192 204,188" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="192" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="208" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">Glossary</text>
+      <text x="56" y="220" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">CONTEXT.md as terms crystallize</text>
+      <path d="M200 228 L200 238" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,234 200,238 204,234" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="238" width="320" height="36" rx="8" fill="#111720" stroke="#73E2C3"/>
+      <text x="56" y="254" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">OUT</text>
+      <text x="56" y="266" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">CHECK_ADR=OK · --final</text>
+      </svg>
+    </div>
+    <div>
+      <div class="tablebox compact"><table><thead><tr><th>Grounding (keep)</th><th>Design leak (reject)</th></tr></thead><tbody><tr><td>Payments join orders on order_id</td><td>Build fct_payments keyed on order_id</td></tr><tr><td>Timestamps are TIMESTAMPTZ UTC</td><td>Add date_day dimension truncating paid_at</td></tr><tr><td>Revenue = paid payments only</td><td>Implement revenue_paid as SQL sum</td></tr></tbody></table></div>
+      <div class="callout mt"><p>One-line test. <span>Could this sentence have been true before anyone chose a solution? Yes → ADR. No → Pass 3.</span></p></div>
+    </div>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">19 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="20" id="s20">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 2 · Owner</div></div>
+
+  <p class="eyebrow">Pass 2 · lifecycle &amp; checklist</p>
+  <h2>ADRs are immutable once accepted</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Lifecycle</strong><p><span class="mono">proposed → accepted → deprecated | superseded</span>. Born proposed; accepted at review — never at scaffold time.</p></div></div><div class="step"><div class="step-body"><strong>Supersede, don’t rewrite</strong><p>Reality changes → <span class="mono">scaffold-adr.sh --supersede NNNN</span>. Bidirectional links. History stays honest.</p></div></div><div class="step"><div class="step-body"><strong>Worthiness test</strong><p>Hard to reverse · stood on downstream · could have been otherwise. Else glossary line, not a numbered ADR.</p></div></div><div class="step"><div class="step-body"><strong>CLI</strong><p><span class="mono">cvg structure</span> · <span class="mono">cvg structure --final</span> (nothing left proposed) · <span class="mono">CHECK_ADR=OK|FAIL|EMPTY</span></p></div></div></div>
+  <div class="grid-2 mt">
+    <article class="card gold-edge"><div class="label">Accept</div><ul class="chk"><li>Terrain named in 0000-context</li><li>Brownfield was <strong>run</strong>, not summarized</li><li>Every ADR cites evidence + re-proof command</li><li>Terms in CONTEXT.md · <span class="mono">spec_ref: R-n</span></li></ul></article>
+    <article class="card coral-edge"><div class="label">Reject</div><ul class="chk"><li>Build/create/implement verbs in ADRs</li><li>Design leaking into terrain</li><li>Closing with records still proposed</li><li>Fabricating schema you didn’t observe</li></ul></article>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">20 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="21" id="s21">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 3 · Decompose</div></div>
+
+  <p class="eyebrow">Pass 3 · reqs-to-swimlane-plans</p>
+  <h2>Decompose — seam → swimlane → leg</h2>
+  <p class="lead">Plan altitude only. <strong>No tasks. No implementation code.</strong> Plans are attacked next — soft spots are expected.</p>
+  <div class="chain mt">
+    <div class="chain-node">Seam<span>nameable interface</span></div>
+    <div class="chain-arr">→</div>
+    <div class="chain-node">Swimlane<span>one folder / plan</span></div>
+    <div class="chain-arr">→</div>
+    <div class="chain-node">Leg<span>one responsibility</span></div>
+    <div class="chain-arr">→</div>
+    <div class="chain-node gold">Task-Spec<span>Pass 5 · 1:N</span></div>
+  </div>
+  <div class="tablebox compact"><table><thead><tr><th>Hardening</th><th>Rule</th><th>Why you care</th></tr></thead><tbody><tr><td>H1</td><td>Exactly one steel-thread lane</td><td>End-to-end path before fattening components</td></tr><tr><td>H2</td><td>risk= per lane; spike high first</td><td>Fatal contracts surface early</td></tr><tr><td>H3</td><td>owner= stream/team</td><td>Conway — wrong owner = coordination tax</td></tr><tr><td>H4</td><td>Seam evolution stated</td><td>Additive vs breaking + coexistence</td></tr><tr><td>H5</td><td>Cycles broken explicitly</td><td>Never a fuzzy two-way seam</td></tr></tbody></table></div>
+  <div class="callout mt"><p>Folder shape. <span><span class="mono">cvg/swimlanes/&lt;seam&gt;/_lane.md</span> + <span class="mono">leg-NN-&lt;tech&gt;.md</span>. Tech is a swappable label; stable key is <span class="mono">swimlane-…-leg-NN</span>. CLI: <span class="mono">cvg decompose → CHECK_PLAN=OK</span>.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">21 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="22" id="s22">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 4 · Barrier</div></div>
+
+  <p class="eyebrow">Pass 4 · THE BARRIER · sketch-plans-adversarial-review</p>
+  <h2>Consensus — last human design sign-off</h2>
+  <p class="lead">A <strong>different model family</strong> attacks the plans. You FIX or ACCEPT every objection. Only you close the barrier.</p>
+  <div class="split mt">
+    <div>
+      <svg class="diagram diagram-v" viewBox="0 0 400 292" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pass 4 flow">
+      <rect x="40" y="8" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="24" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">Preflight</text>
+      <text x="56" y="36" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">cvg doctor · cross-family ready</text>
+      <path d="M200 44 L200 54" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,50 200,54 204,50" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="54" width="320" height="36" rx="8" fill="#111720" stroke="#F3B64C"/>
+      <text x="56" y="70" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">1 · ATTACK</text>
+      <text x="56" y="82" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">cvg review --adversary codex</text>
+      <path d="M200 90 L200 100" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,96 200,100 204,96" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="100" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="116" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">2 · GROUND</text>
+      <text x="56" y="128" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">Drift vs tech-spec + ADRs</text>
+      <path d="M200 136 L200 146" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,142 200,146 204,142" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="146" width="320" height="36" rx="8" fill="#111720" stroke="rgba(141,153,166,.35)"/>
+      <text x="56" y="162" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">3 · SHARPEN</text>
+      <text x="56" y="174" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">FIX or ACCEPT+owner each objection</text>
+      <path d="M200 182 L200 192" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,188 200,192 204,188" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="192" width="320" height="36" rx="8" fill="#111720" stroke="#F3B64C"/>
+      <text x="56" y="208" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">4 · BARRIER</text>
+      <text x="56" y="220" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">YOU sign — agent must stop</text>
+      <path d="M200 228 L200 238" stroke="#F3B64C" stroke-width="1.2" opacity=".6"/><polygon points="196,234 200,238 204,234" fill="#F3B64C" opacity=".6"/>
+      <rect x="40" y="238" width="320" height="36" rx="8" fill="#111720" stroke="#73E2C3"/>
+      <text x="56" y="254" fill="#F3B64C" font-family="Menlo,monospace" font-size="9">5 · GATE</text>
+      <text x="56" y="266" fill="#8D99A6" font-family="Inter,sans-serif" font-size="10">CHECK_CONSENSUS=OK</text>
+      </svg>
+    </div>
+    <div>
+      <div class="tablebox compact"><table><thead><tr><th>Command</th><th>Role</th></tr></thead><tbody><tr><td><span class="mono">cvg doctor</span></td><td>≥2 engines · ≥1 cross-family</td></tr><tr><td><span class="mono">cvg review --adversary E</span></td><td>Dispatch headless attack</td></tr><tr><td><span class="mono">--timeout 900</span></td><td>Raise wall-clock for fat trees</td></tr><tr><td><span class="mono">cvg review --check</span></td><td>Provenance re-hash + dispositions</td></tr></tbody></table></div>
+      <div class="callout mt"><p>Why here. <span>Signing off before a different model tries to break the plan is signing off on an unexamined mandate. The machine would faithfully build the flaw.</span></p></div>
+    </div>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">22 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="23" id="s23">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 4 · Ops</div></div>
+
+  <p class="eyebrow">Pass 4 · procedures &amp; latency</p>
+  <h2>Attack → dispose → sign · when review times out</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>ATTACK</strong><p>Playbook + plans → headless adversary. Default-to-refuted. Emits stamped objection log — never edits plans. Provenance (family + input hashes) stamped by the referee.</p></div></div><div class="step"><div class="step-body"><strong>GROUND</strong><p>Where plans contradict tech-spec or ADRs. Cite both sides. No hand-waving.</p></div></div><div class="step"><div class="step-body"><strong>SHARPEN</strong><p>Every objection: FIX (revise plan in place) or ACCEPT (risk + named owner + reason). Empirical fights → throwaway prototype as evidence.</p></div></div><div class="step"><div class="step-body"><strong>BARRIER</strong><p>Present sharpened plans + dispositions. You sign explicitly. Agent must not start Pass 5 unsigned.</p></div></div><div class="step"><div class="step-body"><strong>Timeout ops</strong><p>Default 300s is often short for 11 files. Use <span class="mono">CVG_TIMEOUT_SECS=900</span> or <span class="mono">--timeout 900</span>. Thin tree (steel-thread first). Avoid multi-adversary while debugging latency. Never use same-family Claude-on-Claude as a real barrier.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">23 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="24" id="s24">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 5 · Tasking</div></div>
+
+  <p class="eyebrow">Pass 5 · cornerstone · task-spec</p>
+  <h2>Tasking — evals first, then seal</h2>
+  <p class="lead">Atomic, vendor-neutral, <strong>self-verifying</strong> units. No eval → not a task yet. After stamp, editing an eval breaks the HMAC seal.</p>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">PRE gate</div><h3>tasks gate --stamp</h3><p>Certifies the spec · <span class="mono">VERDICT: DELEGATE</span> · <span class="mono">TIER=1</span> · HMAC over eval bodies</p></article><article class="card"><div class="label">POST gate</div><h3>tasks accept</h3><p>Certifies the work after execution · seal recheck · blast radius</p></article><article class="card mint-edge"><div class="label">Frontier</div><h3>cvg ready</h3><p>status ready AND all depends_on done — never dispatch past the frontier</p></article></div>
+  <div class="tablebox compact"><table><thead><tr><th>Effort</th><th>Role</th><th>Rule</th></tr></thead><tbody><tr><td>XS · S · M · L</td><td>Executable leaves</td><td>Path budgets ≤1 / ≤2 / ≤3 / ≤5</td></tr><tr><td>XL · XXL</td><td>Decomposition nodes</td><td>Must declare children: — never dispatched</td></tr><tr><td>L leaves</td><td>execution_backend: glm</td><td>Sizing engine absorbs whole range</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">24 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="25" id="s25">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 5 · Procedure</div></div>
+
+  <p class="eyebrow">Pass 5 · per leg / unit</p>
+  <h2>Author → validate → stamp → lint</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Scaffold</strong><p><span class="mono">cvg tasks new &lt;slug&gt; &lt;effort&gt;</span> — honest sizing. XL/XXL must declare children.</p></div></div><div class="step"><div class="step-body"><strong>Evals first</strong><p>Runnable bash asserting outcomes (state, files, query results) — not “the script ran.” Then goal, touches_paths, budgets, blast radius.</p></div></div><div class="step"><div class="step-body"><strong>Holdout</strong><p>Judge-only criteria under <span class="mono">## Holdout</span> — excluded from worker brief; reserved for tier-2 verify.</p></div></div><div class="step"><div class="step-body"><strong>Validate + stamp</strong><p><span class="mono">cvg tasks validate</span> then you authorize <span class="mono">cvg tasks gate --stamp</span>.</p></div></div><div class="step"><div class="step-body"><strong>Lint backlog</strong><p><span class="mono">cvg lint</span> — cycles, write-surface overlaps. Optional <span class="mono">cvg tasks dod</span> for behavior↔eval matrix.</p></div></div></div>
+  <div class="callout mt"><p>Owner stamp policy. <span>You authorize seals. After stamp: never edit evals without re-gate. Silent goalpost moves break every downstream check.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">25 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="26" id="s26">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 6 · Register</div></div>
+
+  <p class="eyebrow">Pass 6 · opt-in · task-specs-to-issues</p>
+  <h2>Register — specs ⇄ tracker board</h2>
+  <p class="lead">One signed spec = one issue. <span class="mono">depends_on</span> → blocked-by. <strong>Repo specs remain canonical</strong>; the board is a shadow.</p>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Only signed_off: true</strong><p>Un-gated specs never hit the board. Skip and report the rest.</p></div></div><div class="step"><div class="step-body"><strong>Idempotent upsert</strong><p>Re-runs update; never duplicate. Issue-side marker is the key; <span class="mono">tracker_ref</span> is a convenience receipt only.</p></div></div><div class="step"><div class="step-body"><strong>Exit Check travels</strong><p>Issue body carries the close condition. Only a green eval may mark done.</p></div></div><div class="step"><div class="step-body"><strong>Gate</strong><p><span class="mono">cvg register --check</span> → 1:1 · DAG · no orphans · no un-gated leaks · <span class="mono">CHECK_REGISTER=OK</span></p></div></div><div class="step"><div class="step-body"><strong>Credentials</strong><p>Referee holds none. <span class="mono">cvg setup key</span> → OS keychain. <span class="mono">.cvg/</span> stores choices only.</p></div></div></div>
+  <div class="callout mt"><p>Skip freely. <span>Repo-local queue is valid. Loop reads either board or <span class="mono">cvg/tasks/</span>.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">26 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="27" id="s27">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 7 · Bind</div></div>
+
+  <p class="eyebrow">Pass 7 · task-to-runtime-contract</p>
+  <h2>Bind — freeze the execution contract</h2>
+  <p class="lead">One sealed leaf → enforceable profile. Fail closed if the host cannot honor a required control.</p>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">7A · Contract</div><h3>What RUNTIME enforces</h3><p><span class="mono">execution-profile.yaml</span> · path guards · capability envelope · adapter manifests</p></article><article class="card"><div class="label">7B · Brief</div><h3>What MODEL reads</h3><p><span class="mono">AGENTS.task.md</span> — identifiers only, not a novel of context</p></article><article class="card mint-edge"><div class="label">Fence</div><h3>.cvg/gate.yaml</h3><p>Repo write policy a Task-Spec cannot widen. <span class="mono">cvg gate --path</span></p></article></div>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Attest host</strong><p><span class="mono">cvg doctor runtime-contract</span> → OK | DEGRADED | FAIL — know what this machine can enforce</p></div></div><div class="step"><div class="step-body"><strong>Bind</strong><p><span class="mono">cvg bind --task &lt;spec&gt;</span> → <span class="mono">CHECK_RUNTIME_CONTRACT=PASS</span></p></div></div><div class="step"><div class="step-body"><strong>Recheck</strong><p><span class="mono">bind --check</span> is genuinely read-only — recomputes HMAC; never runs task evals</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">27 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="28" id="s28">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 7 · Envelope</div></div>
+
+  <p class="eyebrow">Pass 7 · capability envelope</p>
+  <h2>Authority that dies with the task</h2>
+  <div class="grid-3 mt"><article class="card gold-edge"><div class="label">Epoch</div><h3>task-id@spec-sha12</h3><p>Bound to one signed revision. Epoch change revokes authority.</p></article><article class="card"><div class="label">Scope</div><h3>fs.write = spec paths</h3><p>Never wider than Task-Spec. Fence cannot be widened by the task.</p></article><article class="card mint-edge"><div class="label">Closure</div><h3>settle · block · exhaust</h3><p>No lingering session permissions after the task ends.</p></article></div>
+  <div class="tablebox compact"><table><thead><tr><th>Assurance</th><th>Meaning</th></tr></thead><tbody><tr><td>prevent</td><td>Runtime blocks violation (sandbox / pre-tool hook)</td></tr><tr><td>detect</td><td>Portable postflight catches it after the fact</td></tr><tr><td>cannot honor</td><td>Gate fails closed unless explicitly waived in the open</td></tr></tbody></table></div>
+  <div class="callout mt"><p>Gold / Mint / Coral on the mark. <span>UI state folds: Gold=BOUND · Mint=SETTLED · Coral=RED. Master brand logo stays Forge Gold.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">28 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="29" id="s29">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 8 · The Loop</div></div>
+
+  <p class="eyebrow">Pass 8 · task-loop</p>
+  <h2>The Loop — attempt → verify → settle</h2>
+  <p class="lead">Drive <strong>one</strong> assigned task to a named terminal state. This loop never picks work — you or CI pass <span class="mono">--issue</span>.</p>
+  <div class="diagram-wrap mt">
+<svg class="diagram diagram-md" viewBox="0 0 1100 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pass 8 loop">
+  <rect x="40" y="70" width="160" height="70" rx="12" fill="#17324a" stroke="#5b9bd5"/>
+  <text x="120" y="100" text-anchor="middle" fill="#e8f2fb" font-size="13" font-weight="600" font-family="Inter,sans-serif">BIND + READ</text>
+  <text x="120" y="120" text-anchor="middle" fill="#8D99A6" font-size="10" font-family="Menlo,monospace">profile · sealed spec</text>
+  <path d="M210 105 L240 105" stroke="#F3B64C" stroke-width="2"/><polygon points="240,101 252,105 240,109" fill="#F3B64C"/>
+  <rect x="260" y="70" width="160" height="70" rx="12" fill="#443614" stroke="#F3B64C"/>
+  <text x="340" y="100" text-anchor="middle" fill="#F5F2EA" font-size="13" font-weight="600" font-family="Inter,sans-serif">ATTEMPT</text>
+  <text x="340" y="120" text-anchor="middle" fill="#8D99A6" font-size="10" font-family="Menlo,monospace">fresh engine process</text>
+  <path d="M430 105 L460 105" stroke="#F3B64C" stroke-width="2"/><polygon points="460,101 472,105 460,109" fill="#F3B64C"/>
+  <rect x="480" y="70" width="160" height="70" rx="12" fill="#443614" stroke="#F3B64C"/>
+  <text x="560" y="100" text-anchor="middle" fill="#F5F2EA" font-size="13" font-weight="600" font-family="Inter,sans-serif">EVAL</text>
+  <text x="560" y="120" text-anchor="middle" fill="#8D99A6" font-size="10" font-family="Menlo,monospace">task's own evals</text>
+  <path d="M560 140 L560 165 L340 165 L340 140" stroke="#FF6B64" stroke-width="1.5" fill="none" stroke-dasharray="4 3"/>
+  <text x="450" y="182" text-anchor="middle" fill="#FF6B64" font-size="10" font-family="Menlo,monospace">RED + budget → retry</text>
+  <path d="M650 105 L680 105" stroke="#73E2C3" stroke-width="2"/><polygon points="680,101 692,105 680,109" fill="#73E2C3"/>
+  <rect x="700" y="40" width="180" height="55" rx="12" fill="#153c2c" stroke="#73E2C3"/>
+  <text x="790" y="65" text-anchor="middle" fill="#e7fff3" font-size="12" font-weight="600" font-family="Inter,sans-serif">SETTLED / LOCAL</text>
+  <text x="790" y="82" text-anchor="middle" fill="#8D99A6" font-size="10" font-family="Menlo,monospace">path guard · receipt last</text>
+  <rect x="700" y="115" width="180" height="55" rx="12" fill="#471f1d" stroke="#FF6B64"/>
+  <text x="790" y="140" text-anchor="middle" fill="#ffe9e6" font-size="12" font-weight="600" font-family="Inter,sans-serif">BLOCKED · STALLED</text>
+  <text x="790" y="157" text-anchor="middle" fill="#8D99A6" font-size="10" font-family="Menlo,monospace">EXHAUSTED · ERROR</text>
+  <path d="M640 90 L700 65" stroke="#73E2C3" stroke-width="1.2" opacity=".7"/>
+  <path d="M640 120 L700 140" stroke="#FF6B64" stroke-width="1.2" opacity=".7"/>
+</svg></div>
+  <div class="callout mt"><p>Four properties of a real loop. <span>Fresh process each attempt · three-axis budgets checked before the call · stagnation beats fixed count · exhaustion is a planned landing with HANDOFF.md.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">29 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="30" id="s30">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 8 · Terminal states</div></div>
+
+  <p class="eyebrow">Pass 8 · TASK_LOOP=</p>
+  <h2>An error is never a success</h2>
+  <div class="tablebox compact"><table><thead><tr><th>State</th><th>Exit 0?</th><th>Meaning · your action</th></tr></thead><tbody><tr><td><span class="mono">SETTLED</span></td><td>yes</td><td>Green + PR — review &amp; merge</td></tr><tr><td><span class="mono">LOCAL_SETTLED</span></td><td>yes</td><td>Green local commit (external_writes deny) — correct, not failure</td></tr><tr><td><span class="mono">NO_OP</span></td><td>yes</td><td>Already green on arrival</td></tr><tr><td><span class="mono">BLOCKED</span></td><td>no</td><td>Human / missing upstream — read blocked report</td></tr><tr><td><span class="mono">STALLED</span></td><td>no</td><td>Same failure N times — stop burning money; fix cause</td></tr><tr><td><span class="mono">EXHAUSTED</span></td><td>no</td><td>Budget hit · HANDOFF.md · <span class="mono">--resume</span></td></tr><tr><td><span class="mono">CANCELLED</span></td><td>no</td><td><span class="mono">cvg/loop/&lt;id&gt;/STOP</span> honored</td></tr><tr><td><span class="mono">ERROR</span></td><td>no</td><td>Loop unsafe — investigate environment</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">30 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="31" id="s31">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Pass 8 · Settlement</div></div>
+
+  <p class="eyebrow">Pass 8 · settlement &amp; verify</p>
+  <h2>Scoped, ordered, policy-governed</h2>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Stage only authorized paths</strong><p>From capability envelope <span class="mono">fs.write</span> — never <span class="mono">git add -A</span> (untracked files would slip past diff guards).</p></div></div><div class="step"><div class="step-body"><strong>External writes are separate</strong><p>Default deny → LOCAL_SETTLED. Push/PR require policy or <span class="mono">--allow-external-writes</span>. Commit, push, tracker, PR are four effects.</p></div></div><div class="step"><div class="step-body"><strong>Receipt last</strong><p>A pass receipt never attests a settlement that didn’t happen.</p></div></div><div class="step"><div class="step-body"><strong>Optional tier-2</strong><p><span class="mono">cvg verify --task … --judge &lt;other-family&gt;</span> · holdout worker never saw · <span class="mono">CHECK_VERIFY=UPHELD|REFUTED|UNAVAILABLE</span></p></div></div><div class="step"><div class="step-body"><strong>Accept + next</strong><p><span class="mono">cvg tasks accept</span> · then <span class="mono">cvg ready</span> for next unblocked leaf</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">31 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="32" id="s32">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Worked example</div></div>
+
+  <p class="eyebrow">04 · FULL descent dress rehearsal</p>
+  <h2>Storm-alerts feed · end to end</h2>
+  <p class="lead">One concrete product idea through every pass — files, tokens, and your moves.</p>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Day 0 · Setup</strong><p><span class="mono">cvg init · setup signing · setup</span> → READY. <span class="mono">cvg lane "customer storm-alerts feed"</span> → FULL. <span class="mono">cvg next --lane FULL</span> → NEXT_PASS=0.</p></div></div><div class="step"><div class="step-body"><strong>Design 0–4</strong><p>BRD → tech-spec → ADRs → swimlanes (ingest · deliver · steel-thread) → Codex attack → triage objections → <strong>you sign barrier</strong>.</p></div></div><div class="step"><div class="step-body"><strong>Build 5–8</strong><p>Seal steel-thread task first (evals first) · optional Linear register · bind · loop until <span class="mono">TASK_LOOP=SETTLED</span>.</p></div></div><div class="step"><div class="step-body"><strong>Between tasks</strong><p><span class="mono">cvg ready</span> → next unblocked leaf → bind → loop until frontier empty.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">32 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="33" id="s33">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Worked example · board</div></div>
+
+  <p class="eyebrow">04 · evidence board at end</p>
+  <h2>What green looks like</h2>
+  <div class="tablebox compact"><table><thead><tr><th>Pass</th><th>Evidence on disk</th><th>Token</th></tr></thead><tbody><tr><td>0</td><td>cvg/docs/brd/storm-alerts-feed.md</td><td>CHECK_BRD=PASS</td></tr><tr><td>1</td><td>cvg/docs/tech-spec/…</td><td>CHECK_TECH_SPEC=PASS</td></tr><tr><td>2</td><td>cvg/docs/adrs/* + CONTEXT.md</td><td>CHECK_ADR=OK</td></tr><tr><td>3–4</td><td>swimlanes/** + .consensus/</td><td>CHECK_PLAN + CHECK_CONSENSUS</td></tr><tr><td>5</td><td>cvg/tasks/T-*.md sealed</td><td>TIER=1</td></tr><tr><td>7</td><td>cvg/execution/&lt;id&gt;/</td><td>CHECK_RUNTIME_CONTRACT=PASS</td></tr><tr><td>8</td><td>PR + receipts/</td><td>TASK_LOOP=SETTLED</td></tr></tbody></table></div>
+  <div class="callout mt"><p>Steering phrases. <span>“FULL lane. cvg next.” · “I’ll sign when draft is green.” · “No build verbs in ADRs.” · “Dispatch Codex; I sign.” · “Evals first; stamp when I say.” · “Report the token only.”</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">33 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="34" id="s34">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Token literacy</div></div>
+
+  <p class="eyebrow">05 · Greppable truth</p>
+  <h2>Token glossary</h2>
+  <div class="tablebox compact"><table><thead><tr><th>Token</th><th>Means</th></tr></thead><tbody><tr><td>CHECK_BRD=PASS</td><td>Brief handoff-ready</td></tr><tr><td>CHECK_TECH_SPEC=PASS</td><td>Spec handoff-ready</td></tr><tr><td>CHECK_ADR=OK</td><td>Terrain recorded</td></tr><tr><td>CHECK_PLAN=OK</td><td>Swimlane tree sound (machine subset)</td></tr><tr><td>CHECK_CONSENSUS=OK</td><td>Barrier machine-half green</td></tr><tr><td>TIER=1 / DELEGATE</td><td>Spec sealed</td></tr><tr><td>CHECK_REGISTER=OK</td><td>Board mirrors backlog</td></tr><tr><td>CHECK_RUNTIME_CONTRACT=PASS</td><td>Bound to host</td></tr><tr><td>TASK_LOOP=SETTLED</td><td>Shipped through outward legs</td></tr><tr><td>NEXT_PASS=DONE</td><td>Descent complete for that lane</td></tr><tr><td>CHECK_LESSON=PASS</td><td>Lesson structurally teachable</td></tr><tr><td>CHECK_VERIFY=UPHELD|REFUTED</td><td>Tier-2 independent judge</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">34 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="35" id="s35">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Authority</div></div>
+
+  <p class="eyebrow">05 · Your authority</p>
+  <h2>What only you must do</h2>
+  <div class="tablebox compact"><table><thead><tr><th>Pass</th><th>You must personally…</th></tr></thead><tbody><tr><td>0</td><td>Answer grill · canonical on BRD · or no-go</td></tr><tr><td>1</td><td>Close blockers · canonical on tech-spec</td></tr><tr><td>2</td><td>Accept terrain facts · refuse design-as-ADR</td></tr><tr><td>3</td><td>Approve seams / steel thread / owners</td></tr><tr><td>4</td><td><strong>Resolve objections · sign the barrier</strong></td></tr><tr><td>5</td><td>Authorize stamp · place holdouts</td></tr><tr><td>6</td><td>Connect tracker (if used) · verify board truth</td></tr><tr><td>7</td><td>Host readiness · fence / waiver honesty</td></tr><tr><td>8</td><td>Assign issue · interpret terminal states · accept / merge</td></tr></tbody></table></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">35 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="36" id="s36">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Day-to-day</div></div>
+
+  <p class="eyebrow">05 · Operating model</p>
+  <h2>Any work day · four control surfaces</h2>
+  <div class="grid-4 mt"><article class="card gold-edge"><div class="label">LANE</div><h3>How much ceremony?</h3><p><span class="mono">cvg lane</span> — FAST / NORMAL / FULL with hard floors</p></article><article class="card"><div class="label">NEXT</div><h3>Where am I?</h3><p><span class="mono">cvg next</span> — evidence board + prompt + gate</p></article><article class="card"><div class="label">GATE</div><h3>Is this pass true?</h3><p><span class="mono">cvg capture|intent|structure|…</span></p></article><article class="card mint-edge"><div class="label">TOKEN</div><h3>Can I trust it?</h3><p>One greppable line. Agents and owners read the same truth.</p></article></div>
+  <div class="steps"><div class="step"><div class="step-body"><strong>Start session</strong><p><span class="mono">cvg setup</span> healthy → <span class="mono">cvg lane</span> → <span class="mono">cvg next --lane …</span></p></div></div><div class="step"><div class="step-body"><strong>During pass</strong><p>Agent follows pass-prompt. You answer decisions only. Gate token green before moving on.</p></div></div><div class="step"><div class="step-body"><strong>Build half</strong><p><span class="mono">cvg ready</span> → bind → loop. Never edit sealed evals to force green.</p></div></div></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">36 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-page="37" id="s37">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+    <div class="chrome-top"><img class="mark" src="converge-lockup-color-light.svg" alt="Converge"><div class="meta">Remember</div></div>
+
+  <p class="eyebrow">06 · Closing</p>
+  <h2>You are converged when<br><span class="gold">the eval passes</span><br>— not when you feel done.</h2>
+  <div class="grid-3 mt"><article class="card"><div class="label">Design</div><h3>Precision first</h3><p>Cheap kills early. Soft intent poisons every later pass.</p></article><article class="card gold-edge"><div class="label">Barrier</div><h3>Your signature</h3><p>Cross-family attack + human sign-off before machines build.</p></article><article class="card mint-edge"><div class="label">Build</div><h3>Named states only</h3><p>SETTLED is success. EXHAUSTED is a landing, not a win.</p></article></div>
+  <div class="callout mt"><p>Chat is the UX. <span>Disk + tokens are the truth.</span></p></div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Done is proven.</div>
+      <div class="page-num">37 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide cover" data-page="38" id="s38">
+  <div class="page-bg" aria-hidden="true"><div class="grid"></div><div class="glow glow-gold"></div></div>
+  <div class="inner">
+
+
+  <img class="cover-icon" src="converge-icon-color-light.svg" width="84" height="84" alt="">
+  <p class="eyebrow">End of handbook</p>
+  <h1 style="font-size:clamp(40px,6vw,72px)">Done is<br><em style="color:var(--gold);font-style:normal">proven.</em></h1>
+  <p class="tagline" style="margin-top:22px;font-size:17px;color:var(--steel)">Converge · Owner's handbook · complete edition v2</p>
+  <p class="proof-line" style="margin-top:10px">Compile intent into shipped software.</p>
+  <div class="cover-meta" style="margin-top:36px">
+    <span><b>CLI</b> · cvg</span>
+    <span><b>Skills</b> · 12</span>
+    <span><b>Passes</b> · 0–8</span>
+    <span><b>Identity</b> · Settlement Fold</span>
+  </div>
+
+    <div class="chrome-bottom">
+      <div class="proof">Settlement Fold · brand-kit-v1</div>
+      <div class="page-num">38 <span>/ 38</span></div>
+    </div>
+  </div>
+</section>
+</div>
+</body>
+</html>

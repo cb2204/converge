@@ -1,8 +1,14 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  askCapabilitiesDocument,
+  runAskOnce,
+} from "./ask-http.mjs";
+import { publicAskError } from "./ask-contract.mjs";
 import { publicError } from "./security.mjs";
 
+const MAX_ASK_BODY_BYTES = 64 * 1024;
 const CONTENT_TYPES = Object.freeze({
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -27,6 +33,7 @@ function setSecurityHeaders(response) {
 }
 
 function sendJson(response, statusCode, document) {
+  if (response.destroyed || response.writableEnded) return;
   const body = JSON.stringify(document);
   response.writeHead(statusCode, {
     "Cache-Control": "no-store",
@@ -34,6 +41,47 @@ function sendJson(response, statusCode, document) {
     "Content-Length": Buffer.byteLength(body),
   });
   response.end(body);
+}
+
+function isJsonContentType(value) {
+  if (typeof value !== "string") return false;
+  return value.split(";", 1)[0].trim().toLowerCase() === "application/json";
+}
+
+async function readJsonBody(request, maxBytes = MAX_ASK_BODY_BYTES) {
+  let size = 0;
+  const chunks = [];
+  for await (const chunk of request) {
+    size += chunk.byteLength;
+    if (size > maxBytes) {
+      const error = new Error("request body is too large");
+      error.code = "ASK_BODY_TOO_LARGE";
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  if (size === 0) {
+    const error = new Error("request body is required");
+    error.code = "ASK_BODY_INVALID";
+    throw error;
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks, size).toString("utf8"));
+  } catch (cause) {
+    const error = new Error("request body is not valid JSON", { cause });
+    error.code = "ASK_BODY_INVALID";
+    throw error;
+  }
+}
+
+function isAllowedAskOrigin(request) {
+  const origin = request.headers.origin;
+  const host = request.headers.host;
+  return (
+    typeof origin === "string" &&
+    typeof host === "string" &&
+    origin === `http://${host}`
+  );
 }
 
 export function isAllowedHostHeader(value) {
@@ -163,6 +211,8 @@ export function createRequestHandler({
   config,
   service,
   artifactStore,
+  askService = null,
+  askRequestToken = "",
   pollMs = 5_000,
 }) {
   return (request, response) => {
@@ -184,9 +234,14 @@ export function createRequestHandler({
       const url = new URL(request.url ?? "/", "http://localhost");
       const isGet = request.method === "GET";
       const isHead = request.method === "HEAD";
+      const isAskPost =
+        url.pathname === "/api/ask" && request.method === "POST";
 
-      if (url.pathname.startsWith("/api/") && !isGet) {
-        response.setHeader("Allow", "GET");
+      if (url.pathname.startsWith("/api/") && !isGet && !isAskPost) {
+        response.setHeader(
+          "Allow",
+          url.pathname === "/api/ask" ? "GET, POST" : "GET",
+        );
         sendJson(
           response,
           405,
@@ -195,6 +250,120 @@ export function createRequestHandler({
             "Converge Cockpit exposes read-only GET endpoints.",
           ),
         );
+        return;
+      }
+
+      if (url.pathname === "/api/ask/agents") {
+        if (!askService) {
+          sendJson(
+            response,
+            503,
+            publicError(
+              "ASK_UNAVAILABLE",
+              "Ask Converge is not configured for this Cockpit process.",
+            ),
+          );
+          return;
+        }
+        try {
+          sendJson(
+            response,
+            200,
+            await askCapabilitiesDocument(askService, askRequestToken),
+          );
+        } catch {
+          sendJson(
+            response,
+            503,
+            publicError(
+              "ASK_UNAVAILABLE",
+              "The local ACP agent registry is unavailable.",
+            ),
+          );
+        }
+        return;
+      }
+
+      if (isAskPost) {
+        if (!askService) {
+          sendJson(
+            response,
+            503,
+            publicError(
+              "ASK_UNAVAILABLE",
+              "Ask Converge is not configured for this Cockpit process.",
+            ),
+          );
+          return;
+        }
+        if (
+          !isAllowedAskOrigin(request) ||
+          request.headers["x-converge-request"] !== "ask-v1" ||
+          request.headers["x-converge-csrf"] !== askRequestToken
+        ) {
+          sendJson(
+            response,
+            403,
+            publicError(
+              "ASK_REQUEST_NOT_ALLOWED",
+              "Ask requests must originate from this local Cockpit session.",
+            ),
+          );
+          return;
+        }
+        if (!isJsonContentType(request.headers["content-type"])) {
+          sendJson(
+            response,
+            415,
+            publicError(
+              "ASK_CONTENT_TYPE_REQUIRED",
+              "Ask requests require an application/json body.",
+            ),
+          );
+          return;
+        }
+        const askAbort = new AbortController();
+        const abortAsk = () => askAbort.abort();
+        const abortIfDisconnected = () => {
+          if (!response.writableEnded) abortAsk();
+        };
+        request.once("aborted", abortAsk);
+        response.once("close", abortIfDisconnected);
+        try {
+          const body = await readJsonBody(request);
+          sendJson(
+            response,
+            200,
+            await runAskOnce(askService, body, { signal: askAbort.signal }),
+          );
+        } catch (error) {
+          if (response.destroyed) return;
+          if (
+            error?.code === "ASK_BODY_TOO_LARGE" ||
+            error?.code === "ASK_BODY_INVALID"
+          ) {
+            sendJson(
+              response,
+              error.code === "ASK_BODY_TOO_LARGE" ? 413 : 400,
+              publicError(
+                error.code,
+                error.code === "ASK_BODY_TOO_LARGE"
+                  ? "The Ask request body exceeds the local safety limit."
+                  : "The Ask request body is invalid.",
+              ),
+            );
+            return;
+          }
+          const publicFailure = publicAskError(error);
+          sendJson(
+            response,
+            publicFailure.statusCode,
+            publicFailure.document,
+          );
+        } finally {
+          request.off("aborted", abortAsk);
+          response.off("close", abortIfDisconnected);
+        }
         return;
       }
 
@@ -266,8 +435,32 @@ export function createRequestHandler({
           );
           return;
         }
+        let envelope;
         try {
-          const envelope = await service.getSnapshot();
+          envelope = await service.getSnapshot();
+        } catch {
+          sendJson(
+            response,
+            503,
+            publicError(
+              "SNAPSHOT_UNAVAILABLE",
+              "The read-only workspace snapshot is unavailable.",
+            ),
+          );
+          return;
+        }
+        if (envelope?.snapshot?.source !== "workspace") {
+          sendJson(
+            response,
+            503,
+            publicError(
+              "SNAPSHOT_UNAVAILABLE",
+              "The read-only workspace snapshot is unavailable.",
+            ),
+          );
+          return;
+        }
+        try {
           if (envelope.snapshot.snapshotId !== requestedSnapshotId) {
             const error = new Error("the requested snapshot is no longer current");
             error.code = "SNAPSHOT_STALE";
@@ -286,20 +479,30 @@ export function createRequestHandler({
           const stale =
             error?.code === "SNAPSHOT_STALE" ||
             error?.code === "EVIDENCE_STALE";
+          const tooLarge = error?.code === "ARTIFACT_TOO_LARGE";
+          const invalidPdf = error?.code === "PDF_PREVIEW_INVALID";
           sendJson(
             response,
-            stale ? 409 : notAllowed ? 403 : 404,
+            stale ? 409 : notAllowed ? 403 : tooLarge ? 413 : invalidPdf ? 422 : 404,
             publicError(
               stale
                 ? error.code
                 : notAllowed
                   ? "ARTIFACT_NOT_ALLOWED"
+                  : tooLarge
+                    ? "ARTIFACT_TOO_LARGE"
+                    : invalidPdf
+                      ? "PDF_PREVIEW_INVALID"
                   : "ARTIFACT_NOT_FOUND",
               stale
                 ? "The artifact no longer matches the captured workspace snapshot. Refresh before inspecting it."
                 : notAllowed
-                ? "The requested artifact is not in the workspace evidence allowlist."
-                : "The requested artifact is unavailable.",
+                  ? "The requested artifact is not in the workspace evidence allowlist."
+                  : tooLarge
+                    ? "The requested artifact exceeds the safe preview limit."
+                    : invalidPdf
+                      ? "The requested PDF cannot be converted into a safe text preview."
+                      : "The requested artifact is unavailable.",
             ),
           );
         }

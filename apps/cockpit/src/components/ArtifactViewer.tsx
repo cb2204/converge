@@ -1,17 +1,14 @@
 import {
   useEffect,
   useRef,
-  useState,
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { Code, WarningCircle, X } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import type {
-  ArtifactDocument,
-  ArtifactRef,
-  WorkspaceSnapshot,
-} from "../types";
+import type { ArtifactRef, WorkspaceSnapshot } from "../types";
+import { useArtifactDocument } from "../hooks/useArtifactDocument";
+import { DocumentRenderer } from "./DocumentRenderer";
 
 interface ArtifactViewerProps {
   snapshot: WorkspaceSnapshot;
@@ -19,82 +16,16 @@ interface ArtifactViewerProps {
   onClose: () => void;
 }
 
-type ViewerState =
-  | { status: "idle"; document: null; error: null }
-  | { status: "loading"; document: null; error: null }
-  | { status: "ready"; document: ArtifactDocument; error: null }
-  | { status: "error"; document: null; error: string };
-
 export function ArtifactViewer({
   snapshot,
   artifact,
   onClose,
 }: ArtifactViewerProps) {
   const reduceMotion = useReducedMotion();
-  const [state, setState] = useState<ViewerState>({
-    status: "idle",
-    document: null,
-    error: null,
-  });
+  const state = useArtifactDocument(snapshot, artifact);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    if (!artifact) {
-      setState({ status: "idle", document: null, error: null });
-      return;
-    }
-
-    const controller = new AbortController();
-    const load = async () => {
-      setState({ status: "loading", document: null, error: null });
-      try {
-        const query = new URLSearchParams({
-          path: artifact.path,
-          snapshotId: snapshot.snapshotId,
-          sha256: artifact.sha256,
-        });
-        const response = await fetch(`/api/artifact?${query.toString()}`, {
-          method: "GET",
-          signal: controller.signal,
-          headers: { Accept: "application/json" },
-        });
-        if (!response.ok) {
-          throw new Error(
-            response.status === 409
-              ? "This proof is stale. Refresh the workspace before opening it."
-              : `Artifact is unavailable (${response.status})`,
-          );
-        }
-        const candidate = (await response.json()) as Partial<ArtifactDocument>;
-        if (
-          candidate.path !== artifact.path ||
-          candidate.snapshotId !== snapshot.snapshotId ||
-          candidate.sha256 !== artifact.sha256 ||
-          typeof candidate.label !== "string" ||
-          typeof candidate.kind !== "string" ||
-          typeof candidate.content !== "string" ||
-          typeof candidate.truncated !== "boolean"
-        ) {
-          throw new Error("Artifact no longer matches the selected proof.");
-        }
-        setState({
-          status: "ready",
-          document: candidate as ArtifactDocument,
-          error: null,
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setState({
-          status: "error",
-          document: null,
-          error: error instanceof Error ? error.message : "Artifact is unavailable.",
-        });
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [artifact, snapshot.snapshotId]);
+  const replayFixture = snapshot.source === "fixture";
 
   useEffect(() => {
     if (!artifact) return;
@@ -150,6 +81,8 @@ export function ArtifactViewer({
             role="dialog"
             aria-modal="true"
             aria-labelledby="artifact-viewer-title"
+            aria-describedby="artifact-proof-summary"
+            aria-busy={state.status === "loading"}
             onKeyDown={trapFocus}
             initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -174,18 +107,31 @@ export function ArtifactViewer({
               </button>
             </header>
 
-            <div className="artifact-proof">
-              <span>snapshot {snapshot.snapshotId.slice(0, 12)}</span>
-              <span>sha256 {artifact.sha256.slice(0, 12)}</span>
-              <span>{artifact.provenance.truthClass}</span>
+            <div className="artifact-proof" id="artifact-proof-summary">
+              {replayFixture ? (
+                <>
+                  <span>replay fixture</span>
+                  <span>example digest {artifact.sha256.slice(0, 12)}</span>
+                  <span>not live evidence</span>
+                </>
+              ) : (
+                <>
+                  <span>snapshot {snapshot.snapshotId.slice(0, 12)}</span>
+                  <span>verified source sha256 {artifact.sha256.slice(0, 12)}</span>
+                  <span>{artifact.provenance.truthClass}</span>
+                </>
+              )}
             </div>
 
             {state.status === "loading" ? (
-              <div className="artifact-loading" aria-label="Loading artifact">
-                <span />
-                <span />
-                <span />
-                <span />
+              <div className="artifact-loading" role="status">
+                <p className="visually-hidden">Loading verified artifact preview</p>
+                <div aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
               </div>
             ) : null}
 
@@ -193,19 +139,34 @@ export function ArtifactViewer({
               <div className="artifact-error" role="alert">
                 <WarningCircle size={22} weight="fill" aria-hidden="true" />
                 <div>
-                  <strong>Proof unavailable</strong>
+                  <strong>
+                    {replayFixture ? "Live workspace required" : "Preview unavailable"}
+                  </strong>
                   <p>{state.error}</p>
                 </div>
               </div>
             ) : null}
 
             {state.status === "ready" ? (
-              <>
-                <pre>{state.document.content}</pre>
+              <div className="artifact-document-shell">
+                <div className="artifact-preview-flags" aria-label="Preview safeguards">
+                  <span>{state.document.format.replace("-", " ")}</span>
+                  {state.document.redacted ? (
+                    <span className="artifact-preview-flags__safety">credentials redacted</span>
+                  ) : null}
+                  {state.document.truncated ? (
+                    <span className="artifact-preview-flags__safety">preview truncated</span>
+                  ) : null}
+                  <span>{state.document.sourceBytes.toLocaleString()} source bytes</span>
+                </div>
+                <DocumentRenderer document={state.document} />
                 {state.document.truncated ? (
-                  <small>Preview truncated by the read-only local bridge.</small>
+                  <p className="document-truncation-note" role="note">
+                    This safety preview is partial. The source SHA-256 above still
+                    identifies the complete artifact captured by the snapshot.
+                  </p>
                 ) : null}
-              </>
+              </div>
             ) : null}
           </motion.div>
         </motion.div>

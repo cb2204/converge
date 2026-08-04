@@ -10,7 +10,7 @@ import {
   makeStaleEnvelope,
 } from "../test/scenarios";
 
-describe("WorkspaceSnapshot 2.0 client boundary", () => {
+describe("WorkspaceSnapshot 3.0 client boundary", () => {
   it("accepts a complete semantic snapshot with nullable event and attempt fields", () => {
     const snapshot = makeScenarioSnapshot();
 
@@ -75,6 +75,53 @@ describe("WorkspaceSnapshot 2.0 client boundary", () => {
       (value: Record<string, unknown>) => {
         const issues = value.issues as Array<Record<string, unknown>>;
         issues[0].entity = { kind: "task", id: "missing-task" };
+      },
+    ],
+    [
+      "missing decomposition edge",
+      (value: Record<string, unknown>) => {
+        const decomposition = value.decomposition as Record<string, unknown>;
+        decomposition.edges = [];
+      },
+    ],
+    [
+      "inconsistent swimlane membership",
+      (value: Record<string, unknown>) => {
+        const decomposition = value.decomposition as {
+          swimlanes: Array<Record<string, unknown>>;
+        };
+        decomposition.swimlanes[0].legIds = [];
+      },
+    ],
+    [
+      "cyclic decomposition dependency",
+      (value: Record<string, unknown>) => {
+        const decomposition = value.decomposition as {
+          legs: Array<{
+            id: string;
+            dependsOn: string[];
+            artifactIds: string[];
+          }>;
+          edges: Array<Record<string, unknown>>;
+        };
+        const leg = decomposition.legs[0];
+        leg.dependsOn.push(leg.id);
+        decomposition.edges.push({
+          id: "decompedge_ffffffffffffffffffff",
+          source: leg.id,
+          target: leg.id,
+          kind: "depends_on",
+          artifactIds: leg.artifactIds,
+        });
+      },
+    ],
+    [
+      "dangling artifact reference",
+      (value: Record<string, unknown>) => {
+        const method = value.method as {
+          passes: Array<Record<string, unknown>>;
+        };
+        method.passes[0].artifactIds = ["artifact_ffffffffffffffffffff"];
       },
     ],
   ])("rejects a snapshot with invalid %s", (_label, mutate) => {

@@ -126,7 +126,7 @@ function liveEnvelope(
 ): SnapshotEnvelope {
   const snapshot = makeScenarioSnapshot((candidate) => {
     candidate.source = "workspace";
-    candidate.snapshotId = "ws2_10000000000000000000000000000001";
+    candidate.snapshotId = "ws3_10000000000000000000000000000001";
     mutate?.(candidate);
   });
   return makeScenarioEnvelope(snapshot);
@@ -151,16 +151,16 @@ afterEach(() => {
 });
 
 describe("Cockpit application state boundary", () => {
-  it("loads a WorkspaceSnapshot 2.0 envelope using GET and labels it live", async () => {
+  it("loads a WorkspaceSnapshot 3.0 envelope using GET and labels it live", async () => {
     const fetchMock = vi.fn().mockImplementation(() => jsonResponse(liveEnvelope()));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<App />);
 
     expect(await screen.findByText("Live workspace")).toBeTruthy();
-    expect(screen.getByLabelText("Mock journey surface")).toBeTruthy();
-    expect(screen.getAllByText("cvg review --check").length).toBeGreaterThan(0);
-    expect(screen.getByText("Pass 4 / Consensus")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeTruthy();
+    expect(screen.queryByText("CLI execution")).toBeNull();
+    expect(screen.getAllByText(/Pass 4/).length).toBeGreaterThan(0);
     expect(EventSourceStub.instances[0]?.url).toBe("/api/events");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/snapshot",
@@ -217,7 +217,7 @@ describe("Cockpit application state boundary", () => {
     ]);
 
     const next = liveEnvelope((snapshot) => {
-      snapshot.snapshotId = "ws2_20000000000000000000000000000002";
+      snapshot.snapshotId = "ws3_20000000000000000000000000000002";
       snapshot.observedAt = "2026-08-03T20:02:00.000Z";
     });
     EventSourceStub.instances[0].emit("snapshot", next);
@@ -237,7 +237,7 @@ describe("Cockpit application state boundary", () => {
   it("keeps last-good data visible and marks stale transport explicitly", async () => {
     const stale = makeStaleEnvelope();
     stale.snapshot.source = "workspace";
-    stale.snapshot.snapshotId = "ws2_30000000000000000000000000000003";
+    stale.snapshot.snapshotId = "ws3_30000000000000000000000000000003";
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => jsonResponse(stale)));
 
     render(<App />);

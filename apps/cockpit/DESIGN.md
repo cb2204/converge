@@ -7,10 +7,15 @@ turning the browser into a second execution authority.
 ## Product posture
 
 - The repository and `cvg` CLI remain canonical.
-- The browser fetches WorkspaceSnapshot 2.0 and renders only what the snapshot
-  can prove.
-- The persistent command dock can copy an authorized command. It cannot execute
-  or mutate anything.
+- The deterministic observation surfaces fetch WorkspaceSnapshot 3.0 and render
+  only what the snapshot can prove. Ask is explicitly separated as agent
+  interpretation.
+- The command bar exposes a compact method-frontier summary. Exact command and
+  gate context live inside the relevant pass blade; Cockpit cannot execute or
+  mutate anything.
+- Ask sends bounded snapshot context through ACP only when a context-only
+  provider mode is verified. Its prose remains visually and semantically
+  separate from proof.
 - Empty, unavailable, loading, stale, blocked, and error states are visually and
   textually distinct.
 - Panel preferences are the only client state persisted in localStorage.
@@ -21,13 +26,15 @@ The interface fills `100dvh` with no floating outer frame:
 
 - A 56 px command bar identifies the workspace, Git state, transport freshness,
   and panel controls.
-- A left navigation rail is 56 px collapsed and 256 px expanded. It links to
-  Journey, Work, Runs, Proof, and Health.
+- A left navigation rail is 56 px collapsed and 256 px expanded. It groups Ask
+  under Explain and Overview, Journey, Decompose, Work, Runs, Docs, Activity,
+  and Health under Observe.
 - The center is a full-bleed operational surface.
-- A right inspector is 48 px collapsed and 376 px expanded. Its Details, Proof,
-  and History tabs keep typed entity context in one place.
-- A 56 px command dock exposes authorization, mutation class, dry-run support,
-  rationale, and exact copy-only CLI text.
+- A 430 px inspector uses readable Overview, Evidence, and Activity tabs to
+  keep typed entity context in one place. Journey places an open pass blade to
+  the left of the graph so the method remains visible as one connected view.
+- There is no persistent bottom execution dock. The released height belongs to
+  project understanding, documents, and graph navigation.
 
 ## Responsive behavior
 
@@ -38,9 +45,9 @@ The interface fills `100dvh` with no floating outer frame:
   as an overlay.
 - At 1023 px and narrower, navigation and inspector are mutually exclusive
   drawers.
-- Below 768 px, Journey and Work use semantic lists instead of React Flow, the
-  inspector becomes a full-width sheet, and the five primary views move to a
-  bottom navigation bar.
+- Below 768 px, Journey, Decompose, and Work use semantic lists instead of
+  React Flow, the inspector becomes a full-width sheet, and all nine views move
+  to a horizontally scrollable bottom navigation bar.
 - Saved desktop panel preferences are restored where docked panels fit. Smaller
   viewports always start unobstructed.
 
@@ -58,12 +65,42 @@ The interface fills `100dvh` with no floating outer frame:
 
 ## Surfaces
 
+### Ask
+
+Ask presents Codex and Claude as agent choices over ACP. Claude receives a
+bounded snapshot summary, selected entity, and explicitly selected artifact
+text in plan mode with built-in tools and settings sources disabled. It launches
+outside the workspace, client MCP is empty, and permission requests are
+rejected. Codex remains visible but blocked because the pinned adapter cannot
+suppress local read/search tools. The answer shows its interpretation boundary
+and is cleared if scope changes. The surface follows a familiar chat rhythm:
+quiet empty-state prompts, an engine switcher, context chip, scrolling turns,
+stop/new-chat controls, and a multiline composer. Cockpit keeps only a bounded
+visible transcript while each message runs in a fresh disposable ACP session.
+
+### Overview
+
+Overview is the project-at-a-glance landing surface. It composes the method
+frontier, current authorization, decomposition, work, documents, receipts,
+health, signals, and issues from the same snapshot without inventing rollups or
+historical trends.
+
 ### Journey
 
 Journey renders the nine Converge passes and their required, optional, and
 bypass lineage. Nodes can be dragged for local exploration. Pan, zoom, Fit, and
 Arrange never alter repository state. Center Selected preserves the current
 zoom and does not reset the viewport.
+
+### Decompose
+
+Decompose renders the CLI's typed seams, swimlanes, legs, and canonical
+`depends_on` edges. Focus is the default readable projection and gives the seam
+rationale, contracts, evolution boundary, and each leg's full responsibility,
+inputs, outputs, proof, yield, and re-verification rule room to wrap. Map remains
+an exploratory relationship view with expanded nodes; Arrange and local leg
+dragging never alter the repository. Read provides the same information as a
+semantic lane-and-leg sequence and is mandatory on narrow screens.
 
 ### Work
 
@@ -78,12 +115,23 @@ Runs groups durable attempts by task. RED, retry, resumed, and settled records
 remain separate. Null attempts and missing checkpoints are shown as unavailable,
 not inferred.
 
-### Proof
+### Docs
 
-Proof shows hash-bound artifacts and settlement receipts. Receipt integrity and
-freshness are separate fields. Artifact content is fetched by relative path,
-snapshot ID, and SHA-256 through a GET-only endpoint. The viewer rejects any
+Docs is a searchable master-detail reader for observed documents, hash-bound
+artifacts, and settlement receipts. Selecting a file immediately renders it in
+the same surface, with previous/next navigation and an optional full-screen
+reader. A digest is never presented as semantic correctness. Receipt integrity
+and freshness are separate fields. Artifact content is fetched by relative
+path, snapshot ID, and SHA-256 through a GET-only endpoint. Markdown is rendered
+without raw HTML or remote images. PDFs become bounded, text-only page previews;
+their visual layout and raw bytes remain omitted. The viewer rejects any
 response that does not match the requested proof tuple.
+
+### Activity
+
+Activity unifies current snapshot signals and typed issues into one readable
+feed. It is explicitly a bounded observation, not a durable audit history or an
+inferred event timeline.
 
 ### Health
 
@@ -92,17 +140,19 @@ component does not erase a blocking issue in another domain.
 
 ## Selection and truth
 
-Selection is always `{kind, id}`. The inspector resolves typed pass, task, run,
-receipt, health, signal, issue, and artifact entities. History includes only
-signals with an explicit matching entity reference. Labels and prose are never
-parsed to invent lineage or association.
+Selection is always `{kind, id}`. The inspector resolves typed pass, swimlane,
+leg, task, run, receipt, health, signal, issue, and artifact entities. Activity
+includes only signals with an explicit matching entity reference. The frontend
+never parses labels or prose to invent lineage. The CLI performs bounded,
+schema-aware extraction of decomposition Markdown and marks ambiguous,
+malformed, cyclic, or dangling structures unavailable.
 
 Transport state remains outside the semantic snapshot:
 
 - `loading` means the previous projection remains visible during refresh.
 - `stale` means a last-good snapshot is visible after a refresh failure.
 - `fixture` is labeled as replay data and never claimed as a live workspace.
-- malformed v2 snapshots are rejected at the client boundary.
+- malformed v3 snapshots are rejected at the client boundary.
 
 ## Motion and accessibility
 

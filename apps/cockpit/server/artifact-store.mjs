@@ -3,9 +3,20 @@ import { createReadStream } from "node:fs";
 import { lstat, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
-import { redactSensitiveText } from "./security.mjs";
+import { extractPdfText } from "./pdf-text.mjs";
+import { redactSensitiveTextWithReport } from "./security.mjs";
 
 const DEFAULT_MAX_BYTES = 256 * 1024;
+const DEFAULT_MAX_PDF_BYTES = 16 * 1024 * 1024;
+const DEFAULT_MAX_PDF_PAGES = 100;
+const DISALLOWED_TEXT_CONTROLS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+
+function artifactFormat(relativePath) {
+  const extension = path.posix.extname(relativePath).toLowerCase();
+  if (extension === ".md" || extension === ".markdown") return "markdown";
+  if (extension === ".pdf") return "pdf-text";
+  return "text";
+}
 
 function normalizeRequestedPath(requestedPath) {
   if (
@@ -30,10 +41,37 @@ function normalizeRequestedPath(requestedPath) {
   return normalized;
 }
 
+function decodeTextPreview(buffer, { truncated = false } = {}) {
+  const attempts = truncated ? [0, 1, 2, 3] : [0];
+  for (const trim of attempts) {
+    try {
+      const candidate = trim === 0 ? buffer : buffer.subarray(0, -trim);
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(candidate);
+      if (!DISALLOWED_TEXT_CONTROLS.test(text)) return text;
+      break;
+    } catch {
+      // A bounded preview can end inside one UTF-8 code point; try its shorter
+      // prefix only when the source itself was truncated.
+    }
+  }
+  const error = new Error("binary-looking artifacts are not exposed by the bridge");
+  error.code = "ARTIFACT_NOT_ALLOWED";
+  throw error;
+}
+
 export class ArtifactStore {
-  constructor({ projectRoot, maxBytes = DEFAULT_MAX_BYTES }) {
+  constructor({
+    projectRoot,
+    maxBytes = DEFAULT_MAX_BYTES,
+    maxPdfBytes = DEFAULT_MAX_PDF_BYTES,
+    maxPdfPages = DEFAULT_MAX_PDF_PAGES,
+    maxPdfTextBytes = maxBytes,
+  }) {
     this.projectRoot = projectRoot;
     this.maxBytes = maxBytes;
+    this.maxPdfBytes = maxPdfBytes;
+    this.maxPdfPages = maxPdfPages;
+    this.maxPdfTextBytes = maxPdfTextBytes;
     this.allowed = new Map();
     this.snapshotId = null;
     this.projectRealPath = null;
@@ -134,12 +172,22 @@ export class ArtifactStore {
       throw error;
     }
 
+    const format = artifactFormat(relativePath);
+    if (format === "pdf-text" && info.size > this.maxPdfBytes) {
+      const error = new Error("PDF artifact exceeds the safe preview limit");
+      error.code = "ARTIFACT_TOO_LARGE";
+      throw error;
+    }
+
     const digest = createHash("sha256");
     const previewChunks = [];
+    const sourceChunks = [];
     let previewBytes = 0;
     for await (const chunk of createReadStream(resolvedPath)) {
       digest.update(chunk);
-      if (previewBytes < this.maxBytes) {
+      if (format === "pdf-text") {
+        sourceChunks.push(chunk);
+      } else if (previewBytes < this.maxBytes) {
         const remaining = this.maxBytes - previewBytes;
         const previewChunk = chunk.subarray(0, remaining);
         previewChunks.push(previewChunk);
@@ -155,27 +203,46 @@ export class ArtifactStore {
       throw error;
     }
 
-    let content = Buffer.concat(previewChunks).toString("utf8");
-    if (content.includes("\0")) {
-      const error = new Error("binary artifacts are not exposed by the bridge");
-      error.code = "ARTIFACT_NOT_ALLOWED";
-      throw error;
-    }
-    content = redactSensitiveText(content);
-
-    return {
+    const common = {
       id: metadata.id,
       path: relativePath,
       label: metadata.label,
       kind: metadata.kind,
-      content,
-      truncated: info.size > this.maxBytes,
+      format,
+      sourceBytes: info.size,
       sha256: actualSha256,
       snapshotId,
       ...(metadata.entity ? { entity: metadata.entity } : {}),
       provenance: metadata.provenance,
     };
+
+    if (format === "pdf-text") {
+      const preview = await extractPdfText(
+        Buffer.concat(sourceChunks, info.size),
+        {
+          maxPages: this.maxPdfPages,
+          maxTextBytes: this.maxPdfTextBytes,
+        },
+      );
+      return {
+        ...common,
+        ...preview,
+      };
+    }
+
+    const previewBuffer = Buffer.concat(previewChunks);
+    const truncated = info.size > this.maxBytes;
+    const preview = redactSensitiveTextWithReport(
+      decodeTextPreview(previewBuffer, { truncated }),
+    );
+
+    return {
+      ...common,
+      content: preview.content,
+      truncated,
+      redacted: preview.redacted,
+    };
   }
 }
 
-export { normalizeRequestedPath };
+export { artifactFormat, decodeTextPreview, normalizeRequestedPath };

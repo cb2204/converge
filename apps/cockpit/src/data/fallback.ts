@@ -30,8 +30,8 @@ const observedAt = "2026-08-03T19:39:24Z";
  * not a claim about the currently selected workspace.
  */
 export const fallbackSnapshot: WorkspaceSnapshot = {
-  schemaVersion: "2.0",
-  snapshotId: "ws2_00000000000000000000000000000003",
+  schemaVersion: "3.0",
+  snapshotId: "ws3_00000000000000000000000000000003",
   observedAt,
   source: "fixture",
   project: {
@@ -238,6 +238,87 @@ export const fallbackSnapshot: WorkspaceSnapshot = {
       },
     ],
     artifactIds: [artifactId.review],
+  },
+  decomposition: {
+    availability: "available",
+    swimlanes: [
+      {
+        id: "swimlane-assurance",
+        label: "Swimlane · assurance",
+        purpose: "Keep financial meaning stable from modeled facts to decision-ready output.",
+        thread: true,
+        risk: "high",
+        owner: "Analytics engineering",
+        seam: {
+          rationale:
+            "The seam isolates recognition policy from the reporting surface so each side can evolve without silently changing financial meaning.",
+          inputContract: "recognized category facts",
+          outputContract: "auditable profitability measures",
+          consumedInterface: "versioned metric contract",
+          evolution:
+            "New measures extend the published contract; existing measures remain provenance-bound.",
+        },
+        legIds: [
+          "swimlane-assurance-leg-01",
+          "swimlane-assurance-leg-02",
+        ],
+        blockingQuestionCount: 1,
+        artifactIds: [artifactId.plan],
+      },
+    ],
+    legs: [
+      {
+        id: "swimlane-assurance-leg-01",
+        swimlaneId: "swimlane-assurance",
+        order: 1,
+        title: "Stabilize recognized facts",
+        tech: "dbt",
+        status: "accepted",
+        specRefs: ["REQ-REV-01", "ADR-0003"],
+        dependsOn: [],
+        responsibility:
+          "Produce tested category facts with returns and corrections applied exactly once.",
+        proves: ["Recognition policy is deterministic", "Facts reconcile to source"],
+        independence:
+          "Can be verified against source fixtures without the reporting application.",
+        consumes: ["raw sales and return events"],
+        produces: ["recognized category facts"],
+        appetite: "2 days",
+        yields: ["fact model", "reconciliation evidence"],
+        reverifyWhen: "Recognition policy or source event shape changes.",
+        artifactIds: [artifactId.plan],
+      },
+      {
+        id: "swimlane-assurance-leg-02",
+        swimlaneId: "swimlane-assurance",
+        order: 2,
+        title: "Publish profitability contract",
+        tech: "semantic layer",
+        status: "proposed",
+        specRefs: ["REQ-METRIC-04"],
+        dependsOn: ["swimlane-assurance-leg-01"],
+        responsibility:
+          "Expose documented profitability measures without reimplementing recognition logic.",
+        proves: ["Consumer calculations match the governed metric contract"],
+        independence:
+          "Can be exercised with the recognized-facts contract as a fixture.",
+        consumes: ["recognized category facts"],
+        produces: ["auditable profitability measures"],
+        appetite: "1 day",
+        yields: ["semantic model", "consumer examples"],
+        reverifyWhen: "A measure or dimensional grain changes.",
+        artifactIds: [artifactId.plan],
+      },
+    ],
+    edges: [
+      {
+        id: "decompedge_00000000000000000001",
+        source: "swimlane-assurance-leg-01",
+        target: "swimlane-assurance-leg-02",
+        kind: "depends_on",
+        artifactIds: [artifactId.plan],
+      },
+    ],
   },
   work: {
     availability: "empty",

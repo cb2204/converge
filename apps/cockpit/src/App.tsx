@@ -2,18 +2,23 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { CloudSlash, SpinnerGap, WarningCircle } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { ArtifactViewer } from "./components/ArtifactViewer";
+import { ActivitySurface } from "./components/ActivitySurface";
+import { AskSurface } from "./components/AskSurface";
+import { ArtifactsSurface } from "./components/ArtifactsSurface";
 import { CockpitNav } from "./components/CockpitNav";
 import { CommandBar } from "./components/CommandBar";
-import { CommandDock } from "./components/CommandDock";
+import { DecomposeSurface } from "./components/DecomposeSurface";
 import { HealthSurface } from "./components/HealthSurface";
 import { InspectorPanel } from "./components/InspectorPanel";
 import { LineageCanvas } from "./components/LineageCanvas";
 import { MobileNav } from "./components/MobileNav";
+import { OverviewSurface } from "./components/OverviewSurface";
 import { ProofSurface } from "./components/ProofSurface";
 import { RunsSurface } from "./components/RunsSurface";
 import { WorkSurface } from "./components/WorkSurface";
@@ -73,7 +78,23 @@ function selectionForSurface(
   snapshot: WorkspaceSnapshot,
   surface: CockpitSurface,
 ): EntityRef | null {
+  if (surface === "ask") return initialSelection(snapshot);
+  if (surface === "overview") return initialSelection(snapshot);
   if (surface === "journey") return initialSelection(snapshot);
+  if (surface === "decompose") {
+    if (snapshot.decomposition.availability !== "available") return null;
+    const laneId = snapshot.decomposition.swimlanes[0]?.id;
+    if (laneId) return { kind: "swimlane", id: laneId };
+    const legId = snapshot.decomposition.legs[0]?.id;
+    return legId ? { kind: "leg", id: legId } : null;
+  }
+  if (surface === "artifacts") {
+    const id =
+      snapshot.method.passes.find((pass) => pass.artifactIds.length > 0)?.id ??
+      snapshot.method.passes[0]?.id ??
+      null;
+    return id ? { kind: "pass", id } : null;
+  }
   if (surface === "work") {
     const id =
       snapshot.work.frontier.taskIds[0] ?? snapshot.work.tasks[0]?.id ?? null;
@@ -88,6 +109,12 @@ function selectionForSurface(
     if (receiptId) return { kind: "receipt", id: receiptId };
     const artifactId = snapshot.artifacts[0]?.id;
     return artifactId ? { kind: "artifact", id: artifactId } : null;
+  }
+  if (surface === "activity") {
+    const signalId = snapshot.signals[0]?.id;
+    if (signalId) return { kind: "signal", id: signalId };
+    const issueId = snapshot.issues[0]?.id;
+    return issueId ? { kind: "issue", id: issueId } : null;
   }
   const issueId = snapshot.issues.find(
     (issue) => issue.severity === "blocking" || issue.severity === "error",
@@ -110,12 +137,12 @@ export function App() {
       servedAt: fallbackSnapshot.observedAt,
     },
   });
-  const [surface, setSurface] = useState<CockpitSurface>("journey");
+  const [surface, setSurface] = useState<CockpitSurface>("overview");
   const [selected, setSelected] = useState<EntityRef | null>(() =>
     initialSelection(fallbackSnapshot),
   );
   const [inspectorTab, setInspectorTab] =
-    useState<InspectorTab>("details");
+    useState<InspectorTab>("overview");
   const [leftExpanded, setLeftExpanded] = useState(
     () => panelStateForViewport().left,
   );
@@ -126,6 +153,9 @@ export function App() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectionPaused, setConnectionPaused] = useState(false);
+  const hydratedWorkspaceRef = useRef(false);
+  const surfaceRef = useRef<CockpitSurface>(surface);
+  surfaceRef.current = surface;
 
   const snapshot = envelope.snapshot;
   const transport = envelope.transport;
@@ -141,7 +171,14 @@ export function App() {
         throw new Error(`Snapshot unavailable (${response.status})`);
       }
       const next = decodeSnapshotPayload(await response.json());
-      if (!next) throw new Error("WorkspaceSnapshot 2.0 contract mismatch");
+      if (!next) throw new Error("WorkspaceSnapshot 3.0 contract mismatch");
+      if (
+        next.snapshot.source === "workspace" &&
+        !hydratedWorkspaceRef.current
+      ) {
+        hydratedWorkspaceRef.current = true;
+        setSelected(selectionForSurface(next.snapshot, surfaceRef.current));
+      }
       setEnvelope(next);
       setLoadError(null);
       setConnectionPaused(false);
@@ -172,6 +209,13 @@ export function App() {
       try {
         const next = decodeSnapshotPayload(JSON.parse(event.data) as unknown);
         if (!next) return;
+        if (
+          next.snapshot.source === "workspace" &&
+          !hydratedWorkspaceRef.current
+        ) {
+          hydratedWorkspaceRef.current = true;
+          setSelected(selectionForSurface(next.snapshot, surfaceRef.current));
+        }
         setEnvelope(next);
         setLoadError(null);
         setConnectionPaused(false);
@@ -247,22 +291,40 @@ export function App() {
   const selectSurface = useCallback(
     (nextSurface: CockpitSurface) => {
       setSurface(nextSurface);
-      const nextSelection = selectionForSurface(snapshot, nextSurface);
-      setSelected(nextSelection);
-      setInspectorTab("details");
+      if (nextSurface !== "ask") {
+        const nextSelection = selectionForSurface(snapshot, nextSurface);
+        setSelected(nextSelection);
+      }
+      setInspectorTab("overview");
+      if (nextSurface === "ask") {
+        setRightExpanded(false);
+      } else if (nextSurface === "artifacts") {
+        setRightExpanded(false);
+      } else if (nextSurface === "proof" && isNarrowViewport()) {
+        setRightExpanded(false);
+      } else if (nextSurface === "journey" && !isNarrowViewport()) {
+        setRightExpanded(true);
+      }
       if (isNarrowViewport()) setLeftExpanded(false);
     },
     [snapshot],
   );
 
-  const selectEntity = useCallback((next: EntityRef) => {
-    setSelected(next);
-    setInspectorTab("details");
-    if (isNarrowViewport()) {
-      setRightExpanded(true);
-      setLeftExpanded(false);
-    }
-  }, []);
+  const selectEntity = useCallback(
+    (next: EntityRef) => {
+      setSelected(next);
+      setInspectorTab("overview");
+      if (surface === "proof" && isNarrowViewport()) {
+        setRightExpanded(false);
+        return;
+      }
+      if (isNarrowViewport() || next.kind === "pass") {
+        setRightExpanded(true);
+        if (isNarrowViewport()) setLeftExpanded(false);
+      }
+    },
+    [surface],
+  );
 
   const closeDrawers = useCallback(() => {
     setLeftExpanded(false);
@@ -316,8 +378,8 @@ export function App() {
         leftExpanded ? "cockpit-shell--left-open" : "cockpit-shell--left-closed"
       } ${
         rightExpanded ? "cockpit-shell--right-open" : "cockpit-shell--right-closed"
-      }`}
-      initial={reduceMotion ? false : { opacity: 0 }}
+      } cockpit-shell--surface-${surface}`}
+        initial={reduceMotion ? undefined : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.28 }}
     >
@@ -331,6 +393,7 @@ export function App() {
         onToggleLeft={toggleLeft}
         onToggleRight={toggleRight}
         onRefresh={() => void loadSnapshot()}
+        onOpenActivity={() => selectSurface("activity")}
       />
 
       <div className="cockpit-workspace">
@@ -373,6 +436,31 @@ export function App() {
               onSelect={selectEntity}
             />
           ) : null}
+          {surface === "overview" ? (
+            <OverviewSurface
+              snapshot={snapshot}
+              selected={selected}
+              onSelect={selectEntity}
+            />
+          ) : null}
+          {surface === "ask" ? (
+            <AskSurface snapshot={snapshot} selected={selected} />
+          ) : null}
+          {surface === "decompose" ? (
+            <DecomposeSurface
+              snapshot={snapshot}
+              selected={selected}
+              onSelect={selectEntity}
+            />
+          ) : null}
+          {surface === "artifacts" ? (
+            <ArtifactsSurface
+              snapshot={snapshot}
+              selected={selected}
+              onSelect={selectEntity}
+              onOpenArtifact={setArtifact}
+            />
+          ) : null}
           {surface === "work" ? (
             <WorkSurface
               snapshot={snapshot}
@@ -402,6 +490,13 @@ export function App() {
               onSelect={selectEntity}
             />
           ) : null}
+          {surface === "activity" ? (
+            <ActivitySurface
+              snapshot={snapshot}
+              selected={selected}
+              onSelect={selectEntity}
+            />
+          ) : null}
         </section>
 
         <InspectorPanel
@@ -409,9 +504,11 @@ export function App() {
           selected={selected}
           tab={inspectorTab}
           expanded={rightExpanded}
+          placement={surface === "journey" ? "left" : "right"}
           onTabChange={setInspectorTab}
           onToggle={toggleRight}
           onOpenArtifact={setArtifact}
+          onSelect={selectEntity}
         />
 
         <button
@@ -426,7 +523,6 @@ export function App() {
       />
       </div>
 
-      <CommandDock snapshot={snapshot} />
       <MobileNav surface={surface} onSelect={selectSurface} />
       <ArtifactViewer
         snapshot={snapshot}

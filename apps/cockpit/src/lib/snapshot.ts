@@ -1,5 +1,7 @@
 import type {
   ArtifactRef,
+  DecompositionEdge,
+  DecompositionLeg,
   DigestBinding,
   EntityRef,
   ExecutionRun,
@@ -12,19 +14,25 @@ import type {
   ReviewObjection,
   Signal,
   SnapshotEnvelope,
+  Swimlane,
   TransportState,
   WorkTask,
   WorkspaceSnapshot,
 } from "../types";
 
 const ARTIFACT_ID = /^artifact_[0-9a-f]{20}$/;
+const DECOMPOSITION_EDGE_ID = /^decompedge_[0-9a-f]{20}$/;
 const ISSUE_ID = /^issue_[0-9a-f]{20}$/;
+const LEG_ID = /^swimlane-[a-z0-9]+(?:-[a-z0-9]+)*-leg-[0-9]{2}$/;
 const PASS_ID = /^pass-[0-8]$/;
-const SNAPSHOT_ID = /^ws2_[0-9a-f]{32}$/;
+const SNAPSHOT_ID = /^ws3_[0-9a-f]{32}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
+const SWIMLANE_ID = /^swimlane-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ENTITY_KINDS = new Set<EntityRef["kind"]>([
   "project",
   "pass",
+  "swimlane",
+  "leg",
   "task",
   "run",
   "receipt",
@@ -119,9 +127,63 @@ function hasUniqueIds(records: Array<{ id: string }>) {
   return new Set(records.map(({ id }) => id)).size === records.length;
 }
 
+function hasKnownArtifactReferences(
+  value: unknown,
+  knownArtifactIds: Set<string>,
+): boolean {
+  if (Array.isArray(value)) {
+    return value.every((item) =>
+      hasKnownArtifactReferences(item, knownArtifactIds),
+    );
+  }
+  if (!isRecord(value)) return true;
+  return Object.entries(value).every(([name, child]) => {
+    if (name === "artifactIds") {
+      return (
+        Array.isArray(child) &&
+        child.every(
+          (artifactId) =>
+            typeof artifactId === "string" &&
+            knownArtifactIds.has(artifactId),
+        )
+      );
+    }
+    return hasKnownArtifactReferences(child, knownArtifactIds);
+  });
+}
+
+function hasAcyclicLegDependencies(legs: DecompositionLeg[]): boolean {
+  const ids = new Set(legs.map(({ id }) => id));
+  const indegree = new Map(legs.map(({ id }) => [id, 0]));
+  const dependents = new Map(legs.map(({ id }) => [id, [] as string[]]));
+  for (const leg of legs) {
+    for (const dependency of leg.dependsOn) {
+      if (!ids.has(dependency)) continue;
+      if (dependency === leg.id) return false;
+      indegree.set(leg.id, (indegree.get(leg.id) ?? 0) + 1);
+      dependents.get(dependency)?.push(leg.id);
+    }
+  }
+  const frontier = [...ids].filter((id) => indegree.get(id) === 0);
+  let visited = 0;
+  while (frontier.length > 0) {
+    const current = frontier.shift();
+    if (!current) continue;
+    visited += 1;
+    for (const dependent of dependents.get(current) ?? []) {
+      const next = (indegree.get(dependent) ?? 0) - 1;
+      indegree.set(dependent, next);
+      if (next === 0) frontier.push(dependent);
+    }
+  }
+  return visited === ids.size;
+}
+
 function hasReferentialIntegrity(snapshot: WorkspaceSnapshot) {
   const collections = {
     pass: snapshot.method.passes,
+    swimlane: snapshot.decomposition.swimlanes,
+    leg: snapshot.decomposition.legs,
     task: snapshot.work.tasks,
     run: snapshot.execution.runs,
     receipt: snapshot.receipts.items,
@@ -142,6 +204,8 @@ function hasReferentialIntegrity(snapshot: WorkspaceSnapshot) {
   const knownEntities: Record<EntityRef["kind"], Set<string>> = {
     project: new Set([snapshot.project.name]),
     pass: new Set(snapshot.method.passes.map(({ id }) => id)),
+    swimlane: new Set(snapshot.decomposition.swimlanes.map(({ id }) => id)),
+    leg: new Set(snapshot.decomposition.legs.map(({ id }) => id)),
     task: new Set(snapshot.work.tasks.map(({ id }) => id)),
     run: new Set(snapshot.execution.runs.map(({ id }) => id)),
     receipt: new Set(snapshot.receipts.items.map(({ id }) => id)),
@@ -156,7 +220,56 @@ function hasReferentialIntegrity(snapshot: WorkspaceSnapshot) {
     ...snapshot.artifacts.map(({ entity }) => entity),
   ].filter((entity): entity is EntityRef => entity !== undefined);
 
-  return references.every(({ kind, id }) => knownEntities[kind].has(id));
+  const lanesById = new Map(
+    snapshot.decomposition.swimlanes.map((lane) => [lane.id, lane] as const),
+  );
+  const legsById = new Map(
+    snapshot.decomposition.legs.map((leg) => [leg.id, leg] as const),
+  );
+  const laneLegReferences = snapshot.decomposition.swimlanes.every((lane) =>
+    lane.legIds.every(
+      (id) => legsById.get(id)?.swimlaneId === lane.id,
+    ),
+  );
+  const legReferences = snapshot.decomposition.legs.every(
+    (leg) =>
+      lanesById.get(leg.swimlaneId)?.legIds.includes(leg.id) === true &&
+      leg.dependsOn.every((id) => knownEntities.leg.has(id)),
+  );
+  const edgeIds = snapshot.decomposition.edges.map(({ id }) => id);
+  const expectedDependencyPairs = new Set(
+    snapshot.decomposition.legs.flatMap((leg) =>
+      leg.dependsOn.map((dependency) => `${dependency}\u0000${leg.id}`),
+    ),
+  );
+  const observedDependencyPairs = snapshot.decomposition.edges.map(
+    (edge) => `${edge.source}\u0000${edge.target}`,
+  );
+  const edgeReferences =
+    new Set(edgeIds).size === edgeIds.length &&
+    new Set(observedDependencyPairs).size === observedDependencyPairs.length &&
+    expectedDependencyPairs.size === observedDependencyPairs.length &&
+    observedDependencyPairs.every((pair) => expectedDependencyPairs.has(pair)) &&
+    snapshot.decomposition.edges.every(
+    (edge) =>
+      knownEntities.leg.has(edge.source) &&
+      knownEntities.leg.has(edge.target) &&
+      legsById.get(edge.target)?.dependsOn.includes(edge.source) === true,
+    );
+  const emptyWhenUnavailable =
+    snapshot.decomposition.availability === "available" ||
+    (snapshot.decomposition.swimlanes.length === 0 &&
+      snapshot.decomposition.legs.length === 0 &&
+      snapshot.decomposition.edges.length === 0);
+  return (
+    laneLegReferences &&
+    legReferences &&
+    hasAcyclicLegDependencies(snapshot.decomposition.legs) &&
+    edgeReferences &&
+    emptyWhenUnavailable &&
+    references.every(({ kind, id }) => knownEntities[kind].has(id)) &&
+    hasKnownArtifactReferences(snapshot, knownEntities.artifact)
+  );
 }
 
 function isGate(value: unknown) {
@@ -241,6 +354,118 @@ function isQuestion(value: unknown): value is OpenQuestion {
     hasNonEmptyString(value, "owner") &&
     (value.owner as string).length <= 120 &&
     typeof value.blocksBuild === "boolean"
+  );
+}
+
+function isSwimlane(value: unknown): value is Swimlane {
+  if (!isRecord(value) || !isRecord(value.seam)) return false;
+  return (
+    hasExactKeys(value, [
+      "id",
+      "label",
+      "purpose",
+      "thread",
+      "risk",
+      "owner",
+      "seam",
+      "legIds",
+      "blockingQuestionCount",
+      "artifactIds",
+    ]) &&
+    hasString(value, "id") &&
+    SWIMLANE_ID.test(value.id as string) &&
+    hasNonEmptyString(value, "label") &&
+    isNullableString(value.purpose) &&
+    typeof value.thread === "boolean" &&
+    ["low", "med", "high"].includes(String(value.risk)) &&
+    hasNonEmptyString(value, "owner") &&
+    hasExactKeys(value.seam, [
+      "rationale",
+      "inputContract",
+      "outputContract",
+      "consumedInterface",
+      "evolution",
+    ]) &&
+    isNullableString(value.seam.rationale) &&
+    isNullableString(value.seam.inputContract) &&
+    isNullableString(value.seam.outputContract) &&
+    isNullableString(value.seam.consumedInterface) &&
+    isNullableString(value.seam.evolution) &&
+    isStringArray(value.legIds) &&
+    value.legIds.every((id) => LEG_ID.test(id)) &&
+    isNonNegativeInteger(value.blockingQuestionCount) &&
+    isArtifactIds(value.artifactIds)
+  );
+}
+
+function isDecompositionLeg(value: unknown): value is DecompositionLeg {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "id",
+      "swimlaneId",
+      "order",
+      "title",
+      "tech",
+      "status",
+      "specRefs",
+      "dependsOn",
+      "responsibility",
+      "proves",
+      "independence",
+      "consumes",
+      "produces",
+      "appetite",
+      "yields",
+      "reverifyWhen",
+      "artifactIds",
+    ]) &&
+    hasString(value, "id") &&
+    LEG_ID.test(value.id as string) &&
+    hasString(value, "swimlaneId") &&
+    SWIMLANE_ID.test(value.swimlaneId as string) &&
+    isNonNegativeInteger(value.order) &&
+    value.order <= 99 &&
+    hasNonEmptyString(value, "title") &&
+    isNullableString(value.tech) &&
+    ["proposed", "accepted", "in_progress", "done", "superseded"].includes(
+      String(value.status),
+    ) &&
+    isStringArray(value.specRefs) &&
+    isStringArray(value.dependsOn) &&
+    value.dependsOn.every((id) => LEG_ID.test(id)) &&
+    isNullableString(value.responsibility) &&
+    isStringArray(value.proves) &&
+    isNullableString(value.independence) &&
+    isStringArray(value.consumes) &&
+    isStringArray(value.produces) &&
+    isNullableString(value.appetite) &&
+    isStringArray(value.yields) &&
+    isNullableString(value.reverifyWhen) &&
+    isArtifactIds(value.artifactIds)
+  );
+}
+
+function isDecompositionEdge(
+  value: unknown,
+): value is DecompositionEdge {
+  return (
+    isRecord(value) &&
+    hasExactKeys(value, [
+      "id",
+      "source",
+      "target",
+      "kind",
+      "artifactIds",
+    ]) &&
+    hasString(value, "id") &&
+    DECOMPOSITION_EDGE_ID.test(value.id as string) &&
+    hasString(value, "source") &&
+    LEG_ID.test(value.source as string) &&
+    hasString(value, "target") &&
+    LEG_ID.test(value.target as string) &&
+    value.kind === "depends_on" &&
+    isArtifactIds(value.artifactIds)
   );
 }
 
@@ -452,6 +677,7 @@ function isIssue(value: unknown): value is Issue {
     [
       "project",
       "method",
+      "decomposition",
       "review",
       "work",
       "execution",
@@ -496,7 +722,7 @@ function isArtifact(value: unknown): value is ArtifactRef {
     ["file", "command"].includes(String(value.provenance.sourceKind)) &&
     hasNonEmptyString(value.provenance, "sourceRef") &&
     isDate(value.provenance.observedAt) &&
-    ["canonical", "derived", "inferred"].includes(
+    ["canonical", "observed", "derived", "inferred"].includes(
       String(value.provenance.truthClass),
     )
   );
@@ -515,6 +741,7 @@ export function isWorkspaceSnapshot(
       "project",
       "method",
       "review",
+      "decomposition",
       "work",
       "execution",
       "receipts",
@@ -527,6 +754,7 @@ export function isWorkspaceSnapshot(
     !isRecord(value.project) ||
     !isRecord(value.project.git) ||
     !isRecord(value.method) ||
+    !isRecord(value.decomposition) ||
     !isRecord(value.work) ||
     !isRecord(value.work.frontier) ||
     !isRecord(value.work.stats) ||
@@ -539,7 +767,7 @@ export function isWorkspaceSnapshot(
   }
 
   if (
-    value.schemaVersion !== "2.0" ||
+    value.schemaVersion !== "3.0" ||
     !hasString(value, "snapshotId") ||
     !SNAPSHOT_ID.test(value.snapshotId as string) ||
     !isDate(value.observedAt) ||
@@ -609,6 +837,26 @@ export function isWorkspaceSnapshot(
       !Array.isArray(value.review.openQuestions) ||
       !value.review.openQuestions.every(isQuestion) ||
       !isArtifactIds(value.review.artifactIds))
+  ) {
+    return false;
+  }
+
+  if (
+    !hasExactKeys(value.decomposition, [
+      "availability",
+      "swimlanes",
+      "legs",
+      "edges",
+    ]) ||
+    !["available", "empty", "unavailable"].includes(
+      String(value.decomposition.availability),
+    ) ||
+    !Array.isArray(value.decomposition.swimlanes) ||
+    !value.decomposition.swimlanes.every(isSwimlane) ||
+    !Array.isArray(value.decomposition.legs) ||
+    !value.decomposition.legs.every(isDecompositionLeg) ||
+    !Array.isArray(value.decomposition.edges) ||
+    !value.decomposition.edges.every(isDecompositionEdge)
   ) {
     return false;
   }

@@ -10,6 +10,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CommandDock } from "./CommandDock";
 import { ArtifactViewer } from "./ArtifactViewer";
+import { AskSurface } from "./AskSurface";
+import { DecomposeSurface } from "./DecomposeSurface";
 import { HealthSurface } from "./HealthSurface";
 import { InspectorPanel } from "./InspectorPanel";
 import { ProofSurface } from "./ProofSurface";
@@ -24,6 +26,12 @@ vi.mock("./WorkGraph", () => ({
   WorkGraph: () => <div aria-label="Work dependency graph">Graph projection</div>,
 }));
 
+vi.mock("./DecompositionGraph", () => ({
+  DecompositionGraph: () => (
+    <div aria-label="Swimlane decomposition graph">Lane graph projection</div>
+  ),
+}));
+
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   motion: new Proxy(
@@ -36,6 +44,84 @@ vi.mock("motion/react", () => ({
 }));
 
 describe("Cockpit lifecycle surfaces", () => {
+  it("renders canonical seams and lets the user inspect lanes and legs", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot();
+    const onSelect = vi.fn();
+    render(
+      <DecomposeSurface
+        snapshot={snapshot}
+        selected={{ kind: "swimlane", id: "swimlane-checkout" }}
+        onSelect={onSelect}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "The HTTP boundary isolates shopper intent from payment-provider settlement.",
+      ),
+    ).toBeTruthy();
+    const summary = screen.getByLabelText("Decomposition summary");
+    expect(summary.textContent).toContain("1swimlanes");
+    expect(summary.textContent).toContain("2delivery legs");
+
+    await user.click(screen.getByRole("button", { name: "Map" }));
+    expect(screen.getByText("Lane graph projection")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Read" }));
+    expect(screen.getByText("Why this seam")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The HTTP boundary isolates shopper intent from payment-provider settlement.",
+      ),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: /Settle payment outcome/i }),
+    );
+    expect(onSelect).toHaveBeenCalledWith({
+      kind: "leg",
+      id: "swimlane-checkout-leg-02",
+    });
+  });
+
+  it("keeps empty decomposition explicit", () => {
+    render(
+      <DecomposeSurface
+        snapshot={makeEmptySnapshot()}
+        selected={null}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("No canonical swimlane plans were observed"),
+    ).toBeTruthy();
+  });
+
+  it("falls back to the readable projection for a graph above the density cap", () => {
+    const snapshot = structuredClone(makeScenarioSnapshot());
+    const template = snapshot.decomposition.edges[0];
+    snapshot.decomposition.edges = Array.from({ length: 321 }, (_, index) => ({
+      ...template,
+      id: `decompedge_${index.toString(16).padStart(20, "0")}`,
+    }));
+
+    render(
+      <DecomposeSurface
+        snapshot={snapshot}
+        selected={null}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Focus view protects readability for this large decomposition/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Map" }).hasAttribute("disabled"),
+    ).toBe(true);
+    expect(screen.queryByText("Lane graph projection")).toBeNull();
+    expect(screen.getAllByText("Accept checkout intent").length).toBeGreaterThan(0);
+  });
+
   it("renders intentional empty work, run, and receipt states", async () => {
     const user = userEvent.setup();
     const snapshot = makeEmptySnapshot();
@@ -57,7 +143,7 @@ describe("Cockpit lifecycle surfaces", () => {
         onSelect={onSelect}
       />,
     );
-    expect(screen.getByText("No attempts recorded")).toBeTruthy();
+    expect(screen.getByText("No execution records observed")).toBeTruthy();
 
     rerender(
       <ProofSurface
@@ -176,6 +262,450 @@ describe("Cockpit lifecycle surfaces", () => {
   });
 });
 
+describe("Ask Converge via ACP", () => {
+  it("binds a natural-language turn to methodology and the live project without inheriting selection", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot((candidate) => {
+      candidate.source = "workspace";
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (input, init) => {
+        const url = String(input);
+        if (url === "/api/ask/agents") {
+          return new Response(
+            JSON.stringify({
+              agents: [
+                {
+                  id: "codex",
+                  label: "Codex",
+                  adapter: "codex-acp",
+                  availability: "blocked",
+                  reason: "Local read and search tools cannot be suppressed.",
+                },
+                {
+                  id: "claude",
+                  label: "Claude Agent",
+                  adapter: "claude-agent-acp",
+                  availability: "available",
+                  reason: null,
+                },
+              ],
+              requestToken: "csrf-test-token-1234",
+              policy: {
+                transport: "ACP",
+                workspaceAccess: "enforced-safe-mode",
+                persistence: "cockpit-ephemeral",
+                evidenceBoundary:
+                  "Agent interpretation is not a Converge gate verdict, receipt, or proof.",
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        expect(url).toBe("/api/ask");
+        expect(init?.method).toBe("POST");
+        expect(init?.headers).toEqual(
+          expect.objectContaining({ "X-Converge-CSRF": "csrf-test-token-1234" }),
+        );
+        expect(JSON.parse(String(init?.body))).toEqual(
+          expect.objectContaining({
+            agentId: "claude",
+            snapshotId: snapshot.snapshotId,
+            context: {
+              entity: null,
+              artifactIds: [],
+            },
+          }),
+        );
+        return new Response(
+          JSON.stringify({
+            turnId: "turn_1",
+            agentId: "claude",
+            snapshotId: snapshot.snapshotId,
+            grounding: {
+              snapshotId: snapshot.snapshotId,
+              observedAt: snapshot.observedAt,
+              methodology: {
+                tool: "cvg",
+                version: snapshot.method.version,
+                digest: "c".repeat(64),
+              },
+              entity: null,
+              artifacts: [],
+            },
+            answer: "The checkout lane isolates shopper intent from settlement.",
+            steps: [
+              "Read the snapshot-bound lane.",
+              "Trace the canonical dependency.",
+            ],
+            activity: [
+              {
+                id: "read-1",
+                kind: "read",
+                label: "Read checkout lane",
+                status: "complete",
+              },
+            ],
+            stopReason: "end_turn",
+            elapsedMs: 420,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+    );
+
+    const { container, rerender } = render(
+      <AskSurface
+        snapshot={snapshot}
+        selected={{ kind: "swimlane", id: "swimlane-checkout" }}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Choose ACP agent" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /ChatGPT/i })).toBeNull();
+    expect(
+      container
+        .querySelector('[data-provider-mark="codex"]')
+        ?.getAttribute("src"),
+    ).toContain("codex-color.svg");
+    expect(
+      container
+        .querySelector('[data-provider-mark="claude"]')
+        ?.getAttribute("src"),
+    ).toContain("claude-color.svg");
+    expect(await screen.findByText("Verify on send")).toBeTruthy();
+    expect(screen.queryByText("Ready over ACP")).toBeNull();
+    const codexButton = screen.getByRole("button", { name: /Codex/i });
+    const claudeButton = screen.getByRole("button", { name: /Claude Agent/i });
+    expect(claudeButton.getAttribute("aria-pressed")).toBe("true");
+    await user.click(codexButton);
+    expect(codexButton.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText(/Local read and search tools cannot be suppressed/)).toBeTruthy();
+    await user.click(claudeButton);
+    expect(claudeButton.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /Add selected context/i })).toBeTruthy();
+    await user.click(
+      within(screen.getByLabelText("Suggested questions")).getAllByRole("button")[0],
+    );
+    await user.click(screen.getByRole("button", { name: "Send question" }));
+    expect(
+      await screen.findByText(
+        "The checkout lane isolates shopper intent from settlement.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Read the snapshot-bound lane.")).toBeTruthy();
+    expect(screen.getByText(/answers are interpretation, never a gate verdict/i)).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+    const refreshedSnapshot = structuredClone(snapshot);
+    refreshedSnapshot.snapshotId = `ws3_${"a".repeat(32)}`;
+    refreshedSnapshot.observedAt = "2026-08-04T12:00:00.000Z";
+    rerender(
+      <AskSurface
+        snapshot={refreshedSnapshot}
+        selected={{ kind: "swimlane", id: "swimlane-checkout" }}
+      />,
+    );
+    expect(
+      screen.getByText("The checkout lane isolates shopper intent from settlement."),
+    ).toBeTruthy();
+  });
+
+  it("includes explicitly selected artifact text in the snapshot-bound request", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot((candidate) => {
+      candidate.source = "workspace";
+    });
+    const artifact = snapshot.artifacts[0];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input) === "/api/ask/agents") {
+        return new Response(
+          JSON.stringify({
+            agents: [
+              {
+                id: "codex",
+                label: "Codex",
+                adapter: "codex-acp",
+                availability: "blocked",
+                reason: "Local reads cannot be suppressed.",
+              },
+              {
+                id: "claude",
+                label: "Claude Agent",
+                adapter: "claude-agent-acp",
+                availability: "available",
+                reason: null,
+              },
+            ],
+            requestToken: "csrf-artifact-token",
+            policy: {
+              transport: "ACP",
+              workspaceAccess: "enforced-safe-mode",
+              persistence: "cockpit-ephemeral",
+              evidenceBoundary:
+                "Agent interpretation is not a Converge gate verdict, receipt, or proof.",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      const request = JSON.parse(String(init?.body));
+      expect(request.context).toEqual({
+        entity: { kind: "artifact", id: artifact.id },
+        artifactIds: [artifact.id],
+      });
+      return new Response(
+        JSON.stringify({
+          turnId: "turn_artifact",
+          agentId: "claude",
+          snapshotId: snapshot.snapshotId,
+          grounding: {
+            snapshotId: snapshot.snapshotId,
+            observedAt: snapshot.observedAt,
+            methodology: {
+              tool: "cvg",
+              version: snapshot.method.version,
+              digest: "d".repeat(64),
+            },
+            entity: { kind: "artifact", id: artifact.id },
+            artifacts: [
+              {
+                id: artifact.id,
+                label: artifact.label,
+                path: artifact.path,
+                sha256: artifact.sha256,
+                truncated: false,
+              },
+            ],
+          },
+          answer: "The selected artifact is included by digest.",
+          steps: [],
+          activity: [],
+          stopReason: "end_turn",
+          elapsedMs: 10,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    });
+
+    render(
+      <AskSurface
+        snapshot={snapshot}
+        selected={{ kind: "artifact", id: artifact.id }}
+      />,
+    );
+    await screen.findByText("Verify on send");
+    await user.click(screen.getByRole("button", { name: /Add selected context/i }));
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "Question for the selected ACP agent",
+      }),
+      "Explain this artifact.",
+    );
+    await user.click(screen.getByRole("button", { name: "Send question" }));
+    expect(
+      await screen.findByText("The selected artifact is included by digest."),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    ["path", "docs/not-the-selected-artifact.md"],
+    ["sha256", "f".repeat(64)],
+  ] as const)(
+    "rejects selected artifact grounding when its %s does not match the snapshot",
+    async (field, mismatchedValue) => {
+      const user = userEvent.setup();
+      const snapshot = makeScenarioSnapshot((candidate) => {
+        candidate.source = "workspace";
+      });
+      const artifact = snapshot.artifacts[0];
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+        if (String(input) === "/api/ask/agents") {
+          return new Response(
+            JSON.stringify({
+              agents: [
+                {
+                  id: "claude",
+                  label: "Claude Agent",
+                  adapter: "claude-agent-acp",
+                  availability: "available",
+                  reason: null,
+                },
+              ],
+              requestToken: "csrf-artifact-mismatch-token",
+              policy: {
+                transport: "ACP",
+                workspaceAccess: "enforced-safe-mode",
+                persistence: "cockpit-ephemeral",
+                evidenceBoundary:
+                  "Agent interpretation is not a Converge gate verdict, receipt, or proof.",
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({
+            turnId: `turn_artifact_${field}_mismatch`,
+            agentId: "claude",
+            snapshotId: snapshot.snapshotId,
+            grounding: {
+              snapshotId: snapshot.snapshotId,
+              observedAt: snapshot.observedAt,
+              methodology: {
+                tool: "cvg",
+                version: snapshot.method.version,
+                digest: "e".repeat(64),
+              },
+              entity: { kind: "artifact", id: artifact.id },
+              artifacts: [
+                {
+                  id: artifact.id,
+                  label: artifact.label,
+                  path: artifact.path,
+                  sha256: artifact.sha256,
+                  truncated: false,
+                  [field]: mismatchedValue,
+                },
+              ],
+            },
+            answer: "This response must not be rendered.",
+            steps: [],
+            activity: [],
+            stopReason: "end_turn",
+            elapsedMs: 10,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      });
+
+      render(
+        <AskSurface
+          snapshot={snapshot}
+          selected={{ kind: "artifact", id: artifact.id }}
+        />,
+      );
+      await screen.findByText("Verify on send");
+      await user.click(screen.getByRole("button", { name: /Add selected context/i }));
+      await user.type(
+        screen.getByRole("textbox", {
+          name: "Question for the selected ACP agent",
+        }),
+        "Explain this artifact.",
+      );
+      await user.click(screen.getByRole("button", { name: "Send question" }));
+      expect(
+        await screen.findByText(
+          "The agent response was not bound to this workspace snapshot.",
+        ),
+      ).toBeTruthy();
+      expect(screen.queryByText("This response must not be rendered.")).toBeNull();
+    },
+  );
+
+  it("starts a clean focused conversation and resets explicit selected context", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot((candidate) => {
+      candidate.source = "workspace";
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          agents: [{
+            id: "claude",
+            label: "Claude Agent",
+            adapter: "claude-agent-acp",
+            availability: "available",
+            reason: null,
+          }],
+          requestToken: "csrf-new-chat-token",
+          policy: {
+            transport: "ACP",
+            workspaceAccess: "enforced-safe-mode",
+            persistence: "cockpit-ephemeral",
+            evidenceBoundary: "Interpretation only.",
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(
+      <AskSurface
+        snapshot={snapshot}
+        selected={{ kind: "pass", id: "pass-4" }}
+      />,
+    );
+    await screen.findByText("Verify on send");
+    const textbox = screen.getByRole("textbox", {
+      name: "Question for the selected ACP agent",
+    }) as HTMLTextAreaElement;
+    const newChat = screen.getByRole("button", { name: "Start new chat" });
+    expect((newChat as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole("button", { name: /Add selected context/i }));
+    expect(screen.getByTitle("Remove selected entity from this question")).toBeTruthy();
+    await user.type(textbox, "Draft project question");
+    await user.click(newChat);
+    expect(textbox.value).toBe("");
+    expect(document.activeElement).toBe(textbox);
+    expect(screen.getByRole("button", { name: /Add selected context/i })).toBeTruthy();
+    expect(screen.queryByText(/^pass:pass-4$/i)).toBeNull();
+  });
+
+  it("renders actionable provider authentication recovery and restores the question", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot((candidate) => {
+      candidate.source = "workspace";
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input) === "/api/ask/agents") {
+        return new Response(
+          JSON.stringify({
+            agents: [{
+              id: "claude",
+              label: "Claude Agent",
+              adapter: "claude-agent-acp",
+              availability: "available",
+              reason: null,
+            }],
+            requestToken: "csrf-auth-token-1",
+            policy: {
+              transport: "ACP",
+              workspaceAccess: "enforced-safe-mode",
+              persistence: "cockpit-ephemeral",
+              evidenceBoundary: "Interpretation only.",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: "ASK_AUTH_REQUIRED",
+            message:
+              "The selected agent is not authenticated on this machine. Sign in with its local CLI, then try again.",
+            retryable: true,
+          },
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      );
+    });
+
+    render(<AskSurface snapshot={snapshot} selected={null} />);
+    await screen.findByText("Verify on send");
+    const textbox = screen.getByRole("textbox", {
+      name: "Question for the selected ACP agent",
+    }) as HTMLTextAreaElement;
+    await user.type(textbox, "Why is the project blocked?");
+    await user.click(screen.getByRole("button", { name: "Send question" }));
+    expect(await screen.findByText(/not authenticated on this machine/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(textbox.value).toBe("Why is the project blocked?");
+    expect(document.activeElement).toBe(textbox);
+  });
+});
+
 describe("Cockpit proof and command boundaries", () => {
   it("copies the exact CLI command without exposing an execution control", async () => {
     const user = userEvent.setup();
@@ -205,28 +735,30 @@ describe("Cockpit proof and command boundaries", () => {
       <InspectorPanel
         snapshot={makeScenarioSnapshot()}
         selected={{ kind: "run", id: "run-retry" }}
-        tab="details"
+        tab="overview"
         expanded
         onTabChange={onTabChange}
         onToggle={vi.fn()}
         onOpenArtifact={vi.fn()}
+        onSelect={vi.fn()}
       />,
     );
     expect(screen.getByText("run-retry")).toBeTruthy();
     expect(screen.queryByText(/Text mentions run-retry/)).toBeNull();
 
-    await user.click(screen.getByRole("tab", { name: "History" }));
-    expect(onTabChange).toHaveBeenCalledWith("history");
+    await user.click(screen.getByRole("tab", { name: "Activity" }));
+    expect(onTabChange).toHaveBeenCalledWith("activity");
 
     rerender(
       <InspectorPanel
         snapshot={makeScenarioSnapshot()}
         selected={{ kind: "run", id: "run-retry" }}
-        tab="history"
+        tab="activity"
         expanded
         onTabChange={onTabChange}
         onToggle={vi.fn()}
         onOpenArtifact={vi.fn()}
+        onSelect={vi.fn()}
       />,
     );
     expect(screen.getByText("Retry was requested.")).toBeTruthy();
@@ -234,9 +766,50 @@ describe("Cockpit proof and command boundaries", () => {
     expect(screen.queryByText(/Text mentions run-retry/)).toBeNull();
   });
 
+  it("does not request artifact bytes for replay fixtures", async () => {
+    const snapshot = makeScenarioSnapshot();
+    const artifact = snapshot.artifacts[0];
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("fixture previews must not reach the bridge"));
+
+    render(
+      <ArtifactViewer snapshot={snapshot} artifact={artifact} onClose={vi.fn()} />,
+    );
+
+    expect(await screen.findByText("Live workspace required")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Replay fixture entries cannot be opened as verified artifacts/,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("not live evidence")).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("explains when the live workspace snapshot is unavailable", async () => {
+    const snapshot = makeScenarioSnapshot();
+    snapshot.source = "workspace";
+    const artifact = snapshot.artifacts[0];
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("", { status: 503 }));
+
+    render(
+      <ArtifactViewer snapshot={snapshot} artifact={artifact} onClose={vi.fn()} />,
+    );
+
+    expect(await screen.findByText("Preview unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(/The live workspace snapshot is unavailable/),
+    ).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps artifact reads snapshot-and-digest bound and restores focus", async () => {
     const user = userEvent.setup();
     const snapshot = makeScenarioSnapshot();
+    snapshot.source = "workspace";
     const artifact = snapshot.artifacts[0];
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -244,8 +817,11 @@ describe("Cockpit proof and command boundaries", () => {
           path: artifact.path,
           label: artifact.label,
           kind: artifact.kind,
+          format: "text",
           content: "canonical proof",
           truncated: false,
+          redacted: false,
+          sourceBytes: 15,
           sha256: artifact.sha256,
           snapshotId: snapshot.snapshotId,
         }),
@@ -293,5 +869,110 @@ describe("Cockpit proof and command boundaries", () => {
       ).toBeNull(),
     );
     expect(document.activeElement).toBe(opener);
+  });
+
+  it("renders GFM Markdown without activating raw HTML, unsafe links, or remote images", async () => {
+    const snapshot = makeScenarioSnapshot();
+    snapshot.source = "workspace";
+    const artifact = snapshot.artifacts.find((candidate) => candidate.path.endsWith(".md"));
+    expect(artifact).toBeTruthy();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          path: artifact?.path,
+          label: artifact?.label,
+          kind: artifact?.kind,
+          format: "markdown",
+          content: [
+            "---",
+            "owner: delivery",
+            "---",
+            "# Safe document",
+            "",
+            "- [x] Verified item",
+            "",
+            "| Gate | State |",
+            "| --- | --- |",
+            "| Review | PASS |",
+            "",
+            "[Unsafe](javascript:alert(1))",
+            "",
+            "[Guide](https://example.com/guide)",
+            "",
+            "![Remote proof](https://attacker.example/proof.png)",
+            "",
+            "<script>window.readerCompromised = true</script>",
+          ].join("\n"),
+          truncated: false,
+          redacted: true,
+          sourceBytes: 320,
+          sha256: artifact?.sha256,
+          snapshotId: snapshot.snapshotId,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(
+      <ArtifactViewer
+        snapshot={snapshot}
+        artifact={artifact ?? null}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Safe document" })).toBeTruthy();
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(screen.getByText("Verified item")).toBeTruthy();
+    expect(screen.getByText("Document metadata")).toBeTruthy();
+    expect(screen.getByText("Image omitted: Remote proof")).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(document.querySelector("script")).toBeNull();
+    expect(screen.getByText("Unsafe").closest("a")).toBeNull();
+    expect(screen.getByRole("link", { name: "Guide" }).getAttribute("rel")).toBe(
+      "noreferrer noopener",
+    );
+    expect(screen.getByText("credentials redacted")).toBeTruthy();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders redacted PDF page text without receiving raw PDF bytes", async () => {
+    const user = userEvent.setup();
+    const snapshot = makeScenarioSnapshot();
+    snapshot.source = "workspace";
+    const artifact = snapshot.artifacts[0];
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          path: artifact.path,
+          label: artifact.label,
+          kind: artifact.kind,
+          format: "pdf-text",
+          pages: [
+            { number: 1, text: "First verified page" },
+            { number: 2, text: "Second page with [REDACTED]" },
+          ],
+          pageCount: 2,
+          truncated: false,
+          redacted: true,
+          sourceBytes: 4_096,
+          sha256: artifact.sha256,
+          snapshotId: snapshot.snapshotId,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(
+      <ArtifactViewer snapshot={snapshot} artifact={artifact} onClose={vi.fn()} />,
+    );
+
+    expect(await screen.findByText("First verified page")).toBeTruthy();
+    expect(screen.getByText("Redacted page text only.", { exact: false })).toBeTruthy();
+    expect(screen.getByText("Page 1 of 2")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Next PDF page" }));
+    expect(screen.getByText("Second page with [REDACTED]")).toBeTruthy();
+    expect(screen.getByText("Page 2 of 2")).toBeTruthy();
+    expect(document.querySelector("iframe, object, embed")).toBeNull();
   });
 });

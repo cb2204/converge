@@ -4,7 +4,7 @@ import path from "node:path";
 const SNAPSHOT_SCHEMA_RELATIVE_PATH = path.join(
   "contracts",
   "ui",
-  "v2",
+  "v3",
   "workspace-snapshot.schema.json",
 );
 
@@ -253,17 +253,52 @@ export function validateJsonSchema(value, schema) {
   return issues;
 }
 
+function dependencyGraphIsAcyclic(legs) {
+  const ids = new Set(legs.map((leg) => leg?.id));
+  const indegree = new Map();
+  const dependents = new Map();
+  for (const id of ids) {
+    indegree.set(id, 0);
+    dependents.set(id, []);
+  }
+  for (const leg of legs) {
+    if (!Array.isArray(leg?.dependsOn)) continue;
+    for (const dependency of leg.dependsOn) {
+      if (!ids.has(dependency) || !ids.has(leg.id)) continue;
+      if (dependency === leg.id) return false;
+      indegree.set(leg.id, (indegree.get(leg.id) ?? 0) + 1);
+      dependents.get(dependency).push(leg.id);
+    }
+  }
+  const frontier = [...ids].filter((id) => indegree.get(id) === 0);
+  let visited = 0;
+  while (frontier.length > 0) {
+    const current = frontier.shift();
+    visited += 1;
+    for (const dependent of dependents.get(current) ?? []) {
+      const next = indegree.get(dependent) - 1;
+      indegree.set(dependent, next);
+      if (next === 0) frontier.push(dependent);
+    }
+  }
+  return visited === ids.size;
+}
+
 function entityReferenceIssues(snapshot) {
   if (
     !isObject(snapshot) ||
     !isObject(snapshot.project) ||
     typeof snapshot.project.name !== "string" ||
     !isObject(snapshot.method) ||
+    !isObject(snapshot.decomposition) ||
     !isObject(snapshot.work) ||
     !isObject(snapshot.execution) ||
     !isObject(snapshot.receipts) ||
     !isObject(snapshot.health) ||
     !Array.isArray(snapshot.method.passes) ||
+    !Array.isArray(snapshot.decomposition.swimlanes) ||
+    !Array.isArray(snapshot.decomposition.legs) ||
+    !Array.isArray(snapshot.decomposition.edges) ||
     !Array.isArray(snapshot.work.tasks) ||
     !Array.isArray(snapshot.execution.runs) ||
     !Array.isArray(snapshot.receipts.items) ||
@@ -277,6 +312,8 @@ function entityReferenceIssues(snapshot) {
 
   const collections = {
     pass: snapshot.method.passes,
+    swimlane: snapshot.decomposition.swimlanes,
+    leg: snapshot.decomposition.legs,
     task: snapshot.work.tasks,
     run: snapshot.execution.runs,
     receipt: snapshot.receipts.items,
@@ -324,6 +361,132 @@ function entityReferenceIssues(snapshot) {
       }
     });
   }
+
+  const knownArtifactIds = known.artifact;
+  const inspectArtifactReferences = (value, location) => {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) =>
+        inspectArtifactReferences(item, `${location}[${index}]`),
+      );
+      return;
+    }
+    if (!isObject(value)) return;
+    for (const [name, child] of Object.entries(value)) {
+      const childLocation = `${location}.${name}`;
+      if (name === "artifactIds" && Array.isArray(child)) {
+        child.forEach((artifactId, index) => {
+          if (
+            typeof artifactId === "string" &&
+            !knownArtifactIds.has(artifactId)
+          ) {
+            issues.push(
+              `${childLocation}[${index}] references unknown artifact ${JSON.stringify(artifactId)}`,
+            );
+          }
+        });
+      } else {
+        inspectArtifactReferences(child, childLocation);
+      }
+    }
+  };
+  inspectArtifactReferences(snapshot, "$");
+
+  const lanesById = new Map(
+    snapshot.decomposition.swimlanes.map((lane) => [lane.id, lane]),
+  );
+  const legsById = new Map(
+    snapshot.decomposition.legs.map((leg) => [leg.id, leg]),
+  );
+  snapshot.decomposition.swimlanes.forEach((lane, laneIndex) => {
+    if (!Array.isArray(lane.legIds)) return;
+    lane.legIds.forEach((legId, legIndex) => {
+      const leg = legsById.get(legId);
+      if (!leg) {
+        issues.push(
+          `$.decomposition.swimlanes[${laneIndex}].legIds[${legIndex}] references unknown leg ${JSON.stringify(legId)}`,
+        );
+      } else if (leg.swimlaneId !== lane.id) {
+        issues.push(
+          `$.decomposition.swimlanes[${laneIndex}].legIds[${legIndex}] belongs to a different swimlane`,
+        );
+      }
+    });
+  });
+  snapshot.decomposition.legs.forEach((leg, legIndex) => {
+    const lane = lanesById.get(leg.swimlaneId);
+    if (!lane) {
+      issues.push(
+        `$.decomposition.legs[${legIndex}].swimlaneId references unknown swimlane ${JSON.stringify(leg.swimlaneId)}`,
+      );
+    } else if (Array.isArray(lane.legIds) && !lane.legIds.includes(leg.id)) {
+      issues.push(
+        `$.decomposition.legs[${legIndex}] is absent from its swimlane legIds`,
+      );
+    }
+    if (!Array.isArray(leg.dependsOn)) return;
+    leg.dependsOn.forEach((dependency, dependencyIndex) => {
+      if (!legsById.has(dependency)) {
+        issues.push(
+          `$.decomposition.legs[${legIndex}].dependsOn[${dependencyIndex}] references unknown leg ${JSON.stringify(dependency)}`,
+        );
+      }
+    });
+  });
+  if (!dependencyGraphIsAcyclic(snapshot.decomposition.legs)) {
+    issues.push("$.decomposition leg dependencies must form an acyclic graph");
+  }
+  const edgeIds = snapshot.decomposition.edges.map((edge) => edge?.id);
+  if (new Set(edgeIds).size !== edgeIds.length) {
+    issues.push("$.decomposition.edges must have unique ids");
+  }
+  const expectedDependencyPairs = new Set(
+    snapshot.decomposition.legs.flatMap((leg) =>
+      Array.isArray(leg.dependsOn)
+        ? leg.dependsOn.map((dependency) => `${dependency}\u0000${leg.id}`)
+        : [],
+    ),
+  );
+  const observedDependencyPairs = new Set();
+  snapshot.decomposition.edges.forEach((edge, edgeIndex) => {
+    const source = legsById.get(edge?.source);
+    const target = legsById.get(edge?.target);
+    if (!source || !target) {
+      issues.push(
+        `$.decomposition.edges[${edgeIndex}] references an unknown leg`,
+      );
+    } else if (!Array.isArray(target.dependsOn) || !target.dependsOn.includes(source.id)) {
+      issues.push(
+        `$.decomposition.edges[${edgeIndex}] is not declared by its target dependsOn`,
+      );
+    }
+    const pair = `${edge?.source}\u0000${edge?.target}`;
+    if (observedDependencyPairs.has(pair)) {
+      issues.push(
+        `$.decomposition.edges[${edgeIndex}] duplicates a dependency edge`,
+      );
+    }
+    observedDependencyPairs.add(pair);
+  });
+  if (
+    expectedDependencyPairs.size !== observedDependencyPairs.size ||
+    [...expectedDependencyPairs].some(
+      (pair) => !observedDependencyPairs.has(pair),
+    )
+  ) {
+    issues.push(
+      "$.decomposition.edges must exactly represent every leg dependsOn relationship",
+    );
+  }
+  if (
+    snapshot.decomposition.availability !== "available" &&
+    (snapshot.decomposition.swimlanes.length > 0 ||
+      snapshot.decomposition.legs.length > 0 ||
+      snapshot.decomposition.edges.length > 0)
+  ) {
+    issues.push(
+      "$.decomposition must not retain partial records when unavailable or empty",
+    );
+  }
   return issues;
 }
 
@@ -343,7 +506,7 @@ export async function createWorkspaceSnapshotValidator({
     schema = JSON.parse(await readFile(schemaPath, "utf8"));
   } catch (error) {
     const wrapped = new Error(
-      `WorkspaceSnapshot 2.0 schema is unavailable: ${schemaPath}`,
+      `WorkspaceSnapshot 3.0 schema is unavailable: ${schemaPath}`,
       { cause: error },
     );
     wrapped.code = "SNAPSHOT_SCHEMA_UNAVAILABLE";
@@ -354,13 +517,13 @@ export async function createWorkspaceSnapshotValidator({
     const issues = validateJsonSchema(snapshot, schema);
     if (
       !isObject(snapshot) ||
-      snapshot.schemaVersion !== "2.0" ||
+      snapshot.schemaVersion !== "3.0" ||
       typeof snapshot.snapshotId !== "string" ||
       snapshot.snapshotId.length === 0 ||
       !Array.isArray(snapshot.artifacts)
     ) {
       issues.push(
-        "$ must be a WorkspaceSnapshot 2.0 with snapshotId and artifacts",
+        "$ must be a WorkspaceSnapshot 3.0 with snapshotId and artifacts",
       );
     }
     if (issues.length === 0) {
@@ -368,7 +531,7 @@ export async function createWorkspaceSnapshotValidator({
     }
     if (issues.length > 0) {
       const error = new Error(
-        `WorkspaceSnapshot 2.0 failed validation: ${issues
+        `WorkspaceSnapshot 3.0 failed validation: ${issues
           .slice(0, 8)
           .join("; ")}`,
       );
