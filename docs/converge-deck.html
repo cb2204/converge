@@ -90,9 +90,9 @@
 
   .chip {
     display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
     color: var(--gold); border: 1px solid rgba(243,182,76,.45);
-    border-radius: 999px; padding: 6px 14px; background: rgba(243,182,76,.06);
+    border-radius: 999px; padding: 5px 12px; background: rgba(243,182,76,.06);
   }
   .chip.dim { color: var(--steel); border-color: var(--graphite); background: transparent; }
   .chip.mint { color: var(--mint); border-color: rgba(115,226,195,.4); background: rgba(115,226,195,.05); }
@@ -200,29 +200,29 @@
   .pass-dot.on { border-color: rgba(243,182,76,.55); color: var(--gold); background: rgba(243,182,76,.07); }
 
   /* ══ SLIDE 4 · PASS DEEP-DIVE ════════════════════════════ */
-  .pass-head { display: flex; align-items: flex-start; gap: 30px; margin-top: 6px; position: relative; z-index: 3; }
+  .pass-head { display: flex; align-items: flex-start; gap: 26px; margin-top: 0; position: relative; z-index: 3; }
   .pass-num {
-    font-size: 118px; font-weight: 700; line-height: .86; color: var(--gold);
+    font-size: 96px; font-weight: 700; line-height: .86; color: var(--gold);
     letter-spacing: -.04em;
   }
-  .pass-head-main { padding-top: 6px; }
-  .pass-head-main h2 { font-size: 40px; font-weight: 600; letter-spacing: -.015em; line-height: 1.05; }
+  .pass-head-main { padding-top: 2px; }
+  .pass-head-main h2 { font-size: 36px; font-weight: 600; letter-spacing: -.015em; line-height: 1.05; }
   .pass-head-main h2 span { color: var(--steel); font-weight: 500; }
-  .pass-chips { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-  .pass-cols { display: flex; gap: 30px; margin-top: 30px; position: relative; z-index: 3; }
-  .pass-left { width: 470px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+  .pass-chips { display: flex; gap: 9px; margin-top: 11px; flex-wrap: wrap; }
+  .pass-cols { display: flex; gap: 28px; margin-top: 20px; position: relative; z-index: 3; }
+  .pass-left { width: 470px; flex-shrink: 0; display: flex; flex-direction: column; gap: 13px; }
   .info-card {
     background: var(--carbon); border: 1px solid var(--graphite); border-radius: 14px;
-    padding: 18px 22px 16px;
+    padding: 14px 20px 12px;
   }
   .info-card h5 {
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; color: var(--gold);
-    margin-bottom: 10px; font-weight: 400;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .2em; color: var(--gold);
+    margin-bottom: 8px; font-weight: 400;
   }
-  .info-card p { font-size: 13.5px; line-height: 1.6; color: #c9cfd6; }
+  .info-card p { font-size: 12.5px; line-height: 1.52; color: #c9cfd6; }
   .info-card p b { color: var(--ivory); }
   .cmd-flow { display: flex; flex-direction: column; gap: 0; }
-  .cmd-step { display: flex; align-items: center; gap: 14px; padding: 7px 0; }
+  .cmd-step { display: flex; align-items: center; gap: 14px; padding: 5px 0; }
   .cmd-step .tick {
     width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
     border: 1px solid rgba(243,182,76,.5); color: var(--gold);
@@ -242,7 +242,7 @@
   .spec-bar .dots { display: flex; gap: 6px; }
   .spec-bar .dots i { width: 9px; height: 9px; border-radius: 50%; background: #232c38; display: block; }
   .spec-bar .fname { font-family: var(--mono); font-size: 11.5px; color: var(--steel); letter-spacing: .04em; }
-  .spec-body { padding: 20px 24px 16px; font-family: var(--mono); font-size: 12.5px; line-height: 1.9; flex: 1; }
+  .spec-body { padding: 16px 24px 14px; font-family: var(--mono); font-size: 12px; line-height: 1.78; flex: 1; }
   .spec-body .c   { color: #4d5866; }
   .spec-body .k   { color: var(--steel); }
   .spec-body .v   { color: var(--ivory); }
@@ -268,20 +268,20 @@
   .dual-gates { display: flex; gap: 16px; }
   .dual-gate {
     flex: 1; background: var(--carbon); border: 1px solid var(--graphite); border-radius: 12px;
-    padding: 14px 18px 12px;
+    padding: 11px 16px 10px;
   }
   .dual-gate h6 {
-    font-family: var(--mono); font-size: 10px; letter-spacing: .18em; color: var(--gold);
-    font-weight: 400; margin-bottom: 7px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; color: var(--gold);
+    font-weight: 400; margin-bottom: 6px;
   }
-  .dual-gate code { font-size: 11.5px; color: var(--ivory); }
-  .dual-gate p { font-size: 11.5px; line-height: 1.5; color: var(--steel); margin-top: 5px; }
+  .dual-gate code { font-size: 11px; color: var(--ivory); }
+  .dual-gate p { font-size: 11px; line-height: 1.45; color: var(--steel); margin-top: 4px; }
   .red-card {
     border: 1px solid rgba(255,107,100,.4); background: rgba(255,107,100,.05);
-    border-radius: 12px; padding: 13px 18px; display: flex; gap: 12px; align-items: center;
+    border-radius: 12px; padding: 10px 16px; display: flex; gap: 12px; align-items: center;
   }
   .red-card .tok { font-family: var(--mono); font-size: 11px; color: var(--coral); letter-spacing: .1em; flex-shrink: 0; }
-  .red-card p { font-size: 12px; line-height: 1.5; color: #d9a5a2; }
+  .red-card p { font-size: 11.5px; line-height: 1.48; color: #d9a5a2; }
   .template-note {
     margin-top: 22px; position: relative; z-index: 3; display: flex; gap: 12px; align-items: center;
     font-size: 13px; color: var(--steel);
@@ -343,6 +343,79 @@
   }
   .full-edition li b { color: #c9cfd6; font-weight: 500; }
   .full-edition li .n { font-family: var(--mono); font-size: 10px; color: var(--gold); flex-shrink: 0; padding-top: 1px; }
+
+  /* ══ FULL-EDITION SHARED COMPONENTS ══════════════════════ */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .tile {
+    background: var(--carbon); border: 1px solid var(--graphite); border-radius: 12px;
+    padding: 15px 18px 13px;
+  }
+  .tile .tag {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--gold);
+    display: block; margin-bottom: 7px;
+  }
+  .tile h4 { font-size: 14.5px; font-weight: 600; margin-bottom: 6px; letter-spacing: -.01em; }
+  .tile h4 code { font-size: 12px; color: var(--gold); }
+  .tile p { font-size: 11.5px; line-height: 1.55; color: var(--steel); }
+  .tile p code { font-size: 10.5px; color: #c9cfd6; }
+  .tile p b { color: #c9cfd6; font-weight: 600; }
+
+  .toc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 36px; position: relative; z-index: 3; }
+  .toc-card {
+    background: var(--carbon); border: 1px solid var(--graphite); border-radius: 14px;
+    padding: 18px 20px 14px;
+  }
+  .toc-card .ch { font-family: var(--mono); font-size: 10px; letter-spacing: .22em; color: var(--gold); margin-bottom: 8px; }
+  .toc-card h4 { font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -.01em; }
+  .toc-row { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; font-size: 12px; color: #c9cfd6; }
+  .toc-row .pg { font-family: var(--mono); font-size: 10px; color: var(--gold); margin-left: auto; }
+
+  .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .state-card {
+    background: var(--carbon); border: 1px solid var(--graphite); border-radius: 11px;
+    padding: 10px 14px 9px;
+  }
+  .state-card .row { display: flex; align-items: baseline; }
+  .state-card .tok { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
+  .state-card .ex { font-family: var(--mono); font-size: 9.5px; color: var(--steel); margin-left: auto; }
+  .state-card p { font-size: 10.5px; line-height: 1.45; color: var(--steel); margin-top: 4px; }
+
+  .chat { display: flex; flex-direction: column; gap: 9px; }
+  .msg { display: flex; gap: 12px; align-items: flex-start; }
+  .msg .who { width: 52px; flex-shrink: 0; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; padding-top: 8px; text-align: right; color: var(--steel); }
+  .msg .bubble {
+    background: var(--carbon); border: 1px solid var(--graphite); border-radius: 12px;
+    padding: 9px 15px; font-size: 12px; line-height: 1.55; color: #c9cfd6; flex: 1;
+  }
+  .msg.you .who { color: var(--gold); }
+  .msg.you .bubble { border-color: rgba(243,182,76,.35); background: rgba(243,182,76,.04); color: var(--ivory); }
+  .msg .bubble code { font-family: var(--mono); font-size: 10.5px; color: #c9cfd6; }
+  .msg .bubble .tok { font-family: var(--mono); font-size: 10.5px; color: var(--mint); }
+  .msg .bubble .tokg { font-family: var(--mono); font-size: 10.5px; color: var(--gold); }
+
+  .tier-row { display: flex; gap: 12px; }
+  .tier-card {
+    flex: 1; background: var(--carbon); border: 1px solid var(--graphite); border-radius: 12px;
+    padding: 14px 12px 12px; text-align: center;
+  }
+  .tier-card .t { font-size: 24px; font-weight: 700; color: var(--gold); letter-spacing: -.02em; }
+  .tier-card .b { font-family: var(--mono); font-size: 9.5px; color: var(--steel); margin-top: 7px; line-height: 1.6; }
+  .tier-card .b em { font-style: normal; color: #c9cfd6; }
+  .tier-card.node { border-style: dashed; }
+  .tier-card.node .t { color: var(--steel); }
+
+  .code-row { display: flex; gap: 12px; align-items: baseline; padding: 5px 0; border-bottom: 1px dashed #1e2733; font-size: 11.5px; color: var(--steel); }
+  .code-row:last-child { border-bottom: none; }
+  .code-row .c { font-family: var(--mono); width: 26px; color: var(--gold); flex-shrink: 0; }
+  .code-row .n { font-family: var(--mono); width: 110px; color: var(--ivory); font-size: 10.5px; flex-shrink: 0; }
+  .code-row .r { font-family: var(--mono); font-size: 9.5px; color: var(--mint); margin-left: auto; flex-shrink: 0; }
+
+  .kv { display: flex; gap: 10px; padding: 4px 0; font-size: 12px; color: var(--steel); align-items: baseline; }
+  .kv b { color: var(--ivory); font-weight: 600; flex-shrink: 0; }
+  .kv code { font-family: var(--mono); font-size: 10.5px; color: #c9cfd6; }
+
+  .sec-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .24em; color: var(--gold); margin-bottom: 12px; }
 
   /* SVG shared text styles */
   svg .nd-title { font: 600 15px var(--display); fill: var(--ivory); }
@@ -407,7 +480,7 @@
   <svg class="watermark" viewBox="0 0 1024 1024"><use href="#fold-icon" opacity="1"/></svg>
 
   <div class="cover-kit">BRAND · SETTLEMENT FOLD</div>
-  <div class="cover-tag"><span class="chip">DESIGN PREVIEW · 5 PAGES OF THE FULL EDITION</span></div>
+  <div class="cover-tag"><span class="chip">THE COMPLETE EDITION · EVERY GATE, EVERY TOKEN</span></div>
 
   <div class="cover-center">
     <svg class="cover-lockup" viewBox="0 0 2048 512" role="img" aria-label="Converge">
@@ -451,7 +524,94 @@
   <div class="page-foot">
     <span class="doc">CONVERGE · DOCUMENTATION</span>
     <span class="line"></span>
-    <span class="num"><b>01</b> / 05</span>
+    <span class="num"><b>01</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 02 · CONTENTS ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="left:-200px; top:-160px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">CONTENTS</span>
+  </div>
+
+  <h2 class="slide-title">Contents. <span class="dim">Nine chapters, one production line.</span></h2>
+
+  <div class="toc-grid">
+    <div class="toc-card">
+      <div class="ch">CHAPTER 01</div>
+      <h4>Introduction</h4>
+      <div class="toc-row"><span>What is Converge?</span><span class="pg">03</span></div>
+      <div class="toc-row"><span>The vocabulary</span><span class="pg">04</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 02</div>
+      <h4>The method</h4>
+      <div class="toc-row"><span>The descent — nine passes</span><span class="pg">05</span></div>
+      <div class="toc-row"><span>Gates, tokens &amp; evidence</span><span class="pg">06</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 03</div>
+      <h4>The passes, one by one</h4>
+      <div class="toc-row"><span>0 Capture · 1 Intent · 2 Structure</span><span class="pg">07–09</span></div>
+      <div class="toc-row"><span>3 Decompose · 4 Consensus</span><span class="pg">10–11</span></div>
+      <div class="toc-row"><span>5 Tasking + the six-tier engine</span><span class="pg">12–13</span></div>
+      <div class="toc-row"><span>6 Register · 7 Bind · 8 The Loop</span><span class="pg">14–16</span></div>
+      <div class="toc-row"><span>The loop state machine</span><span class="pg">17</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 04</div>
+      <h4>The trust chain</h4>
+      <div class="toc-row"><span>Seals, tiers &amp; receipts</span><span class="pg">18</span></div>
+      <div class="toc-row"><span>Proof in production</span><span class="pg">19</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 05</div>
+      <h4>The skills</h4>
+      <div class="toc-row"><span>Utilities &amp; the twelve-skill catalog</span><span class="pg">20</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 06</div>
+      <h4>The referee CLI</h4>
+      <div class="toc-row"><span>The surface at a glance</span><span class="pg">21</span></div>
+      <div class="toc-row"><span>The agent protocol</span><span class="pg">22</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 07</div>
+      <h4>Architecture</h4>
+      <div class="toc-row"><span>Control plane &amp; the write fence</span><span class="pg">23</span></div>
+      <div class="toc-row"><span>Cockpit — read-only observability</span><span class="pg">24</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 08</div>
+      <h4>Operating the factory</h4>
+      <div class="toc-row"><span>Steering from chat</span><span class="pg">25</span></div>
+    </div>
+    <div class="toc-card">
+      <div class="ch">CHAPTER 09</div>
+      <h4>Install &amp; status</h4>
+      <div class="toc-row"><span>Three doors, one result</span><span class="pg">26</span></div>
+      <div class="toc-row"><span>Status, provenance &amp; roadmap</span><span class="pg">27</span></div>
+    </div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>How to read this document:</b> every pass chapter follows one template — identity →
+    job → gate → CLI path → artifact anatomy → failure modes. Every claim ends in a greppable
+    token you can verify in your own repository.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>02</b> / 27</span>
   </div>
 </section>
 
@@ -532,7 +692,110 @@
   <div class="page-foot">
     <span class="doc">CONVERGE · DOCUMENTATION</span>
     <span class="line"></span>
-    <span class="num"><b>02</b> / 05</span>
+    <span class="num"><b>03</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 04 · VOCABULARY ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">01 · INTRODUCTION — THE VOCABULARY</span>
+  </div>
+
+  <h2 class="slide-title">Twelve words <span class="dim">that carry the whole system.</span></h2>
+
+  <div class="grid3 z" style="margin-top:30px;">
+    <div class="tile">
+      <span class="tag">THE SHAPE</span>
+      <h4>The descent</h4>
+      <p>The nine-gate production line, pass 0 → 8. A raw idea goes in; merged, proven work
+      comes out. Evidence and lessons flow back to feed the next pass.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE UNIT OF METHOD</span>
+      <h4>Pass</h4>
+      <p>One installable skill with <b>one job, one output, one gate</b>. You or your agent do
+      the work; the gate proves it happened.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE VERDICT</span>
+      <h4>Gate &amp; token</h4>
+      <p>A deterministic script whose verdict ends in one greppable token
+      (<code>CHECK_PLAN=OK</code>). Fail-closed: a verdict that cannot be read is never a pass.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE UNIT OF WORK</span>
+      <h4>Task-Spec</h4>
+      <p>A self-verifying markdown file: machine-checked format, effort budget, HMAC seal, and
+      its own definition of done. The evals travel <b>inside</b> the file.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE JUDGE</span>
+      <h4>Eval</h4>
+      <p>Runnable bash authored <b>before</b> the work. The eval decides done — completion is a
+      state-machine invariant, never an agent's claim.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE TRUST DEVICE</span>
+      <h4>The seal</h4>
+      <p>An HMAC-SHA256 envelope over the spec's identity, body digest, and authorization
+      fields. Edit one eval byte after signing and the gate refuses.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">PASS 4</span>
+      <h4>The barrier</h4>
+      <p>A different-family model attacks the plan; the owner resolves objections and signs.
+      <b>The last human decision in the chain.</b></p>
+    </div>
+    <div class="tile">
+      <span class="tag">PASS 5</span>
+      <h4>The cornerstone</h4>
+      <p>Where intent becomes signed, self-verifying Task-Specs — the point of no return
+      between the design half and the machine half.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE ROUTER</span>
+      <h4>Lane</h4>
+      <p><code>cvg lane</code> routes work to the ceremony it earns — FAST (5, 7, 8) ·
+      NORMAL (1, 2, 5, 7, 8) · FULL (0–8). It routes, but <b>never waives</b>.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE UMPIRE</span>
+      <h4>The referee</h4>
+      <p><code>cvg</code> — frames, dispatches, gates. Holds zero model credentials, calls no
+      models, writes no product code. Agents play; the referee scores.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE TERMINAL STATE</span>
+      <h4>Settled</h4>
+      <p>Green evals within budget, receipt written, PR opened —
+      <code>TASK_LOOP=SETTLED</code>. An exhausted budget is never a success.</p>
+    </div>
+    <div class="tile">
+      <span class="tag">THE FLOOR</span>
+      <h4>Evidence</h4>
+      <p>Receipts, seals, tokens, objection logs, attempt transcripts — the artifacts every
+      gate stands on. <code>cvg next</code> derives the whole descent's position from them.</p>
+    </div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>The three layers:</b> the <b>Agentic Loop</b> is the runtime (attempt → verify →
+    repeat) · <b>Converge</b> is the method (nine gated passes) · <b>ASD</b> — Agentic Software
+    Delivery — is the meta-process that turns every run's evidence into the next run's input.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>04</b> / 27</span>
   </div>
 </section>
 
@@ -678,7 +941,595 @@
   <div class="page-foot">
     <span class="doc">CONVERGE · DOCUMENTATION</span>
     <span class="line"></span>
-    <span class="num"><b>03</b> / 05</span>
+    <span class="num"><b>05</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 06 · GATES, TOKENS & EVIDENCE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="right:-240px; top:-160px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">02 · THE METHOD — GATES, TOKENS &amp; EVIDENCE</span>
+  </div>
+
+  <h2 class="slide-title">How a gate works. <span class="dim">Fail-closed, byte-exact, greppable.</span></h2>
+
+  <div class="cli-cols" style="margin-top:28px;">
+    <div style="width:600px; flex-shrink:0; display:flex; flex-direction:column; gap:16px;">
+      <div class="info-card">
+        <h5>THE MECHANICS</h5>
+        <p>Every wrapped gate is a <b>byte-exact pass-through</b> (<code class="mono">exec</code>)
+        to the proven skill script — the router adds convenience, never behavior. Each verdict
+        ends in one token on its own line, so a script, a CI job, or an agent can read the
+        outcome with a single grep. Artifacts are discovered in typed folders
+        (<code class="mono">cvg/docs/brd/</code>, then legacy paths) — zero found is exit 2,
+        never a silent pass.</p>
+      </div>
+      <div class="info-card">
+        <h5>FAIL-CLOSED, EVERYWHERE</h5>
+        <p>A verdict that cannot be obtained is never a pass: a missing engine is
+        <code class="mono">SKIP</code>, a wall-clock breach is <code class="mono">TIMEOUT</code>,
+        an unparseable judgment is <code class="mono">ENGINE_ERROR</code>. Gate checks run with
+        <b>fenced code blocks stripped</b>, so pasting the magic words inside a code sample
+        authorizes nothing. Sentinels like <code class="mono">(open)</code>, <code class="mono">tbd</code>,
+        <code class="mono">pending</code> read as <b>unresolved</b> — anything the script cannot
+        prove resolved counts against you.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CONDUCTOR — <span style="color:var(--ivory)">cvg next</span></h5>
+        <p>Derives which pass is current and which comes next <b>from workspace evidence alone</b> —
+        no stored state. It prints the evidence board, the owning skill, its steering prompt, and
+        the pass's closing gate. Presence probes only: evidence presence is not a verdict — the
+        gates stay authoritative. Pre/post hooks enforce descent order fail-closed.
+        <code class="mono" style="color:var(--gold)">NEXT_PASS=0-8|DONE</code></p>
+      </div>
+    </div>
+
+    <div class="cli-right">
+      <div class="sec-label">THE TOKEN LEDGER — ONE VERDICT PER PASS</div>
+      <div class="info-card" style="padding:14px 22px 12px;">
+        <div class="code-row"><span class="c">0</span><span class="n">Capture</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_BRD=PASS|FAIL|USAGE_ERROR</code></div>
+        <div class="code-row"><span class="c">1</span><span class="n">Intent</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_TECH_SPEC=PASS|FAIL|USAGE_ERROR</code></div>
+        <div class="code-row"><span class="c">2</span><span class="n">Structure</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_ADR=OK|FAIL|EMPTY|USAGE_ERROR</code></div>
+        <div class="code-row"><span class="c">3</span><span class="n">Decompose</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_PLAN=OK|FAIL|EMPTY|USAGE_ERROR</code></div>
+        <div class="code-row"><span class="c">4</span><span class="n">Consensus</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_CONSENSUS=OK|FAIL|EMPTY|USAGE_ERROR</code></div>
+        <div class="code-row"><span class="c">5</span><span class="n">Tasking</span><code class="mono" style="font-size:11px; color:#c9cfd6;">VERDICT: DELEGATE · TIER=1|2|3</code></div>
+        <div class="code-row"><span class="c">6</span><span class="n">Register</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_REGISTER=OK|FAIL</code></div>
+        <div class="code-row"><span class="c">7</span><span class="n">Bind</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_RUNTIME_CONTRACT=PASS|FAIL</code></div>
+        <div class="code-row"><span class="c">8</span><span class="n">The Loop</span><code class="mono" style="font-size:11px; color:#73E2C3;">TASK_LOOP=SETTLED …(8 states)</code></div>
+        <div class="code-row"><span class="c">·</span><span class="n">Tier-2</span><code class="mono" style="font-size:11px; color:#c9cfd6;">CHECK_VERIFY=UPHELD|REFUTED|UNAVAILABLE|ERROR</code></div>
+      </div>
+
+      <div class="console" style="margin-top:16px;">
+        <div class="bar">EVIDENCE HAS ITS OWN DOCTOR</div>
+        <pre><span class="p">$</span> cvg doctor evidence     <span class="p"># can git show the floor the gates stand on?</span>
+<span class="p">$</span> cvg doctor              <span class="p"># ≥2 engines, ≥1 cross-family → DOCTOR=OK</span>
+<span class="p">$</span> cvg doctor plugin       <span class="p"># is this project loading a STALE Converge?</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>Why tokens:</b> a token is a contract between the gate and everything downstream —
+    scripts, CI, agents, and this document. If a claim in these pages matters, it names the token
+    that proves it.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>06</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 07 · PASS 0 · CAPTURE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — CAPTURE</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">0</div>
+    <div class="pass-head-main">
+      <h2>Capture <span>— grill the gaps out of the idea.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · idea-to-brd</span>
+        <span class="chip dim">GATE · CHECK_BRD=PASS</span>
+        <span class="chip dim">OPTIONAL · FULL LANE</span>
+        <span class="chip dim">IN · A RAW IDEA</span>
+        <span class="chip dim">OUT · cvg/docs/brd/&lt;slug&gt;.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT YOU DO</h5>
+        <p>The skill grills the <b>stakeholder</b>, not the engineer, in <b>frontier rounds</b> —
+        every answerable question goes out at once, numbered, each with a recommended default.
+        Seven branches in leverage order: pain → <b>the do-nothing test</b> → goal → scope
+        boundary → success from the owner's seat → constraints → the pre-mortem
+        (<i>“it shipped and failed — what killed it?”</i>).</p>
+      </div>
+      <div class="info-card">
+        <h5>WHAT THE GATE PROVES</h5>
+        <p>The brief is complete and signed: verdict line <code class="mono" style="color:var(--gold)">canonical</code>
+        in the owner's hand, a calendar-real date, every number provenance-tagged, every open
+        question owned. Checks run with <b>fenced code blocks stripped</b> — evasion by example
+        is blocked.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg capture</code><span class="what">the BRD exit contract</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg capture --draft</code><span class="what">progress check — never authorizes</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg capture --no-go</code><span class="what">validate the parked record</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">CHECK_BRD=FAIL</span>
+        <p>A <code>(guessed)</code> number with no linked open question fails. A scope entry that
+        says nothing fails. A heading that drifts from the template fails. Owner-voice is a WARN;
+        structure is law.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">cvg/docs/brd/storm-alerts.md</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF A BRD</span>
+        </div>
+        <div class="spec-body">
+<span class="sec">## Executive summary</span> <span class="c">— written LAST, ≤ 60 words</span><br>
+<span class="sec">## Problem</span> <span class="c">— every number tagged</span> <span class="g">(measured)</span> <span class="c">/</span> <span class="g">(estimated)</span> <span class="c">/</span> <span class="g">(guessed)</span><br>
+<span class="sec">## Goals &amp; KPIs</span> <span class="c">— in the owner's terms, not the engineer's</span><br>
+<span class="sec">## Scope</span> <span class="c">— in / out, each entry earns its line</span><br>
+<span class="sec">## Definition of success</span> · <span class="sec">## Stakeholders</span> · <span class="sec">## Risks</span> · <span class="sec">## Constraints</span><br>
+<span class="sec">## Open questions</span> <span class="c">— every one carries a named owner</span><br>
+<span class="sec">## Sign-off</span>&nbsp;&nbsp;<span class="k">verdict:</span> <span class="g">canonical</span>&nbsp;&nbsp;<span class="k">date:</span> <span class="v">2026-08-04</span> <span class="c">— born _pending_, only the owner flips it</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>THE DO-NOTHING EXIT</h6>
+          <code>cvg/docs/no-go/&lt;slug&gt;.md</code>
+          <p>If the do-nothing cost is tolerable: the idea in two lines, the owner of the call,
+          the do-nothing answer <b>verbatim</b>, and what would reopen it. Parked, not deleted —
+          and no handoff from a no-go.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>ANSWER DISCIPLINE</h6>
+          <code>Locked: 1 — &lt;answer&gt;</code>
+          <p>Answers are locked by restating. Push back once per vague answer; after two carries
+          an unanswered question becomes an <b>owned open question</b>, never a silent gap.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>07</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 08 · PASS 1 · INTENT ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — INTENT</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">1</div>
+    <div class="pass-head-main">
+      <h2>Intent <span>— every requirement falsifiable.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · brd-docs-to-tech-req</span>
+        <span class="chip dim">GATE · CHECK_TECH_SPEC=PASS</span>
+        <span class="chip dim">LANES · NORMAL + FULL</span>
+        <span class="chip dim">IN · THE BRD</span>
+        <span class="chip dim">OUT · cvg/docs/tech-spec/&lt;slug&gt;.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT YOU DO</h5>
+        <p>Read the BRD as the senior engineer accountable for delivery. The admission rule:
+        a requirement enters the spec <b>only if a future eval could pass or fail it</b>.
+        Non-falsifiable wishes go to the open-assumptions list with a named owner — never
+        softened into the spec.</p>
+      </div>
+      <div class="info-card">
+        <h5>WHAT THE GATE PROVES</h5>
+        <p>Verdict <code class="mono" style="color:var(--gold)">canonical</code> with a valid date,
+        and <b>no blocker gap unresolved</b>. The blocker check fails CLOSED: <code class="mono">(open)</code>,
+        <code class="mono">tbd</code>, <code class="mono">pending</code> — quoted or not — all count
+        as unresolved.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg intent --draft</code><span class="what">progress check while drafting</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg intent</code><span class="what">the Pass 1 exit contract</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">ALTITUDE GUARD</span>
+        <p>Stack names leak downward: a tech choice in the spec is Pass 2's altitude and draws a
+        WARN, bucketed by domain. An <code>R-n</code> with no number, unit, or comparator draws
+        another.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">cvg/docs/tech-spec/storm-alerts.md</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF A TECH-SPEC</span>
+        </div>
+        <div class="spec-body">
+<span class="sec">## TL;DR</span> <span class="c">— ≤ 25 words; the outcome in ≤ 3 sentences</span><br>
+<span class="sec">## Requirements</span> <span class="c">— stable ids, never renumbered</span><br>
+<span class="g">R-1</span> <span class="v">alert latency p95 &lt; 60s from event to publish</span><br>
+<span class="g">R-2</span> <span class="v">feed availability ≥ 99.5% monthly</span><br>
+<span class="g">W-1</span> <span class="c">(wish — explicitly out of `must`)</span> <span class="v">per-user quiet hours</span><br>
+<span class="sec">## Success metrics</span> <span class="c">— current → target, traced to BRD KPIs</span><br>
+<span class="sec">## Gap register</span> <span class="c">— typed, owned, fail-closed on blockers</span><br>
+<span class="k">id:</span> <span class="v">GAP-001</span> · <span class="k">type:</span> <span class="v">data</span> · <span class="k">severity:</span> <span class="g">blocker</span> · <span class="k">owner:</span> <span class="v">luan</span> · <span class="k">resolution:</span> <span class="m">resolved 2026-08-02 — source confirmed</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>THE TRACEABILITY CHAIN STARTS HERE</h6>
+          <code>R-n → ADR (spec_ref) → plan → eval</code>
+          <p><code>R-n</code> / <code>W-n</code> are what ADRs, plans, and evals cite for the rest
+          of the descent — which is why they are never renumbered.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>DECISIONS LIVE ON DISK</h6>
+          <code>Confirmed decisions recap</code>
+          <p>A <code>Locked:</code> decision is written into the spec's decision record the moment
+          it locks; drafting opens with a recap replay — nothing decided “in the air”.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>08</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 09 · PASS 2 · STRUCTURE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — STRUCTURE</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">2</div>
+    <div class="pass-head-main">
+      <h2>Structure <span>— record what is, as ADRs.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · tech-req-to-adrs</span>
+        <span class="chip dim">GATE · CHECK_ADR=OK</span>
+        <span class="chip dim">LANES · NORMAL + FULL</span>
+        <span class="chip dim">IN · TECH-SPEC + THE REAL REPO</span>
+        <span class="chip dim">OUT · docs/adrs/ + CONTEXT.md</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT YOU DO</h5>
+        <p><b>Run the real system, don't read about it.</b> Reconcile the spec against the
+        terrain and record each grounding fact as a numbered ADR. Three-condition worthiness
+        test: hard to reverse · downstream passes stand on it · it could plausibly have been
+        otherwise. Fails the test → a glossary line, not a numbered file.</p>
+      </div>
+      <div class="info-card">
+        <h5>WHAT THE GATE PROVES</h5>
+        <p>The decision set is canonical and consistent: <code class="mono">0000-context.md</code>
+        present, every section filled, supersede links bidirectional — and under
+        <code class="mono">--final</code>, nothing still <code class="mono">proposed</code>.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>scaffold-adr.sh "&lt;slug&gt;"</code><span class="what">auto-numbered, dated scaffold</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>scaffold-adr.sh --supersede NNNN</code><span class="what">replace, never edit</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg structure</code><span class="what">the ADR gate</span></div>
+          <div class="cmd-step"><span class="tick">4</span><code>cvg structure --final</code><span class="what">nothing left proposed</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">NO-DRIFT</span>
+        <p>A <b>build-verb</b> in any ADR fails the gate — build, create, implement, add. ADRs
+        record what <b>is</b>, never what to build. That single invariant is this pass's one
+        failure mode.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">docs/adrs/0003-source-ships-wal-replica.md</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF AN ADR</span>
+        </div>
+        <div class="spec-body">
+<span class="c">---</span><br>
+<span class="k">status:</span> <span class="g">accepted</span> <span class="c"># proposed → accepted → deprecated | superseded</span><br>
+<span class="k">ground:</span> <span class="v">brownfield</span> · <span class="k">spec_ref:</span> <span class="v">R-2</span> · <span class="k">supersedes:</span> <span class="v">—</span><br>
+<span class="c">---</span><br>
+<span class="sec">## Context</span> · <span class="sec">## Decision</span> · <span class="sec">## Rejected reading</span><br>
+<span class="sec">## Evidence</span> <span class="c">— the observation AND the runnable command that re-proves it</span><br>
+<span class="v">$ docker exec pg psql -c 'show wal_level'  →  replica</span><br>
+<span class="sec">## Consequences</span> <span class="c">— always ends with</span> <span class="g">"Re-verify when: …"</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>ACCEPTED = IMMUTABLE</h6>
+          <code>--supersede NNNN</code>
+          <p>An accepted ADR is never edited — it is superseded, stamping
+          <code>supersedes:</code> / <code>superseded_by:</code> on both files. The gate verifies
+          the links point at each other.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>THE VOCABULARY LEDGER</h6>
+          <code>docs/CONTEXT.md</code>
+          <p>Domain terms crystallize as you ground — canonical name, one-line meaning, the
+          evidence line each traces to. Written as it happens, never batched.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>09</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 10 · PASS 3 · DECOMPOSE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — DECOMPOSE</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">3</div>
+    <div class="pass-head-main">
+      <h2>Decompose <span>— cut the system at its real seams.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · reqs-to-swimlane-plans</span>
+        <span class="chip dim">GATE · CHECK_PLAN=OK</span>
+        <span class="chip dim">LANES · FULL</span>
+        <span class="chip dim">IN · ADRs + IN-SESSION UNDERSTANDING</span>
+        <span class="chip dim">OUT · swimlanes/&lt;seam&gt;/</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT YOU DO</h5>
+        <p>The decomposition chain: <b>seam → swimlane → leg</b> → (task-spec, at Pass 5).
+        A seam is the joint; a lane gets one lean PRD; a <b>leg</b> is the lane's named stretch —
+        one responsibility, one proving test, yielding 1:N task-specs later. Plan altitude only:
+        no query bodies, no handler bodies, no evals.</p>
+      </div>
+      <div class="info-card">
+        <h5>FIVE HARDENING RULES</h5>
+        <p><b>H1</b> exactly one steel-thread lane (<code class="mono">thread=yes</code> — the
+        walking skeleton) · <b>H2</b> spike the riskiest seam first · <b>H3</b> one owner per
+        seam (Conway) · <b>H4</b> seam evolution declared per consumer · <b>H5</b> no unbroken
+        dependency cycles.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>new-plan.sh "&lt;seam&gt;"</code><span class="what">scaffold the lane PRD</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>new-plan.sh --lane &lt;seam&gt; --leg NN-&lt;tech&gt;</code><span class="what">scaffold a leg</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg decompose</code><span class="what">tree shape + dependencies</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">HUMILITY CLAUSE</span>
+        <p>A green check proves legs <b>exist, are named, and are ordered</b> — whether they are
+        well-<i>cut</i> is Pass 4's judgment, not a grep's.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">swimlanes/alerts-pipeline/_lane.md · leg-02-ingest.md</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF A LANE + LEG</span>
+        </div>
+        <div class="spec-body">
+<span class="g">lane-meta: thread=yes · risk=med · owner=data-platform</span><br>
+<span class="sec">## Seam</span> · <span class="sec">## Architecture</span> <span class="c">— flowchart + numbered steps (dual coding)</span><br>
+<span class="sec">## Non-Goals</span> <span class="c">— the #1 anti-bloat device</span> · <span class="sec">## Legs index</span><br>
+<span class="c">── leg file ──────────────────────────────</span><br>
+<span class="k">leg:</span> <span class="v">swimlane-alerts-pipeline-leg-02</span> <span class="c"># the stable key; &lt;tech&gt; is swappable display</span><br>
+<span class="k">depends_on:</span> <span class="v">[…leg-01]</span> · <span class="k">status:</span> <span class="v">accepted</span><br>
+<span class="sec">## Responsibility</span> <span class="c">— one job</span> · <span class="sec">## Proves</span> <span class="c">— Given/When/Then, never an eval</span><br>
+<span class="sec">## Yields</span> <span class="c">— the 1:N task-specs; read directly by</span> <span class="g">cvg tasks plan</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>THE DEEP-LANE TEST</h6>
+          <code>interface answers everything</code>
+          <p>A lane must be answerable from its interface alone — what it does, how you use it,
+          what it depends on, and <b>what is its secret</b> (the decision most likely to change).</p>
+        </div>
+        <div class="dual-gate">
+          <h6>GATE REFUSALS</h6>
+          <code>CHECK_PLAN=FAIL</code>
+          <p>No steel thread · non-contiguous legs · an orphan leg or dangling index row ·
+          altitude-guard hits · a plan that re-decides an ADR.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>10</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 11 · PASS 4 · CONSENSUS ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="left:-200px; top:-160px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — CONSENSUS · THE BARRIER</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">4</div>
+    <div class="pass-head-main">
+      <h2>Consensus <span>— a different family attacks the plan.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · sketch-plans-adversarial-review</span>
+        <span class="chip">GATE · CHECK_CONSENSUS=OK + OWNER SIGN-OFF</span>
+        <span class="chip dim">LANES · FULL</span>
+        <span class="chip dim">IN · SWIMLANE TREE + ADRs</span>
+        <span class="chip dim">OUT · SHARPENED PLANS + LOG</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT HAPPENS</h5>
+        <p>A model from a <b>different vendor family</b> (author Claude → adversary Codex, Kimi,
+        or Gemini) attacks the plans <b>default-to-refuted</b>: the 5–7 highest-leverage
+        objections, ranked by build-time damage. Hunting grounds: unverified assumptions about
+        existing state · build order · cross-lane interfaces. Empirical disputes get a
+        <b>throwaway prototype</b>, not more prose.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE OBJECTION LIFECYCLE</h5>
+        <p>Every objection ends in exactly one of <b>FIX</b> (plan revised in place) or
+        <b>ACCEPT</b> (recorded risk + <b>named owner</b> + reason to proceed). Nothing is
+        silently dropped — the gate greps one resolution per objection. The plans are sharpened
+        <b>in place</b>: the diff is the record; no new files, no new scope.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg doctor</code><span class="what">≥2 engines, ≥1 cross-family</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg review --adversary codex,kimi</code><span class="what">merged, referee-stamped log</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg review --resolve C7 --fix</code><span class="what">record the owner's decision</span></div>
+          <div class="cmd-step"><span class="tick">4</span><code>cvg review --check</code><span class="what">provenance re-hashed</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">UNSIGNED = STOP</span>
+        <p>Gate green but nobody signed → <b>STOP</b>. Never cut task-specs on an unsigned plan.
+        The owner signs <i>“this is the right thing to build, and I am handing it to the
+        machine”</i> — not “the code will be correct”. That's the eval's job.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">swimlanes/.consensus/objection-log.json</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF THE OBJECTION LOG</span>
+        </div>
+        <div class="spec-body">
+<span class="k">"provenance":</span> { <span class="k">engine:</span> <span class="v">codex</span>, <span class="k">family:</span> <span class="g">openai</span>, <span class="k">inputs:</span> <span class="v">[sha256…, sha256…]</span> }<br>
+<span class="c">// the stamp is the proof — the gate re-hashes the live plans;</span><br>
+<span class="c">// drift since review, or a same-family stamp, fails the gate</span><br>
+<span class="k">"objections":</span> [<br>
+&nbsp;&nbsp;{ <span class="k">id:</span> <span class="v">C2</span>, <span class="k">target:</span> <span class="v">swimlane-alerts-pipeline-leg-03</span>, <span class="k">rank:</span> <span class="v">1</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">finding:</span> <span class="v">"consumer needs event_id — producer never emits it"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">resolution:</span> <span class="m">FIX — leg-02 contract amended</span> },<br>
+&nbsp;&nbsp;{ <span class="k">id:</span> <span class="v">C5</span>, <span class="k">resolution:</span> <span class="g">ACCEPT — owner: luan, risk recorded</span> } ]<br>
+<span class="k">"fork":</span> { <span class="k">choice:</span> <span class="v">"B"</span> } <span class="c">— frozen compatibility token, echoed atop every PRD</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>WHY CROSS-FAMILY</h6>
+          <code>self-review under-reports</code>
+          <p>Self-preference bias is family-correlated: a model reviewing its own family's plan
+          blesses too much. A fresh same-family session is the explicitly <b>weaker</b> fallback.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>SCOPE IS FROZEN HERE</h6>
+          <code>new requirement = drift</code>
+          <p>A new requirement appearing during review is logged and pushed <b>back up the
+          chain</b> — never added as scope. The barrier sharpens; it does not grow.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>11</b> / 27</span>
   </div>
 </section>
 
@@ -692,7 +1543,7 @@
       <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
       <span>CONVERGE</span>
     </div>
-    <span class="eyebrow">03 · PASS DEEP-DIVE — THE CHAPTER TEMPLATE</span>
+    <span class="eyebrow">03 · THE PASSES — TASKING · THE CORNERSTONE</span>
   </div>
 
   <div class="pass-head">
@@ -786,15 +1637,758 @@
 
   <div class="template-note">
     <span class="bar"></span>
-    <span><b>The design model:</b> every pass in the full edition gets this chapter template —
-    identity → job → gate → CLI path → artifact anatomy → failure modes. Nine chapters, one
-    per pass, plus the three utility skills.</span>
+    <span><b>The point of no return:</b> after this pass, humans stop writing and machines stop
+    trusting — everything downstream runs on the seal, the budgets, and the evals authored here.</span>
   </div>
 
   <div class="page-foot">
     <span class="doc">CONVERGE · DOCUMENTATION</span>
     <span class="line"></span>
-    <span class="num"><b>04</b> / 05</span>
+    <span class="num"><b>12</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 13 · THE SIX-TIER ENGINE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — TASKING · SIZING</span>
+  </div>
+
+  <h2 class="slide-title">The six-tier engine. <span class="dim">Size is a budget the gate enforces, not a guess.</span></h2>
+  <p class="slide-sub">Four runnable leaves and two decomposition nodes. Only the <b>write-surface
+  budget</b> is gate-enforced; reads and eval counts are authoring guidance. Breach the budget and
+  the verdict is your decomposition was too coarse.</p>
+
+  <div class="tier-row z" style="margin-top:26px;">
+    <div class="tier-card"><div class="t">XS</div><div class="b"><em>≤ 1 write path</em><br>≤ 2 files read · 1 eval<br>mechanical, tightly specced</div></div>
+    <div class="tier-card"><div class="t">S</div><div class="b"><em>≤ 2 write paths</em><br>≤ 4 files read · 1–2 evals</div></div>
+    <div class="tier-card"><div class="t">M</div><div class="b"><em>≤ 3 write paths</em><br>≤ 6 files read · 2–3 evals</div></div>
+    <div class="tier-card"><div class="t">L</div><div class="b"><em>≤ 5 write paths</em><br>≤ 10 files · ≤ 4 evals<br><em>ONE coherent goal</em></div></div>
+    <div class="tier-card node"><div class="t">XL</div><div class="b">node — <em>children: ≥ 2</em><br>never runnable<br>dispatch the children</div></div>
+    <div class="tier-card node"><div class="t">XXL</div><div class="b">node — <em>children: ≥ 3</em><br>never runnable<br>no route out</div></div>
+  </div>
+
+  <div class="cli-cols" style="margin-top:22px;">
+    <div style="flex:1; display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>TWO SHAPE RULES FOR EVERY ATOM</h5>
+        <p><b>Cut tracer bullets, not layers</b> — a vertical slice through schema → transform →
+        serving → test beats a horizontal “all the models”. And <b>size to one fresh context
+        window</b>: spec + cited ADRs + touched files + working diff, verifying as one PR. The one
+        exception: wide refactors sequence as <b>expand → migrate → contract</b>.</p>
+      </div>
+      <div class="info-card">
+        <h5>SEVERITY-SCALED CONFIDENCE</h5>
+        <p>The delegation threshold scales with what breaks if the spec is wrong:
+        cosmetic <b>0.80</b> · refactor <b>0.85</b> · feature <b>0.90</b> · bugfix <b>0.95</b>
+        (the default) · security <b>0.98</b> · financial-critical <b>0.99</b>.</p>
+      </div>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; gap:14px;">
+      <div class="red-card" style="align-items:flex-start;">
+        <span class="tok">STUB-RESISTANCE</span>
+        <p>An eval that only asserts a file exists is satisfied by
+        <code class="mono">echo "# assert" &gt; x.py</code> — the gate <b>blocks</b> existence-only
+        evals. Assert the <b>outcome</b>: a row in a table, a role in the cluster, a revoked
+        privilege.</p>
+      </div>
+      <div class="info-card">
+        <h5>HOLES ARE FIRST-CLASS</h5>
+        <p>An unresolved question makes the spec <code class="mono">status: blocked</code> with a
+        <code class="mono">blocked_reason:</code> and a non-empty Open Questions zone — and a
+        blocked atom <b>never reaches the gate</b>. Ambiguity is recorded, not smuggled.</p>
+      </div>
+      <div class="info-card">
+        <h5>BACKLOG-WIDE LINTING</h5>
+        <p><code class="mono">cvg lint</code> checks cycles and overlaps across every spec —
+        needs bash 4+ (stock macOS 3.2 prints <code class="mono">LINT=UNSUPPORTED</code>, exit 3;
+        <code class="mono">brew install bash</code> and it re-execs itself).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>13</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 14 · PASS 6 · REGISTER ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — REGISTER</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">6</div>
+    <div class="pass-head-main">
+      <h2>Register <span>— the board that cannot lie.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · task-specs-to-issues</span>
+        <span class="chip dim">GATE · CHECK_REGISTER=OK</span>
+        <span class="chip dim">OPT-IN · ALL LANES</span>
+        <span class="chip dim">IN · SIGNED SPECS</span>
+        <span class="chip dim">OUT · LINEAR / GITHUB / JIRA ISSUES</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHAT IT DOES</h5>
+        <p>Idempotently projects each <code class="mono">signed_off: true</code> spec onto
+        <b>exactly one</b> tracker issue — never fan out, never merge — and mirrors every
+        <code class="mono">depends_on</code> edge as the tracker's own <b>blocked-by</b> relation.
+        The ready frontier renders natively in the board UI.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE SIX-VERB ADAPTER</h5>
+        <p>Every tracker is one adapter file speaking six verbs:
+        <code class="mono">preflight · upsert · link · list-ready · list-issues · write-result</code>.
+        The loop uses only two; registration uses two; the parity gate reads one. A no-network
+        <code class="mono">fake</code> adapter proves the whole suite offline — 145 checks.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg setup tracker linear</code><span class="what">key → OS keychain, never argv</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg register --dry-run</code><span class="what">detects cycles before any write</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg register</code><span class="what">specs → issues, 1:1</span></div>
+          <div class="cmd-step"><span class="tick">4</span><code>cvg register --check</code><span class="what">parity · DAG · no orphans</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">CYCLE = REFUSE ALL</span>
+        <p>A <code>depends_on</code> cycle refuses the whole run — it's a spec bug, not a board
+        state. A failed preflight <b>stops</b> rather than half-registering.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">linear issue CVG-23 ⇄ cvg/tasks/T-20260730-add-health-endpoint.md</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF THE MAPPING</span>
+        </div>
+        <div class="spec-body">
+<span class="k">title:</span> <span class="v">the spec's title, verbatim</span><br>
+<span class="k">body:</span> <span class="v">goal + touches_paths +</span> <span class="g">the Exit Check, verbatim</span> <span class="c">— the issue carries its own proof</span><br>
+<span class="k">key:</span> <span class="v">&lt;!-- task-spec: T-20260730-add-health-endpoint --&gt;</span> <span class="c">— the marker IS the idempotency key</span><br>
+<span class="k">deps:</span> <span class="v">blocked-by ⇄ depends_on, edge for edge</span><br>
+<span class="k">receipt:</span> <span class="v">tracker_ref: linear:CVG-23</span> <span class="c">— stamped into frontmatter METADATA;</span><br>
+<span class="c">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; the HMAC seal covers id + body + authz — the receipt never breaks it</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>THE ONE RULE THAT KEEPS IT HONEST</h6>
+          <code>only a green eval closes an issue</code>
+          <p>Only the loop writes result state. Humans and agents can look at the board;
+          <b>only settlement moves it</b> — which is why the board never lies.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>PARITY, GATED</h6>
+          <code>issues 8 != specs 7 → FAIL</code>
+          <p>Count mismatch, orphan issue, double-registered spec, or a missing
+          <code>blocked-by</code> edge — each one fails <code>CHECK_REGISTER</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>14</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 15 · PASS 7 · BIND ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — BIND</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">7</div>
+    <div class="pass-head-main">
+      <h2>Bind <span>— the smallest enforceable contract.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · task-to-runtime-contract</span>
+        <span class="chip dim">GATE · CHECK_RUNTIME_CONTRACT=PASS</span>
+        <span class="chip dim">LANES · FAST + NORMAL + FULL</span>
+        <span class="chip dim">IN · ONE SIGNED LEAF SPEC</span>
+        <span class="chip dim">OUT · cvg/execution/&lt;task-id&gt;/</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>THE CAPABILITY EPOCH</h5>
+        <p>Authority is granted against <b>one signed revision</b>:
+        <code class="mono" style="color:var(--gold)">epoch = &lt;task-id&gt;@&lt;spec-sha12&gt;</code>,
+        scoped to the spec's own paths, and <b>revoked</b> on settle, block, budget exhaustion, or
+        epoch change — closing the hole where session permissions outlive the task.</p>
+      </div>
+      <div class="info-card">
+        <h5>PREVENT / DETECT / CANNOT-HONOR</h5>
+        <p>Each runtime adapter declares, per capability, whether it <b>prevents</b> the violation
+        (kernel primitive or pre-tool hook), only <b>detects</b> it (portable postflight), or
+        <b>cannot honor</b> it. A required control the runtime cannot enforce <b>fails the gate
+        closed</b> — waive only explicitly with <code class="mono">--accept-unenforced</code>,
+        written into the profile.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg doctor runtime-contract</code><span class="what">attest the host first</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg bind --task &lt;spec&gt;</code><span class="what">freeze profile + brief + adapters</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>cvg bind --check --task &lt;spec&gt;</code><span class="what">read-only freshness recheck</span></div>
+          <div class="cmd-step"><span class="tick">4</span><code>cvg gate --path &lt;p&gt;</code><span class="what">ask the repo fence about one path</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">NEVER UPGRADED</span>
+        <p>A profile never upgrades <code>detect</code> to <code>prevent</code> because the vendor
+        has an optional hook. Declared assurance must match what the resolver <b>proves</b>.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">cvg/execution/T-20260730-add-health-endpoint/execution-profile.yaml</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF THE CONTRACT</span>
+        </div>
+        <div class="spec-body">
+<span class="k">task.spec_ref:</span> <span class="v">{ path, sha256 }</span> <span class="c">— the spec pinned by content, not name</span><br>
+<span class="k">write_scope:</span> <span class="v">touches_paths + creates_paths</span> · <span class="k">forbidden:</span> <span class="v">do-not-touch</span><br>
+<span class="k">context:</span> <span class="v">ADRs · approved knowledge · cached docs — each with an evidence hash</span><br>
+<span class="k">topology:</span> <span class="v">single</span> <span class="c">| single-explorer | implementer-verifier | parallel (static reason required)</span><br>
+<span class="k">policy.external_writes:</span> <span class="g">deny</span> <span class="c">— commit ≠ push ≠ tracker ≠ PR: four distinct effects</span><br>
+<span class="k">enforcement.assurance:</span> <span class="v">weakest-link across controls</span><br>
+<span class="c">+ AGENTS.task.md — the brief pins IDENTIFIERS, never content:</span><br>
+<span class="g">"done is the Exit Check exiting zero — not your judgement."</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>THE FENCE IS CHECKED TWICE</h6>
+          <code>per-candidate + whole-diff</code>
+          <p>Pre-write, per candidate path (vendor hook); and pre-settlement, over the whole diff —
+          <b>mandatory even when</b> a stronger sandbox exists.</p>
+        </div>
+        <div class="dual-gate">
+          <h6>GATE REFUSALS</h6>
+          <code>CHECK_RUNTIME_CONTRACT=FAIL</code>
+          <p>Unsigned task · stale spec hash · an XL/XXL node instead of a leaf · missing evidence
+          hashes · a parallel topology without disjoint write ownership.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>15</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 16 · PASS 8 · THE LOOP ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="right:-220px; bottom:-200px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — THE LOOP</span>
+  </div>
+
+  <div class="pass-head">
+    <div class="pass-num">8</div>
+    <div class="pass-head-main">
+      <h2>The Loop <span>— attempt → verify → repeat, with brakes.</span></h2>
+      <div class="pass-chips">
+        <span class="chip">SKILL · task-loop</span>
+        <span class="chip mint">GATE · TASK_LOOP=SETTLED</span>
+        <span class="chip dim">LANES · ALL</span>
+        <span class="chip dim">IN · ONE ISSUE + BOUND CONTRACT</span>
+        <span class="chip dim">OUT · PR + RECEIPT, OR AN HONEST FAILURE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pass-cols">
+    <div class="pass-left">
+      <div class="info-card">
+        <h5>WHY IT'S A LOOP AND NOT A GATE</h5>
+        <p><b>Each attempt is a fresh process</b> — state lives on disk, never in a growing
+        conversation (a retry otherwise re-reads every prior failure at quadratic cost).
+        <b>Brakes are checked before each engine call</b>, where the money isn't spent yet.
+        Budget flags can only <b>tighten</b>: a loop whose ceiling can be raised at the call site
+        has no ceiling.</p>
+      </div>
+      <div class="info-card">
+        <h5>RED TWICE, SAME WAY → DIAGNOSE</h5>
+        <p>Stop patching, start diagnosing: reproduce minimally → hypothesize in one sentence →
+        <b>verify the hypothesis before writing the fix</b> → fix once, re-run. A fix applied to
+        a confirmed cause converges in one iteration; a fix applied to a guess converges by
+        accident.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE CLI PATH</h5>
+        <div class="cmd-flow">
+          <div class="cmd-step"><span class="tick">1</span><code>cvg loop --estimate --issue &lt;id&gt;</code><span class="what">read-only budget preflight</span></div>
+          <div class="cmd-step"><span class="tick">2</span><code>cvg loop --issue &lt;id&gt; --agent codex</code><span class="what">the bounded descent</span></div>
+          <div class="cmd-step"><span class="tick">3</span><code>touch cvg/loop/&lt;id&gt;/STOP</code><span class="what">cancel at the next brake check</span></div>
+          <div class="cmd-step"><span class="tick">4</span><code>cvg loop --issue &lt;id&gt; --resume</code><span class="what">continue from the checkpoint</span></div>
+        </div>
+      </div>
+      <div class="red-card">
+        <span class="tok">NEVER git add -A</span>
+        <p>Settlement stages only the contract's <code>fs.write</code> scope — <code>git diff</code>
+        never lists untracked files, so a blanket add could smuggle an out-of-scope file unseen.
+        Every staged path is re-checked before commit.</p>
+      </div>
+    </div>
+
+    <div class="spec-col">
+      <div class="spec-card">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">cvg/loop/T-20260730-add-health-endpoint/</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">ANATOMY OF A RUN</span>
+        </div>
+        <div class="spec-body">
+<span class="k">state.env</span> <span class="c">— the durable checkpoint: ITER · STRIKES · TOKENS_USED · fingerprint</span><br>
+<span class="k">brief-003.md</span> <span class="c">— spec path · contract · attempt 3 of 15 ·</span> <span class="g">only the failing checks</span><span class="c">,</span><br>
+<span class="c">&nbsp;&nbsp;&nbsp;plus "what the previous attempt did (do not repeat it)"</span><br>
+<span class="k">attempts/003.log</span> <span class="c">— engine transcript + verify output, one file per attempt</span><br>
+<span class="k">HANDOFF.md</span> <span class="c">— why it stopped · budgets used · last failure · how to resume</span><br>
+<span class="k">STOP</span> <span class="c">— touch to cancel; honored at the next brake check, then deleted</span><br>
+<span class="c">── settlement ──</span> <span class="v">branch task/&lt;id&gt;-&lt;slug&gt; · scoped staging · </span><span class="g">receipt written LAST</span><br>
+<span class="k">…/cvg/STATE.md</span> <span class="c">— append-only board:</span> <span class="v">| when | task | engine | state | iters |</span>
+        </div>
+      </div>
+      <div class="dual-gates">
+        <div class="dual-gate">
+          <h6>ENGINES ARE ONE FILE EACH</h6>
+          <code>engines/&lt;name&gt;.sh — two calls</code>
+          <p><code>--available</code> and <code>--prompt-file F --workdir D</code>. Adding an
+          engine is a new file, never a kernel change. A pure-bash watchdog caps every attempt's
+          wall-clock (exit 124).</p>
+        </div>
+        <div class="dual-gate">
+          <h6>UPSTREAM GAPS STAY UPSTREAM</h6>
+          <code>broken eval = Pass 5 fix</code>
+          <p>Broken eval bash, a missing ADR, a stale profile — each is a named upstream gap.
+          The loop reports <code>BLOCKED</code>; it never hacks the eval.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>16</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 17 · THE LOOP STATE MACHINE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">03 · THE PASSES — THE LOOP · STATE MACHINE</span>
+  </div>
+
+  <h2 class="slide-title">Eight ways a loop can land. <span class="dim">All of them named, only three exit zero.</span></h2>
+
+  <div class="cli-cols" style="margin-top:22px;">
+    <div style="width:620px; flex-shrink:0;">
+      <svg viewBox="0 0 600 536" width="618">
+        <!-- start -->
+        <rect x="190" y="4" width="200" height="36" rx="18" fill="none" stroke="#8D99A6" stroke-width="1.5"/>
+        <text x="290" y="27" text-anchor="middle" style="font: 11px var(--mono); fill: var(--ivory)">cvg loop --issue T-…</text>
+        <path d="M290 40 V60" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- preflight -->
+        <rect x="140" y="64" width="300" height="42" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="83" text-anchor="middle" style="font-size:12px">PREFLIGHT VERIFY</text>
+        <text class="arch-s" x="290" y="99" text-anchor="middle" style="font-size:10px">RED here is expected — the work isn't built yet</text>
+        <path d="M140 85 H92" stroke="#73E2C3" stroke-width="1.4" marker-end="url(#arr-mint)"/>
+        <rect x="2" y="72" width="88" height="26" rx="8" fill="rgba(115,226,195,.06)" stroke="#3d7a6a"/>
+        <text x="46" y="89" text-anchor="middle" style="font: 9.5px var(--mono); fill: #73E2C3">NO_OP · 0</text>
+        <path d="M290 106 V126" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- brakes -->
+        <rect x="140" y="130" width="300" height="56" rx="10" fill="#111720" stroke="#F3B64C" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="151" text-anchor="middle" style="font-size:12px; fill:#F3B64C">BRAKES — BEFORE ANY SPEND</text>
+        <text class="arch-s" x="290" y="168" text-anchor="middle" style="font-size:10px">STOP file · iterations · wall-clock · tokens</text>
+        <path d="M140 146 H92" stroke="#8D99A6" stroke-width="1.3" marker-end="url(#arr)"/>
+        <rect x="2" y="134" width="88" height="24" rx="8" fill="#0c1117" stroke="#232c38"/>
+        <text x="46" y="150" text-anchor="middle" style="font: 9px var(--mono); fill: #FF6B64">CANCELLED · 3</text>
+        <path d="M140 172 H92" stroke="#8D99A6" stroke-width="1.3" marker-end="url(#arr)"/>
+        <rect x="2" y="160" width="88" height="24" rx="8" fill="#0c1117" stroke="#232c38"/>
+        <text x="46" y="176" text-anchor="middle" style="font: 9px var(--mono); fill: #FF6B64">EXHAUSTED · 1</text>
+        <path d="M290 186 V206" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- attempt -->
+        <rect x="140" y="210" width="300" height="42" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="229" text-anchor="middle" style="font-size:12px">ATTEMPT N — FRESH ENGINE PROCESS</text>
+        <text class="arch-s" x="290" y="245" text-anchor="middle" style="font-size:10px">brief in · transcript out · pure-bash watchdog</text>
+        <path d="M290 252 V272" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- verify -->
+        <rect x="140" y="276" width="300" height="42" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="295" text-anchor="middle" style="font-size:12px">VERIFY — THE SPEC'S OWN EVALS</text>
+        <text class="arch-s" x="290" y="311" text-anchor="middle" style="font-size:10px">eval_N() + Exit Check, clean subshell</text>
+
+        <!-- RED → learn -->
+        <path d="M440 297 H466" stroke="#FF6B64" stroke-width="1.4" marker-end="url(#arr)"/>
+        <text x="452" y="290" text-anchor="middle" style="font: 700 8.5px var(--display); fill: #FF6B64; letter-spacing:1px">RED</text>
+        <rect x="470" y="276" width="126" height="56" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="533" y="296" text-anchor="middle" style="font-size:11px">LEARN</text>
+        <text class="arch-s" x="533" y="311" text-anchor="middle" style="font-size:9px">fingerprint the failure</text>
+        <text class="arch-s" x="533" y="324" text-anchor="middle" style="font-size:9px">(how, not that)</text>
+        <path d="M533 276 V158 H444" fill="none" stroke="#8D99A6" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arr)"/>
+        <text x="545" y="212" style="font: italic 9.5px var(--display); fill: var(--steel)" transform="rotate(90 545 212)">repeat</text>
+        <path d="M533 332 V352" stroke="#8D99A6" stroke-width="1.3" marker-end="url(#arr)"/>
+        <rect x="470" y="356" width="126" height="32" rx="8" fill="#0c1117" stroke="#232c38"/>
+        <text x="533" y="369" text-anchor="middle" style="font: 9px var(--mono); fill: #FF6B64">STALLED · 1</text>
+        <text x="533" y="381" text-anchor="middle" style="font: 8px var(--mono); fill: #8D99A6">3 identical failures</text>
+
+        <!-- GREEN → tier-2 -->
+        <path d="M290 318 V342" stroke="#73E2C3" stroke-width="1.5" marker-end="url(#arr-mint)"/>
+        <text x="302" y="336" style="font: 700 8.5px var(--display); fill: #73E2C3; letter-spacing:1px">GREEN</text>
+        <rect x="140" y="346" width="300" height="42" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="365" text-anchor="middle" style="font-size:12px">TIER-2 — CROSS-FAMILY JUDGE</text>
+        <text class="arch-s" x="290" y="381" text-anchor="middle" style="font-size:10px">diff + intent + holdout · prompted to refute</text>
+        <path d="M140 367 H92" stroke="#8D99A6" stroke-width="1.3" marker-end="url(#arr)"/>
+        <rect x="2" y="355" width="88" height="24" rx="8" fill="#0c1117" stroke="#232c38"/>
+        <text x="46" y="371" text-anchor="middle" style="font: 9px var(--mono); fill: #FF6B64">BLOCKED · 1</text>
+        <text x="98" y="347" style="font: italic 9px var(--display); fill: var(--steel)">REFUTED</text>
+        <path d="M290 388 V408" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- settle -->
+        <rect x="140" y="412" width="300" height="42" rx="10" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="290" y="431" text-anchor="middle" style="font-size:12px">SETTLE — SCOPED STAGING</text>
+        <text class="arch-s" x="290" y="447" text-anchor="middle" style="font-size:10px">branch · commit · push · PR — receipt written LAST</text>
+        <path d="M140 433 H92" stroke="#8D99A6" stroke-width="1.3" marker-end="url(#arr)"/>
+        <rect x="2" y="421" width="88" height="24" rx="8" fill="rgba(115,226,195,.06)" stroke="#3d7a6a"/>
+        <text x="46" y="433" text-anchor="middle" style="font: 8.5px var(--mono); fill: #73E2C3">LOCAL_SETTLED·0</text>
+        <text x="46" y="443" text-anchor="middle" style="font: 8px var(--mono); fill: #8D99A6">writes denied</text>
+        <path d="M290 454 V474" stroke="#73E2C3" stroke-width="1.6" marker-end="url(#arr-mint)"/>
+
+        <!-- settled -->
+        <rect x="190" y="478" width="200" height="40" rx="20" fill="rgba(115,226,195,.07)" stroke="#73E2C3" stroke-width="1.6"/>
+        <text x="290" y="498" text-anchor="middle" style="font: 11px var(--mono); fill: #73E2C3">TASK_LOOP=SETTLED · 0</text>
+        <text x="290" y="511" text-anchor="middle" style="font: 8.5px var(--mono); fill: #8D99A6">green evals · receipt · PR</text>
+        <text x="470" y="516" style="font: italic 10px var(--display); fill: var(--steel)">ERROR · 4 — from anywhere</text>
+      </svg>
+    </div>
+
+    <div class="cli-right">
+      <div class="sec-label">THE EIGHT TERMINAL STATES</div>
+      <div class="state-grid">
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--mint)">SETTLED</span><span class="ex">exit 0</span></div><p>green evals, external writes permitted, PR opened</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--mint)">LOCAL_SETTLED</span><span class="ex">exit 0</span></div><p>green evals; policy denies external writes — local commit</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--mint)">NO_OP</span><span class="ex">exit 0</span></div><p>already green on arrival — nothing to do, honestly said</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--coral)">BLOCKED</span><span class="ex">exit 1</span></div><p>needs a human, an upstream input, or tier-2 REFUTED</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--coral)">STALLED</span><span class="ex">exit 1</span></div><p>the same check failed the same way 3 times — believe it</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--coral)">EXHAUSTED</span><span class="ex">exit 1</span></div><p>a budget ceiling hit — WIP committed, HANDOFF.md written</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--coral)">CANCELLED</span><span class="ex">exit 3</span></div><p>the STOP file arrived; honored at the next brake check</p></div>
+        <div class="state-card"><div class="row"><span class="tok" style="color:var(--coral)">ERROR</span><span class="ex">exit 4</span></div><p>the loop itself could not continue safely</p></div>
+      </div>
+
+      <div class="info-card" style="margin-top:14px;">
+        <h5>THREE BUDGET AXES — FLAGS ONLY TIGHTEN</h5>
+        <p><b>iterations</b> <code class="mono">budget_iterations</code>, default 15 ·
+        <b>wall-clock</b> <code class="mono">timeout_minutes</code>, default 90 (accumulated
+        working time, so a resumed run isn't pre-exhausted) · <b>tokens</b>
+        <code class="mono">budget_tokens</code>, unenforced unless declared — absence is
+        “unknown”, never zero.</p>
+      </div>
+      <div class="info-card" style="margin-top:14px;">
+        <h5>THE STAGNATION FINGERPRINT</h5>
+        <p>sha256 over the <code class="mono">[fail]/[pass]</code> lines + the Exit Check line,
+        <b>durations stripped</b> — the same failure taking 1s instead of 0s must not read as
+        progress. Identical fingerprint = a strike; three strikes = <code class="mono" style="color:var(--coral)">STALLED</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>17</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 18 · THE TRUST CHAIN ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="left:-200px; bottom:-220px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">04 · THE TRUST CHAIN — SEALS, TIERS &amp; RECEIPTS</span>
+  </div>
+
+  <h2 class="slide-title">The trust chain. <span class="dim">From a 256-bit key to a receipt that can't lie.</span></h2>
+
+  <div class="cli-cols" style="margin-top:26px;">
+    <div style="width:620px; flex-shrink:0; display:flex; flex-direction:column; gap:14px;">
+      <div class="spec-card" style="flex:0 0 auto;">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">the seal, end to end</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">HMAC-SHA256 v2</span>
+        </div>
+        <div class="spec-body">
+<span class="g">① provision</span>&nbsp;&nbsp;<span class="v">cvg setup signing</span> <span class="c">— 256-bit key at .git/info/, mode 0600, never enters git</span><br>
+<span class="g">② stamp</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="v">cvg tasks gate --stamp</span> <span class="c">— seals the canonical payload:</span><br>
+<span class="c">&nbsp;&nbsp;&nbsp;&nbsp;id · body_digest · authz_digest (paths, deps, effort, budgets) · signed_off fields</span><br>
+<span class="g">③ verify</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="c">recomputed at</span> <span class="v">validate · bind --check · accept · receipt --post-hoc</span><br>
+<span class="g">④ survive</span>&nbsp;&nbsp;&nbsp;<span class="c">Pass 6's tracker_ref stamp touches metadata only — the seal holds</span><br>
+<span class="g">⑤ break</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c">one eval byte changes →</span> <span style="color:#FF6B64">DO NOT DELEGATE: modified after stamping</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h5>THE THREE-RUNG TRUST LADDER</h5>
+        <p><b style="color:var(--mint)">Tier 1</b> — key present, MAC verifies → full crypto trust,
+        unsupervised crank OK · <b style="color:var(--gold)">Tier 2</b> — key or signature absent →
+        structural-only, <b>supervised dispatch only</b> · <b style="color:var(--coral)">Tier 3</b> —
+        MAC mismatch → hard fail. Honest threat model: symmetric HMAC is <b>tamper-evident, not
+        tamper-proof</b> — it binds “a repo-key holder stamped this”, and per-author signatures
+        (Ed25519/DSSE) are the named upgrade.</p>
+      </div>
+      <div class="info-card">
+        <h5>RECEIPTS — A HASH CHAIN, WRITTEN LAST</h5>
+        <p><code class="mono">cvg/receipts/&lt;task-id&gt;.json</code>
+        (<code class="mono">cvg.execution-receipt.v1</code>) pins the spec sha256, the profile
+        sha256, the eval output digest, agent, and branch. A superseded receipt is archived as
+        <code class="mono">.attempt-&lt;sha12-of-its-own-bytes&gt;</code> — and the <b>pass</b>
+        receipt is written last, so it can never attest to a settlement that didn't happen.</p>
+      </div>
+    </div>
+
+    <div class="cli-right" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>TIER-2 VERIFICATION — THE HOLDOUT</h5>
+        <p>The spec may carry a <code class="mono" style="color:var(--gold)">## Holdout</code>
+        section: assertions <b>excluded from the worker's brief</b>, reserved for the judge —
+        train/test separation borrowed from ML. <code class="mono">cvg verify</code> sends the
+        diff, the stated intent, and the holdout to a different-family model prompted to refute.
+        It never sees the worker's transcript.</p>
+      </div>
+      <div class="info-card">
+        <h5>BLAST RADIUS IS COMPUTED, NOT CLAIMED</h5>
+        <p><b>High</b> if any touched path matches auth · session · token · secret · payment ·
+        billing · migration · schema, or effort ≥ L, or the change spans &gt; 5 files.
+        Low + <code class="mono">UNAVAILABLE</code> → recorded and permitted. High +
+        <code class="mono">UNAVAILABLE</code> → <b>blocked</b>, with three exits: a second engine,
+        a smaller change, or an explicit <code class="mono">--accept-unverified</code>.</p>
+      </div>
+      <div class="console">
+        <div class="bar">THE FULL CHAIN, IN TOKENS</div>
+        <pre><span class="p">$</span> cvg tasks gate --stamp <span class="p">…</span>  → <span class="gold">VERDICT: DELEGATE · TIER=1</span>
+<span class="p">$</span> cvg bind --check --task <span class="p">…</span> → <span class="gold">CHECK_RUNTIME_CONTRACT=PASS</span>
+<span class="p">$</span> cvg loop --issue <span class="p">…</span>        → <span class="mint">TASK_LOOP=SETTLED</span>
+<span class="p">$</span> cvg verify --task <span class="p">…</span>       → <span class="mint">CHECK_VERIFY=UPHELD</span>
+<span class="p">$</span> cvg register --check       → <span class="mint">CHECK_REGISTER=OK</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>The invariant:</b> policy is not part of the signed payload — re-signing a spec can
+    never buy access the fence denies, and hand-stamping is rejected. The only path to autonomy is
+    through the gate.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>18</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 19 · PROOF IN PRODUCTION ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">04 · THE TRUST CHAIN — PROOF IN PRODUCTION</span>
+  </div>
+
+  <h2 class="slide-title">Proven in both directions. <span class="dim">No Anthropic model in either seat.</span></h2>
+
+  <div class="grid2 z" style="margin-top:28px;">
+    <div class="spec-card" style="flex:0 0 auto;">
+      <div class="spec-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="fname">obs-rowcounts · 2026-07-29</span>
+        <span class="fname" style="margin-left:auto; color:var(--mint)">CHECK_VERIFY=UPHELD</span>
+      </div>
+      <div class="spec-body">
+<span class="k">builder:</span> <span class="v">codex</span> <span class="c">(openai) — green in one iteration</span><br>
+<span class="k">judge:</span> <span class="v">kimi</span> <span class="c">(moonshot) — upheld every holdout assertion</span><br>
+<span class="k">outcome:</span> <span class="m">TASK_LOOP=SETTLED</span> <span class="c">— PR #9 merged, receipt on file</span>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:0 0 auto;">
+      <div class="spec-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span class="fname">obs-fence · 2026-07-29</span>
+        <span class="fname" style="margin-left:auto; color:var(--coral)">CHECK_VERIFY=REFUTED</span>
+      </div>
+      <div class="spec-body">
+<span class="k">builder:</span> <span class="v">kimi</span> <span class="c">— built it, evals GREEN</span><br>
+<span class="k">judge:</span> <span class="v">codex</span> <span class="c">— found the fence swallows OSError and reports an</span><br>
+<span class="c">&nbsp;&nbsp;unreadable surface as FENCE=OK — exactly what the holdout reserved for the judge</span><br>
+<span class="k">outcome:</span> <span style="color:#FF6B64">TASK_LOOP=BLOCKED</span> <span class="c">— settlement refused, handoff written;</span><br>
+<span class="c">&nbsp;&nbsp;left BLOCKED on the board deliberately, as the living demonstration</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pull-quote z" style="margin-top:24px; max-width:900px;">
+    “A green eval is necessary, not sufficient — demonstrated, not asserted.”
+    <small>THE REFUTED VERDICT CAUGHT A FAIL-OPEN BUG THE DETERMINISTIC EVALS COULD NOT SEE</small>
+  </div>
+
+  <div class="stat-strip" style="margin-top:26px;">
+    <div class="stat"><div class="n iv">21</div><div class="l">HERMETIC CI SUITES · 2 OSes</div></div>
+    <div class="stat"><div class="n iv">52</div><div class="l">LOOP-KERNEL CHECKS</div></div>
+    <div class="stat"><div class="n iv">145</div><div class="l">REGISTER CHECKS, OFFLINE</div></div>
+    <div class="stat"><div class="n">9/9</div><div class="l">BACKLOG SETTLED VIA PRs</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">FULLY UNATTENDED SETTLE</div></div>
+    <div class="stat"><div class="n iv">0</div><div class="l">SECRETS OR LIVE SERVICES IN CI</div></div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>Provenance:</b> Converge practices what it enforces — this repository's own backlog
+    was driven through the loop (board parity 9⇄9, empty ready frontier), the clean-room suite
+    proves init → sign → bind → RED→GREEN loop → acceptance → receipt hash chain from an empty
+    repo, and a version-unity gate fails the build if any manifest drifts from
+    <code class="mono">VERSION</code>.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>19</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 20 · UTILITIES & CATALOG ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">05 · THE SKILLS — UTILITIES &amp; CATALOG</span>
+  </div>
+
+  <h2 class="slide-title">Twelve portable skills. <span class="dim">Nine spine, three utility — one install, every harness.</span></h2>
+
+  <div class="grid3 z" style="margin-top:26px;">
+    <div class="tile" style="border-color:rgba(243,182,76,.4);">
+      <span class="tag">UTILITY · THE CONDUCTOR</span>
+      <h4>evidence-to-next-pass <code>cvg next</code></h4>
+      <p>Derives where the descent stands from workspace evidence — no stored state. Prints the
+      evidence board, the owning skill, its steering prompt, and the closing gate.
+      Pre/post hooks enforce order fail-closed. <code>NEXT_PASS=0-8|DONE</code></p>
+    </div>
+    <div class="tile" style="border-color:rgba(243,182,76,.4);">
+      <span class="tag">UTILITY · THE TEACHER</span>
+      <h4>pass-to-lesson <code>cvg lesson</code></h4>
+      <p>After any pass closes: every component, the decision it encodes, <b>what breaks
+      downstream without it</b>, plus check-yourself questions. <code>--immutable</code> proves
+      teaching changed nothing it taught. Optional — never blocks the descent.
+      <code>CHECK_LESSON=PASS</code></p>
+    </div>
+    <div class="tile" style="border-color:rgba(243,182,76,.4);">
+      <span class="tag">UTILITY · THE FORGE</span>
+      <h4>skill-creator</h4>
+      <p>Author and validate new skills. Its <code>quick_validate.py</code> is the bar every
+      shipped skill passes — and the same check the installer runs before it reports
+      <code>INSTALL=OK</code>.</p>
+    </div>
+  </div>
+
+  <div class="sec-label z" style="margin-top:26px;">THE SPINE — ONE SKILL PER PASS</div>
+  <div class="grid3 z" style="gap:12px;">
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">0 · idea-to-brd</h4><p>grill the idea into a signed BRD — or a no-go record</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">1 · brd-docs-to-tech-req</h4><p>falsifiable requirements, stable R-n ids, typed gaps</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">2 · tech-req-to-adrs</h4><p>ground in the running system; immutable, evidenced ADRs</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">3 · reqs-to-swimlane-plans</h4><p>seams → lanes → legs; steel thread; H1–H5 hardening</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">4 · sketch-plans-adversarial-review</h4><p>cross-family attack, FIX/ACCEPT, provenance-stamped</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">5 · task-spec</h4><p>the cornerstone: evals first, six tiers, the HMAC seal</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">6 · task-specs-to-issues</h4><p>1:1 board projection, blocked-by edges, six-verb adapters</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">7 · task-to-runtime-contract</h4><p>epoch-scoped authority, evidence hashes, write fence</p></div>
+    <div class="tile" style="padding:12px 16px 10px;"><h4 style="font-size:13px;">8 · task-loop</h4><p>bounded attempt → verify → repeat; eight named landings</p></div>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>Portable by construction:</b> skills are plain markdown + scripts in each harness's
+    native discovery directory — <code class="mono">.claude/skills/</code> ·
+    <code class="mono">.agents/skills/</code> (Codex + Kimi) · <code class="mono">.grok/skills/</code>.
+    Any harness that can run shell commands can drive the gates.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>20</b> / 27</span>
   </div>
 </section>
 
@@ -808,7 +2402,7 @@
       <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
       <span>CONVERGE</span>
     </div>
-    <span class="eyebrow">04 · THE REFEREE CLI &amp; THE TRUST ARCHITECTURE</span>
+    <span class="eyebrow">06 · THE REFEREE CLI — THE SURFACE AT A GLANCE</span>
   </div>
 
   <h2 class="slide-title">One referee. <span class="dim">Every verdict ends in one greppable token.</span></h2>
@@ -895,16 +2489,16 @@
       </svg>
 
       <div class="full-edition">
-        <h5>THE FULL EDITION — WHAT THIS PREVIEW EXPANDS INTO</h5>
+        <h5>EXIT CODES ARE CONTRACTS — RETRYABLE IS PUBLISHED</h5>
         <ul>
-          <li><span class="n">01</span><span><b>Introduction</b> — the dark factory model</span></li>
-          <li><span class="n">02</span><span><b>The method</b> — nine gates, lanes, evidence</span></li>
-          <li><span class="n">03–11</span><span><b>One chapter per pass</b> — this template ×9</span></li>
-          <li><span class="n">12</span><span><b>The CLI ledger</b> — commands + exit codes</span></li>
-          <li><span class="n">13</span><span><b>Trust chain</b> — seals, tiers, receipts, refutation</span></li>
-          <li><span class="n">14</span><span><b>Architecture</b> — referee, engines, Cockpit</span></li>
-          <li><span class="n">15</span><span><b>Steering from chat</b> — the agent protocol</span></li>
-          <li><span class="n">16</span><span><b>Install, status &amp; FAQ</b> — three doors, CI proof</span></li>
+          <li><span class="n">0</span><span><b>OK</b> — gate passed / command succeeded</span></li>
+          <li><span class="n">1</span><span><b>GATE_FAIL</b> — verdict RED; artifact not acceptable</span></li>
+          <li><span class="n">2</span><span><b>USAGE_ERROR</b> — bad flag or nothing to gate</span></li>
+          <li><span class="n">20</span><span><b>SKIP</b> — engine not installed <i style="color:var(--mint)">retryable</i></span></li>
+          <li><span class="n">21</span><span><b>TIMEOUT</b> — wall-clock cap, fail-closed <i style="color:var(--mint)">retryable</i></span></li>
+          <li><span class="n">22</span><span><b>ENGINE_ERROR</b> — no parseable judgment <i style="color:var(--mint)">retryable</i></span></li>
+          <li><span class="n">3</span><span><b>CANCELLED</b> — the loop's STOP-file landing</span></li>
+          <li><span class="n">4</span><span><b>ERROR</b> — the loop could not continue safely</span></li>
         </ul>
       </div>
     </div>
@@ -913,7 +2507,466 @@
   <div class="page-foot">
     <span class="doc">CONVERGE · DOCUMENTATION</span>
     <span class="line"></span>
-    <span class="num"><b>05</b> / 05</span>
+    <span class="num"><b>21</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 22 · THE AGENT PROTOCOL ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">06 · THE REFEREE CLI — THE AGENT PROTOCOL</span>
+  </div>
+
+  <h2 class="slide-title">Agent-native by design. <span class="dim">The whole surface, one JSON call.</span></h2>
+
+  <div class="cli-cols" style="margin-top:26px;">
+    <div style="width:620px; flex-shrink:0;">
+      <div class="console">
+        <div class="bar">cvg agent-context — THE SELF-DESCRIPTION MANIFEST</div>
+        <pre>{
+  <span class="gold">"schema_version"</span>: "1.0",  <span class="gold">"tool"</span>: "cvg",  <span class="gold">"role"</span>: <span class="mint">"referee"</span>,
+  <span class="gold">"contracts"</span>:    { stdout, stderr, token, color, determinism, resolution },
+  <span class="gold">"global_flags"</span>: [ {flag, position, effect} … ],
+  <span class="gold">"exit_codes"</span>:   [ {code, name, meaning, retryable, side_effects} … ],
+  <span class="gold">"commands"</span>:     [ {name, converge_pass, wraps, emits_tokens,
+                     mutating, example, description} … ]
+}</pre>
+      </div>
+      <div class="console" style="margin-top:16px;">
+        <div class="bar">--json — THE UNIFORM RESPONSE ENVELOPE, ANY COMMAND</div>
+        <pre>{ <span class="gold">ok</span>, <span class="gold">command</span>, <span class="gold">token</span>, <span class="gold">verdict</span>, <span class="gold">exit_code</span>, <span class="gold">changed</span>, <span class="gold">dry_run</span>,
+  <span class="gold">data</span>, <span class="gold">error</span>, <span class="gold">warnings</span>, <span class="gold">meta</span>{schema_version, tool, cvg_version} }
+
+<span class="p"># a pure re-invoke wrapper — the byte-parity default path is untouched;</span>
+<span class="p"># the underlying exit code is preserved. Proven 14/14.</span></pre>
+      </div>
+    </div>
+
+    <div class="cli-right" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>--dry-run — PREVIEW WITHOUT PERFORMING</h5>
+        <p>Applies to mutating commands only (<code class="mono">review --adversary</code>,
+        <code class="mono">bind</code>, <code class="mono">tasks gate --stamp</code>,
+        <code class="mono">transition</code>, <code class="mono">register</code>, setup writes).
+        Reports the intended action, changes nothing:
+        <code class="mono">changed=false · dry_run=true · DRY_RUN=OK</code>. Read-only verification
+        has its own doors: <code class="mono">tasks validate --no-state</code>,
+        <code class="mono">bind --check</code>, <code class="mono">register --check</code>.</p>
+      </div>
+      <div class="info-card">
+        <h5>SETUP — CHOICES, NEVER CREDENTIALS</h5>
+        <p><code class="mono">cvg setup</code> is a readiness board ending in
+        <code class="mono">SETUP=READY</code> with your exact next step.
+        <code class="mono">setup key</code> reads the tracker key from <b>stdin, never argv</b>,
+        and stores it once outside the repo. <code class="mono">setup harness</code> scaffolds a
+        ~50-line project router and stops — <b>cvg never generates doctrine</b>.</p>
+      </div>
+      <div class="info-card">
+        <h5>WHY AGENTS DON'T MEMORIZE THE SEQUENCE</h5>
+        <p><code class="mono" style="color:var(--gold)">cvg next</code> names the current pass, its
+        steering prompt, and its closing gate — derived from evidence.
+        <code class="mono">cvg ready</code> answers “what now?” between tasks — the dispatchable
+        frontier only (ready <b>and</b> unblocked), failing closed on a dangling or cyclic edge.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>22</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 23 · CONTROL PLANE & WRITE FENCE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="right:-220px; top:-160px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">07 · ARCHITECTURE — CONTROL PLANE &amp; THE WRITE FENCE</span>
+  </div>
+
+  <h2 class="slide-title">The control plane. <span class="dim">Two tracked files answer “may ANY task ever write here?”</span></h2>
+
+  <div class="cli-cols" style="margin-top:26px;">
+    <div style="width:620px; flex-shrink:0;">
+      <div class="spec-card" style="flex:0 0 auto;">
+        <div class="spec-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="fname">.cvg/gate.yaml — tracked, reviewed like any other file</span>
+          <span class="fname" style="margin-left:auto; color:var(--gold)">THE REPO WRITE FENCE</span>
+        </div>
+        <div class="spec-body">
+<span class="k">version:</span> <span class="v">2</span><br>
+<span class="k">protected_paths:</span> <span class="c"># the fence a Task-Spec cannot widen</span><br>
+&nbsp;&nbsp;<span class="v">**/.git/** · **/.cvg/** · **/.env · **/secrets/** · **/credentials/**</span><br>
+&nbsp;&nbsp;<span class="v">**/*_key* · **/*_secret* · **/id_rsa* · **/.terraform/**</span><br>
+&nbsp;&nbsp;<span class="v">**/migrations/** · **/auth/** · **/payments/** · **/billing/**</span><br>
+&nbsp;&nbsp;<span class="g">.cvg/gate.yaml · bin/cvg · skills/task-*/scripts/** · .github/workflows/**</span><br>
+&nbsp;&nbsp;<span class="c"># "an agent that edits its own verifier is the specification-gaming failure mode"</span><br>
+<span class="k">max_changed_files:</span> <span class="v">12</span> <span class="c"># blast radius, orthogonal to paths</span>
+        </div>
+      </div>
+      <div class="console" style="margin-top:16px;">
+        <div class="bar">ASK THE FENCE — READ-ONLY, ANY TIME</div>
+        <pre><span class="p">$</span> cvg gate --path src/api/health.py
+  allowed  src/api/health.py
+<span class="p">$</span> cvg gate --path auth/tokens.py
+  <span style="color:#FF6B64">REFUSED</span>  auth/tokens.py  (rule: **/auth/**)
+<span class="gold">CHECK_GATE=OK|ABSENT|FORBIDDEN|ERROR</span></pre>
+      </div>
+    </div>
+
+    <div class="cli-right" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>PRECEDENCE — THE FENCE ALWAYS WINS</h5>
+        <p>The Pass 7 contract answers “may <b>this</b> task write here?”; the fence answers
+        “may <b>any</b> task ever write here?”. <b>Protected paths beat contract, always</b> —
+        and policy is not part of the signed payload, so re-signing a spec cannot buy access.</p>
+      </div>
+      <div class="info-card">
+        <h5>THE WORKSPACE TREE</h5>
+        <p><code class="mono">cvg/</code> is the factory floor:
+        <code class="mono">docs/{brd,tech-spec,no-go,adrs,lessons}</code> ·
+        <code class="mono">swimlanes/</code> · <code class="mono">tasks/</code> ·
+        <code class="mono">execution/</code> · <code class="mono">loop/</code> ·
+        <code class="mono">receipts/</code> · <code class="mono">brain/</code>.
+        Paths resolve against the <b>workspace, never the git root</b> —
+        <code class="mono">cvg/</code> may live in a subproject.</p>
+      </div>
+      <div class="info-card">
+        <h5>WHAT LIVES WHERE</h5>
+        <p><code class="mono">.cvg/gate.yaml</code> — tracked fence ·
+        <code class="mono">.cvg/config</code> — choices, never credentials ·
+        <code class="mono">.cvg/identity</code> — tracker identity map, mode 0600 ·
+        <code class="mono">.git/info/taskspec-signing-key</code> — the HMAC key, 0600,
+        <b>never enters git</b> · tracker API keys — the OS keychain.</p>
+      </div>
+      <div class="info-card">
+        <h5>ENGINES AUTHENTICATE THEMSELVES</h5>
+        <p>The referee holds zero model credentials. Engine CLIs (<code class="mono">claude</code>,
+        <code class="mono">codex</code>, <code class="mono">kimi</code>, <code class="mono">grok</code>)
+        are needed only by the passes that dispatch — each brings its own auth.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>23</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 24 · COCKPIT ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">07 · ARCHITECTURE — COCKPIT</span>
+  </div>
+
+  <h2 class="slide-title">Cockpit. <span class="dim">Observable, without a second source of truth.</span></h2>
+  <p class="slide-sub">A repository-first frontend that renders the real nine-pass lineage, work
+  queue, runs, evidence, receipts, health, and adversarial objections. <b>Deliberately read-only</b> —
+  the CLI still owns execution and proof.</p>
+
+  <div class="cli-cols" style="margin-top:24px;">
+    <div style="width:620px; flex-shrink:0;">
+      <svg viewBox="0 0 600 300" width="618">
+        <rect x="20" y="20" width="160" height="70" rx="11" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="100" y="50" text-anchor="middle" style="font-size:12px">THE WORKSPACE</text>
+        <text class="arch-s" x="100" y="68" text-anchor="middle" style="font-size:10px">cvg/ — CLI-owned truth</text>
+        <path d="M180 55 H240" stroke="#F3B64C" stroke-width="1.6" marker-end="url(#arr-gold)"/>
+        <text class="arch-m" x="210" y="108" text-anchor="middle" fill="#F3B64C">cvg snapshot --json — exactly one</text>
+        <rect x="244" y="20" width="160" height="70" rx="11" fill="rgba(243,182,76,.07)" stroke="#F3B64C" stroke-width="1.6"/>
+        <text class="arch-t" x="324" y="50" text-anchor="middle" style="font-size:12px" fill="#F3B64C">THE BRIDGE</text>
+        <text class="arch-s" x="324" y="68" text-anchor="middle" style="font-size:10px">loopback only · validates · SSE</text>
+        <path d="M404 55 H464" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
+        <text class="arch-m" x="464" y="108" text-anchor="middle">WorkspaceSnapshot 3.0</text>
+        <rect x="468" y="20" width="112" height="70" rx="11" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="524" y="50" text-anchor="middle" style="font-size:12px">SURFACES</text>
+        <text class="arch-s" x="524" y="68" text-anchor="middle" style="font-size:10px">nine, read-only</text>
+
+        <rect x="20" y="138" width="560" height="64" rx="11" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
+        <text class="arch-t" x="40" y="163" style="font-size:12px">SHA-256-BOUND PREVIEWS</text>
+        <text class="arch-s" x="40" y="183" style="font-size:10.5px">an artifact preview requires the snapshot ID + captured SHA-256; changed bytes → HTTP 409 —</text>
+        <text class="arch-s" x="40" y="196" style="font-size:10.5px">changed bytes can never masquerade as captured proof</text>
+
+        <rect x="20" y="222" width="560" height="64" rx="11" fill="#0c1117" stroke="#232c38" stroke-width="1.5"/>
+        <text class="arch-t" x="40" y="247" style="font-size:12px" fill="#FF6B64">WHAT IT CANNOT DO — BY CONSTRUCTION</text>
+        <text class="arch-s" x="40" y="267" style="font-size:10.5px">never executes Converge work: cannot create, run, approve, register, bind, transition, or settle;</text>
+        <text class="arch-s" x="40" y="280" style="font-size:10.5px">permission requests are always rejected; a replay is never labeled live</text>
+      </svg>
+    </div>
+
+    <div class="cli-right" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>NINE SURFACES</h5>
+        <p><b>Ask · Overview · Journey · Decompose · Work · Runs · Docs · Activity · Health</b> —
+        the descent's lineage, gate results, the queue, execution attempts, readable documents,
+        objections and blocking questions, receipts, and the command <code class="mono">cvg</code>
+        currently authorizes.</p>
+      </div>
+      <div class="info-card">
+        <h5>FOUR FACTS, KEPT SEPARATE</h5>
+        <p>A deterministic gate verdict · an adversarial review verdict · the conductor's current
+        authorization · whether an artifact still matches the snapshot digest. <i>“A matching hash
+        proves which bytes were observed, not that their claims are current or approved.”</i></p>
+      </div>
+      <div class="console">
+        <div class="bar">RUN IT</div>
+        <pre><span class="p">$</span> npm run cockpit:install
+<span class="p">$</span> npm run cockpit:dev -- --cvg-home "$PWD" \
+    --project-root /path/to/workspace
+<span class="p">→ http://127.0.0.1:4173</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>24</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 25 · STEERING FROM CHAT ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="left:-200px; top:-140px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">08 · OPERATING THE FACTORY — STEERING FROM CHAT</span>
+  </div>
+
+  <h2 class="slide-title">You steer in plain language. <span class="dim">The agent drives the gates.</span></h2>
+
+  <div class="cli-cols" style="margin-top:22px;">
+    <div style="width:660px; flex-shrink:0;">
+      <div class="chat">
+        <div class="msg you"><span class="who">you</span><div class="bubble">I want a storm-alerts feed for our customers. Start a Converge run — capture it.</div></div>
+        <div class="msg"><span class="who">agent</span><div class="bubble">Pass 0 (idea-to-brd): drafting the BRD, grilling the gaps out of the idea…
+        <span class="tokg">CHECK_BRD=PASS</span> — the brief is signed.</div></div>
+        <div class="msg you"><span class="who">you</span><div class="bubble">Take it to requirements and architecture.</div></div>
+        <div class="msg"><span class="who">agent</span><div class="bubble">Pass 1: <span class="tokg">CHECK_TECH_SPEC=PASS</span>. Pass 2: five ADRs recorded — <span class="tokg">CHECK_ADR=OK</span>.</div></div>
+        <div class="msg you"><span class="who">you</span><div class="bubble">Break it down, then have Codex attack the plan.</div></div>
+        <div class="msg"><span class="who">agent</span><div class="bubble">Pass 3: two swimlanes, six legs — <span class="tokg">CHECK_PLAN=OK</span>. Pass 4: codex raised
+        3 objections. Two resolved; one needs your call.</div></div>
+        <div class="msg you"><span class="who">you</span><div class="bubble">Objection two is right — merge the retry logic into one leg. Then sign.</div></div>
+        <div class="msg"><span class="who">agent</span><div class="bubble">Plan amended. <span class="tokg">CHECK_CONSENSUS=OK</span> — the barrier is behind us.</div></div>
+        <div class="msg you"><span class="who">you</span><div class="bubble">Cut the tasks, put them on the board, and ship the first ready one.</div></div>
+        <div class="msg"><span class="who">agent</span><div class="bubble">Pass 5: six Task-Specs, evals first, all <span class="tokg">TIER=1</span> and sealed. Pass 6:
+        <span class="tokg">CHECK_REGISTER=OK</span>. Pass 7: <span class="tokg">CHECK_RUNTIME_CONTRACT=PASS</span>.
+        Pass 8: attempt → verify → repeat… green on iteration 2. <span class="tok">TASK_LOOP=SETTLED</span> —
+        PR opened, receipt written. Next ready task: 2 of 6.</div></div>
+      </div>
+    </div>
+
+    <div class="cli-right" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>THE DIVISION OF LABOR</h5>
+        <p><b>You own intent and judgment; the factory owns procedure and proof.</b> Your voice is
+        needed at exactly the moments that deserve it: the barrier sign-off after the adversarial
+        review, and any objection the machines cannot settle. Everything else runs on gates.</p>
+      </div>
+      <div class="info-card">
+        <h5>WHY THIS WORKS</h5>
+        <p>The skills are installed <b>in your harness</b>, and
+        <code class="mono">cvg agent-context</code> hands any agent the whole surface as one JSON
+        manifest. You never memorize the sequence — <code class="mono">cvg next</code> derives it,
+        <code class="mono">cvg lane</code> routes it, <code class="mono">cvg setup</code> names the
+        exact missing step, <code class="mono">cvg ready</code> answers “what now?”.</p>
+      </div>
+      <div class="info-card">
+        <h5>SWAP THE ENGINE, KEEP THE GATES</h5>
+        <p><code class="mono">--agent claude</code> → <code class="mono">codex</code> →
+        <code class="mono">kimi</code>: the same signed spec dispatches to any of them, and the
+        gate that scores the work is identical. Engines are one adapter file each.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>25</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 26 · INSTALL ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">09 · INSTALL &amp; STATUS — THREE DOORS</span>
+  </div>
+
+  <h2 class="slide-title">Three doors, same result. <span class="dim">Twelve skills, every harness, <code style="font-family:var(--mono); font-size:34px;">cvg</code> on PATH.</span></h2>
+
+  <div class="grid3 z" style="margin-top:26px;">
+    <div class="tile">
+      <span class="tag">DOOR ① · PLUGIN MARKETPLACE</span>
+      <h4>Inside Claude Code</h4>
+      <p style="margin-bottom:10px;">Grok Build reads Claude marketplaces natively. Ships the skills
+      <b>and</b> puts <code>cvg</code> on the session PATH — nothing to authenticate.</p>
+      <div class="console" style="margin:0;"><pre style="padding:10px 14px; font-size:10.5px;">/plugin marketplace add luanmorenommaciel/converge
+/plugin install converge@cvg</pre></div>
+    </div>
+    <div class="tile">
+      <span class="tag">DOOR ② · npm / npx</span>
+      <h4>Anywhere Node lives</h4>
+      <p style="margin-bottom:10px;">The package embeds the CLI <b>and</b> all skills. Project-local
+      works too: <code>npm i -D</code> then <code>npx cvg …</code>.</p>
+      <div class="console" style="margin:0;"><pre style="padding:10px 14px; font-size:10.5px;">npm install -g github:luanmorenommaciel/converge
+cvg-install</pre></div>
+    </div>
+    <div class="tile">
+      <span class="tag">DOOR ③ · ONE-LINE SHELL</span>
+      <h4>No Node — git + bash only</h4>
+      <p style="margin-bottom:10px;">Pin a release with <code>CVG_REF=v0.1.0</code>; install from a
+      fork with <code>CVG_REPO_URL=&lt;url&gt;</code>.</p>
+      <div class="console" style="margin:0;"><pre style="padding:10px 14px; font-size:10.5px;">curl -fsSL https://raw.githubusercontent.com/
+  luanmorenommaciel/converge/main/install.sh | bash</pre></div>
+    </div>
+  </div>
+
+  <div class="cli-cols" style="margin-top:20px;">
+    <div style="flex:1;">
+      <div class="info-card">
+        <h5>WHERE SKILLS LAND — ONE INSTALL COVERS ALL FOUR</h5>
+        <div class="kv"><b>Claude Code</b><code>.claude/skills/</code><span style="margin-left:auto;">+ marketplace plugin</span></div>
+        <div class="kv"><b>Codex + Kimi</b><code>.agents/skills/</code><span style="margin-left:auto;">the AGENTS.md family</span></div>
+        <div class="kv"><b>Grok Build</b><code>.grok/skills/</code><span style="margin-left:auto;">reads Claude marketplaces too</span></div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div class="info-card">
+        <h5>GUARANTEES</h5>
+        <p>Idempotent — re-running skips existing entries (<code class="mono">--force</code> to
+        replace). <b>Never writes a credential.</b> Verifies the installed skills parse before
+        reporting <code class="mono" style="color:var(--mint)">INSTALL=OK</code>. Development:
+        <code class="mono">install.sh --symlink</code> keeps skills live-linked to your checkout.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-meta z" style="margin-top:18px;">
+    <span class="chip dim">REQUIRES · BASH 3.2+ AND GIT</span>
+    <span class="chip dim">GATES · PYTHON3 STDLIB, NO PIP</span>
+    <span class="chip dim">NODE · NPM DOOR ONLY</span>
+    <span class="chip dim">ENGINES · AUTHENTICATE THEMSELVES</span>
+    <span class="chip dim">WINDOWS · GIT BASH / WSL</span>
+  </div>
+
+  <div class="template-note">
+    <span class="bar"></span>
+    <span><b>First minutes in a repo:</b> <code class="mono">cvg init</code> →
+    <code class="mono">cvg setup signing</code> → <code class="mono">cvg setup</code> — then
+    <code class="mono">cvg lane "your next change"</code>. Init is non-clobbering; nothing forces
+    the full descent.</span>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION</span>
+    <span class="line"></span>
+    <span class="num"><b>26</b> / 27</span>
+  </div>
+</section>
+
+<!-- ═══════════════════ 27 · STATUS & CLOSE ═══════════════════ -->
+<section class="slide">
+  <div class="grid-bg"></div>
+  <div class="glow" style="left:270px; top:120px;"></div>
+
+  <div class="page-head">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+      <span>CONVERGE</span>
+    </div>
+    <span class="eyebrow">09 · INSTALL &amp; STATUS — STATUS, PROVENANCE &amp; ROADMAP</span>
+  </div>
+
+  <div style="display:flex; gap:44px; margin-top:30px;" class="z">
+    <div style="width:600px; flex-shrink:0;">
+      <h2 class="slide-title" style="font-size:54px;">Done is <em style="font-style:normal; color:var(--gold);">proven</em>.</h2>
+      <p class="slide-sub" style="margin-top:18px;">Converge 0.1.0 ships the CLI, twelve skills,
+      and the Task-Spec engine as <b>one versioned unit</b> — the first release where every claim
+      has a receipt behind it. One number everywhere: <code class="mono">VERSION</code> is the
+      single source of truth, and a CI gate fails the build on drift.</p>
+
+      <div class="info-card" style="margin-top:24px;">
+        <h5>DELIBERATELY NOT IN 0.1.0 — THE ROADMAP</h5>
+        <p><b>The Manager</b> — fleet dispatch across ready tasks (the loop is single-task by
+        design today). Git-native orchestration: Actions as scheduler, the PR as settlement,
+        branch protection as the gate. Top of the roadmap. · <b>The CI eval-gate</b> —
+        server-side re-verification of every green claim.</p>
+      </div>
+
+      <div class="cover-meta" style="margin-top:24px;">
+        <span class="chip">v0.1.0 · 2026-07-30</span>
+        <span class="chip dim">MIT — ONE LICENSE, WHOLE UNIT</span>
+        <span class="chip dim">CI GREEN · macOS + LINUX</span>
+      </div>
+    </div>
+
+    <div style="flex:1; display:flex; flex-direction:column; gap:14px;">
+      <div class="info-card">
+        <h5>BUILT THE WAY IT ASKS YOU TO BUILD</h5>
+        <p>This repository's own backlog went through the loop — nine tasks settled through
+        merged PRs, one fully unattended, board parity 9⇄9. Built with Claude Code, Codex, and
+        Kimi in all three seats: author, adversary, and judge.</p>
+      </div>
+      <div class="info-card">
+        <h5>READ NEXT</h5>
+        <div class="kv"><code>docs/task-spec-v0.1.pdf</code><span style="margin-left:auto;">the cornerstone, in depth</span></div>
+        <div class="kv"><code>skills/README.md</code><span style="margin-left:auto;">the skill catalog</span></div>
+        <div class="kv"><code>bin/README.md</code><span style="margin-left:auto;">the CLI surface ledger</span></div>
+        <div class="kv"><code>presentation/*.html</code><span style="margin-left:auto;">interactive walkthroughs</span></div>
+      </div>
+      <div class="spec-card" style="flex:0 0 auto;">
+        <div class="spec-body" style="padding:16px 22px;">
+<span class="c"># the whole method, one breath:</span><br>
+<span class="v">capture → intent → structure → decompose</span><br>
+<span class="v">→ </span><span class="g">consensus (the barrier)</span><span class="v"> → </span><span class="g">tasking (the seal)</span><br>
+<span class="v">→ register → bind → </span><span class="m">loop until SETTLED</span><br>
+<span class="c"># evidence feeds the next pass. crank → learn → update.</span>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; margin-top:6px;">
+        <svg width="34" height="34" viewBox="0 0 1024 1024"><use href="#fold-icon"/></svg>
+        <span style="font-family:var(--mono); font-size:11px; letter-spacing:.28em; color:var(--steel);">COMPILE INTENT INTO SHIPPED SOFTWARE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot">
+    <span class="doc">CONVERGE · DOCUMENTATION · v0.1.0</span>
+    <span class="line"></span>
+    <span class="num"><b>27</b> / 27</span>
   </div>
 </section>
 
