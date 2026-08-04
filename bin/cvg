@@ -1456,6 +1456,10 @@ cmd_help() {
   printf '                           opt OUT of the default worktree isolation — the\n'
   printf '                           default runs each attempt in an isolated git worktree,\n'
   printf '                           so a bad run never touches the tree you are reading\n'
+  printf '  loop --keep-worktree     keep the isolated worktree even after a SETTLED run.\n'
+  printf '                           A settled run commits its work to a branch, so its\n'
+  printf '                           worktree is removed by default; a run that ends with\n'
+  printf '                           UNCOMMITTED work always keeps it, flag or not\n'
   printf '\n'
   printf '%steaching companion%s\n' "$UI_CYAN" "$UI_RESET"
   printf '  lesson [file] [--immutable <taught>...]\n'

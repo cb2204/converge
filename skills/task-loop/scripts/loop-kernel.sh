@@ -83,6 +83,11 @@ BASE=""; CONTRACT=""; LEGACY_NO_CONTRACT=false
 # tree a human is reading, and a failed attempt should cost nothing to discard.
 # `--isolation inplace` opts out when you want to watch files land live.
 ISOLATION="worktree"
+# A SETTLED run's worktree is a duplicate of state already committed to a branch,
+# sitting in $TMPDIR where the OS will eventually delete it and leave git holding a
+# stale registration. So settled runs clean up after themselves; --keep-worktree
+# opts out. Runs that end with UNCOMMITTED work always keep it, flag or not.
+KEEP_WORKTREE_FLAG=false
 ESTIMATE=false
 # Tier-2 is ON by default. An adversarial verifier you have to remember to run
 # is one nobody runs on the unattended path.
@@ -119,6 +124,10 @@ while [ $# -gt 0 ]; do
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
     --isolation)      [ $# -ge 2 ] || { err "--isolation requires worktree|inplace"; exit 2; }; ISOLATION="$2"; shift 2 ;;
     --isolation=*)    ISOLATION="${1#--isolation=}"; shift ;;
+    # A settled run's worktree is a duplicate of committed state, so it is removed
+    # by default. This keeps it anyway — for inspecting HOW a green run got there,
+    # which the committed diff alone does not show.
+    --keep-worktree)  KEEP_WORKTREE_FLAG=true; shift ;;
     # Naming a judge IS asking for tier 2 — requiring --verify alongside it would
     # be a flag that silently does nothing, which is worse than a missing flag.
     --judge)          [ $# -ge 2 ] || { err "--judge requires a value"; exit 2; }; JUDGE="$2"; VERIFY=true; VERIFY_EXPLICIT=true; shift 2 ;;
@@ -373,14 +382,30 @@ fi
 # Discard the isolated checkout unless the run earned a keep. Registered on EXIT
 # so a crash cannot leave orphaned worktrees accumulating on disk.
 KEEP_WORKTREE=false
+# Set by land() so the trap — which is called with no arguments — can tell a
+# settled removal from an ordinary one.
+CLEANUP_REASON=""
 cleanup_worktree() {
   [ -n "$WORKTREE_DIR" ] || return 0
   if [ "$KEEP_WORKTREE" = true ]; then
     printf 'worktree KEPT for inspection: %s (branch %s)\n' "$WORKTREE_DIR" "$WT_BRANCH"
+    printf '  the work is UNCOMMITTED and lives only here — resume, or remove it with:\n'
+    printf '  git -C %s worktree remove --force %s\n' "$GIT_ROOT" "$WORKTREE_DIR"
     return 0
   fi
   git -C "$GIT_ROOT" worktree remove --force "$WORKTREE_DIR" >/dev/null 2>&1 || rm -rf "$WORKTREE_DIR"
   git -C "$GIT_ROOT" branch -D "$WT_BRANCH" >/dev/null 2>&1 || true
+  # A worktree removed by hand, or one whose $TMPDIR was reaped by the OS, leaves a
+  # registration behind that `git worktree list` keeps reporting forever. Prune so
+  # the repo's own account of itself stays true.
+  git -C "$GIT_ROOT" worktree prune >/dev/null 2>&1 || true
+  # Say it out loud on the settled path only. A silent removal after a run that
+  # printed a $TMPDIR path throughout reads as "where did my work go" — and the
+  # answer (a branch, plus the receipt that names it) is worth one line.
+  if [ "$CLEANUP_REASON" = settled ]; then
+    printf 'worktree removed — the work is committed on the task branch named in the receipt.\n'
+  fi
+  return 0
 }
 trap cleanup_worktree EXIT
 
@@ -519,12 +544,26 @@ land() {  # land <STATE> <exit-code> <why>
   # EXHAUSTED and STALLED keep it too: the handoff note is useless without the
   # work it describes, and --resume needs somewhere to resume into.
   case "$_state" in
-    # BLOCKED belongs here too, and its absence cost a diagnosis: a run that
-    # went GREEN and then had settlement refused is exactly when you most need
-    # the evidence, and discarding it leaves only the verdict with no way to
-    # ask why. Only NO_OP, CANCELLED and ERROR — none of which produced work —
-    # are safe to throw away.
-    SETTLED|LOCAL_SETTLED|EXHAUSTED|STALLED|BLOCKED) KEEP_WORKTREE=true ;;
+    # THE RULE: keep the worktree exactly when the work exists NOWHERE ELSE.
+    #
+    # EXHAUSTED, STALLED and BLOCKED all end with the work UNCOMMITTED — it lives
+    # only in the worktree, the handoff note is useless without it, and --resume
+    # needs somewhere to resume into. BLOCKED's absence from this list once cost a
+    # diagnosis: a run that went GREEN and then had settlement refused is exactly
+    # when you most need to ask why.
+    #
+    # SETTLED and LOCAL_SETTLED are the opposite case, and they used to be here by
+    # mistake. Settlement's whole job is to COMMIT the work onto a branch in the
+    # shared repository, and sync_receipt (called above, before this decision) has
+    # already carried the receipt home. So after a settled run the worktree holds
+    # nothing that the repo does not — it is a duplicate under $TMPDIR that the OS
+    # will delete out from under git, leaving a stale registration behind. Two
+    # accumulated in one afternoon of a single task.
+    EXHAUSTED|STALLED|BLOCKED) KEEP_WORKTREE=true ;;
+    SETTLED|LOCAL_SETTLED)
+      CLEANUP_REASON=settled
+      if [ "$KEEP_WORKTREE_FLAG" = true ]; then KEEP_WORKTREE=true; fi
+      ;;
     *) : ;;
   esac
   printf '\n────────────────────────────────────────────────────────\n'

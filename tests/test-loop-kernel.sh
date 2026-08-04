@@ -313,6 +313,50 @@ if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
 else
   bad "the isolated run did not settle: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
 fi
+
+# ---- a SETTLED run cleans up after itself -----------------------------------
+# Settlement's whole job is to COMMIT the work onto a branch, and sync_receipt has
+# already carried the receipt home — so the worktree is a duplicate sitting in
+# $TMPDIR, which the OS deletes out from under git, leaving a stale registration
+# `git worktree list` reports forever. Two accumulated from a single task in one
+# afternoon. Runs that end with UNCOMMITTED work still keep theirs; that is the
+# distinction, not "success vs failure".
+_left="$(git -C "$W" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | grep -c '/cvg-wt-' || true)"
+if [ "${_left:-0}" -eq 0 ]; then
+  ok "a settled run leaves NO worktree behind (its work is on a branch)"
+else
+  bad "a settled run left $_left worktree(s) registered — they accumulate in \$TMPDIR"
+fi
+if git -C "$W" branch --list 'loop/*' | grep -q .; then
+  bad "the scratch loop/* branch outlived the settled run"
+else
+  ok "and the scratch loop/* branch is deleted with it"
+fi
+if git -C "$W" branch --list 'task/*' | grep -q .; then
+  ok "the task/* branch SURVIVES — that is where the committed work lives"
+else
+  bad "the settled work's branch was deleted along with the worktree"
+fi
+case "$RK_OUT" in
+  *"worktree removed"*) ok "and it says so, naming where the work went" ;;
+  *) bad "a silent removal reads as 'where did my work go' after a \$TMPDIR run" ;;
+esac
+drop_ws "$W"
+
+# ---- ...unless the operator asks to keep it ---------------------------------
+W="$(new_ws)"
+git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m red >/dev/null 2>&1
+run_kernel "$W" --agent tstfix --isolation worktree --keep-worktree
+if grep -qE '^TASK_LOOP=(SETTLED|LOCAL_SETTLED)$' <<<"$RK_OUT"; then
+  _kept="$(git -C "$W" worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' | grep -c '/cvg-wt-' || true)"
+  if [ "${_kept:-0}" -ge 1 ]; then
+    ok "--keep-worktree overrides the cleanup on a settled run"
+  else
+    bad "--keep-worktree did not keep the worktree"
+  fi
+else
+  bad "--keep-worktree changed the landing state: $(grep -E '^TASK_LOOP=' <<<"$RK_OUT" | tail -1)"
+fi
 drop_ws "$W"
 
 # ------------------------------------------------------ the cost dial (lane)
