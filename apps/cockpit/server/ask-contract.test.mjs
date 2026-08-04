@@ -4,12 +4,85 @@ import test from "node:test";
 import {
   ASK_LIMITS,
   AskError,
+  parseAskAgentIdRequest,
+  parseAskConfigSelections,
   parseAskHistory,
   parseAskTurnRequest,
   parseCreateAskSessionRequest,
   publicAskError,
   truncateUtf8,
 } from "./ask-contract.mjs";
+
+test("Ask session config selections are bounded, typed, and de-duplicated", () => {
+  assert.deepEqual(parseAskConfigSelections(undefined), []);
+  assert.deepEqual(parseAskConfigSelections(null), []);
+  assert.deepEqual(
+    parseAskConfigSelections([
+      { configId: "model", type: "select", value: "claude-opus-5" },
+      { configId: "thinking", type: "boolean", value: true },
+    ]),
+    [
+      { configId: "model", type: "select", value: "claude-opus-5" },
+      { configId: "thinking", type: "boolean", value: true },
+    ],
+  );
+
+  // A select value must be an identifier, never a free-form string.
+  assert.throws(
+    () => parseAskConfigSelections([{ configId: "model", type: "select", value: "a b" }]),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+  // Type and value must agree.
+  assert.throws(
+    () => parseAskConfigSelections([{ configId: "model", type: "boolean", value: "yes" }]),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+  // An unknown option type is refused rather than passed through to ACP.
+  assert.throws(
+    () => parseAskConfigSelections([{ configId: "model", type: "mode", value: "plan" }]),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+  // Unexpected keys are refused.
+  assert.throws(
+    () =>
+      parseAskConfigSelections([
+        { configId: "model", type: "select", value: "opus", extra: 1 },
+      ]),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+  // The same option cannot be set twice in one turn.
+  assert.throws(
+    () =>
+      parseAskConfigSelections([
+        { configId: "model", type: "select", value: "opus" },
+        { configId: "model", type: "select", value: "sonnet" },
+      ]),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+  assert.throws(
+    () =>
+      parseAskConfigSelections(
+        Array.from({ length: ASK_LIMITS.maxConfigSelections + 1 }, (_unused, index) => ({
+          configId: `option-${index}`,
+          type: "select",
+          value: "value",
+        })),
+      ),
+    (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+  );
+});
+
+test("Ask agent-id requests for the model-option probe are strict", () => {
+  assert.deepEqual(parseAskAgentIdRequest({ agentId: "claude" }), {
+    agentId: "claude",
+  });
+  for (const candidate of [{}, { agentId: "" }, { agentId: "claude", extra: 1 }]) {
+    assert.throws(
+      () => parseAskAgentIdRequest(candidate),
+      (error) => error instanceof AskError && error.code === "ASK_INVALID_REQUEST",
+    );
+  }
+});
 
 test("Ask request contracts are strict, bounded, and include decomposition entities", () => {
   assert.deepEqual(
@@ -28,6 +101,7 @@ test("Ask request contracts are strict, bounded, and include decomposition entit
         entity: { kind: "swimlane", id: "lane-1" },
         artifactIds: ["artifact-1"],
       },
+      config: [],
     },
   );
   assert.equal(

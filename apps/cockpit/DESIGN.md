@@ -72,11 +72,35 @@ bounded snapshot summary, selected entity, and explicitly selected artifact
 text in plan mode with built-in tools and settings sources disabled. It launches
 outside the workspace, client MCP is empty, and permission requests are
 rejected. Codex remains visible but blocked because the pinned adapter cannot
-suppress local read/search tools. The answer shows its interpretation boundary
-and is cleared if scope changes. The surface follows a familiar chat rhythm:
-quiet empty-state prompts, an engine switcher, context chip, scrolling turns,
-stop/new-chat controls, and a multiline composer. Cockpit keeps only a bounded
-visible transcript while each message runs in a fresh disposable ACP session.
+suppress local read/search tools; it states that reason in place rather than
+appearing as an unexplained disabled control. The answer shows its
+interpretation boundary and is cleared if scope changes.
+
+The surface follows a familiar chat rhythm: quiet empty-state prompts sitting
+with the invitation they answer above the composer, scrolling turns, stop and
+new-chat controls, and a multiline composer. Two composer controls carry the
+setup a reader actually changes:
+
+- **Engine and model.** One popover holds the engine, the model, and any
+  reasoning or thought-level selector the agent advertises over ACP
+  `session/set_config_option`. Options are read from a disposable probe session
+  that sends no prompt, so nothing is spawned merely by opening Ask, and the
+  reply header names the model that actually answered. Only the `model`,
+  `model_config`, and `thought_level` categories are settable. The `mode`
+  category is deliberately excluded: session mode is what holds Claude in plan
+  mode, and the pinned adapter advertises `bypassPermissions`, `acceptEdits`,
+  and `dontAsk` there.
+- **Question context.** A searchable picker over the passes, swimlanes, legs,
+  tasks, runs, receipts, artifacts, issues, signals, and health checks in the
+  current snapshot. Every question already carries the method reference and the
+  whole snapshot; naming one entity adds its detail, and an artifact adds its
+  hash-bound text.
+
+Conversations are owned above the surface, so moving to another view no longer
+discards the transcript, and prior conversations stay reachable through the
+history control. Nothing is written to storage: transcripts survive navigation
+but not a reload, which keeps provider answers off disk. Each message still runs
+in a fresh disposable ACP session.
 
 ### Overview
 

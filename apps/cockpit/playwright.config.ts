@@ -46,7 +46,10 @@ export default defineConfig({
       "npm run build && npm run start -- --cvg-home ../.. --project-root e2e/fixtures/workspace --port 4274",
     cwd: ".",
     url: "http://127.0.0.1:4274/api/health",
-    reuseExistingServer: false,
+    // CI always builds and starts its own server. Locally, reusing one that is
+    // already listening keeps a crashed or interrupted run from leaving the port
+    // squatted, which otherwise fails every later run before a single test runs.
+    reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
 });

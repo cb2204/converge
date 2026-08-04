@@ -10,6 +10,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { ArtifactViewer } from "./components/ArtifactViewer";
 import { ActivitySurface } from "./components/ActivitySurface";
 import { AskSurface } from "./components/AskSurface";
+import { useAskConversations } from "./ask/useAskConversations";
 import { ArtifactsSurface } from "./components/ArtifactsSurface";
 import { CockpitNav } from "./components/CockpitNav";
 import { CommandBar } from "./components/CommandBar";
@@ -150,6 +151,9 @@ export function App() {
     () => panelStateForViewport().right,
   );
   const [artifact, setArtifact] = useState<ArtifactRef | null>(null);
+  // Ask conversations are owned here so leaving the Ask surface no longer
+  // unmounts and discards the transcript.
+  const askConversations = useAskConversations();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectionPaused, setConnectionPaused] = useState(false);
@@ -444,7 +448,11 @@ export function App() {
             />
           ) : null}
           {surface === "ask" ? (
-            <AskSurface snapshot={snapshot} selected={selected} />
+            <AskSurface
+              snapshot={snapshot}
+              selected={selected}
+              conversations={askConversations}
+            />
           ) : null}
           {surface === "decompose" ? (
             <DecomposeSurface

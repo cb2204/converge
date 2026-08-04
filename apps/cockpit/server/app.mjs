@@ -5,7 +5,7 @@ import {
   askCapabilitiesDocument,
   runAskOnce,
 } from "./ask-http.mjs";
-import { publicAskError } from "./ask-contract.mjs";
+import { parseAskAgentIdRequest, publicAskError } from "./ask-contract.mjs";
 import { publicError } from "./security.mjs";
 
 const MAX_ASK_BODY_BYTES = 64 * 1024;
@@ -234,14 +234,15 @@ export function createRequestHandler({
       const url = new URL(request.url ?? "/", "http://localhost");
       const isGet = request.method === "GET";
       const isHead = request.method === "HEAD";
-      const isAskPost =
-        url.pathname === "/api/ask" && request.method === "POST";
+      // `/api/ask/options` spawns an adapter to read its model selectors, so it
+      // carries the same POST guards as asking rather than being reachable as a
+      // plain cross-origin GET.
+      const isAskPostPath =
+        url.pathname === "/api/ask" || url.pathname === "/api/ask/options";
+      const isAskPost = isAskPostPath && request.method === "POST";
 
       if (url.pathname.startsWith("/api/") && !isGet && !isAskPost) {
-        response.setHeader(
-          "Allow",
-          url.pathname === "/api/ask" ? "GET, POST" : "GET",
-        );
+        response.setHeader("Allow", isAskPostPath ? "GET, POST" : "GET");
         sendJson(
           response,
           405,
@@ -331,6 +332,11 @@ export function createRequestHandler({
         response.once("close", abortIfDisconnected);
         try {
           const body = await readJsonBody(request);
+          if (url.pathname === "/api/ask/options") {
+            const { agentId } = parseAskAgentIdRequest(body);
+            sendJson(response, 200, await askService.probeAgentConfig(agentId));
+            return;
+          }
           sendJson(
             response,
             200,

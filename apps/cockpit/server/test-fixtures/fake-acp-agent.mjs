@@ -78,6 +78,73 @@ const app = createAgentApp({ name: "converge-fake-agent" })
               },
             ],
       },
+      configOptions: [
+        {
+          id: "model",
+          name: "Model",
+          category: "model",
+          type: "select",
+          currentValue: "fake-sonnet",
+          options: [
+            { value: "fake-sonnet", name: "Fake Sonnet" },
+            { value: "fake-opus", name: "Fake Opus" },
+          ],
+        },
+        {
+          id: "thinking",
+          name: "Extended thinking",
+          category: "thought_level",
+          type: "boolean",
+          currentValue: false,
+        },
+        {
+          // A mode selector must never be settable through the model picker.
+          id: "danger-mode",
+          name: "Session mode",
+          category: "mode",
+          type: "select",
+          currentValue: "read-only",
+          options: [
+            { value: "read-only", name: "Read only" },
+            { value: "agent", name: "Agent" },
+          ],
+        },
+      ],
+    };
+  })
+  .onRequest(methods.agent.session.setConfigOption, ({ params }) => {
+    const session = sessions.get(params.sessionId);
+    if (!session) throw new Error("unknown fake session");
+    session.config = { ...session.config, [params.configId]: params.value };
+    // Echo only the option that changed, the way the pinned Claude adapter
+    // does, so the client is forced to merge rather than replace.
+    if (params.configId === "thinking") {
+      return {
+        configOptions: [
+          {
+            id: "thinking",
+            name: "Extended thinking",
+            category: "thought_level",
+            type: "boolean",
+            currentValue: session.config.thinking === true,
+          },
+        ],
+      };
+    }
+    return {
+      configOptions: [
+        {
+          id: "model",
+          name: "Model",
+          category: "model",
+          type: "select",
+          currentValue: session.config.model ?? "fake-sonnet",
+          options: [
+            { value: "fake-sonnet", name: "Fake Sonnet" },
+            { value: "fake-opus", name: "Fake Opus" },
+          ],
+        },
+      ],
     };
   })
   .onRequest(methods.agent.session.prompt, async ({ params, client }) => {

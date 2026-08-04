@@ -14,6 +14,84 @@ import { truncateUtf8 } from "../ask-contract.mjs";
 
 const SAFE_TOOL_KINDS = new Set(["read", "search", "think"]);
 const EVENT_TEXT_LIMIT = 8 * 1024;
+// Ask may only drive selectors that choose *which model answers* and how hard it
+// thinks. The ACP `mode` category is deliberately excluded: session mode is what
+// holds Claude in plan mode with tools disabled, so letting a client-supplied
+// selection reach it would turn a cosmetic picker into a safe-mode bypass.
+const SETTABLE_CONFIG_CATEGORIES = new Set([
+  "model",
+  "model_config",
+  "thought_level",
+]);
+const MAX_CONFIG_OPTIONS = 12;
+const MAX_CONFIG_VALUES = 48;
+
+function sanitizeSelectOptions(options) {
+  // ACP allows either a flat option array or grouped options. Both are
+  // flattened to one list so the client renders a single selector.
+  const flat = [];
+  const visit = (entries, group) => {
+    if (!Array.isArray(entries)) return;
+    for (const entry of entries) {
+      if (flat.length >= MAX_CONFIG_VALUES) return;
+      if (Array.isArray(entry?.options)) {
+        visit(entry.options, safeText(entry.name ?? entry.group ?? "", 120));
+        continue;
+      }
+      if (typeof entry?.value !== "string" || typeof entry?.name !== "string") {
+        continue;
+      }
+      flat.push(Object.freeze({
+        value: safeText(entry.value, 160),
+        name: safeText(entry.name, 120),
+        description: entry.description ? safeText(entry.description, 320) : null,
+        group: group ?? null,
+      }));
+    }
+  };
+  visit(Array.isArray(options) ? options : options?.options, null);
+  return Object.freeze(flat);
+}
+
+export function sanitizeConfigOptions(configOptions) {
+  if (!Array.isArray(configOptions)) return Object.freeze([]);
+  const sanitized = [];
+  for (const option of configOptions) {
+    if (sanitized.length >= MAX_CONFIG_OPTIONS) break;
+    if (typeof option?.id !== "string" || typeof option?.name !== "string") {
+      continue;
+    }
+    const category = typeof option.category === "string" ? option.category : null;
+    if (option.type === "boolean") {
+      sanitized.push(Object.freeze({
+        id: safeText(option.id, 160),
+        name: safeText(option.name, 120),
+        description: option.description ? safeText(option.description, 320) : null,
+        category,
+        type: "boolean",
+        currentValue: option.currentValue === true,
+        values: Object.freeze([]),
+        settable: SETTABLE_CONFIG_CATEGORIES.has(category),
+      }));
+      continue;
+    }
+    if (option.type !== "select") continue;
+    sanitized.push(Object.freeze({
+      id: safeText(option.id, 160),
+      name: safeText(option.name, 120),
+      description: option.description ? safeText(option.description, 320) : null,
+      category,
+      type: "select",
+      currentValue:
+        typeof option.currentValue === "string"
+          ? safeText(option.currentValue, 160)
+          : null,
+      values: sanitizeSelectOptions(option.options),
+      settable: SETTABLE_CONFIG_CATEGORIES.has(category),
+    }));
+  }
+  return Object.freeze(sanitized);
+}
 
 export class AcpClientError extends Error {
   constructor(code, { cause } = {}) {
@@ -194,6 +272,8 @@ export class AcpClient {
     this.initializeResult = null;
     this.authMethods = Object.freeze([]);
     this.capabilities = sanitizeCapabilities();
+    this.configOptions = Object.freeze([]);
+    this.modeDrifted = false;
     this.knownToolKinds = new Map();
     this.outputRejected = false;
     this.unsafeToolObserved = false;
@@ -256,6 +336,21 @@ export class AcpClient {
       })
       .onNotification(methods.client.session.update, async ({ params }) => {
         if (this.acpSessionId && params.sessionId !== this.acpSessionId) return;
+        if (params.update?.sessionUpdate === "current_mode_update") {
+          // Safe mode is what disables tools. If the agent moves the session off
+          // the required mode after we established it, the turn must not run.
+          const nextMode =
+            params.update.modeId ?? params.update.currentModeId ?? null;
+          if (this.adapter.requiredMode && nextMode !== this.adapter.requiredMode) {
+            this.modeDrifted = true;
+            await this.cancel();
+          }
+          return;
+        }
+        if (params.update?.sessionUpdate === "config_option_update") {
+          this.configOptions = sanitizeConfigOptions(params.update.configOptions);
+          return;
+        }
         const event = normalizeSessionUpdate(
           params.update,
           this.adapter.cwd,
@@ -277,7 +372,10 @@ export class AcpClient {
       const result = await this.#requestWithDeadline(
         this.agent.request(methods.agent.initialize, {
           protocolVersion: PROTOCOL_VERSION,
-          clientCapabilities: {},
+          // Boolean session config options are opt-in per ACP. Advertising them
+          // lets agents offer reasoning-level toggles alongside model
+          // selectors; no other client capability is granted.
+          clientCapabilities: { sessionConfigOptions: { boolean: {} } },
           clientInfo: {
             name: "converge-cockpit",
             title: "Converge Cockpit",
@@ -379,17 +477,59 @@ export class AcpClient {
     } else {
       this.safeModeEstablished = this.adapter.disableBuiltInTools === true;
     }
+    this.configOptions = sanitizeConfigOptions(response.configOptions);
     return Object.freeze({
       sessionId: response.sessionId,
       modes,
+      configOptions: this.configOptions,
     });
+  }
+
+  /**
+   * Applies one session configuration selection (model or reasoning level).
+   * Rejects any option the agent did not advertise, any value outside the
+   * advertised set, and any category outside SETTABLE_CONFIG_CATEGORIES.
+   */
+  async setConfigOption({ configId, type, value }) {
+    if (!this.agent || !this.acpSessionId) {
+      throw new AcpClientError("ACP_SESSION_STATE_INVALID");
+    }
+    const option = this.configOptions.find((candidate) => candidate.id === configId);
+    if (!option || !option.settable || option.type !== type) {
+      throw new AcpClientError("ACP_CONFIG_REJECTED");
+    }
+    if (
+      type === "select" &&
+      !option.values.some((candidate) => candidate.value === value)
+    ) {
+      throw new AcpClientError("ACP_CONFIG_REJECTED");
+    }
+    const previous = this.configOptions;
+    const response = await this.#requestWithDeadline(
+      this.agent.request(methods.agent.session.setConfigOption, {
+        sessionId: this.acpSessionId,
+        configId,
+        ...(type === "boolean" ? { type: "boolean", value } : { value }),
+      }),
+      this.initializeTimeoutMs,
+    );
+    // The response may echo only the option that changed — the pinned Claude
+    // adapter does exactly that. Merging by id keeps the untouched selectors
+    // known, so a second selection in the same turn still resolves instead of
+    // being rejected as unadvertised.
+    const applied = sanitizeConfigOptions(response?.configOptions);
+    const merged = new Map(previous.map((option) => [option.id, option]));
+    for (const option of applied) merged.set(option.id, option);
+    this.configOptions = Object.freeze([...merged.values()]);
+    if (this.modeDrifted) throw new AcpClientError("ACP_SAFE_MODE_UNAVAILABLE");
+    return this.configOptions;
   }
 
   async prompt(text) {
     if (!this.agent || !this.acpSessionId) {
       throw new AcpClientError("ACP_SESSION_STATE_INVALID");
     }
-    if (!this.safeModeEstablished) {
+    if (!this.safeModeEstablished || this.modeDrifted) {
       throw new AcpClientError("ACP_SAFE_MODE_UNAVAILABLE");
     }
     this.outputRejected = false;
@@ -511,4 +651,4 @@ export class AcpClient {
   }
 }
 
-export { SAFE_TOOL_KINDS, chooseRejection };
+export { SAFE_TOOL_KINDS, SETTABLE_CONFIG_CATEGORIES, chooseRejection };

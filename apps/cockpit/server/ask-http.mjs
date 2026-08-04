@@ -13,7 +13,8 @@ export function parseAskOnceRequest(value) {
   if (
     !isRecord(value) ||
     Object.keys(value).some(
-      (key) => !["agentId", "snapshotId", "text", "context", "history"].includes(key),
+      (key) =>
+        !["agentId", "snapshotId", "text", "context", "history", "config"].includes(key),
     )
   ) {
     throw new AskError("ASK_INVALID_REQUEST");
@@ -22,6 +23,7 @@ export function parseAskOnceRequest(value) {
     agentId: value.agentId,
     snapshotId: value.snapshotId,
     context: value.context,
+    config: value.config,
   });
   const turn = parseAskTurnRequest({
     snapshotId: value.snapshotId,
@@ -34,6 +36,7 @@ export function parseAskOnceRequest(value) {
     text: turn.text,
     context: session.context,
     history: turn.history,
+    config: session.config,
   });
 }
 
@@ -151,6 +154,9 @@ export async function runAskOnce(
   let sessionId = null;
   let turnId = null;
   let grounding = null;
+  let appliedConfig = [];
+  let contextStats = null;
+  let preparedAt = null;
   let rejectWaitOnAbort = null;
   const cancelActiveTurn = () => {
     if (sessionId && turnId) {
@@ -165,9 +171,15 @@ export async function runAskOnce(
       agentId: request.agentId,
       snapshotId: request.snapshotId,
       context: request.context,
+      config: request.config,
     });
     sessionId = created.session.id;
     grounding = created.session.grounding;
+    appliedConfig = created.session.configOptions ?? [];
+    contextStats = created.session.stats ?? null;
+    // Everything before the prompt: cvg snapshot, methodology, artifact reads,
+    // adapter spawn, ACP initialize, session/new, and config selections.
+    preparedAt = now();
     if (signal?.aborted) throw new AskError("ASK_CANCELLED");
     const turn = await askService.startTurn(sessionId, {
       text: request.text,
@@ -214,6 +226,27 @@ export async function runAskOnce(
       activity: activityFromEvents(eventDocument.events),
       stopReason: completed?.payload?.stopReason ?? "unknown",
       elapsedMs: Math.max(0, now() - startedAt),
+      // Where a turn's wall-clock actually goes. `prepareMs` is everything the
+      // Cockpit controls; `answerMs` is the provider thinking and writing.
+      timings: Object.freeze({
+        prepareMs: preparedAt === null ? null : Math.max(0, preparedAt - startedAt),
+        answerMs: preparedAt === null ? null : Math.max(0, now() - preparedAt),
+        totalMs: Math.max(0, now() - startedAt),
+      }),
+      context: contextStats,
+      // What actually answered, read back from the session rather than echoed
+      // from the request, so the transcript can name the real model.
+      engine: appliedConfig
+        .filter((option) => option.settable && option.type === "select")
+        .map((option) => ({
+          id: option.id,
+          name: option.name,
+          category: option.category,
+          value: option.currentValue,
+          label:
+            option.values.find((entry) => entry.value === option.currentValue)?.name ??
+            option.currentValue,
+        })),
     };
   } finally {
     signal?.removeEventListener("abort", cancelActiveTurn);

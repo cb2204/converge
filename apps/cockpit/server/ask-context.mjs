@@ -32,19 +32,16 @@ export function resolveAskEntity(snapshot, reference) {
     : null;
 }
 
-const METHOD_CONTEXT_BYTES = 20 * 1024;
+// The methodology manifest serialized past 21 KiB against the previous 20 KiB
+// budget, so every Ask turn silently fell back to the compaction profiles in
+// safeJson and shipped command descriptions clipped to as little as 120 bytes.
+// That truncation — not a missing conceptual handbook — is why answers about
+// Converge as a whole read thin. The manifest now gets room for its full
+// command surface at full fidelity.
+const METHOD_CONTEXT_BYTES = 32 * 1024;
 const PROJECT_CONTEXT_BYTES = 54 * 1024;
 const ENTITY_CONTEXT_BYTES = 10 * 1024;
 const ARTIFACT_CONTEXT_BYTES = 18 * 1024;
-const METHOD_SUPPORT_COMMANDS = new Set([
-  "agent-context",
-  "doctor evidence",
-  "lane <intent> [--files N] [--paths p]",
-  "lesson [<file>] [--immutable <path>...]",
-  "next [--lane FULL|NORMAL|FAST]",
-  "ready [--all]",
-  "snapshot",
-]);
 
 function compactValue(value, {
   depth = 0,
@@ -135,17 +132,18 @@ function methodologySummary(methodology) {
   ) {
     throw new AskError("ASK_METHODOLOGY_UNAVAILABLE");
   }
-  const commands = manifest.commands
-    .filter((command) =>
-      command.converge_pass !== null || METHOD_SUPPORT_COMMANDS.has(command.name))
-    .map((command) => ({
-      name: command.name,
-      pass: command.converge_pass,
-      mutating: command.mutating,
-      emitsTokens: command.emits_tokens,
-      example: command.example,
-      description: command.description,
-    }));
+  // The whole CLI surface is forwarded, not just pass-bearing and hand-listed
+  // support commands. The previously excluded 14 (init, gate, setup, doctor,
+  // help, version) are exactly the ones a question about how Converge works as
+  // a whole depends on.
+  const commands = manifest.commands.map((command) => ({
+    name: command.name,
+    pass: command.converge_pass,
+    mutating: command.mutating,
+    emitsTokens: command.emits_tokens,
+    example: command.example,
+    description: command.description,
+  }));
   return {
     schemaVersion: manifest.schema_version,
     tool: manifest.tool,
@@ -153,6 +151,7 @@ function methodologySummary(methodology) {
     role: manifest.role,
     description: manifest.description,
     contracts: manifest.contracts,
+    globalFlags: manifest.global_flags ?? [],
     exitCodes: manifest.exit_codes,
     commands,
   };
@@ -371,6 +370,35 @@ export async function buildAskContext({
 
   return Object.freeze({
     contextText,
+    // What was actually packed into the prompt. Surfaced to the reader so an
+    // answer can be judged against the evidence it was given, and so the cost
+    // of a turn is visible rather than guessed at.
+    stats: Object.freeze({
+      contextBytes: utf8Length(contextText),
+      maxContextBytes: ASK_LIMITS.maxContextBytes,
+      methodCommands: methodReference.commands.length,
+      passes: Array.isArray(snapshot.method?.passes) ? snapshot.method.passes.length : 0,
+      swimlanes: Array.isArray(snapshot.decomposition?.swimlanes)
+        ? snapshot.decomposition.swimlanes.length
+        : 0,
+      legs: Array.isArray(snapshot.decomposition?.legs)
+        ? snapshot.decomposition.legs.length
+        : 0,
+      tasks: Array.isArray(snapshot.work?.tasks) ? snapshot.work.tasks.length : 0,
+      runs: Array.isArray(snapshot.execution?.runs) ? snapshot.execution.runs.length : 0,
+      receipts: Array.isArray(snapshot.receipts?.items)
+        ? snapshot.receipts.items.length
+        : 0,
+      artifactsCatalogued: Array.isArray(snapshot.artifacts)
+        ? snapshot.artifacts.length
+        : 0,
+      artifactsIncluded: artifacts.length,
+      issues: Array.isArray(snapshot.issues) ? snapshot.issues.length : 0,
+      signals: Array.isArray(snapshot.signals) ? snapshot.signals.length : 0,
+      healthChecks: Array.isArray(snapshot.health?.checks)
+        ? snapshot.health.checks.length
+        : 0,
+    }),
     grounding: Object.freeze({
       snapshotId: snapshot.snapshotId,
       observedAt: snapshot.observedAt,

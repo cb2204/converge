@@ -10,47 +10,44 @@ import {
   ArrowRight,
   ArrowUp,
   Check,
+  CaretDown,
   CircleNotch,
+  ClockCounterClockwise,
   CloudSlash,
+  Cube,
   LockKey,
   MagnifyingGlass,
   Plus,
   ShieldCheck,
+  Sliders,
   Stop,
+  Trash,
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
-import claudeIconUrl from "@lobehub/icons-static-svg/icons/claude-color.svg?url&no-inline";
-import codexIconUrl from "@lobehub/icons-static-svg/icons/codex-color.svg?url&no-inline";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type {
   AskAgent,
   AskCapabilities,
+  AskConfigOption,
+  AskConfigSelection,
+  AskConversationTurn,
+  AskFailure,
   AskTurnResponse,
 } from "../ask/types";
-import { resolveEntity } from "../lib/entities";
+import type { AskConversationStore } from "../ask/useAskConversations";
+import {
+  askContextCandidates,
+  filterContextCandidates,
+} from "../ask/context-candidates";
+import { resolveEntity, sameEntity } from "../lib/entities";
 import type { EntityRef, WorkspaceSnapshot } from "../types";
 
 interface AskSurfaceProps {
   snapshot: WorkspaceSnapshot;
   selected: EntityRef | null;
-}
-
-interface ConversationTurn {
-  id: string;
-  agentId: AskAgent["id"];
-  question: string;
-  scope: EntityRef | null;
-  state: "pending" | "complete" | "error" | "cancelled";
-  response: AskTurnResponse | null;
-  error: AskFailure | null;
-}
-
-interface AskFailure {
-  code: string;
-  message: string;
-  retryable: boolean;
+  conversations: AskConversationStore;
 }
 
 class AskRequestError extends Error {
@@ -182,19 +179,191 @@ const EMPTY_CAPABILITIES: AskCapabilities = {
   },
 };
 
-function AgentIcon({ id }: { id: AskAgent["id"] }) {
-  const label = id === "codex" ? "Codex" : "Claude Agent";
+/**
+ * Monochrome provider marks drawn inline so they inherit `currentColor`.
+ *
+ * The previous implementation loaded vendor full-colour SVGs as external `<img>`
+ * URLs, which CSS cannot recolour — that is why they read as stickers dropped
+ * into a restrained dark interface rather than as part of it.
+ */
+function AgentMark({ id }: { id: AskAgent["id"] }) {
   return (
-    <span className={`ask-agent-icon ask-agent-icon--${id}`} aria-hidden="true">
-      <img
-        src={id === "codex" ? codexIconUrl : claudeIconUrl}
-        alt=""
-        aria-hidden="true"
-        draggable={false}
-        data-provider-mark={id}
-        title={label}
-      />
+    <span className={`ask-agent-mark ask-agent-mark--${id}`} aria-hidden="true">
+      {id === "claude" ? (
+        <svg viewBox="0 0 24 24" fill="none" focusable="false">
+          {Array.from({ length: 6 }, (_unused, index) => {
+            const angle = (index * Math.PI) / 6 + Math.PI / 12;
+            const x = Math.cos(angle) * 8.5;
+            const y = Math.sin(angle) * 8.5;
+            return (
+              <line
+                key={angle}
+                x1={12 - x}
+                y1={12 - y}
+                x2={12 + x}
+                y2={12 + y}
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            );
+          })}
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" focusable="false">
+          <path
+            d="M12 2.6 20.1 7.3v9.4L12 21.4 3.9 16.7V7.3z"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12 8.1 15.6 10.2v4.2L12 16.5 8.4 14.4v-4.2z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
     </span>
+  );
+}
+
+function seconds(ms: number | null | undefined) {
+  return typeof ms === "number" ? `${(ms / 1000).toFixed(1)}s` : "—";
+}
+
+function kib(bytes: number) {
+  return `${Math.round(bytes / 1024).toLocaleString()} KiB`;
+}
+
+/**
+ * The evidence a turn was actually given, plus where its wall-clock went.
+ *
+ * The grounding block already travelled with every answer but was collapsed to
+ * a single line, so a reader could not check an interpretation against its
+ * sources or see why a turn took as long as it did.
+ */
+function AskSources({ response }: { response: AskTurnResponse }) {
+  const { grounding, timings, context } = response;
+  const artifacts = grounding.artifacts ?? [];
+  const counts = context
+    ? [
+        `${context.methodCommands} cvg commands`,
+        `${context.passes} passes`,
+        `${context.swimlanes} swimlanes`,
+        `${context.legs} legs`,
+        `${context.tasks} Task-Specs`,
+        `${context.runs} runs`,
+        `${context.receipts} receipts`,
+        `${context.artifactsCatalogued} artifacts catalogued`,
+        `${context.issues} issues`,
+        `${context.signals} signals`,
+        `${context.healthChecks} health checks`,
+      ]
+    : [];
+
+  return (
+    <details className="ask-sources">
+      <summary>
+        <ShieldCheck weight="fill" aria-hidden="true" />
+        <span>
+          Grounded in Converge {grounding.methodology.version}, snapshot{" "}
+          {grounding.snapshotId.slice(0, 12)}
+        </span>
+        <em>
+          {seconds(timings?.totalMs ?? response.elapsedMs)}
+          {context ? ` · ${kib(context.contextBytes)} sent` : ""}
+        </em>
+      </summary>
+
+      <div className="ask-sources__body">
+        <section>
+          <h4>Sources</h4>
+          <dl>
+            <div>
+              <dt>Method</dt>
+              <dd>
+                {grounding.methodology.tool} {grounding.methodology.version}
+                <code>{grounding.methodology.digest.slice(0, 12)}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>Snapshot</dt>
+              <dd>
+                <code>{grounding.snapshotId}</code>
+                observed {new Date(grounding.observedAt).toLocaleString()}
+              </dd>
+            </div>
+            <div>
+              <dt>Focus</dt>
+              <dd>
+                {grounding.entity
+                  ? `${grounding.entity.kind}:${grounding.entity.id}`
+                  : "Whole workspace snapshot"}
+              </dd>
+            </div>
+            {artifacts.length > 0 ? (
+              <div>
+                <dt>Documents</dt>
+                <dd>
+                  <ul className="ask-sources__artifacts">
+                    {artifacts.map((artifact) => (
+                      <li key={artifact.id}>
+                        <strong>{artifact.label}</strong>
+                        <code>{artifact.path}</code>
+                        <code>sha256 {artifact.sha256.slice(0, 12)}</code>
+                        {artifact.truncated ? <em>truncated</em> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+          {counts.length > 0 ? (
+            <p className="ask-sources__counts">{counts.join(" · ")}</p>
+          ) : null}
+        </section>
+
+        {timings ? (
+          <section>
+            <h4>Time</h4>
+            <dl>
+              <div>
+                <dt>Preparing</dt>
+                <dd>
+                  {seconds(timings.prepareMs)}
+                  <small>cvg snapshot, method, adapter start, session setup</small>
+                </dd>
+              </div>
+              <div>
+                <dt>Answering</dt>
+                <dd>
+                  {seconds(timings.answerMs)}
+                  <small>provider thinking and writing</small>
+                </dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd>{seconds(timings.totalMs)}</dd>
+              </div>
+            </dl>
+            {context ? (
+              <p className="ask-sources__counts">
+                {kib(context.contextBytes)} of a {kib(context.maxContextBytes)} budget,
+                re-sent in full because every message runs in a fresh session.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        <p className="ask-sources__boundary">
+          This is an interpretation read off a snapshot. It is never a gate verdict,
+          receipt, or proof — only <code>cvg</code> gate commands produce those.
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -285,7 +454,7 @@ function groundingMatches(
   );
 }
 
-function historyFrom(turns: ConversationTurn[]) {
+function historyFrom(turns: AskConversationTurn[]) {
   const bounded = (value: string) => {
     const bytes = new TextEncoder().encode(value);
     return bytes.byteLength <= 1_800
@@ -301,21 +470,76 @@ function historyFrom(turns: ConversationTurn[]) {
     .slice(-6);
 }
 
-export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
+/** Selections the composer sends, derived from the agent's advertised options. */
+function selectionsFrom(
+  options: AskConfigOption[],
+  chosen: Record<string, string | boolean>,
+): AskConfigSelection[] {
+  return options
+    .filter((option) => option.settable && Object.hasOwn(chosen, option.id))
+    .map((option) => ({
+      configId: option.id,
+      type: option.type,
+      value: chosen[option.id],
+    }))
+    .filter((selection) =>
+      selection.type === "boolean"
+        ? typeof selection.value === "boolean"
+        : typeof selection.value === "string",
+    );
+}
+
+function currentValueOf(
+  option: AskConfigOption,
+  chosen: Record<string, string | boolean>,
+) {
+  return Object.hasOwn(chosen, option.id) ? chosen[option.id] : option.currentValue;
+}
+
+function modelSummary(
+  options: AskConfigOption[],
+  chosen: Record<string, string | boolean>,
+) {
+  const model = options.find(
+    (option) => option.category === "model" && option.type === "select",
+  );
+  if (!model) return null;
+  const value = currentValueOf(model, chosen);
+  if (typeof value !== "string") return null;
+  return model.values.find((entry) => entry.value === value)?.name ?? value;
+}
+
+export function AskSurface({ snapshot, selected, conversations }: AskSurfaceProps) {
   const [capabilities, setCapabilities] = useState<AskCapabilities>(EMPTY_CAPABILITIES);
   const [agentId, setAgentId] = useState<AskAgent["id"]>("codex");
   const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<ConversationTurn[]>([]);
-  const [includeSelection, setIncludeSelection] = useState(false);
+  const [contextRef, setContextRef] = useState<EntityRef | null>(null);
   const [loadingAgents, setLoadingAgents] = useState(true);
   const [registryError, setRegistryError] = useState<string | null>(null);
+  const [enginePanelOpen, setEnginePanelOpen] = useState(false);
+  const [contextPanelOpen, setContextPanelOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [contextQuery, setContextQuery] = useState("");
+  const [configByAgent, setConfigByAgent] = useState<
+    Record<string, AskConfigOption[]>
+  >({});
+  const [configState, setConfigState] = useState<
+    Record<string, "idle" | "loading" | "ready" | "unsupported">
+  >({});
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [chosenConfig, setChosenConfig] = useState<
+    Record<string, Record<string, string | boolean>>
+  >({});
   const requestRef = useRef<{ controller: AbortController; turnId: string } | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const projectIdentityRef = useRef(snapshot.project.root);
-  const liveContextRef = useRef(contextKey(snapshot.snapshotId, selected));
-  liveContextRef.current = contextKey(snapshot.snapshotId, selected);
+  const liveContextRef = useRef(contextKey(snapshot.snapshotId, contextRef));
+  liveContextRef.current = contextKey(snapshot.snapshotId, contextRef);
+
+  const turns = conversations.active?.turns ?? [];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -358,10 +582,13 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     projectIdentityRef.current = snapshot.project.root;
     requestRef.current?.controller.abort();
     requestRef.current = null;
-    setTurns([]);
+    conversations.clearAll();
     setQuestion("");
-    setIncludeSelection(false);
-  }, [snapshot.project.root]);
+    setContextRef(null);
+    setConfigByAgent({});
+    setConfigState({});
+    setChosenConfig({});
+  }, [conversations, snapshot.project.root]);
 
   useEffect(
     () => () => {
@@ -398,7 +625,28 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     } else {
       transcript.scrollTop = transcript.scrollHeight;
     }
-  }, [turns]);
+  }, [turns.length]);
+
+  // Dismiss the composer popovers on outside click or Escape.
+  useEffect(() => {
+    if (!enginePanelOpen && !contextPanelOpen) return;
+    function onPointerDown(event: MouseEvent) {
+      if (composerRef.current?.contains(event.target as Node)) return;
+      setEnginePanelOpen(false);
+      setContextPanelOpen(false);
+    }
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setEnginePanelOpen(false);
+      setContextPanelOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [contextPanelOpen, enginePanelOpen]);
 
   const selectedAgent = useMemo(
     () => capabilities.agents.find((agent) => agent.id === agentId) ?? capabilities.agents[0],
@@ -406,7 +654,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
   );
   const replay = snapshot.source === "fixture";
   const asking = turns.some((turn) => turn.state === "pending");
-  const requestedEntity = includeSelection ? selected : null;
+  const requestedEntity = contextRef;
   const alternateAgent = capabilities.agents.find(
     (agent) => agent.id !== selectedAgent?.id && agentReady(agent),
   );
@@ -414,16 +662,93 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     () => suggestionsFor(snapshot, requestedEntity),
     [snapshot, requestedEntity],
   );
+  const contextCandidates = useMemo(
+    () => askContextCandidates(snapshot),
+    [snapshot],
+  );
+  const filteredCandidates = useMemo(
+    () => filterContextCandidates(contextCandidates, contextQuery),
+    [contextCandidates, contextQuery],
+  );
+  const activeOptions = configByAgent[agentId] ?? [];
+  const activeChosen = chosenConfig[agentId] ?? {};
+  const settableOptions = activeOptions.filter((option) => option.settable);
+  const activeModel = modelSummary(activeOptions, activeChosen);
   const canAsk =
     !replay &&
     !asking &&
     question.trim().length >= 2 &&
     agentReady(selectedAgent);
 
-  function patchTurn(turnId: string, patch: Partial<ConversationTurn>) {
-    setTurns((current) =>
-      current.map((turn) => (turn.id === turnId ? { ...turn, ...patch } : turn)),
-    );
+  /**
+   * Reads the model and reasoning selectors the agent advertises. Deferred until
+   * the picker is opened so no adapter process is spawned just by visiting Ask.
+   */
+  async function loadAgentConfig(targetId: AskAgent["id"]) {
+    if (configState[targetId] === "loading" || configByAgent[targetId]) return;
+    const agent = capabilities.agents.find((candidate) => candidate.id === targetId);
+    if (!agentReady(agent) || !capabilities.requestToken) return;
+    setConfigState((current) => ({ ...current, [targetId]: "loading" }));
+    setConfigError(null);
+    try {
+      const response = await fetch("/api/ask/options", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-Converge-Request": "ask-v1",
+          "X-Converge-CSRF": capabilities.requestToken,
+        },
+        body: JSON.stringify({ agentId: targetId }),
+      });
+      const body = (await response.json()) as {
+        configOptions?: AskConfigOption[];
+        error?: { message?: string };
+      };
+      if (!response.ok) {
+        throw new Error(
+          body.error?.message ?? "The agent did not report its model options.",
+        );
+      }
+      const options = Array.isArray(body.configOptions) ? body.configOptions : [];
+      setConfigByAgent((current) => ({ ...current, [targetId]: options }));
+      setConfigState((current) => ({
+        ...current,
+        [targetId]: options.some((option) => option.settable) ? "ready" : "unsupported",
+      }));
+    } catch (error) {
+      setConfigState((current) => ({ ...current, [targetId]: "idle" }));
+      setConfigError(
+        error instanceof Error ? error.message : "Model options are unavailable.",
+      );
+    }
+  }
+
+  function toggleEnginePanel() {
+    const next = !enginePanelOpen;
+    setEnginePanelOpen(next);
+    setContextPanelOpen(false);
+    if (next) void loadAgentConfig(agentId);
+  }
+
+  function chooseAgent(nextId: AskAgent["id"]) {
+    // The unusable engines are `aria-disabled`, not `disabled`, so they still
+    // receive clicks: readiness has to be enforced here rather than by the DOM.
+    const agent = capabilities.agents.find((candidate) => candidate.id === nextId);
+    if (!agentReady(agent)) return;
+    setAgentId(nextId);
+    void loadAgentConfig(nextId);
+  }
+
+  function chooseConfigValue(optionId: string, value: string | boolean) {
+    setChosenConfig((current) => ({
+      ...current,
+      [agentId]: { ...(current[agentId] ?? {}), [optionId]: value },
+    }));
+  }
+
+  function patchTurn(turnId: string, patch: Partial<AskConversationTurn>) {
+    conversations.patchTurn(turnId, patch);
   }
 
   function stopTurn() {
@@ -441,12 +766,25 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     });
   }
 
-  function clearConversation() {
+  function startNewConversation() {
     stopTurn();
-    setTurns([]);
+    conversations.startConversation();
     setQuestion("");
-    setIncludeSelection(false);
+    // A new chat starts unscoped: carrying the previous question's entity into a
+    // fresh conversation would silently narrow an answer the reader did not ask
+    // to narrow.
+    setContextRef(null);
+    setContextQuery("");
+    setHistoryPanelOpen(false);
+    setEnginePanelOpen(false);
+    setContextPanelOpen(false);
     textareaRef.current?.focus();
+  }
+
+  function openConversation(id: string) {
+    stopTurn();
+    conversations.selectConversation(id);
+    setHistoryPanelOpen(false);
   }
 
   function chooseSuggestion(suggestion: string) {
@@ -454,7 +792,13 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     textareaRef.current?.focus();
   }
 
-  function retryTurn(turn: ConversationTurn) {
+  function chooseContext(next: EntityRef | null) {
+    setContextRef(next);
+    setContextPanelOpen(false);
+    setContextQuery("");
+  }
+
+  function retryTurn(turn: AskConversationTurn) {
     setQuestion(turn.question);
     textareaRef.current?.focus();
   }
@@ -465,7 +809,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
 
     const text = question.trim();
     const turnId = `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const turn: ConversationTurn = {
+    const turn: AskConversationTurn = {
       id: turnId,
       agentId: selectedAgent.id,
       question: text,
@@ -475,11 +819,12 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
       error: null,
     };
     const priorHistory = historyFrom(turns);
-    setTurns((current) => [...current, turn]);
+    conversations.appendTurn(turn);
     setQuestion("");
     const controller = new AbortController();
     requestRef.current = { controller, turnId };
     const requestedContext = contextKey(snapshot.snapshotId, requestedEntity);
+    const config = selectionsFrom(activeOptions, activeChosen);
 
     try {
       const response = await fetch("/api/ask", {
@@ -500,6 +845,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
             artifactIds:
               requestedEntity?.kind === "artifact" ? [requestedEntity.id] : [],
           },
+          ...(config.length > 0 ? { config } : {}),
         }),
         signal: controller.signal,
       });
@@ -568,6 +914,8 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
     formRef.current?.requestSubmit();
   }
 
+  const historyCount = conversations.history.length;
+
   return (
     <section
       className={`surface surface--ask ask-chat${turns.length === 0 ? " ask-chat--empty" : ""}`}
@@ -578,16 +926,68 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
           <h1 id="ask-title">Ask</h1>
           <span>Converge and {snapshot.project.name}</span>
         </div>
-        <button
-          type="button"
-          className="ask-new-chat"
-          onClick={clearConversation}
-          aria-label="Start new chat"
-        >
-          <Plus aria-hidden="true" />
-          New chat
-        </button>
+        <div className="ask-chat__header-actions">
+          <button
+            type="button"
+            className={`ask-header-button${historyPanelOpen ? " is-open" : ""}`}
+            onClick={() => setHistoryPanelOpen((open) => !open)}
+            aria-expanded={historyPanelOpen}
+            aria-label={`Conversation history, ${historyCount} saved`}
+          >
+            <ClockCounterClockwise aria-hidden="true" />
+            History
+            {historyCount > 0 ? <em>{historyCount}</em> : null}
+          </button>
+          <button
+            type="button"
+            className="ask-new-chat"
+            onClick={startNewConversation}
+            aria-label="Start new chat"
+          >
+            <Plus aria-hidden="true" />
+            New chat
+          </button>
+        </div>
       </header>
+
+      {historyPanelOpen ? (
+        <div className="ask-history" role="region" aria-label="Conversation history">
+          {historyCount === 0 ? (
+            <p className="ask-history__empty">
+              Conversations you start appear here for this session. They are kept in
+              memory only and are never written to disk.
+            </p>
+          ) : (
+            <ul>
+              {conversations.history.map((conversation) => (
+                <li key={conversation.id}>
+                  <button
+                    type="button"
+                    className={
+                      conversation.id === conversations.activeId ? "is-active" : ""
+                    }
+                    onClick={() => openConversation(conversation.id)}
+                  >
+                    <strong>{conversation.title}</strong>
+                    <small>
+                      {conversation.turns.length}{" "}
+                      {conversation.turns.length === 1 ? "question" : "questions"}
+                    </small>
+                  </button>
+                  <button
+                    type="button"
+                    className="ask-history__delete"
+                    onClick={() => conversations.deleteConversation(conversation.id)}
+                    aria-label={`Delete conversation ${conversation.title}`}
+                  >
+                    <Trash aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
 
       <div className="ask-chat__transcript" ref={transcriptRef} aria-live="polite">
         {turns.length === 0 ? (
@@ -603,11 +1003,29 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
             />
             <h2>What should we explore in {snapshot.project.name}?</h2>
             <p>Ask about the method, decisions, delivery, execution, or proof.</p>
+            {/* Openers sit with the invitation they answer, above the composer,
+                rather than stranded below the input. */}
+            <div className="ask-suggestions" aria-label="Suggested questions">
+              {visibleSuggestions.map((suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion.question}
+                  onClick={() => chooseSuggestion(suggestion.question)}
+                >
+                  <span>
+                    <strong>{suggestion.question}</strong>
+                    <small>{suggestion.label}</small>
+                  </span>
+                  <ArrowRight aria-hidden="true" />
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="ask-thread">
             {turns.map((turn) => {
               const agent = capabilities.agents.find((candidate) => candidate.id === turn.agentId);
+              const engine = turn.response?.engine ?? [];
               return (
                 <article className="ask-turn" key={turn.id}>
                   <div className="ask-turn__user">
@@ -618,8 +1036,13 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
                   </div>
                   <div className="ask-reply">
                     <header className="ask-reply__provider">
-                      <AgentIcon id={turn.agentId} />
+                      <AgentMark id={turn.agentId} />
                       <strong>{agent?.label ?? turn.agentId}</strong>
+                      {engine.length > 0 ? (
+                        <span className="ask-reply__engine">
+                          {engine.map((entry) => entry.label).filter(Boolean).join(" · ")}
+                        </span>
+                      ) : null}
                       <small>via ACP</small>
                     </header>
                     {turn.state === "pending" ? (
@@ -646,7 +1069,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
                               </button>
                             ) : null}
                             {alternateAgent ? (
-                              <button type="button" onClick={() => setAgentId(alternateAgent.id)}>
+                              <button type="button" onClick={() => chooseAgent(alternateAgent.id)}>
                                 Use {alternateAgent.label}
                               </button>
                             ) : null}
@@ -688,12 +1111,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
                             </ol>
                           </details>
                         ) : null}
-                        <footer className="ask-reply__meta">
-                          <ShieldCheck weight="fill" aria-hidden="true" />
-                          <span>
-                            Grounded in Converge {turn.response.grounding.methodology.version}, snapshot {turn.response.grounding.snapshotId.slice(0, 12)} · {(turn.response.elapsedMs / 1000).toFixed(1)}s
-                          </span>
-                        </footer>
+                        <AskSources response={turn.response} />
                       </>
                     ) : null}
                   </div>
@@ -704,7 +1122,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
         )}
       </div>
 
-      <div className="ask-chat__composer-zone">
+      <div className="ask-chat__composer-zone" ref={composerRef}>
         {registryError ? (
           <div className="ask-inline-state" role="alert">
             <WarningCircle weight="fill" aria-hidden="true" /> {registryError}
@@ -718,7 +1136,7 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
               <button
                 type="button"
                 className="ask-inline-state__action"
-                onClick={() => setAgentId(alternateAgent.id)}
+                onClick={() => chooseAgent(alternateAgent.id)}
               >
                 Use {alternateAgent.label}
                 <ArrowRight aria-hidden="true" />
@@ -745,53 +1163,234 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
           />
           <div className="ask-composer__bar">
             <div className="ask-composer__tools">
-              <div
-                className="ask-engine-switcher"
-                role="group"
-                aria-label="Choose ACP agent"
-              >
-                {capabilities.agents.map((agent) => {
-                  const active = agent.id === agentId;
-                  const loadingLabel = "Checking ACP availability";
-                  return (
-                    <button
-                      type="button"
-                      key={agent.id}
-                      className={active ? "is-active" : ""}
-                      onClick={() => setAgentId(agent.id)}
-                      disabled={loadingAgents}
-                      aria-pressed={active}
-                      aria-label={`${agent.label}, ${loadingAgents ? loadingLabel : availabilityLabel(agent)}`}
-                      title={loadingAgents ? loadingLabel : agent.reason ?? availabilityLabel(agent)}
+              <div className="ask-popover-anchor">
+                <button
+                  type="button"
+                  className={`ask-engine-button${enginePanelOpen ? " is-open" : ""}`}
+                  onClick={toggleEnginePanel}
+                  disabled={loadingAgents}
+                  aria-expanded={enginePanelOpen}
+                  aria-haspopup="dialog"
+                  aria-label={`Engine and model: ${selectedAgent?.label ?? "none"}${
+                    activeModel ? `, ${activeModel}` : ""
+                  }`}
+                >
+                  <AgentMark id={selectedAgent?.id ?? "claude"} />
+                  <span className="ask-engine-button__copy">
+                    <strong>{selectedAgent?.label ?? "Engine"}</strong>
+                    <small>
+                      {loadingAgents
+                        ? "Checking"
+                        : activeModel ??
+                          (selectedAgent ? compactAvailabilityLabel(selectedAgent) : "")}
+                    </small>
+                  </span>
+                  <CaretDown aria-hidden="true" />
+                </button>
+                {enginePanelOpen ? (
+                  <div className="ask-popover" role="dialog" aria-label="Engine and model">
+                    {/* The engine choices stay a named group so the picker keeps one
+                        stable accessible identity as the visual design moves. */}
+                    <div
+                      className="ask-popover__engine-group"
+                      role="group"
+                      aria-label="Choose ACP agent"
                     >
-                      <AgentIcon id={agent.id} />
-                      <span className="ask-engine-switcher__copy">
-                        <strong>{agent.label}</strong>
-                        <small>{loadingAgents ? "Checking" : compactAvailabilityLabel(agent)}</small>
-                      </span>
-                      <i className={`is-${agent.availability}`} aria-hidden="true" />
-                    </button>
-                  );
-                })}
+                      <p className="ask-popover__title">Engine</p>
+                      <ul className="ask-popover__engines">
+                        {capabilities.agents.map((agent) => {
+                          const ready = agentReady(agent);
+                          return (
+                            <li key={agent.id}>
+                              <button
+                                type="button"
+                                className={agent.id === agentId ? "is-active" : ""}
+                                onClick={() => chooseAgent(agent.id)}
+                                /*
+                                 * An unusable engine stays focusable and announces why.
+                                 * `disabled` would drop it out of the tab order, so the
+                                 * one place that explains the safe-mode block would be
+                                 * unreachable by keyboard and screen reader alike.
+                                 */
+                                aria-disabled={!ready}
+                                aria-pressed={agent.id === agentId}
+                                aria-label={`${agent.label}, ${availabilityLabel(agent)}`}
+                              >
+                                <AgentMark id={agent.id} />
+                                <span>
+                                  <strong>{agent.label}</strong>
+                                  <small>{compactAvailabilityLabel(agent)}</small>
+                                </span>
+                                {agent.id === agentId ? <Check aria-hidden="true" /> : null}
+                              </button>
+                              {/* A blocked engine explains itself instead of being a
+                                  dressed-up disabled button. */}
+                              {agent.availability === "blocked" && agent.reason ? (
+                                <p className="ask-popover__blocked">{agent.reason}</p>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+
+                    {configState[agentId] === "loading" ? (
+                      <p className="ask-popover__note">
+                        <CircleNotch className="status-glyph--spin" aria-hidden="true" />
+                        Reading the options this agent offers…
+                      </p>
+                    ) : null}
+                    {configError ? (
+                      <p className="ask-popover__note is-error">{configError}</p>
+                    ) : null}
+                    {configState[agentId] === "unsupported" ? (
+                      <p className="ask-popover__note">
+                        This agent does not advertise selectable models over ACP.
+                      </p>
+                    ) : null}
+
+                    {settableOptions.map((option) => {
+                      const value = currentValueOf(option, activeChosen);
+                      return (
+                        <div className="ask-popover__group" key={option.id}>
+                          <p className="ask-popover__title">
+                            {option.category === "model" ? <Cube aria-hidden="true" /> : <Sliders aria-hidden="true" />}
+                            {option.name}
+                          </p>
+                          {option.type === "boolean" ? (
+                            <label className="ask-toggle">
+                              <input
+                                type="checkbox"
+                                checked={value === true}
+                                onChange={(event) =>
+                                  chooseConfigValue(option.id, event.target.checked)
+                                }
+                              />
+                              <span>{option.description ?? option.name}</span>
+                            </label>
+                          ) : (
+                            <ul className="ask-popover__values">
+                              {option.values.map((entry) => (
+                                <li key={entry.value}>
+                                  <button
+                                    type="button"
+                                    className={entry.value === value ? "is-active" : ""}
+                                    onClick={() => chooseConfigValue(option.id, entry.value)}
+                                    aria-pressed={entry.value === value}
+                                  >
+                                    <span>
+                                      <strong>{entry.name}</strong>
+                                      {entry.description ? <small>{entry.description}</small> : null}
+                                    </span>
+                                    {entry.value === value ? <Check aria-hidden="true" /> : null}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
-              {selected ? (
-                includeSelection ? (
+
+              <div className="ask-popover-anchor">
+                <button
+                  type="button"
+                  className={`ask-context-button${contextPanelOpen ? " is-open" : ""}${contextRef ? " has-context" : ""}`}
+                  onClick={() => {
+                    setContextPanelOpen((open) => !open);
+                    setEnginePanelOpen(false);
+                  }}
+                  aria-expanded={contextPanelOpen}
+                  aria-haspopup="dialog"
+                  aria-label={`Question context: ${
+                    contextRef ? readableScopeLabel(snapshot, contextRef) : "Whole workspace"
+                  }`}
+                >
+                  <MagnifyingGlass aria-hidden="true" />
+                  {contextRef ? readableScopeLabel(snapshot, contextRef) : "Whole workspace"}
+                  <CaretDown aria-hidden="true" />
+                </button>
+                {contextRef ? (
                   <button
                     type="button"
-                    className="ask-context-chip"
-                    onClick={() => setIncludeSelection(false)}
-                    title="Remove selected entity from this question"
+                    className="ask-context-clear"
+                    onClick={() => chooseContext(null)}
+                    aria-label="Ask about the whole workspace instead"
                   >
-                    <MagnifyingGlass aria-hidden="true" />
-                    {readableScopeLabel(snapshot, selected)}
                     <X aria-hidden="true" />
                   </button>
-                ) : (
-                  <button type="button" className="ask-context-add" onClick={() => setIncludeSelection(true)}>
-                    <Plus aria-hidden="true" /> Add selected context
-                  </button>
-                )
-              ) : null}
+                ) : null}
+                {contextPanelOpen ? (
+                  <div className="ask-popover" role="dialog" aria-label="Question context">
+                    <p className="ask-popover__title">What this question is about</p>
+                    <p className="ask-popover__hint">
+                      Every question already carries the Converge method and the full
+                      workspace snapshot. Naming one entity adds its detail
+                      {contextRef?.kind === "artifact" ? " and document text" : ""}, and
+                      focuses the answer.
+                    </p>
+                    <input
+                      type="search"
+                      className="ask-popover__search"
+                      value={contextQuery}
+                      onChange={(event) => setContextQuery(event.target.value.slice(0, 120))}
+                      placeholder="Search passes, legs, tasks, artifacts…"
+                      aria-label="Search workspace entities"
+                    />
+                    <ul className="ask-popover__values">
+                      <li>
+                        <button
+                          type="button"
+                          className={contextRef === null ? "is-active" : ""}
+                          onClick={() => chooseContext(null)}
+                        >
+                          <span>
+                            <strong>Whole workspace</strong>
+                            <small>Method plus the entire observed snapshot</small>
+                          </span>
+                          {contextRef === null ? <Check aria-hidden="true" /> : null}
+                        </button>
+                      </li>
+                      {selected && !sameEntity(selected, contextRef) ? (
+                        <li>
+                          <button type="button" onClick={() => chooseContext(selected)}>
+                            <span>
+                              <strong>{readableScopeLabel(snapshot, selected)}</strong>
+                              <small>Selected elsewhere in Cockpit</small>
+                            </span>
+                          </button>
+                        </li>
+                      ) : null}
+                      {filteredCandidates.map((candidate) => (
+                        <li key={candidate.key}>
+                          <button
+                            type="button"
+                            className={sameEntity(candidate.ref, contextRef) ? "is-active" : ""}
+                            onClick={() => chooseContext(candidate.ref)}
+                            aria-pressed={sameEntity(candidate.ref, contextRef)}
+                          >
+                            <span>
+                              <strong>{candidate.title}</strong>
+                              <small>{candidate.eyebrow}</small>
+                            </span>
+                            {sameEntity(candidate.ref, contextRef) ? (
+                              <Check aria-hidden="true" />
+                            ) : null}
+                          </button>
+                        </li>
+                      ))}
+                      {filteredCandidates.length === 0 ? (
+                        <li className="ask-popover__empty">
+                          No entity in this snapshot matches that search.
+                        </li>
+                      ) : null}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="ask-composer__actions">
               <span className="ask-composer__hint">
@@ -811,24 +1410,6 @@ export function AskSurface({ snapshot, selected }: AskSurfaceProps) {
             </div>
           </div>
         </form>
-
-        {turns.length === 0 ? (
-          <div className="ask-suggestions" aria-label="Suggested questions">
-            {visibleSuggestions.map((suggestion) => (
-              <button
-                type="button"
-                key={suggestion.question}
-                onClick={() => chooseSuggestion(suggestion.question)}
-              >
-                <span>
-                  <strong>{suggestion.question}</strong>
-                  <small>{suggestion.label}</small>
-                </span>
-                <ArrowRight aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        ) : null}
 
         <div className="ask-session-boundary" aria-label="Ask evidence boundary">
           <ShieldCheck weight="fill" aria-hidden="true" />

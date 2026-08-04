@@ -11,6 +11,8 @@ import { describe, expect, it, vi } from "vitest";
 import { CommandDock } from "./CommandDock";
 import { ArtifactViewer } from "./ArtifactViewer";
 import { AskSurface } from "./AskSurface";
+import { useAskConversations } from "../ask/useAskConversations";
+
 import { DecomposeSurface } from "./DecomposeSurface";
 import { HealthSurface } from "./HealthSurface";
 import { InspectorPanel } from "./InspectorPanel";
@@ -21,6 +23,33 @@ import {
   makeEmptySnapshot,
   makeScenarioSnapshot,
 } from "../test/scenarios";
+
+/**
+ * Ask conversations are owned by App, so the surface takes the store as a prop.
+ * This harness supplies a real store instead of a stub, keeping these tests
+ * exercising the same code path the application uses.
+ */
+function AskSurfaceHarness(props: {
+  snapshot: Parameters<typeof AskSurface>[0]["snapshot"];
+  selected: Parameters<typeof AskSurface>[0]["selected"];
+}) {
+  const conversations = useAskConversations();
+  return <AskSurface {...props} conversations={conversations} />;
+}
+
+/**
+ * Chooses question context through Ask's own picker. Context used to be settable
+ * only by selecting an entity on another surface, so these tests clicked an
+ * "Add selected context" button that no longer exists.
+ */
+async function pickAskContext(
+  user: ReturnType<typeof userEvent.setup>,
+  match: RegExp,
+) {
+  await user.click(screen.getByRole("button", { name: /Question context:/ }));
+  const panel = screen.getByRole("dialog", { name: "Question context" });
+  await user.click(within(panel).getByRole("button", { name: match }));
+}
 
 vi.mock("./WorkGraph", () => ({
   WorkGraph: () => <div aria-label="Work dependency graph">Graph projection</div>,
@@ -302,6 +331,48 @@ describe("Ask Converge via ACP", () => {
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
+        if (url === "/api/ask/options") {
+          // The model picker reads real ACP selectors through a probe session.
+          expect(init?.method).toBe("POST");
+          expect(init?.headers).toEqual(
+            expect.objectContaining({ "X-Converge-CSRF": "csrf-test-token-1234" }),
+          );
+          expect(JSON.parse(String(init?.body))).toEqual({ agentId: "claude" });
+          return new Response(
+            JSON.stringify({
+              agentId: "claude",
+              agentInfo: null,
+              configOptions: [
+                {
+                  id: "model",
+                  name: "Model",
+                  description: null,
+                  category: "model",
+                  type: "select",
+                  currentValue: "sonnet",
+                  values: [
+                    { value: "sonnet", name: "Sonnet", description: null, group: null },
+                    { value: "opus", name: "Opus", description: null, group: null },
+                  ],
+                  settable: true,
+                },
+                {
+                  id: "session-mode",
+                  name: "Session mode",
+                  description: null,
+                  category: "mode",
+                  type: "select",
+                  currentValue: "plan",
+                  values: [
+                    { value: "plan", name: "Plan", description: null, group: null },
+                  ],
+                  settable: false,
+                },
+              ],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
         expect(url).toBe("/api/ask");
         expect(init?.method).toBe("POST");
         expect(init?.headers).toEqual(
@@ -355,35 +426,52 @@ describe("Ask Converge via ACP", () => {
     );
 
     const { container, rerender } = render(
-      <AskSurface
+      <AskSurfaceHarness
         snapshot={snapshot}
         selected={{ kind: "swimlane", id: "swimlane-checkout" }}
       />,
     );
 
-    expect(screen.getByRole("group", { name: "Choose ACP agent" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /ChatGPT/i })).toBeNull();
-    expect(
-      container
-        .querySelector('[data-provider-mark="codex"]')
-        ?.getAttribute("src"),
-    ).toContain("codex-color.svg");
-    expect(
-      container
-        .querySelector('[data-provider-mark="claude"]')
-        ?.getAttribute("src"),
-    ).toContain("claude-color.svg");
+    // Provider marks are inline SVG on currentColor, not external vendor
+    // colour images, so nothing loads a *-color.svg URL any more.
+    expect(container.querySelector(".ask-agent-mark svg")).toBeTruthy();
+    expect(container.querySelector('img[src*="-color.svg"]')).toBeNull();
     expect(await screen.findByText("Verify on send")).toBeTruthy();
     expect(screen.queryByText("Ready over ACP")).toBeNull();
-    const codexButton = screen.getByRole("button", { name: /Codex/i });
-    const claudeButton = screen.getByRole("button", { name: /Claude Agent/i });
+
+    // Engine and model live behind one composer control.
+    await user.click(screen.getByRole("button", { name: /Engine and model/ }));
+    const enginePanel = screen.getByRole("dialog", { name: "Engine and model" });
+    const codexButton = within(enginePanel).getByRole("button", { name: /Codex/i });
+    const claudeButton = within(enginePanel).getByRole("button", {
+      name: /Claude Agent/i,
+    });
     expect(claudeButton.getAttribute("aria-pressed")).toBe("true");
+    // Codex is statically blocked, so it explains itself and cannot be chosen.
+    // It stays a real focus target rather than being `disabled`, so the reason
+    // is reachable by keyboard; activating it must still change nothing.
+    expect((codexButton as HTMLButtonElement).disabled).toBe(false);
+    expect(codexButton.getAttribute("aria-disabled")).toBe("true");
+    expect(codexButton.getAttribute("aria-pressed")).toBe("false");
+    expect(
+      within(enginePanel).getByText(
+        /Local read and search tools cannot be suppressed/,
+      ),
+    ).toBeTruthy();
     await user.click(codexButton);
-    expect(codexButton.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText(/Local read and search tools cannot be suppressed/)).toBeTruthy();
-    await user.click(claudeButton);
+    expect(codexButton.getAttribute("aria-pressed")).toBe("false");
     expect(claudeButton.getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: /Add selected context/i })).toBeTruthy();
+    // Selectable models come from the agent; a mode selector is never offered.
+    expect(await within(enginePanel).findByText("Sonnet")).toBeTruthy();
+    expect(within(enginePanel).getByText("Opus")).toBeTruthy();
+    expect(within(enginePanel).queryByText("Session mode")).toBeNull();
+    await user.click(within(enginePanel).getByRole("button", { name: /Opus/ }));
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: /Engine and model:.*Opus/ })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Question context: Whole workspace/ }),
+    ).toBeTruthy();
     await user.click(
       within(screen.getByLabelText("Suggested questions")).getAllByRole("button")[0],
     );
@@ -395,13 +483,14 @@ describe("Ask Converge via ACP", () => {
     ).toBeTruthy();
     expect(screen.getByText("Read the snapshot-bound lane.")).toBeTruthy();
     expect(screen.getByText(/answers are interpretation, never a gate verdict/i)).toBeTruthy();
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    // registry + model-option probe + the turn itself
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
 
     const refreshedSnapshot = structuredClone(snapshot);
     refreshedSnapshot.snapshotId = `ws3_${"a".repeat(32)}`;
     refreshedSnapshot.observedAt = "2026-08-04T12:00:00.000Z";
     rerender(
-      <AskSurface
+      <AskSurfaceHarness
         snapshot={refreshedSnapshot}
         selected={{ kind: "swimlane", id: "swimlane-checkout" }}
       />,
@@ -489,13 +578,13 @@ describe("Ask Converge via ACP", () => {
     });
 
     render(
-      <AskSurface
+      <AskSurfaceHarness
         snapshot={snapshot}
         selected={{ kind: "artifact", id: artifact.id }}
       />,
     );
     await screen.findByText("Verify on send");
-    await user.click(screen.getByRole("button", { name: /Add selected context/i }));
+    await pickAskContext(user, /Selected elsewhere in Cockpit/);
     await user.type(
       screen.getByRole("textbox", {
         name: "Question for the selected ACP agent",
@@ -580,13 +669,13 @@ describe("Ask Converge via ACP", () => {
       });
 
       render(
-        <AskSurface
+        <AskSurfaceHarness
           snapshot={snapshot}
           selected={{ kind: "artifact", id: artifact.id }}
         />,
       );
       await screen.findByText("Verify on send");
-      await user.click(screen.getByRole("button", { name: /Add selected context/i }));
+      await pickAskContext(user, /Selected elsewhere in Cockpit/);
       await user.type(
         screen.getByRole("textbox", {
           name: "Question for the selected ACP agent",
@@ -631,7 +720,7 @@ describe("Ask Converge via ACP", () => {
     );
 
     render(
-      <AskSurface
+      <AskSurfaceHarness
         snapshot={snapshot}
         selected={{ kind: "pass", id: "pass-4" }}
       />,
@@ -642,13 +731,18 @@ describe("Ask Converge via ACP", () => {
     }) as HTMLTextAreaElement;
     const newChat = screen.getByRole("button", { name: "Start new chat" });
     expect((newChat as HTMLButtonElement).disabled).toBe(false);
-    await user.click(screen.getByRole("button", { name: /Add selected context/i }));
-    expect(screen.getByTitle("Remove selected entity from this question")).toBeTruthy();
+    await pickAskContext(user, /Selected elsewhere in Cockpit/);
+    expect(
+      screen.getByRole("button", { name: /Question context: Pass 4/ }),
+    ).toBeTruthy();
     await user.type(textbox, "Draft project question");
     await user.click(newChat);
     expect(textbox.value).toBe("");
     expect(document.activeElement).toBe(textbox);
-    expect(screen.getByRole("button", { name: /Add selected context/i })).toBeTruthy();
+    // A new chat starts unscoped again.
+    expect(
+      screen.getByRole("button", { name: /Question context: Whole workspace/ }),
+    ).toBeTruthy();
     expect(screen.queryByText(/^pass:pass-4$/i)).toBeNull();
   });
 
@@ -692,7 +786,7 @@ describe("Ask Converge via ACP", () => {
       );
     });
 
-    render(<AskSurface snapshot={snapshot} selected={null} />);
+    render(<AskSurfaceHarness snapshot={snapshot} selected={null} />);
     await screen.findByText("Verify on send");
     const textbox = screen.getByRole("textbox", {
       name: "Question for the selected ACP agent",
