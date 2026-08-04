@@ -15,11 +15,18 @@ import {
 import { CheckCircle, LockKey, RocketLaunch } from "@phosphor-icons/react";
 import type { EntityRef, WorkTask } from "../types";
 
+export interface WorkPresentation {
+  engine: string;
+  topology: string;
+  depth: number;
+}
+
 type WorkFlowNode = Node<
   {
     task: WorkTask;
     selected: boolean;
     frontier: boolean;
+    presentation: WorkPresentation;
   },
   "work"
 >;
@@ -27,12 +34,13 @@ type WorkFlowNode = Node<
 interface WorkGraphProps {
   tasks: WorkTask[];
   frontierIds: string[];
+  presentation: Record<string, WorkPresentation>;
   selected: EntityRef | null;
   onSelect: (selection: EntityRef) => void;
 }
 
 function WorkNode({ data }: NodeProps<WorkFlowNode>) {
-  const { task, selected, frontier } = data;
+  const { task, selected, frontier, presentation } = data;
   return (
     <div
       className={`work-node work-node--${task.status} ${
@@ -46,10 +54,15 @@ function WorkNode({ data }: NodeProps<WorkFlowNode>) {
         isConnectable={false}
       />
       <div className="work-node__meta">
-        <span>{task.id}</span>
         <span>{String(task.priority ?? "No priority")}</span>
+        <span>{String(task.effort ?? "No effort")}</span>
       </div>
       <strong>{task.title}</strong>
+      <div className="work-node__attributes">
+        <span>{presentation.topology}</span>
+        <span>engine: {presentation.engine}</span>
+        <span>agent: {task.agent ?? "unassigned"}</span>
+      </div>
       <div className="work-node__state">
         {task.status === "done" ? (
           <CheckCircle weight="fill" aria-hidden="true" />
@@ -96,6 +109,7 @@ function buildNodes(
   tasks: WorkTask[],
   frontier: ReadonlySet<string>,
   selected: EntityRef | null,
+  presentation: Record<string, WorkPresentation>,
 ): WorkFlowNode[] {
   const byId = new Map(tasks.map((task) => [task.id, task] as const));
   const rowsByDepth = new Map<number, number>();
@@ -106,11 +120,16 @@ function buildNodes(
     return {
       id: task.id,
       type: "work",
-      position: { x: depth * 278 + 54, y: row * 164 + 76 },
+      position: { x: depth * 298 + 54, y: row * 186 + 66 },
       data: {
         task,
         frontier: frontier.has(task.id),
         selected: selected?.kind === "task" && selected.id === task.id,
+        presentation: presentation[task.id] ?? {
+          engine: "unassigned",
+          topology: "not recorded",
+          depth,
+        },
       },
       draggable: true,
       focusable: true,
@@ -128,7 +147,7 @@ function Graph(props: WorkGraphProps) {
     [props.frontierIds],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkFlowNode>(
-    buildNodes(props.tasks, frontier, props.selected),
+    buildNodes(props.tasks, frontier, props.selected, props.presentation),
   );
 
   useEffect(() => {
@@ -136,12 +155,12 @@ function Graph(props: WorkGraphProps) {
       const positions = new Map(
         current.map((node) => [node.id, node.position] as const),
       );
-      return buildNodes(props.tasks, frontier, props.selected).map((node) => ({
+      return buildNodes(props.tasks, frontier, props.selected, props.presentation).map((node) => ({
         ...node,
         position: positions.get(node.id) ?? node.position,
       }));
     });
-  }, [frontier, props.selected, props.tasks, setNodes]);
+  }, [frontier, props.presentation, props.selected, props.tasks, setNodes]);
 
   const edges = useMemo<Edge[]>(
     () =>

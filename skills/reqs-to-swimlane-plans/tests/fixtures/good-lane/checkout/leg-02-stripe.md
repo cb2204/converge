@@ -21,7 +21,8 @@ published for fulfillment — and nothing is published unless payment succeeded.
 
 ## Proves (acceptance criteria — Given/When/Then; no evals)
 
-- Given a validated cart, when payment succeeds, then exactly one `order.*` row is published.
+- Given a validated cart, when payment succeeds, then exactly one `order.*` row is
+  published for fulfillment.
 - Given a declined payment, when checkout runs, then no order is published.
 
 ## Independence
@@ -32,7 +33,8 @@ only inbound edge.
 ## Consumes / produces
 
 - Consumes: a validated-cart signal (leg-01).
-- Produces: the `order.*` published contract.
+- Produces: the `order.*` published contract, with its payment outcome
+  preserved for fulfillment.
 
 ## Appetite
 

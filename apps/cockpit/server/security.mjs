@@ -40,12 +40,22 @@ const PRIVATE_KEY_BLOCK =
 const KNOWN_TOKEN =
   /\b(?:github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})\b/g;
 
-export function redactSensitiveText(value) {
-  return String(value)
+export function redactSensitiveTextWithReport(value) {
+  const original = String(value);
+  const content = original
     .replace(PRIVATE_KEY_BLOCK, "[REDACTED PRIVATE KEY]")
     .replace(SECRET_ASSIGNMENT, "$1[REDACTED]")
     .replace(BEARER_TOKEN, "$1[REDACTED]")
     .replace(KNOWN_TOKEN, "[REDACTED]");
+
+  return {
+    content,
+    redacted: content !== original,
+  };
+}
+
+export function redactSensitiveText(value) {
+  return redactSensitiveTextWithReport(value).content;
 }
 
 export function publicError(code, message) {

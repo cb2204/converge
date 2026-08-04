@@ -117,7 +117,7 @@ O="$(jrun --json --dry-run tasks gate --stamp-by release-audit "$SPEC")"
   && ok "tasks gate mutates only when an explicit stamp flag is present" \
   || bad "tasks gate stamp mutability" "dry-run did not intercept the stamped form"
 
-# --- WorkspaceSnapshot 2.0: one canonical read-only cockpit contract ---
+# --- WorkspaceSnapshot 3.0: one canonical read-only cockpit contract ---
 # Build an equivalent of the analytics proving-ground state from the existing
 # product-neutral fixtures: Passes 0-3 are green, Pass 4 has an unresolved
 # owner decision, and downstream task evidence already exists. The conductor
@@ -260,7 +260,10 @@ s=d['data']['snapshot']
 assert d['ok'] is True and d['command']=='snapshot'
 assert d['changed'] is False and d['dry_run'] is False
 assert set(d['data']) == {'snapshot'}
-assert s['schemaVersion']=='2.0' and s['source']=='workspace'
+assert s['schemaVersion']=='3.0' and s['source']=='workspace'
+assert __import__('re').fullmatch(r'ws3_[0-9a-f]{32}',s['snapshotId'])
+assert s['decomposition']['availability']=='available'
+assert [x['id'] for x in s['decomposition']['swimlanes']]==['swimlane-checkout']
 assert s['method']['activePassId']=='pass-4'
 assert all(s['method']['passes'][i]['gate']['ok'] is True for i in range(4))
 assert s['method']['passes'][4]['gate']['ok'] is False
@@ -279,9 +282,9 @@ assert all('position' not in p for p in s['method']['passes'])
 assert all('content' not in a for a in s['artifacts'])
 assert all(not a['path'].startswith('/') for a in s['artifacts'])
 " 2>/dev/null; then
-  ok "snapshot v2 envelope + Pass-4 fail-closed authorization"
+  ok "snapshot v3 envelope + Pass-4 fail-closed authorization"
 else
-  bad "snapshot v2 contract" "typed envelope, frontier, or barrier assertion failed"
+  bad "snapshot v3 contract" "typed envelope, frontier, or barrier assertion failed"
 fi
 
 # Global flag position remains universal for the new command.
@@ -353,12 +356,12 @@ fi
 printf '%s' "$SO" | python3 -c "import json,sys
 d=json.load(sys.stdin)
 s=d['data']['snapshot']
-schema=json.load(open('$ROOT/contracts/ui/v2/workspace-snapshot.schema.json'))
+schema=json.load(open('$ROOT/contracts/ui/v3/workspace-snapshot.schema.json'))
 assert set(schema['required']) == set(s)
 assert schema['properties']['schemaVersion']['const'] == s['schemaVersion']
 assert schema['properties']['source']['enum'] == ['workspace','fixture']
 " 2>/dev/null \
-  && ok "snapshot v2 checked-in schema matches emitted surface" \
+  && ok "snapshot v3 checked-in schema matches emitted surface" \
   || bad "snapshot schema" "schema is invalid or top-level keys drifted"
 
 # Discoverability and read-only classification are part of the CLI contract.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the canonical, read-only Converge WorkspaceSnapshot 2.0.
+"""Build the canonical, read-only Converge WorkspaceSnapshot 3.0.
 
 The snapshot is a semantic projection, not an artifact transport:
 
@@ -31,12 +31,18 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-SCHEMA_VERSION = "2.0"
+SCHEMA_VERSION = "3.0"
 MAX_TEXT_BYTES = 2 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
 MAX_ARTIFACTS = 4096
 MAX_TASKS = 2000
 MAX_SIGNALS = 1000
+MAX_PROJECT_DOCUMENTS = 1024
+MAX_SWIMLANES = 256
+MAX_LEGS = 2000
+MAX_SECTION_ITEMS = 64
+MAX_DECOMPOSITION_PROSE = 1600
+MAX_DECOMPOSITION_LIST_ITEM = 1200
 CVG_TIMEOUT_SECONDS = 30
 
 PASS_DEFINITIONS = (
@@ -207,7 +213,7 @@ def compute_snapshot_id(snapshot: dict[str, Any]) -> str:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
-    return f"ws2_{sha256_bytes(canonical)[:32]}"
+    return f"ws3_{sha256_bytes(canonical)[:32]}"
 
 
 def within(root: Path, candidate: Path) -> bool:
@@ -354,6 +360,12 @@ class IssueCollector:
             ),
         )
 
+    def drop_entity_kinds(self, kinds: set[str]) -> None:
+        for item in self._items:
+            entity = item.get("entity")
+            if isinstance(entity, dict) and entity.get("kind") in kinds:
+                item.pop("entity", None)
+
 
 class ArtifactCollector:
     def __init__(self, root: Path, observed_at: str, issues: IssueCollector) -> None:
@@ -366,7 +378,7 @@ class ArtifactCollector:
         resolved_parent = path.parent.resolve()
         if not within(self.root, resolved_parent):
             raise ValueError("path escapes the project root")
-        return path.relative_to(self.root).as_posix()
+        return (resolved_parent / path.name).relative_to(self.root).as_posix()
 
     def add(
         self,
@@ -452,6 +464,12 @@ class ArtifactCollector:
     def values(self) -> list[dict[str, Any]]:
         return sorted(self._items.values(), key=lambda item: (item["path"], item["id"]))
 
+    def drop_entity_kinds(self, kinds: set[str]) -> None:
+        for item in self._items.values():
+            entity = item.get("entity")
+            if isinstance(entity, dict) and entity.get("kind") in kinds:
+                item.pop("entity", None)
+
 
 def read_text(path: Path) -> str:
     if path.is_symlink():
@@ -518,6 +536,675 @@ def iter_regular_files(root: Path, pattern: str = "*") -> list[Path]:
             if path.match(pattern):
                 files.append(path)
     return files
+
+
+def iter_bounded_documents(
+    root: Path,
+    *,
+    suffixes: set[str],
+    limit: int,
+) -> tuple[list[Path], bool]:
+    """Return a deterministic, symlink-safe document inventory with a hard cap."""
+    if not root.is_dir() or root.is_symlink():
+        return [], False
+    files: list[Path] = []
+    for current, directories, names in os.walk(root, followlinks=False):
+        current_path = Path(current)
+        directories[:] = sorted(
+            name
+            for name in directories
+            if not (current_path / name).is_symlink()
+        )
+        for name in sorted(names):
+            path = current_path / name
+            if path.is_symlink() or not path.is_file():
+                continue
+            if path.suffix.lower() not in suffixes:
+                continue
+            if len(files) >= limit:
+                return files, True
+            files.append(path)
+    return files, False
+
+
+DECOMPOSITION_TREE_PARTS = (
+    ("cvg", "swimlanes"),
+    ("cvg", "sketch"),
+    ("swimlanes",),
+    ("sketch",),
+)
+
+
+def lane_prd_paths(tree: Path) -> list[Path]:
+    """Find immediate lane PRDs using the same content-first rule as `cvg`."""
+    if not tree.is_dir() or tree.is_symlink():
+        return []
+    paths: list[Path] = []
+    try:
+        directories = sorted(
+            (
+                child
+                for child in tree.iterdir()
+                if child.is_dir() and not child.is_symlink() and not child.name.startswith(".")
+            ),
+            key=lambda item: item.name,
+        )
+    except OSError:
+        return []
+    for directory in directories:
+        canonical = directory / "_lane.md"
+        if canonical.is_file() or canonical.is_symlink():
+            paths.append(canonical)
+        for legacy in sorted(directory.glob("*.plan.md"), key=lambda item: item.name):
+            if legacy.is_file() or legacy.is_symlink():
+                paths.append(legacy)
+    return paths
+
+
+def discover_decomposition_tree(
+    root: Path,
+    issues: IssueCollector,
+) -> dict[str, Any]:
+    candidates = [root.joinpath(*parts) for parts in DECOMPOSITION_TREE_PARTS]
+    populated = [path for path in candidates if lane_prd_paths(path)]
+    if len(populated) > 1:
+        relative = [path.relative_to(root).as_posix() for path in populated]
+        issues.add(
+            code="DECOMPOSITION_TREE_AMBIGUOUS",
+            severity="error",
+            domain="decomposition",
+            message=(
+                "Multiple non-empty swimlane trees were observed: "
+                + ", ".join(relative)
+            ),
+            remediation="Keep one canonical swimlane tree or pass an explicit tree to the Pass 3 tools.",
+        )
+        return {
+            "availability": "unavailable",
+            "root": None,
+            "roots": populated,
+        }
+    if populated:
+        return {
+            "availability": "available",
+            "root": populated[0],
+            "roots": populated,
+        }
+    existing = [path for path in candidates if path.is_dir() and not path.is_symlink()]
+    return {
+        "availability": "empty",
+        "root": existing[0] if existing else None,
+        "roots": [],
+    }
+
+
+def strip_inline_markdown(value: str, limit: int = 320) -> str:
+    text = re.sub(r"!\[([^]]*)\]\([^)]+\)", r"\1", value)
+    text = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", text)
+    text = text.replace("**", "").replace("__", "").replace("~~", "").replace("`", "")
+    text = re.sub(r"^\s*>\s?", "", text)
+    return clip_text(text, limit)
+
+
+def markdown_sections(text: str) -> dict[str, str]:
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    fenced = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            if current is not None:
+                sections[current].append(line)
+            continue
+        if not fenced:
+            heading = re.match(r"^##\s+(.+?)\s*$", line)
+            if heading:
+                current = strip_inline_markdown(heading.group(1)).lower()
+                sections.setdefault(current, [])
+                continue
+        if current is not None:
+            sections[current].append(line)
+    return {key: "\n".join(lines).strip() for key, lines in sections.items()}
+
+
+def section_with_prefix(sections: dict[str, str], prefix: str) -> str:
+    wanted = prefix.lower()
+    for key, value in sections.items():
+        if key.startswith(wanted):
+            return value
+    return ""
+
+
+def first_markdown_paragraph(
+    value: str, limit: int = MAX_DECOMPOSITION_PROSE
+) -> str | None:
+    without_comments = re.sub(r"<!--.*?-->", "", value, flags=re.DOTALL)
+    lines: list[str] = []
+    fenced = False
+    for raw in without_comments.splitlines():
+        line = raw.strip()
+        if line.startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or not line:
+            if lines:
+                break
+            continue
+        if line.startswith(("|", "#", "---")):
+            if lines:
+                break
+            continue
+        if re.match(r"^[-*+]\s+", line):
+            if lines:
+                break
+            continue
+        lines.append(strip_inline_markdown(line))
+    if not lines:
+        return None
+    return clip_text(" ".join(lines), limit)
+
+
+def markdown_list_items(
+    value: str,
+    limit: int = MAX_SECTION_ITEMS,
+    item_limit: int = MAX_DECOMPOSITION_LIST_ITEM,
+) -> list[str]:
+    without_comments = re.sub(r"<!--.*?-->", "", value, flags=re.DOTALL)
+    items: list[str] = []
+    current: list[str] | None = None
+    fenced = False
+
+    def finish_item() -> bool:
+        nonlocal current
+        if current:
+            item = strip_inline_markdown(" ".join(current), item_limit)
+            if item and item not in items:
+                items.append(item)
+        current = None
+        return len(items) >= limit
+
+    for raw in without_comments.splitlines():
+        line = raw.strip()
+        if line.startswith("```"):
+            if finish_item():
+                break
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        match = re.match(r"^\s*[-*+]\s+(.+)$", raw)
+        if match:
+            if finish_item():
+                break
+            current = [match.group(1).strip()]
+            continue
+        if current is not None:
+            if not line or line.startswith(("|", "#", "---")):
+                if finish_item():
+                    break
+            elif raw[:1].isspace():
+                current.append(line)
+            else:
+                if finish_item():
+                    break
+    finish_item()
+    return items
+
+
+def frontmatter_strings(value: Any, limit: int = MAX_SECTION_ITEMS) -> list[str]:
+    if value is None or value == "":
+        return []
+    candidates = value if isinstance(value, list) else [value]
+    result: list[str] = []
+    for candidate in candidates:
+        if not isinstance(candidate, (str, int)):
+            continue
+        item = clip_text(candidate, 160)
+        if item and item not in result:
+            result.append(item)
+            if len(result) >= limit:
+                break
+    return result
+
+
+def extract_contract(text: str, label: str) -> str | None:
+    code = re.search(rf"{re.escape(label)}:\s*`([^`]+)`", text, flags=re.IGNORECASE)
+    if code:
+        return clip_text(code.group(1), 240)
+    line = re.search(
+        rf"{re.escape(label)}:\s*(.+?)(?=\s+(?:Input|Output) contract:|$)",
+        text,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+    return strip_inline_markdown(line.group(1)) if line else None
+
+
+def blocking_question_count(section: str) -> int:
+    count = 0
+    for raw in section.splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2 or set("".join(cells)) <= {"-", ":"}:
+            continue
+        if cells[-1].lower() in {"yes", "y", "true", "blocking"}:
+            count += 1
+    return count
+
+
+def lane_purpose(text: str) -> str | None:
+    lines = text.splitlines()
+    start = next(
+        (index + 1 for index, line in enumerate(lines) if line.lower().startswith("lane-meta:")),
+        0,
+    )
+    for raw in lines[start:]:
+        line = raw.strip()
+        if line.startswith("## "):
+            break
+        if (
+            not line
+            or line.startswith((">", "<!--", "Input contract:", "Output contract:"))
+        ):
+            continue
+        if line.lower().startswith("lane-meta:"):
+            continue
+        return strip_inline_markdown(line)
+    return None
+
+
+def leg_title(text: str, leg_id: str) -> str:
+    heading = next(
+        (strip_inline_markdown(match.group(1)) for line in text.splitlines() if (match := re.match(r"^#\s+(.+)$", line))),
+        leg_id,
+    )
+    remainder = re.sub(
+        rf"^{re.escape(leg_id)}(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?\s*[—-]\s*",
+        "",
+        heading,
+        flags=re.IGNORECASE,
+    )
+    return clip_text(remainder or heading, 200)
+
+
+def parse_decomposition(
+    root: Path,
+    discovery: dict[str, Any],
+    artifacts: ArtifactCollector,
+    issues: IssueCollector,
+) -> dict[str, Any]:
+    empty = {"availability": "empty", "swimlanes": [], "legs": [], "edges": []}
+    if discovery["availability"] == "empty":
+        return empty
+    if discovery["availability"] == "unavailable" or discovery["root"] is None:
+        return {**empty, "availability": "unavailable"}
+
+    tree: Path = discovery["root"]
+    swimlanes: list[dict[str, Any]] = []
+    legs: list[dict[str, Any]] = []
+    invalid = False
+    lane_ids: set[str] = set()
+    leg_ids: set[str] = set()
+
+    try:
+        lane_directories = sorted(
+            (
+                child
+                for child in tree.iterdir()
+                if child.is_dir() and not child.is_symlink() and not child.name.startswith(".")
+            ),
+            key=lambda item: item.name,
+        )
+    except OSError as exc:
+        issues.add(
+            code="DECOMPOSITION_TREE_UNREADABLE",
+            severity="error",
+            domain="decomposition",
+            message=f"The swimlane tree cannot be read: {exc}",
+        )
+        return {**empty, "availability": "unavailable"}
+
+    if len(lane_directories) > MAX_SWIMLANES:
+        invalid = True
+        issues.add(
+            code="DECOMPOSITION_LANE_LIMIT_EXCEEDED",
+            severity="error",
+            domain="decomposition",
+            message=f"The swimlane tree exceeds the {MAX_SWIMLANES}-lane snapshot limit.",
+            remediation="Split or archive obsolete lane plans before opening the Cockpit.",
+        )
+        lane_directories = lane_directories[:MAX_SWIMLANES]
+
+    for directory in lane_directories:
+        prds = [path for path in lane_prd_paths(tree) if path.parent == directory]
+        leg_files = sorted(
+            (
+                path
+                for path in directory.glob("*.md")
+                if re.search(r"(?:^|-)leg-[0-9]{2}-[a-z0-9][a-z0-9-]*\.md$", path.name)
+            ),
+            key=lambda item: item.name,
+        )
+        if not prds:
+            if leg_files:
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_ORPHAN_LEGS",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Leg files have no lane PRD under {directory.relative_to(root).as_posix()}.",
+                    remediation="Add _lane.md or the legacy <lane>.plan.md parent.",
+                )
+            continue
+        if len(prds) != 1:
+            invalid = True
+            issues.add(
+                code="DECOMPOSITION_LANE_PRD_AMBIGUOUS",
+                severity="error",
+                domain="decomposition",
+                message=f"Multiple lane PRDs were observed under {directory.relative_to(root).as_posix()}.",
+                remediation="Keep exactly one _lane.md or legacy *.plan.md per lane directory.",
+            )
+            continue
+        prd = prds[0]
+        try:
+            text = read_text(prd)
+        except (OSError, UnicodeError, ValueError) as exc:
+            invalid = True
+            issues.add(
+                code="DECOMPOSITION_LANE_UNREADABLE",
+                severity="error",
+                domain="decomposition",
+                message=f"Lane PRD cannot be parsed: {prd.relative_to(root).as_posix()} ({exc})",
+            )
+            continue
+
+        heading_match = next(
+            (re.match(r"^#\s+Swimlane\s*[·:-]\s*([a-z0-9]+(?:-[a-z0-9]+)*)\s*$", line, re.IGNORECASE) for line in text.splitlines() if line.startswith("# ")),
+            None,
+        )
+        heading_match = heading_match if heading_match and heading_match.group(1) else None
+        meta_line = next(
+            (line for line in text.splitlines() if line.lower().startswith("lane-meta:")),
+            "",
+        )
+        thread_match = re.search(r"\bthread=(yes|no)\b", meta_line, re.IGNORECASE)
+        risk_match = re.search(r"\brisk=(low|med|high)\b", meta_line, re.IGNORECASE)
+        owner_match = re.search(r"\bowner=([^·|\n]+)", meta_line, re.IGNORECASE)
+        owner = clip_text(owner_match.group(1), 120).strip() if owner_match else ""
+        if not heading_match or not thread_match or not risk_match or not owner or "<" in owner:
+            invalid = True
+            issues.add(
+                code="DECOMPOSITION_LANE_IDENTITY_INVALID",
+                severity="error",
+                domain="decomposition",
+                message=f"Lane identity or lane-meta is invalid: {prd.relative_to(root).as_posix()}.",
+                remediation="Provide '# Swimlane · <kebab-seam>' and real thread, risk, and owner values.",
+            )
+            continue
+        seam_name = heading_match.group(1).lower()
+        lane_id = seam_name if seam_name.startswith("swimlane-") else f"swimlane-{seam_name}"
+        if lane_id in lane_ids:
+            invalid = True
+            issues.add(
+                code="DECOMPOSITION_LANE_ID_DUPLICATE",
+                severity="error",
+                domain="decomposition",
+                message=f"Duplicate swimlane id was observed: {lane_id}.",
+            )
+            continue
+        lane_ids.add(lane_id)
+        lane_artifact_id = artifacts.add(
+            prd,
+            label=f"Swimlane · {seam_name}",
+            kind="plan",
+            entity={"kind": "swimlane", "id": lane_id},
+        )
+        sections = markdown_sections(text)
+        consumed_section = section_with_prefix(sections, "the interface this lane consumes")
+        evolution_match = re.search(
+            r"\*\*Seam evolution:\*\*\s*(.+?)(?=\n\s*\n|\n---|\n##|$)",
+            text,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        lane_record = {
+            "id": lane_id,
+            "label": f"Swimlane · {seam_name}",
+            "purpose": lane_purpose(text),
+            "thread": thread_match.group(1).lower() == "yes",
+            "risk": risk_match.group(1).lower(),
+            "owner": owner,
+            "seam": {
+                "rationale": first_markdown_paragraph(section_with_prefix(sections, "seam")),
+                "inputContract": extract_contract(text, "Input contract"),
+                "outputContract": extract_contract(text, "Output contract"),
+                "consumedInterface": first_markdown_paragraph(consumed_section),
+                "evolution": (
+                    strip_inline_markdown(
+                        evolution_match.group(1), MAX_DECOMPOSITION_PROSE
+                    )
+                    if evolution_match
+                    else None
+                ),
+            },
+            "legIds": [],
+            "blockingQuestionCount": blocking_question_count(
+                section_with_prefix(sections, "open questions")
+            ),
+            "artifactIds": [lane_artifact_id] if lane_artifact_id else [],
+        }
+        swimlanes.append(lane_record)
+
+        for leg_path in leg_files:
+            if len(legs) >= MAX_LEGS:
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_LEG_LIMIT_EXCEEDED",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"The decomposition exceeds the {MAX_LEGS}-leg snapshot limit.",
+                    remediation="Split or archive obsolete leg plans before opening the Cockpit.",
+                )
+                break
+            try:
+                leg_text = read_text(leg_path)
+                frontmatter = parse_frontmatter(leg_text)
+            except (OSError, UnicodeError, ValueError) as exc:
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_LEG_UNREADABLE",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Leg cannot be parsed: {leg_path.relative_to(root).as_posix()} ({exc})",
+                )
+                continue
+            leg_id = frontmatter.get("leg")
+            leg_lane_id = frontmatter.get("swimlane")
+            status = frontmatter.get("status")
+            if (
+                not isinstance(leg_id, str)
+                or not re.fullmatch(r"swimlane-[a-z0-9]+(?:-[a-z0-9]+)*-leg-[0-9]{2}", leg_id)
+                or leg_lane_id != lane_id
+                or status not in {"proposed", "accepted", "in_progress", "done", "superseded"}
+            ):
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_LEG_IDENTITY_INVALID",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Leg identity, swimlane, or status is invalid: {leg_path.relative_to(root).as_posix()}.",
+                    remediation="Use stable leg/swimlane ids and a supported lifecycle status.",
+                )
+                continue
+            if leg_id in leg_ids:
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_LEG_ID_DUPLICATE",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Duplicate leg id was observed: {leg_id}.",
+                )
+                continue
+            dependencies = frontmatter_strings(frontmatter.get("depends_on"))
+            if any(
+                not re.fullmatch(r"swimlane-[a-z0-9]+(?:-[a-z0-9]+)*-leg-[0-9]{2}", dependency)
+                for dependency in dependencies
+            ):
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_DEPENDENCY_ID_INVALID",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Leg has an invalid depends_on id: {leg_id}.",
+                )
+                continue
+            leg_ids.add(leg_id)
+            leg_artifact_id = artifacts.add(
+                leg_path,
+                label=leg_title(leg_text, leg_id),
+                kind="plan",
+                entity={"kind": "leg", "id": leg_id},
+            )
+            parent = frontmatter.get("parent")
+            if isinstance(parent, str) and parent and parent != prd.name:
+                issues.add(
+                    code="DECOMPOSITION_PARENT_MISMATCH",
+                    severity="warning",
+                    domain="decomposition",
+                    message=f"Leg {leg_id} names parent {parent}, but its observed lane PRD is {prd.name}.",
+                    entity={"kind": "leg", "id": leg_id},
+                    remediation="Update parent/back-link metadata when the canonical scaffold is corrected.",
+                    artifact_ids=[leg_artifact_id] if leg_artifact_id else [],
+                )
+            leg_sections = markdown_sections(leg_text)
+            consumes_produces = section_with_prefix(leg_sections, "consumes / produces")
+            consumes: list[str] = []
+            produces: list[str] = []
+            for item in markdown_list_items(consumes_produces):
+                consume_match = re.match(r"Consumes:\s*(.+)", item, re.IGNORECASE)
+                produce_match = re.match(r"Produces:\s*(.+)", item, re.IGNORECASE)
+                if consume_match:
+                    consumes.append(
+                        clip_text(
+                            consume_match.group(1), MAX_DECOMPOSITION_LIST_ITEM
+                        )
+                    )
+                if produce_match:
+                    produces.append(
+                        clip_text(
+                            produce_match.group(1), MAX_DECOMPOSITION_LIST_ITEM
+                        )
+                    )
+            leg_record = {
+                "id": leg_id,
+                "swimlaneId": lane_id,
+                "order": int(leg_id.rsplit("-", 1)[1]),
+                "title": leg_title(leg_text, leg_id),
+                "tech": (
+                    clip_text(frontmatter["tech"], 80)
+                    if isinstance(frontmatter.get("tech"), str) and frontmatter["tech"]
+                    else None
+                ),
+                "status": status,
+                "specRefs": frontmatter_strings(frontmatter.get("spec_ref")),
+                "dependsOn": dependencies,
+                "responsibility": first_markdown_paragraph(
+                    section_with_prefix(leg_sections, "responsibility")
+                ),
+                "proves": markdown_list_items(section_with_prefix(leg_sections, "proves")),
+                "independence": first_markdown_paragraph(
+                    section_with_prefix(leg_sections, "independence")
+                ),
+                "consumes": consumes,
+                "produces": produces,
+                "appetite": first_markdown_paragraph(
+                    section_with_prefix(leg_sections, "appetite")
+                ),
+                "yields": markdown_list_items(section_with_prefix(leg_sections, "yields")),
+                "reverifyWhen": first_markdown_paragraph(
+                    section_with_prefix(leg_sections, "re-verify when")
+                ),
+                "artifactIds": [leg_artifact_id] if leg_artifact_id else [],
+            }
+            legs.append(leg_record)
+            lane_record["legIds"].append(leg_id)
+
+    known_leg_ids = {leg["id"] for leg in legs}
+    edges: list[dict[str, Any]] = []
+    for leg in legs:
+        for dependency in leg["dependsOn"]:
+            if dependency not in known_leg_ids:
+                invalid = True
+                issues.add(
+                    code="DECOMPOSITION_DEPENDENCY_DANGLING",
+                    severity="error",
+                    domain="decomposition",
+                    message=f"Leg {leg['id']} depends on unknown leg {dependency}.",
+                    entity={"kind": "leg", "id": leg["id"]},
+                    remediation="Add the missing leg or remove the stale depends_on id.",
+                    artifact_ids=leg["artifactIds"],
+                )
+                continue
+            edges.append(
+                {
+                    "id": stable_id("decompedge", dependency, leg["id"]),
+                    "source": dependency,
+                    "target": leg["id"],
+                    "kind": "depends_on",
+                    "artifactIds": leg["artifactIds"],
+                }
+            )
+
+    dependencies_by_leg = {
+        leg["id"]: {dependency for dependency in leg["dependsOn"] if dependency in known_leg_ids}
+        for leg in legs
+    }
+    dependents: dict[str, set[str]] = {leg_id: set() for leg_id in known_leg_ids}
+    indegree = {leg_id: len(dependencies) for leg_id, dependencies in dependencies_by_leg.items()}
+    for leg_id, dependencies in dependencies_by_leg.items():
+        for dependency in dependencies:
+            dependents[dependency].add(leg_id)
+    frontier = sorted(leg_id for leg_id, count in indegree.items() if count == 0)
+    visited: list[str] = []
+    while frontier:
+        current = frontier.pop(0)
+        visited.append(current)
+        for dependent in sorted(dependents[current]):
+            indegree[dependent] -= 1
+            if indegree[dependent] == 0:
+                frontier.append(dependent)
+                frontier.sort()
+    if len(visited) != len(known_leg_ids):
+        invalid = True
+        cyclic = sorted(known_leg_ids - set(visited))
+        issues.add(
+            code="DECOMPOSITION_DEPENDENCY_CYCLE",
+            severity="error",
+            domain="decomposition",
+            message="A dependency cycle was observed among: " + ", ".join(cyclic[:8]),
+            entity={"kind": "leg", "id": cyclic[0]} if cyclic else None,
+            remediation="Break the cycle with a one-way contract or explicit boundary.",
+        )
+
+    for lane in swimlanes:
+        lane["legIds"] = sorted(
+            set(lane["legIds"]),
+            key=lambda leg_id: next(
+                (leg["order"] for leg in legs if leg["id"] == leg_id),
+                999,
+            ),
+        )
+    if invalid:
+        artifacts.drop_entity_kinds({"swimlane", "leg"})
+        issues.drop_entity_kinds({"swimlane", "leg"})
+        return {**empty, "availability": "unavailable"}
+    return {
+        "availability": "available",
+        "swimlanes": sorted(swimlanes, key=lambda item: item["id"]),
+        "legs": sorted(legs, key=lambda item: (item["swimlaneId"], item["order"], item["id"])),
+        "edges": sorted(edges, key=lambda item: (item["source"], item["target"], item["id"])),
+    }
 
 
 class CvgRunner:
@@ -643,9 +1330,60 @@ def git_project(root: Path) -> dict[str, Any]:
         }
 
 
+def project_document_inventory(
+    root: Path,
+    artifacts: ArtifactCollector,
+    issues: IssueCollector,
+) -> list[str]:
+    paths: list[Path] = []
+    readme = root / "README.md"
+    if readme.is_file() or readme.is_symlink():
+        paths.append(readme)
+    truncated = False
+    document_count = 0
+    for document_root in (root / "cvg" / "docs", root / "docs"):
+        remaining = max(0, MAX_PROJECT_DOCUMENTS - document_count)
+        if remaining == 0:
+            truncated = True
+            break
+        documents, root_truncated = iter_bounded_documents(
+            document_root,
+            suffixes={".md", ".markdown", ".pdf"},
+            limit=remaining,
+        )
+        paths.extend(documents)
+        document_count += len(documents)
+        truncated = truncated or root_truncated
+    if truncated:
+        issues.add(
+            code="PROJECT_DOCUMENT_LIMIT_EXCEEDED",
+            severity="warning",
+            domain="project",
+            message=f"Project document inventory was capped at {MAX_PROJECT_DOCUMENTS} files.",
+            remediation="Archive obsolete documents or split the workspace before opening the Cockpit.",
+        )
+    artifact_ids: list[str] = []
+    for path in paths:
+        artifact_id = artifacts.add(
+            path,
+            label=(
+                "Project README"
+                if path == readme
+                else path.relative_to(root).as_posix()
+            ),
+            kind="readme" if path == readme else "document",
+            entity={"kind": "project", "id": root.name},
+            truth_class="observed",
+        )
+        if artifact_id:
+            artifact_ids.append(artifact_id)
+    return sorted(set(artifact_ids))
+
+
 def artifact_inventory(
     root: Path,
     artifacts: ArtifactCollector,
+    decomposition_discovery: dict[str, Any],
 ) -> dict[str, list[str]]:
     by_pass = {f"pass-{index}": [] for index in range(9)}
 
@@ -676,20 +1414,25 @@ def artifact_inventory(
     if (docs / "CONTEXT.md").is_file():
         add_many((docs / "CONTEXT.md",), pass_id="pass-2", kind="context")
 
-    lanes = root / "cvg" / "swimlanes"
-    if not any(path.name.endswith(".md") for path in iter_regular_files(lanes, "*.md")):
-        legacy = root / "cvg" / "sketch"
-        if legacy.is_dir():
-            lanes = legacy
-    lane_files = [
-        path
-        for path in iter_regular_files(lanes, "*.md")
-        if ".consensus" not in path.parts
-    ]
+    lane_roots = (
+        decomposition_discovery["roots"]
+        if decomposition_discovery["roots"]
+        else ([decomposition_discovery["root"]] if decomposition_discovery["root"] else [])
+    )
+    lane_files = sorted(
+        {
+            path
+            for lane_root in lane_roots
+            for path in iter_regular_files(lane_root, "*.md")
+            if ".consensus" not in path.parts
+        },
+        key=lambda item: item.as_posix(),
+    )
     add_many(lane_files, pass_id="pass-3", kind="plan")
-    review_path = lanes / ".consensus" / "objection-log.json"
-    if review_path.is_file():
-        add_many((review_path,), pass_id="pass-4", kind="review")
+    if decomposition_discovery["root"] is not None:
+        review_path = decomposition_discovery["root"] / ".consensus" / "objection-log.json"
+        if review_path.is_file():
+            add_many((review_path,), pass_id="pass-4", kind="review")
 
     tasks_root = root / "cvg" / "tasks"
     if not tasks_root.is_dir() and (root / "tasks").is_dir():
@@ -1978,6 +2721,7 @@ def build_snapshot(project_root: Path, cvg_home: Path) -> dict[str, Any]:
         )
         if artifact_id:
             project_artifact_ids.append(artifact_id)
+    project_artifact_ids.extend(project_document_inventory(root, artifacts, issues))
 
     project = {
         "name": root.name,
@@ -1986,7 +2730,14 @@ def build_snapshot(project_root: Path, cvg_home: Path) -> dict[str, Any]:
         "git": git,
         "artifactIds": sorted(project_artifact_ids),
     }
-    artifacts_by_pass = artifact_inventory(root, artifacts)
+    decomposition_discovery = discover_decomposition_tree(root, issues)
+    artifacts_by_pass = artifact_inventory(root, artifacts, decomposition_discovery)
+    decomposition = parse_decomposition(
+        root,
+        decomposition_discovery,
+        artifacts,
+        issues,
+    )
     review = parse_review(root, artifacts_by_pass, issues)
     work = parse_tasks(root, artifacts, issues)
     execution = parse_execution(root, artifacts, work, issues)
@@ -2044,6 +2795,7 @@ def build_snapshot(project_root: Path, cvg_home: Path) -> dict[str, Any]:
         "project": project,
         "method": method,
         "review": review,
+        "decomposition": decomposition,
         "work": work,
         "execution": execution,
         "receipts": receipts,
@@ -2059,7 +2811,7 @@ def build_snapshot(project_root: Path, cvg_home: Path) -> dict[str, Any]:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build a read-only Converge WorkspaceSnapshot 2.0"
+        description="Build a read-only Converge WorkspaceSnapshot 3.0"
     )
     parser.add_argument("--project-root", required=True)
     parser.add_argument("--cvg-home", required=True)

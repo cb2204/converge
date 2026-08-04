@@ -3,6 +3,7 @@ import { execFile as nodeExecFile } from "node:child_process";
 import { createReadOnlyEnvironment } from "./security.mjs";
 
 export const READ_ONLY_CVG_COMMANDS = Object.freeze({
+  agentContext: Object.freeze(["agent-context", "--json"]),
   snapshot: Object.freeze(["snapshot", "--json"]),
 });
 

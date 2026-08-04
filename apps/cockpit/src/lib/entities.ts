@@ -71,6 +71,96 @@ export function resolveEntity(
     };
   }
 
+  if (ref.kind === "swimlane") {
+    const lane = snapshot.decomposition.swimlanes.find(
+      (item) => item.id === ref.id,
+    );
+    if (!lane) return null;
+    return {
+      ref,
+      eyebrow: lane.thread ? "Steel-thread swimlane" : "Swimlane",
+      title: lane.label,
+      summary:
+        lane.seam.rationale ??
+        lane.purpose ??
+        "No seam rationale was recorded in the canonical lane plan.",
+      status: `${lane.risk}_risk`,
+      artifactIds: lane.artifactIds,
+      details: [
+        { label: "Owner", value: lane.owner },
+        { label: "Risk", value: lane.risk },
+        { label: "Steel thread", value: lane.thread ? "Yes" : "No" },
+        {
+          label: "Input contract",
+          value:
+            lane.seam.inputContract ??
+            lane.seam.consumedInterface ??
+            "Not recorded",
+        },
+        {
+          label: "Output contract",
+          value: lane.seam.outputContract ?? "Not recorded",
+        },
+        {
+          label: "Evolution",
+          value: lane.seam.evolution ?? "Not recorded",
+        },
+        { label: "Delivery legs", value: String(lane.legIds.length) },
+        {
+          label: "Blocking questions",
+          value: String(lane.blockingQuestionCount),
+        },
+      ],
+    };
+  }
+
+  if (ref.kind === "leg") {
+    const leg = snapshot.decomposition.legs.find((item) => item.id === ref.id);
+    if (!leg) return null;
+    return {
+      ref,
+      eyebrow: `Leg ${String(leg.order).padStart(2, "0")} · ${leg.tech ?? "technology open"}`,
+      title: leg.title,
+      summary:
+        leg.responsibility ??
+        "No responsibility statement was recorded in the canonical leg plan.",
+      status: leg.status,
+      artifactIds: leg.artifactIds,
+      details: [
+        { label: "Swimlane", value: leg.swimlaneId },
+        { label: "Technology", value: leg.tech ?? "Not recorded" },
+        {
+          label: "Dependencies",
+          value: leg.dependsOn.length > 0 ? leg.dependsOn.join(", ") : "None",
+        },
+        {
+          label: "Proves",
+          value: leg.proves.length > 0 ? leg.proves.join(" · ") : "Not recorded",
+        },
+        {
+          label: "Consumes",
+          value:
+            leg.consumes.length > 0 ? leg.consumes.join(" · ") : "Not recorded",
+        },
+        {
+          label: "Produces",
+          value:
+            leg.produces.length > 0 ? leg.produces.join(" · ") : "Not recorded",
+        },
+        { label: "Appetite", value: leg.appetite ?? "Not recorded" },
+        {
+          label: "Spec references",
+          value:
+            leg.specRefs.length > 0 ? leg.specRefs.join(", ") : "Not recorded",
+        },
+        {
+          label: "Re-verify when",
+          value: leg.reverifyWhen ?? "Not recorded",
+        },
+      ],
+    };
+  }
+
   if (ref.kind === "task") {
     const task = snapshot.work.tasks.find((item) => item.id === ref.id);
     if (!task) return null;

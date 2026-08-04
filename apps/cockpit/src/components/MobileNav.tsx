@@ -1,9 +1,14 @@
 import {
+  ChatsCircle,
+  ClockCounterClockwise,
   FlowArrow,
+  GitBranch,
   Heartbeat,
   Kanban,
   Pulse,
   SealCheck,
+  Stack,
+  SquaresFour,
 } from "@phosphor-icons/react";
 import type { CockpitSurface } from "../types";
 
@@ -13,10 +18,15 @@ interface MobileNavProps {
 }
 
 const items = [
+  { id: "ask", label: "Ask", icon: ChatsCircle },
+  { id: "overview", label: "Overview", icon: SquaresFour },
   { id: "journey", label: "Journey", icon: FlowArrow },
+  { id: "decompose", label: "Lanes", icon: GitBranch },
+  { id: "artifacts", label: "Artifacts", icon: Stack },
   { id: "work", label: "Work", icon: Kanban },
   { id: "runs", label: "Runs", icon: Pulse },
-  { id: "proof", label: "Proof", icon: SealCheck },
+  { id: "proof", label: "Docs", icon: SealCheck },
+  { id: "activity", label: "Activity", icon: ClockCounterClockwise },
   { id: "health", label: "Health", icon: Heartbeat },
 ] as const;
 

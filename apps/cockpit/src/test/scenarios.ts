@@ -10,6 +10,9 @@ const artifactIds = {
   task: "artifact_22222222222222222222",
   profile: "artifact_33333333333333333333",
   receipt: "artifact_44444444444444444444",
+  lane: "artifact_55555555555555555555",
+  legApi: "artifact_66666666666666666666",
+  legUi: "artifact_77777777777777777777",
 } as const;
 const issueIds = {
   review: "issue_11111111111111111111",
@@ -46,12 +49,17 @@ function pass(
       exitCode: ok === null ? null : ok ? 0 : 1,
       ok,
     },
-    artifactIds: order === 4 ? [artifactIds.review] : [],
+    artifactIds:
+      order === 4
+        ? [artifactIds.review]
+        : order === 3
+          ? [artifactIds.lane]
+          : [],
   };
 }
 
 /**
- * A deterministic, schema-valid WorkspaceSnapshot 2.0 scenario.
+ * A deterministic, schema-valid WorkspaceSnapshot 3.0 scenario.
  *
  * The scenario intentionally combines every lifecycle state Cockpit must keep
  * visually distinct. Tests may mutate their own fresh copy without changing
@@ -61,8 +69,8 @@ export function makeScenarioSnapshot(
   mutate?: (snapshot: WorkspaceSnapshot) => void,
 ): WorkspaceSnapshot {
   const snapshot: WorkspaceSnapshot = {
-    schemaVersion: "2.0",
-    snapshotId: "ws2_00000000000000000000000000000001",
+    schemaVersion: "3.0",
+    snapshotId: "ws3_00000000000000000000000000000001",
     observedAt,
     source: "fixture",
     project: {
@@ -130,6 +138,84 @@ export function makeScenarioSnapshot(
         },
       ],
       artifactIds: [artifactIds.review],
+    },
+    decomposition: {
+      availability: "available",
+      swimlanes: [
+        {
+          id: "swimlane-checkout",
+          label: "Swimlane · checkout",
+          purpose: "Prove a bounded checkout steel thread across explicit seams.",
+          thread: true,
+          risk: "high",
+          owner: "Payments platform",
+          seam: {
+            rationale:
+              "The HTTP boundary isolates shopper intent from payment-provider settlement.",
+            inputContract: "checkout command v1",
+            outputContract: "payment outcome v1",
+            consumedInterface: "cart and identity context",
+            evolution: "Additive fields remain backwards compatible.",
+          },
+          legIds: [
+            "swimlane-checkout-leg-01",
+            "swimlane-checkout-leg-02",
+          ],
+          blockingQuestionCount: 1,
+          artifactIds: [artifactIds.lane],
+        },
+      ],
+      legs: [
+        {
+          id: "swimlane-checkout-leg-01",
+          swimlaneId: "swimlane-checkout",
+          order: 1,
+          title: "Accept checkout intent",
+          tech: "fastapi",
+          status: "accepted",
+          specRefs: ["REQ-001", "ADR-002"],
+          dependsOn: [],
+          responsibility:
+            "Validate a checkout command and publish a stable payment request.",
+          proves: ["Invalid checkout commands fail closed"],
+          independence: "Uses a provider port and deterministic request fixtures.",
+          consumes: ["checkout command v1"],
+          produces: ["payment request v1"],
+          appetite: "1 day",
+          yields: ["HTTP adapter", "contract tests"],
+          reverifyWhen: "The checkout command schema changes.",
+          artifactIds: [artifactIds.legApi],
+        },
+        {
+          id: "swimlane-checkout-leg-02",
+          swimlaneId: "swimlane-checkout",
+          order: 2,
+          title: "Settle payment outcome",
+          tech: "stripe",
+          status: "in_progress",
+          specRefs: ["REQ-004"],
+          dependsOn: ["swimlane-checkout-leg-01"],
+          responsibility:
+            "Translate the payment request into an idempotent provider interaction.",
+          proves: ["Retries do not duplicate charges"],
+          independence: "Runs against a deterministic provider fixture.",
+          consumes: ["payment request v1"],
+          produces: ["payment outcome v1"],
+          appetite: "2 days",
+          yields: ["provider adapter", "idempotency receipt"],
+          reverifyWhen: "Provider idempotency or webhook semantics change.",
+          artifactIds: [artifactIds.legUi],
+        },
+      ],
+      edges: [
+        {
+          id: "decompedge_11111111111111111111",
+          source: "swimlane-checkout-leg-01",
+          target: "swimlane-checkout-leg-02",
+          kind: "depends_on",
+          artifactIds: [artifactIds.legUi],
+        },
+      ],
     },
     work: {
       availability: "available",
@@ -548,6 +634,48 @@ export function makeScenarioSnapshot(
           truthClass: "canonical",
         },
       },
+      {
+        id: artifactIds.lane,
+        label: "Checkout swimlane",
+        path: "cvg/swimlanes/checkout/_lane.md",
+        kind: "plan",
+        sha256,
+        entity: { kind: "swimlane", id: "swimlane-checkout" },
+        provenance: {
+          sourceKind: "file",
+          sourceRef: "cvg/swimlanes/checkout/_lane.md",
+          observedAt,
+          truthClass: "canonical",
+        },
+      },
+      {
+        id: artifactIds.legApi,
+        label: "Accept checkout intent",
+        path: "cvg/swimlanes/checkout/leg-01-fastapi.md",
+        kind: "plan",
+        sha256,
+        entity: { kind: "leg", id: "swimlane-checkout-leg-01" },
+        provenance: {
+          sourceKind: "file",
+          sourceRef: "cvg/swimlanes/checkout/leg-01-fastapi.md",
+          observedAt,
+          truthClass: "canonical",
+        },
+      },
+      {
+        id: artifactIds.legUi,
+        label: "Settle payment outcome",
+        path: "cvg/swimlanes/checkout/leg-02-stripe.md",
+        kind: "plan",
+        sha256,
+        entity: { kind: "leg", id: "swimlane-checkout-leg-02" },
+        provenance: {
+          sourceKind: "file",
+          sourceRef: "cvg/swimlanes/checkout/leg-02-stripe.md",
+          observedAt,
+          truthClass: "canonical",
+        },
+      },
     ],
   };
 
@@ -557,7 +685,15 @@ export function makeScenarioSnapshot(
 
 export function makeEmptySnapshot(): WorkspaceSnapshot {
   return makeScenarioSnapshot((snapshot) => {
-    snapshot.snapshotId = "ws2_00000000000000000000000000000002";
+    snapshot.snapshotId = "ws3_00000000000000000000000000000002";
+    snapshot.decomposition = {
+      availability: "empty",
+      swimlanes: [],
+      legs: [],
+      edges: [],
+    };
+    const pass = snapshot.method.passes.find((item) => item.id === "pass-3");
+    if (pass) pass.artifactIds = [];
     snapshot.work = {
       availability: "empty",
       tasks: [],
@@ -579,7 +715,13 @@ export function makeEmptySnapshot(): WorkspaceSnapshot {
         signal.entity?.kind !== "run" &&
         signal.entity?.kind !== "receipt",
     );
-    snapshot.artifacts = snapshot.artifacts.map((artifact) => {
+    snapshot.artifacts = snapshot.artifacts
+      .filter(
+        (artifact) =>
+          artifact.entity?.kind !== "swimlane" &&
+          artifact.entity?.kind !== "leg",
+      )
+      .map((artifact) => {
       if (
         artifact.entity?.kind !== "task" &&
         artifact.entity?.kind !== "run" &&
@@ -589,7 +731,7 @@ export function makeEmptySnapshot(): WorkspaceSnapshot {
       }
       const { entity: _entity, ...unlinkedArtifact } = artifact;
       return unlinkedArtifact;
-    });
+      });
   });
 }
 

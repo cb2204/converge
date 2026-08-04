@@ -1,8 +1,10 @@
 export type Availability = "available" | "empty" | "unavailable";
-export type TruthClass = "canonical" | "derived" | "inferred";
+export type TruthClass = "canonical" | "observed" | "derived" | "inferred";
 export type EntityKind =
   | "project"
   | "pass"
+  | "swimlane"
+  | "leg"
   | "task"
   | "run"
   | "receipt"
@@ -72,6 +74,65 @@ export interface ReviewState {
   objections: ReviewObjection[];
   openQuestions: OpenQuestion[];
   artifactIds: string[];
+}
+
+export interface Swimlane {
+  id: string;
+  label: string;
+  purpose: string | null;
+  thread: boolean;
+  risk: "low" | "med" | "high";
+  owner: string;
+  seam: {
+    rationale: string | null;
+    inputContract: string | null;
+    outputContract: string | null;
+    consumedInterface: string | null;
+    evolution: string | null;
+  };
+  legIds: string[];
+  blockingQuestionCount: number;
+  artifactIds: string[];
+}
+
+export interface DecompositionLeg {
+  id: string;
+  swimlaneId: string;
+  order: number;
+  title: string;
+  tech: string | null;
+  status:
+    | "proposed"
+    | "accepted"
+    | "in_progress"
+    | "done"
+    | "superseded";
+  specRefs: string[];
+  dependsOn: string[];
+  responsibility: string | null;
+  proves: string[];
+  independence: string | null;
+  consumes: string[];
+  produces: string[];
+  appetite: string | null;
+  yields: string[];
+  reverifyWhen: string | null;
+  artifactIds: string[];
+}
+
+export interface DecompositionEdge {
+  id: string;
+  source: string;
+  target: string;
+  kind: "depends_on";
+  artifactIds: string[];
+}
+
+export interface DecompositionState {
+  availability: Availability;
+  swimlanes: Swimlane[];
+  legs: DecompositionLeg[];
+  edges: DecompositionEdge[];
 }
 
 export type TaskStatus =
@@ -209,6 +270,7 @@ export interface Issue {
   domain:
     | "project"
     | "method"
+    | "decomposition"
     | "review"
     | "work"
     | "execution"
@@ -248,7 +310,7 @@ export interface ArtifactRef {
 }
 
 export interface WorkspaceSnapshot {
-  schemaVersion: "2.0";
+  schemaVersion: "3.0";
   snapshotId: string;
   observedAt: string;
   source: "workspace" | "fixture";
@@ -273,6 +335,7 @@ export interface WorkspaceSnapshot {
     edges: MethodEdge[];
   };
   review: ReviewState | null;
+  decomposition: DecompositionState;
   work: WorkState;
   execution: ExecutionState;
   receipts: ReceiptState;
@@ -297,15 +360,44 @@ export interface SnapshotEnvelope {
   transport: TransportState;
 }
 
-export interface ArtifactDocument {
+interface ArtifactDocumentBase {
   path: string;
   label: string;
   kind: string;
-  content: string;
   truncated: boolean;
+  redacted: boolean;
+  sourceBytes: number;
   sha256: string;
   snapshotId: string;
 }
 
-export type CockpitSurface = "journey" | "work" | "runs" | "proof" | "health";
-export type InspectorTab = "details" | "proof" | "history";
+export interface TextArtifactDocument extends ArtifactDocumentBase {
+  format: "markdown" | "text";
+  content: string;
+}
+
+export interface PdfTextArtifactDocument extends ArtifactDocumentBase {
+  format: "pdf-text";
+  pages: Array<{
+    number: number;
+    text: string;
+  }>;
+  pageCount: number;
+}
+
+export type ArtifactDocument =
+  | TextArtifactDocument
+  | PdfTextArtifactDocument;
+
+export type CockpitSurface =
+  | "ask"
+  | "overview"
+  | "journey"
+  | "decompose"
+  | "artifacts"
+  | "work"
+  | "runs"
+  | "proof"
+  | "activity"
+  | "health";
+export type InspectorTab = "overview" | "evidence" | "activity";

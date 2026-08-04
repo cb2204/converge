@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-cvg-snapshot.sh — canonical WorkspaceSnapshot 2.0 contract.
+# test-cvg-snapshot.sh — canonical WorkspaceSnapshot 3.0 contract.
 # Proves the Cockpit reads one deterministic, offline, fail-closed CLI model:
 # lane-aware method state, canonical task frontier, runtime/receipt provenance,
 # typed authorization, artifact references without bytes, and uniform JSON.
@@ -47,6 +47,15 @@ cp "$ROOT/skills/task-spec/tests/fixtures/T-20260602-golden.md" \
 sed -i.bak 's/^signed_off: false$/signed_off: true/' \
   "$WS/cvg/tasks/T-20260602-golden.md"
 rm -f "$WS/cvg/tasks/T-20260602-golden.md.bak"
+
+cat > "$WS/README.md" <<'EOF'
+# Snapshot fixture
+
+The project README is visible as hash-bound Cockpit evidence.
+EOF
+printf '%s\n' '%PDF-1.4 fixture document' > "$WS/cvg/docs/guide.pdf"
+mkdir -p "$WS/docs"
+printf '%s\n' '%PDF-1.4 project handbook' > "$WS/docs/handbook.pdf"
 
 cat > "$WS/cvg/docs/CONTEXT.md" <<'EOF'
 # CONTEXT — pinned vocabulary
@@ -154,7 +163,7 @@ srun() {
   ) 2>/dev/null
 }
 
-echo "== cvg snapshot — WorkspaceSnapshot 2.0 =="
+echo "== cvg snapshot — WorkspaceSnapshot 3.0 =="
 
 FULL="$(srun --json snapshot)"
 if printf '%s' "$FULL" | python3 -c "import json,sys
@@ -163,7 +172,8 @@ s=d['data']['snapshot']
 assert d['ok'] is True and d['command']=='snapshot'
 assert d['changed'] is False and d['dry_run'] is False
 assert set(d['data'])=={'snapshot'}
-assert s['schemaVersion']=='2.0' and s['source']=='workspace'
+assert s['schemaVersion']=='3.0' and s['source']=='workspace'
+assert __import__('re').fullmatch(r'ws3_[0-9a-f]{32}',s['snapshotId'])
 assert s['project']['lane']=='FULL'
 assert s['method']['activePassId']=='pass-4'
 assert [p['gate']['ok'] for p in s['method']['passes'][:5]]==[True,True,True,True,False]
@@ -177,6 +187,24 @@ assert s['authorization']['dryRunSupported'] is True
 assert s['authorization']['enabled'] is True
 assert s['work']['stats']['total']==1 and s['work']['stats']['ready']==1
 assert s['work']['frontier']['taskIds']==['T-20260602-golden']
+d=s['decomposition']
+assert d['availability']=='available'
+assert [lane['id'] for lane in d['swimlanes']]==['swimlane-checkout']
+lane=d['swimlanes'][0]
+assert lane['thread'] is True and lane['risk']=='high' and lane['owner']=='payments-stream'
+assert lane['seam']['inputContract']=='cart.*' and lane['seam']['outputContract']=='order.*'
+assert lane['legIds']==['swimlane-checkout-leg-01','swimlane-checkout-leg-02']
+assert [leg['order'] for leg in d['legs']]==[1,2]
+assert d['legs'][1]['dependsOn']==['swimlane-checkout-leg-01']
+assert [(edge['source'],edge['target']) for edge in d['edges']]==[('swimlane-checkout-leg-01','swimlane-checkout-leg-02')]
+assert all(record['artifactIds'] for record in [*d['swimlanes'],*d['legs']])
+paths={a['path']:a for a in s['artifacts']}
+assert {'README.md','cvg/docs/guide.pdf','cvg/docs/CONTEXT.md','docs/handbook.pdf'} <= set(paths)
+assert {paths[p]['id'] for p in ('README.md','cvg/docs/guide.pdf','cvg/docs/CONTEXT.md','docs/handbook.pdf')} <= set(s['project']['artifactIds'])
+generic_documents=('README.md','cvg/docs/guide.pdf','docs/handbook.pdf')
+assert all(paths[p]['provenance']['truthClass']=='observed' for p in generic_documents)
+recognized_converge_artifacts=('cvg/docs/CONTEXT.md','cvg/docs/tech-spec/snapshot.md')
+assert all(paths[p]['provenance']['truthClass']=='canonical' for p in recognized_converge_artifacts)
 failed=[x for x in s['signals'] if x['kind']=='gate' and x.get('entity',{}).get('id')=='pass-4']
 assert len(failed)==1 and failed[0]['severity']=='error'
 assert {'workspace-control-plane','git','signing','engines','path-fence','consensus-record','tasks','execution','receipts','runtime-enforcement','plugin-parity','tracker-config'} <= {x['id'] for x in s['health']['checks']}
@@ -265,6 +293,7 @@ assert gate_signals=={'pass-1','pass-2'}
 assert s['authorization']['state']=='allowed'
 assert s['authorization']['nextPassId']=='pass-7'
 assert s['authorization']['command']=='cvg bind --check --profile <profile>'
+assert s['decomposition']['availability']=='available'
 assert not any(i['code'] in {'PASS_GATE_BLOCKED','REVIEW_UNRESOLVED'} for i in s['issues'])
 " 2>/dev/null; then
   ok "NORMAL lane skips omitted ceremonies without hiding evidence"
@@ -394,9 +423,70 @@ else
   bad "strict lane validation" "invalid lane was accepted or not enveloped"
 fi
 
+# The typed projection supports both the legacy *.plan.md filenames above and
+# the canonical directory layout. Broken and ambiguous DAGs fail closed.
+printf 'lane=FULL\n' > "$WS/.cvg/config"
+mv "$WS/cvg/swimlanes" "$WS/legacy-swimlanes"
+mkdir -p "$WS/cvg/swimlanes"
+cp -R "$ROOT/skills/reqs-to-swimlane-plans/tests/fixtures/good-lane/." \
+  "$WS/cvg/swimlanes/"
+CANONICAL="$(srun --json snapshot)"
+if printf '%s' "$CANONICAL" | python3 -c "import json,sys
+s=json.load(sys.stdin)['data']['snapshot']
+d=s['decomposition']
+assert d['availability']=='available'
+assert d['swimlanes'][0]['artifactIds'] and all(x['artifactIds'] for x in d['legs'])
+leg=next(x for x in d['legs'] if x['id']=='swimlane-checkout-leg-02')
+assert leg['proves'][0]=='Given a validated cart, when payment succeeds, then exactly one order.* row is published for fulfillment.'
+assert leg['produces']==['the order.* published contract, with its payment outcome preserved for fulfillment.']
+assert any(i['code']=='DECOMPOSITION_PARENT_MISMATCH' for i in s['issues'])
+" 2>/dev/null; then
+  ok "canonical decomposition preserves wrapped prose without trusting stale parent links"
+else
+  bad "canonical decomposition" "canonical lane/leg layout was not projected"
+fi
+
+sed -i.bak 's/depends_on: \[swimlane-checkout-leg-01\]/depends_on: [swimlane-missing-leg-09]/' \
+  "$WS/cvg/swimlanes/checkout/leg-02-stripe.md"
+rm -f "$WS/cvg/swimlanes/checkout/leg-02-stripe.md.bak"
+DANGLING="$(srun --json snapshot)"
+if printf '%s' "$DANGLING" | python3 -c "import json,sys
+s=json.load(sys.stdin)['data']['snapshot']
+assert s['decomposition']['availability']=='unavailable'
+assert s['decomposition']['swimlanes']==[]
+assert s['decomposition']['legs']==[]
+assert s['decomposition']['edges']==[]
+assert any(i['code']=='DECOMPOSITION_DEPENDENCY_DANGLING' for i in s['issues'])
+assert not any(
+  record.get('entity',{}).get('kind') in {'swimlane','leg'}
+  for record in [*s['issues'],*s['artifacts']]
+)
+" 2>/dev/null; then
+  ok "dangling leg dependency makes decomposition unavailable"
+else
+  bad "dangling decomposition dependency" "unknown leg edge was accepted"
+fi
+sed -i.bak 's/depends_on: \[swimlane-missing-leg-09\]/depends_on: [swimlane-checkout-leg-01]/' \
+  "$WS/cvg/swimlanes/checkout/leg-02-stripe.md"
+rm -f "$WS/cvg/swimlanes/checkout/leg-02-stripe.md.bak"
+
+mkdir -p "$WS/swimlanes"
+cp -R "$ROOT/skills/reqs-to-swimlane-plans/tests/fixtures/good-lane/." \
+  "$WS/swimlanes/"
+AMBIGUOUS="$(srun --json snapshot)"
+if printf '%s' "$AMBIGUOUS" | python3 -c "import json,sys
+s=json.load(sys.stdin)['data']['snapshot']
+assert s['decomposition']=={'availability':'unavailable','swimlanes':[],'legs':[],'edges':[]}
+assert any(i['code']=='DECOMPOSITION_TREE_AMBIGUOUS' for i in s['issues'])
+" 2>/dev/null; then
+  ok "multiple non-empty decomposition trees fail closed"
+else
+  bad "ambiguous decomposition trees" "producer silently chose a tree"
+fi
+
 if printf '%s' "$FULL" | python3 -c "import json,sys
 s=json.load(sys.stdin)['data']['snapshot']
-schema=json.load(open('$ROOT/contracts/ui/v2/workspace-snapshot.schema.json'))
+schema=json.load(open('$ROOT/contracts/ui/v3/workspace-snapshot.schema.json'))
 assert set(schema['required'])==set(s)
 assert schema['properties']['schemaVersion']['const']==s['schemaVersion']
 assert schema['properties']['source']['enum']==['workspace','fixture']

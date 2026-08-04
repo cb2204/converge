@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import snapshotSchema from "../../../../contracts/ui/v2/workspace-snapshot.schema.json";
+import snapshotSchema from "../../../../contracts/ui/v3/workspace-snapshot.schema.json";
 // The bridge validator is intentionally framework-free JavaScript.
 // @ts-expect-error no declaration file is shipped for the local bridge module
 import { validateJsonSchema } from "../../server/schema.mjs";

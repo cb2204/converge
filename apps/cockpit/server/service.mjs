@@ -15,9 +15,9 @@ function transportError(error) {
     CLI_SNAPSHOT_REJECTED: "The CLI rejected the snapshot request.",
     CLI_SNAPSHOT_TIMEOUT: "The CLI snapshot request timed out.",
     SNAPSHOT_SCHEMA_INVALID:
-      "The CLI snapshot does not match WorkspaceSnapshot 2.0.",
+      "The CLI snapshot does not match WorkspaceSnapshot 3.0.",
     SNAPSHOT_SCHEMA_UNAVAILABLE:
-      "The WorkspaceSnapshot 2.0 contract is unavailable.",
+      "The WorkspaceSnapshot 3.0 contract is unavailable.",
     SNAPSHOT_REFRESH_FAILED: "The CLI snapshot could not be refreshed.",
   };
   return { code, message: messages[code] };
