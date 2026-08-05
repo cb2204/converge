@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="The Converge development backlog — eight epics, three horizons, every item with an effort tier, a priority, and the gate that will prove it done.">
+<title>Converge · The Backlog · evals first, even here</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070a0f'/%3E%3Cpath d='m14 17 18 15 18-15v11L32 43 14 28Z' fill='%2373e2c3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --sans:"Avenir Next",Inter,"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Menlo,ui-monospace,monospace;
+  --bg:#070a0f;--panel:#101620;--raised:#151d29;--deep:#0a1018;
+  --ink:#f5f2ea;--muted:#8d99a6;
+  --line:rgba(141,153,166,.16);--line2:rgba(141,153,166,.34);
+  --grid:rgba(141,153,166,.05);
+  --gold:#f3b64c;--gold-soft:rgba(243,182,76,.12);
+  --mint:#73e2c3;--mint-soft:rgba(115,226,195,.11);
+  --coral:#ff6b64;--coral-soft:rgba(255,107,100,.11);
+  --steel:#8d99a6;--steel-soft:rgba(141,153,166,.12);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;color-scheme:dark}
+body{margin:0;background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:36px 36px;color:var(--ink);font:14px/1.64 var(--sans);overflow-wrap:anywhere}
+.progress{position:fixed;inset:0 auto auto 0;width:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--mint));z-index:999}
+.skip{position:fixed;left:12px;top:10px;transform:translateY(-180%);z-index:1000;background:var(--ink);color:var(--bg);padding:8px 12px;border-radius:6px}.skip:focus{transform:none}
+.layout{max-width:1420px;margin:auto;padding:40px;display:grid;grid-template-columns:212px minmax(0,1100px);gap:44px}
+.toc{position:sticky;top:24px;align-self:start;max-height:calc(100dvh - 48px);overflow:auto;padding:13px 0}
+.toc strong{display:block;font:600 9px/1.4 var(--mono);text-transform:uppercase;letter-spacing:2px;color:var(--muted);padding:0 8px 10px;margin-bottom:7px;border-bottom:1px solid var(--line)}
+.toc a{display:block;padding:3.5px 8px;border-left:2px solid transparent;border-radius:0 5px 5px 0;color:var(--muted);font-size:11px;line-height:1.36;text-decoration:none}
+.toc a:hover{color:var(--ink);background:var(--panel)}
+.toc a.active{color:var(--ink);border-left-color:var(--gold);background:var(--gold-soft)}
+.toc a.cl{margin-top:8px;font:600 9.5px var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--gold)}
+main{min-width:0}
+header.doc{padding:8px 0 22px}
+.brandline{display:flex;align-items:center;gap:10px;font:600 10px var(--mono);letter-spacing:2.5px;color:var(--ink)}
+.brandline em{font-style:normal;color:var(--muted);letter-spacing:1.5px}
+.edition{margin-left:auto;border:1px solid var(--mint);border-radius:999px;color:var(--mint);padding:5px 12px;font:600 9.5px var(--mono);letter-spacing:1.6px;white-space:nowrap}
+.eyebrow{font:600 10px/1.5 var(--mono);letter-spacing:2.2px;text-transform:uppercase;color:var(--gold);margin-top:26px}
+.eyebrow::before{content:"";display:block;width:56px;height:3px;background:var(--gold);margin-bottom:14px;border-radius:2px}
+h1{font-size:clamp(42px,6.6vw,74px);line-height:1.02;letter-spacing:-2.6px;margin:10px 0 12px;font-weight:800;text-wrap:balance}
+h1 em{font-style:normal;color:var(--gold)}
+.thesis{font:600 12px var(--mono);letter-spacing:1.6px;color:var(--gold)}
+.thesis span{color:var(--muted);letter-spacing:.8px;font-weight:400}
+.lead{max-width:80ch;font-size:17px;line-height:1.65;margin:16px 0 20px;color:var(--muted)}
+.lead strong{color:var(--ink)}
+.tools,.crosslinks{display:flex;flex-wrap:wrap;gap:8px}
+.tool{border:1px solid var(--line2);background:var(--panel);color:var(--ink);padding:7px 10px;border-radius:7px;font:500 10px var(--mono);text-decoration:none;cursor:pointer}
+.tool:hover{border-color:var(--gold);background:var(--gold-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0}
+.chip{border:1px solid var(--line2);border-radius:999px;padding:4px 11px;font:600 9.5px var(--mono);letter-spacing:1px;color:var(--muted);white-space:nowrap}
+.chip.gold{border-color:var(--gold);color:var(--gold)}
+.chip.mint{border-color:var(--mint);color:var(--mint)}
+section{scroll-margin-top:18px;padding-top:54px}
+.section-head{display:flex;align-items:baseline;gap:13px;padding-bottom:9px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.num{flex:0 0 auto;white-space:nowrap;font:600 11px var(--mono);letter-spacing:1px;color:var(--gold)}
+h2{font-size:24px;line-height:1.18;letter-spacing:-.5px;margin:0;font-weight:700}
+h2 span{color:var(--muted);font-weight:600}
+h3{font-size:15px;margin:0 0 7px}
+.intro{max-width:84ch;color:var(--muted);margin:0 0 18px}
+.intro strong,.card strong,.callout strong,td strong,.item strong{color:var(--ink)}
+.kpis,.grid2,.grid3,.grid4{display:grid;gap:13px}
+.kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:16px 18px}
+.card.gold{border-top:2px solid var(--gold)}
+.card.mint{border-top:2px solid var(--mint)}
+.card.coral{border-top:2px solid var(--coral)}
+.label{font:600 10px var(--mono);text-transform:uppercase;letter-spacing:1.35px;color:var(--gold);margin-bottom:8px}
+.label.mint{color:var(--mint)}.label.coral{color:var(--coral)}.label.steel{color:var(--muted)}
+.card p,.card li{color:var(--muted);font-size:13px}
+.card p{margin:0}.card p+p{margin-top:7px}
+.kpi{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
+.kpi b{display:block;font-size:26px;line-height:1;color:var(--ink)}
+.kpi b.gold{color:var(--gold)}.kpi b.mint{color:var(--mint)}.kpi b.coral{color:var(--coral)}
+.kpi span{display:block;color:var(--muted);font:600 8.5px var(--mono);letter-spacing:1.1px;text-transform:uppercase;margin-top:7px}
+.callout{margin:16px 0;padding:14px 18px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:0 9px 9px 0;color:var(--muted)}
+.callout.mint{border-left-color:var(--mint)}
+.callout.coral{border-left-color:var(--coral)}
+.callout.steel{border-left-color:var(--steel)}
+.keyline{display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;margin:20px 0 0;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.keyline::before{content:"";width:26px;height:3px;background:var(--gold);border-radius:2px;margin-top:8px}
+code{font-family:var(--mono);font-size:.89em;color:var(--gold);background:var(--gold-soft);border-radius:4px;padding:1px 5px}
+.tok{font-family:var(--mono);font-size:.86em;border-radius:5px;padding:1.5px 7px;white-space:nowrap}
+.tok.ok{color:var(--mint);background:var(--mint-soft)}
+.tok.bad{color:var(--coral);background:var(--coral-soft)}
+.tok.au{color:var(--gold);background:var(--gold-soft)}
+.terminal{overflow:auto;white-space:pre;background:var(--deep);color:#dfe7ef;border:1px solid var(--line2);border-radius:10px;padding:15px 18px;font:12px/1.72 var(--mono)}
+.tablebox{overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:11px;margin:14px 0}
+.scroll{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;background:var(--raised);color:var(--muted);padding:10px 13px;font:600 10px var(--mono);letter-spacing:.9px;text-transform:uppercase;border-bottom:2px solid var(--line2);white-space:nowrap}
+td{padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--gold-soft)}
+.pill{display:inline-flex;padding:3px 8px;border-radius:999px;font:600 9.5px var(--mono);white-space:nowrap}
+.ok{background:var(--mint-soft);color:var(--mint)}
+.warn{background:var(--gold-soft);color:var(--gold)}
+.no{background:var(--coral-soft);color:var(--coral)}
+.info{background:var(--steel-soft);color:var(--muted)}
+.epic-head{display:grid;grid-template-columns:86px 1fr;gap:20px;align-items:start;margin-bottom:14px}
+.epic-head .bigletter{font:800 76px/0.95 var(--sans);letter-spacing:-3px;color:var(--gold);text-align:center}
+.epic-head h2{font-size:26px}
+.epic-head .sub{color:var(--muted);font-weight:600}
+.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.item{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px 17px;display:flex;flex-direction:column;gap:8px}
+.item .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.item .id{font:700 11px var(--mono);letter-spacing:1px;color:var(--ink)}
+.item h3{margin:0;font-size:14.5px}
+.item p{margin:0;color:var(--muted);font-size:12.8px}
+.item .proves{border-top:1px dashed var(--line);padding-top:8px;font-size:12.6px}
+.item .proves b{font:600 9.5px var(--mono);letter-spacing:1.2px;text-transform:uppercase;color:var(--mint);display:block;margin-bottom:3px}
+.item .ev{font-size:11.5px;color:color-mix(in srgb,var(--muted) 82%,transparent)}
+.item .ev b{font:600 9.5px var(--mono);letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:3px}
+.p0{background:var(--coral-soft);color:var(--coral)}
+.p1{background:var(--gold-soft);color:var(--gold)}
+.p2{background:var(--steel-soft);color:var(--muted)}
+.p3{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.eff{background:var(--raised);color:var(--ink);border:1px solid var(--line2)}
+.node{background:transparent;border:1px dashed var(--line2);color:var(--muted)}
+.diagram-shell{margin:18px 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.diagram-shell figcaption{display:flex;justify-content:space-between;gap:16px;padding:12px 15px;border-bottom:1px solid var(--line);font-size:12px}
+.diagram-shell figcaption span{color:var(--muted);font:500 10px var(--mono)}
+.mermaid-wrap{position:relative}
+.diagram-controls{display:flex;gap:5px;position:absolute;top:9px;right:9px;z-index:4}
+.diagram-controls button{width:29px;height:27px;border:1px solid var(--line2);border-radius:6px;background:color-mix(in srgb,var(--panel) 92%,transparent);color:var(--ink);font:600 11px var(--mono);cursor:pointer}
+.diagram-controls button:hover{border-color:var(--gold);color:var(--gold)}
+.mermaid-viewport{position:relative;height:420px;overflow:hidden;cursor:grab;touch-action:none;background:radial-gradient(circle at 50% 45%,var(--gold-soft),transparent 62%)}
+.mermaid-viewport:active{cursor:grabbing}
+.mermaid-canvas{position:absolute;left:0;top:0;width:max-content;height:max-content;display:block;transform-origin:0 0;will-change:transform}
+.mermaid-canvas svg{display:block;max-width:none!important;height:auto}
+.diagram-status{color:var(--muted);font:11px var(--mono);padding:18px}
+.diagram-shell.tall .mermaid-viewport{height:640px}
+.diagram-shell.expanded{position:fixed;inset:12px;z-index:1100;margin:0;box-shadow:0 20px 80px #000}
+.diagram-shell.expanded .mermaid-viewport{height:calc(100dvh - 72px)}
+.footer{margin-top:64px;padding:20px 0;border-top:1px solid var(--line);color:var(--muted);font:11px/1.65 var(--mono)}
+.footer .crosslinks{margin-top:10px}
+@media(max-width:960px){.layout{display:block;padding:18px 14px}.toc{position:sticky;top:0;z-index:20;display:flex;gap:4px;overflow-x:auto;max-height:none;margin:0 -14px 18px;padding:9px 14px;background:var(--bg);border-bottom:1px solid var(--line)}.toc strong{display:none}.toc a{flex:0 0 auto;border:1px solid var(--line);border-bottom:2px solid transparent;border-radius:6px;white-space:nowrap}.toc a.active{border-left-color:var(--line);border-bottom-color:var(--gold)}section{scroll-margin-top:54px}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4,.grid3,.items{grid-template-columns:repeat(2,minmax(0,1fr))}.mermaid-viewport{height:340px}.epic-head{grid-template-columns:56px 1fr;gap:12px}.epic-head .bigletter{font-size:48px}}
+@media(max-width:640px){h1{font-size:42px}.lead{font-size:15.5px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2,.grid3,.grid4,.items{grid-template-columns:1fr}.diagram-shell figcaption{display:block;padding-right:140px}.mermaid-viewport{height:300px}.terminal{font-size:10.5px}.edition{display:none}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media print{.toc,.progress,.tools,.diagram-controls,.skip{display:none!important}.layout{display:block;padding:0}.diagram-shell,.card,.callout,.tablebox,.item{break-inside:avoid}.mermaid-viewport{height:420px}.diagram-shell.tall .mermaid-viewport{height:640px}body{background:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a><div class="progress" aria-hidden="true"></div>
+<div class="layout">
+<nav class="toc" aria-label="Sections">
+<strong>Converge · The Backlog</strong>
+<a href="#read" class="cl">Orientation</a>
+<a href="#read">01 · How to read this</a>
+<a href="#horizons">02 · The three horizons</a>
+<a href="#deps">03 · The dependency graph</a>
+<a href="#ea" class="cl">The epics</a>
+<a href="#ea">A · Relight the proof surface</a>
+<a href="#eb">B · The CI eval-gate</a>
+<a href="#ec">C · The Manager</a>
+<a href="#ed">D · Spec-layer interop</a>
+<a href="#ee">E · Distribution &amp; trust</a>
+<a href="#ef">F · Cockpit release gates</a>
+<a href="#eg">G · Verification depth</a>
+<a href="#eh">H · Platform breadth</a>
+<a href="#master" class="cl">Reference</a>
+<a href="#master">04 · The master table</a>
+<a href="#method">05 · Backlog → Task-Specs</a>
+</nav>
+<main id="content">
+
+<header class="doc">
+<div class="brandline">
+<svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><path d="m14 17 18 15 18-15v11L32 43 14 28Z" fill="var(--gold)"/></svg>
+C O N V E R G E&nbsp;&nbsp;<em>· SETTLEMENT FOLD</em>
+<span class="edition">THE BACKLOG · v0.1.0 → 0.3</span>
+</div>
+<div class="eyebrow">The development backlog · authored in the Pass-5 spirit</div>
+<h1>What the factory builds <em>next</em>.</h1>
+<div class="thesis">EVALS FIRST — EVEN HERE. <span>— every item names the gate that will prove it.</span></div>
+<p class="lead">Eight epics across three horizons, every item carrying an <strong>effort tier</strong>, a <strong>priority</strong>, a <strong>definition of done</strong>, and — in the house discipline — the <strong>evidence that put it here</strong>. Nothing below is a wish: each entry traces to a measured failure, a named roadmap commitment, a release gate already written down, or a positioning bet made explicit. When an item is scheduled, it decomposes into sealed Task-Specs and these “proves” lines become the evals.</p>
+<div class="tools"><button class="tool" type="button" data-print>Print or save PDF</button><a class="tool" href="converge-complete-v2.html">The Complete Edition v2</a><a class="tool" href="../README.md">README</a></div>
+<div class="chips"><span class="chip gold">8 EPICS</span><span class="chip">31 ITEMS</span><span class="chip">EVIDENCE-CITED</span><span class="chip mint">GATES PROPOSED PER ITEM</span></div>
+</header>
+
+<!-- ============================================================ 01 -->
+<section id="read">
+<div class="section-head"><span class="num">01</span><h2>How to read this. <span>Priorities, tiers, and what “proves” means.</span></h2></div>
+<div class="kpis">
+<div class="kpi"><b class="coral">6</b><span>P0 items</span></div>
+<div class="kpi"><b class="gold">9</b><span>P1 items</span></div>
+<div class="kpi"><b>11</b><span>P2 items</span></div>
+<div class="kpi"><b>5</b><span>P3 items</span></div>
+<div class="kpi"><b class="gold">3</b><span>horizons</span></div>
+<div class="kpi"><b class="mint">31</b><span>defined gates</span></div>
+</div>
+<div class="grid3" style="margin-top:13px">
+<article class="card"><div class="label">Priority scale</div><p><span class="pill p0">P0</span> the thesis is at risk — the project is currently contradicting its own claims · <span class="pill p1">P1</span> the roadmap's named commitments · <span class="pill p2">P2</span> compounding value, scheduled after the commitments · <span class="pill p3">P3</span> breadth that can wait for pull.</p></article>
+<article class="card"><div class="label">Effort tiers — the six-tier scale</div><p>The same scale the gate enforces on Task-Specs: <span class="pill eff">XS</span> ≤ 1 write path · <span class="pill eff">S</span> ≤ 2 · <span class="pill eff">M</span> ≤ 3 · <span class="pill eff">L</span> ≤ 5, one coherent goal · <span class="pill node">XL / XXL</span> are <strong>nodes</strong> — never runnable, they dispatch children.</p></article>
+<article class="card"><div class="label">Proves — proposed gates</div><p>Each item ends in the check that will decide it. Existing tokens (<span class="tok ok">DOCTOR_HOST_TESTS=PASS</span>) are the real gates today; <em>proposed</em> tokens (<span class="tok au">EVAL_GATE=OK</span>) become real when the item's Task-Spec is authored and sealed. A proposal is not a verdict.</p></article>
+</div>
+<div class="callout coral"><strong>Why Epic A outranks everything.</strong> Converge's pitch is <em>“done is proven, never claimed”</em> — and as of 2026-08-05 its own proof surface is dark: every CI run since <code>2026-08-03T20:17Z</code> has failed in 3–13 seconds with no step executed and job logs returning 404 (runner-allocation shape, not a test failure), while the README still says “CI is public and green.” Eight commits of new gate logic sit unverified by the gauntlet. A trust product wearing a red badge under a green claim is the one contradiction the thesis cannot survive — so relighting the floor is the whole of horizon one.</div>
+</section>
+
+<!-- ============================================================ 02 -->
+<section id="horizons">
+<div class="section-head"><span class="num">02</span><h2>The three horizons. <span>Restore the floor → move settlement server-side → compound.</span></h2></div>
+<figure class="diagram-shell"><figcaption><strong>NOW · NEXT · LATER</strong><span>epics by horizon — each unlocks the next</span></figcaption><div class="mermaid-wrap"><div class="diagram-controls"><button data-zoom="-1">−</button><button data-reset>1:1</button><button data-fit>⌂</button><button data-expand>⛶</button></div><div class="mermaid-viewport" tabindex="0"><div class="mermaid-canvas"><svg id="st-b0" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 2040.2px; background-color: transparent;" viewBox="0 0 2040.1953125 418" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#st-b0{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:16px;fill:#f5f2ea;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#st-b0 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#st-b0 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#st-b0 .error-icon{fill:#151d29;}#st-b0 .error-text{fill:#eae2d6;stroke:#eae2d6;}#st-b0 .edge-thickness-normal{stroke-width:1px;}#st-b0 .edge-thickness-thick{stroke-width:3.5px;}#st-b0 .edge-pattern-solid{stroke-dasharray:0;}#st-b0 .edge-thickness-invisible{stroke-width:0;fill:none;}#st-b0 .edge-pattern-dashed{stroke-dasharray:3;}#st-b0 .edge-pattern-dotted{stroke-dasharray:2;}#st-b0 .marker{fill:#8d99a6;stroke:#8d99a6;}#st-b0 .marker.cross{stroke:#8d99a6;}#st-b0 svg{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:16px;}#st-b0 p{margin:0;}#st-b0 .label{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;color:#f5f2ea;}#st-b0 .cluster-label text{fill:#f5f2ea;}#st-b0 .cluster-label span{color:#f5f2ea;}#st-b0 .cluster-label span p{background-color:transparent;}#st-b0 .label text,#st-b0 span{fill:#f5f2ea;color:#f5f2ea;}#st-b0 .node rect,#st-b0 .node circle,#st-b0 .node ellipse,#st-b0 .node polygon,#st-b0 .node path{fill:#1a2330;stroke:#f3b64c;stroke-width:1px;}#st-b0 .rough-node .label text,#st-b0 .node .label text,#st-b0 .image-shape .label,#st-b0 .icon-shape .label{text-anchor:middle;}#st-b0 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#st-b0 .rough-node .label,#st-b0 .node .label,#st-b0 .image-shape .label,#st-b0 .icon-shape .label{text-align:center;}#st-b0 .node.clickable{cursor:pointer;}#st-b0 .root .anchor path{fill:#8d99a6!important;stroke-width:0;stroke:#8d99a6;}#st-b0 .arrowheadPath{fill:#efe9df;}#st-b0 .edgePath .path{stroke:#8d99a6;stroke-width:1px;}#st-b0 .flowchart-link{stroke:#8d99a6;fill:none;}#st-b0 .edgeLabel{background-color:#101620;text-align:center;}#st-b0 .edgeLabel p{background-color:#101620;}#st-b0 .edgeLabel rect{opacity:0.5;background-color:#101620;fill:#101620;}#st-b0 .labelBkg{background-color:rgba(16, 22, 32, 0.5);}#st-b0 .cluster rect{fill:#0c1219;stroke:rgba(141,153,166,0.34);stroke-width:1px;}#st-b0 .cluster text{fill:#f5f2ea;}#st-b0 .cluster span{color:#f5f2ea;}#st-b0 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:12px;background:#151d29;border:1px solid hsl(216, 0%, 22.1568627451%);border-radius:2px;pointer-events:none;z-index:100;}#st-b0 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#f5f2ea;}#st-b0 rect.text{fill:none;stroke-width:0;}#st-b0 .icon-shape,#st-b0 .image-shape{background-color:#101620;text-align:center;}#st-b0 .icon-shape p,#st-b0 .image-shape p{background-color:#101620;padding:2px;}#st-b0 .icon-shape .label rect,#st-b0 .image-shape .label rect{opacity:0.5;background-color:#101620;fill:#101620;}#st-b0 .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#st-b0 .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#st-b0 .node .neo-node{stroke:#f3b64c;}#st-b0 [data-look="neo"].node rect,#st-b0 [data-look="neo"].cluster rect,#st-b0 [data-look="neo"].node polygon{stroke:url(#st-b0-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b0 [data-look="neo"].swimlane.cluster rect{filter:none;}#st-b0 [data-look="neo"].node path{stroke:url(#st-b0-gradient);stroke-width:1px;}#st-b0 [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b0 [data-look="neo"].node .neo-line path{stroke:#f3b64c;filter:none;}#st-b0 [data-look="neo"].node circle{stroke:url(#st-b0-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b0 [data-look="neo"].node circle .state-start{fill:#000000;}#st-b0 [data-look="neo"].icon-shape .icon{fill:url(#st-b0-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b0 [data-look="neo"].icon-shape .icon-neo path{stroke:url(#st-b0-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b0 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#st-b0 .coral&gt;*{fill:rgb(58, 21, 18)!important;stroke:rgb(255, 107, 100)!important;color:rgb(255, 233, 231)!important;}#st-b0 .coral span{fill:rgb(58, 21, 18)!important;stroke:rgb(255, 107, 100)!important;color:rgb(255, 233, 231)!important;}#st-b0 .coral tspan{fill:rgb(255, 233, 231)!important;}#st-b0 .gold&gt;*{fill:rgb(42, 34, 16)!important;stroke:rgb(243, 182, 76)!important;color:rgb(245, 242, 234)!important;}#st-b0 .gold span{fill:rgb(42, 34, 16)!important;stroke:rgb(243, 182, 76)!important;color:rgb(245, 242, 234)!important;}#st-b0 .gold tspan{fill:rgb(245, 242, 234)!important;}#st-b0 .mint&gt;*{fill:rgb(15, 42, 36)!important;stroke:rgb(115, 226, 195)!important;color:rgb(230, 247, 242)!important;}#st-b0 .mint span{fill:rgb(15, 42, 36)!important;stroke:rgb(115, 226, 195)!important;color:rgb(230, 247, 242)!important;}#st-b0 .mint tspan{fill:rgb(230, 247, 242)!important;}</style><g><marker id="st-b0_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="st-b0_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="st-b0_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edgePaths"><path d="M972.867,209L977.034,209C981.201,209,989.534,209,997.201,209C1004.867,209,1011.867,209,1015.367,209L1018.867,209" id="st-b0-L_NEXT_LATER_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_NEXT_LATER_0" data-points="W3sieCI6OTcyLjg2NzE4NzUsInkiOjIwOX0seyJ4Ijo5OTcuODY3MTg3NSwieSI6MjA5fSx7IngiOjEwMjIuODY3MTg3NSwieSI6MjA5fV0=" data-look="classic" marker-end="url(#st-b0_flowchart-v2-pointEnd)"/><path d="M338,200.316L342.167,200.096C346.333,199.877,354.667,199.439,362.334,199.33C370.001,199.221,377.001,199.441,380.502,199.551L384.002,199.662" id="st-b0-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6MzM4LCJ5IjoyMDAuMzE1Nzg5NDczNjg0MjJ9LHsieCI6MzYzLCJ5IjoxOTl9LHsieCI6Mzg4LCJ5IjoxOTkuNzg3NTY2Mjk3MDg0Nzd9XQ==" data-look="classic" marker-end="url(#st-b0_flowchart-v2-pointEnd)"/><path d="M338,217.684L342.167,217.904C346.333,218.123,354.667,218.561,362.334,218.67C370.001,218.779,377.001,218.559,380.502,218.449L384.002,218.338" id="st-b0-L_A_NEXT_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A_NEXT_0" data-points="W3sieCI6MzM4LCJ5IjoyMTcuNjg0MjEwNTI2MzE1Nzh9LHsieCI6MzYzLCJ5IjoyMTl9LHsieCI6Mzg4LCJ5IjoyMTguMjEyNDMzNzAyOTE1MjN9XQ==" data-look="classic" marker-end="url(#st-b0_flowchart-v2-pointEnd)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_NEXT_LATER_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A_B_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A_NEXT_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="root" transform="translate(1014.8671875, 124.5)"><g class="clusters"><g class="cluster" id="st-b0-LATER" data-look="classic"><rect style="" x="8" y="8" width="1009.328125" height="153"/><g class="cluster-label" transform="translate(405.25, 8)"><foreignObject width="214.828125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>LATER — 0.3+ · compound</p></span></div></foreignObject></g></g></g><g class="edgePaths"/><g class="edgeLabels"/><g class="nodes"><g class="node default mint" id="st-b0-flowchart-E-4" data-look="classic" transform="translate(160.296875, 84.5)"><rect class="basic label-container" style="fill:#0f2a24 !important;stroke:#73e2c3 !important" x="-117.296875" y="-39" width="234.59375" height="78"/><g class="label" style="color:#e6f7f2 !important" transform="translate(-87.296875, -24)"><rect/><foreignObject width="174.59375" height="48"><div style="color: rgb(230, 247, 242) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e6f7f2 !important" class="nodeLabel"><p>EPIC E<br /><small>distribution &amp; signed trust</small></p></span></div></foreignObject></g></g><g class="node default mint" id="st-b0-flowchart-F-5" data-look="classic" transform="translate(429.578125, 84.5)"><rect class="basic label-container" style="fill:#0f2a24 !important;stroke:#73e2c3 !important" x="-101.984375" y="-39" width="203.96875" height="78"/><g class="label" style="color:#e6f7f2 !important" transform="translate(-71.984375, -24)"><rect/><foreignObject width="143.96875" height="48"><div style="color: rgb(230, 247, 242) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e6f7f2 !important" class="nodeLabel"><p>EPIC F<br /><small>Cockpit release gates</small></p></span></div></foreignObject></g></g><g class="node default mint" id="st-b0-flowchart-G-6" data-look="classic" transform="translate(670.4296875, 84.5)"><rect class="basic label-container" style="fill:#0f2a24 !important;stroke:#73e2c3 !important" x="-88.8671875" y="-39" width="177.734375" height="78"/><g class="label" style="color:#e6f7f2 !important" transform="translate(-58.8671875, -24)"><rect/><foreignObject width="117.734375" height="48"><div style="color: rgb(230, 247, 242) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e6f7f2 !important" class="nodeLabel"><p>EPIC G<br /><small>verification depth</small></p></span></div></foreignObject></g></g><g class="node default mint" id="st-b0-flowchart-H-7" data-look="classic" transform="translate(895.8125, 84.5)"><rect class="basic label-container" style="fill:#0f2a24 !important;stroke:#73e2c3 !important" x="-86.515625" y="-39" width="173.03125" height="78"/><g class="label" style="color:#e6f7f2 !important" transform="translate(-56.515625, -24)"><rect/><foreignObject width="113.03125" height="48"><div style="color: rgb(230, 247, 242) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#e6f7f2 !important" class="nodeLabel"><p>EPIC H<br /><small>platform breadth</small></p></span></div></foreignObject></g></g></g></g><g class="root" transform="translate(380, 0)"><g class="clusters"><g class="cluster" id="st-b0-NEXT" data-look="classic"><rect style="" x="8" y="8" width="584.8671875" height="402"/><g class="cluster-label" transform="translate(134.05859375, 8)"><foreignObject width="332.75" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>NEXT — 0.2 · settlement goes server-side</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M173,195.5L173,201.75C173,208,173,220.5,173,232.333C173,244.167,173,255.333,173,260.917L173,266.5" id="st-b0-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MTczLCJ5IjoxOTUuNX0seyJ4IjoxNzMsInkiOjIzM30seyJ4IjoxNzMsInkiOjI3MC41fV0=" data-look="classic" marker-end="url(#st-b0_flowchart-v2-pointEnd)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_B_C_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default gold" id="st-b0-flowchart-B-1" data-look="classic" transform="translate(173, 120.5)"><rect class="basic label-container" style="fill:#2a2210 !important;stroke:#f3b64c !important" x="-130" y="-75" width="260" height="150"/><g class="label" style="color:#f5f2ea !important" transform="translate(-100, -60)"><rect/><foreignObject width="200" height="120"><div style="color: rgb(245, 242, 234) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#f5f2ea !important" class="nodeLabel"><p>EPIC B<br /><small>the CI eval-gate — re-verify every<br />green claim where merges happen</small></p></span></div></foreignObject></g></g><g class="node default gold" id="st-b0-flowchart-C-2" data-look="classic" transform="translate(173, 321.5)"><rect class="basic label-container" style="fill:#2a2210 !important;stroke:#f3b64c !important" x="-128.6640625" y="-51" width="257.328125" height="102"/><g class="label" style="color:#f5f2ea !important" transform="translate(-98.6640625, -36)"><rect/><foreignObject width="197.328125" height="72"><div style="color: rgb(245, 242, 234) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#f5f2ea !important" class="nodeLabel"><p>EPIC C<br /><small>the Manager — fleet dispatch<br />across the ready frontier</small></p></span></div></foreignObject></g></g><g class="node default gold" id="st-b0-flowchart-D-3" data-look="classic" transform="translate(454.765625, 321.5)"><rect class="basic label-container" style="fill:#2a2210 !important;stroke:#f3b64c !important" x="-103.1015625" y="-51" width="206.203125" height="102"/><g class="label" style="color:#f5f2ea !important" transform="translate(-73.1015625, -36)"><rect/><foreignObject width="146.203125" height="72"><div style="color: rgb(245, 242, 234) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#f5f2ea !important" class="nodeLabel"><p>EPIC D<br /><small>spec-layer interop —<br />ingest, don't compete</small></p></span></div></foreignObject></g></g></g></g><g class="root" transform="translate(0, 88.5)"><g class="clusters"><g class="cluster" id="st-b0-NOW" data-look="classic"><rect style="" x="8" y="8" width="330" height="225"/><g class="cluster-label" transform="translate(15.203125, 8)"><foreignObject width="315.59375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>NOW — 0.1.x · relight the proof surface</p></span></div></foreignObject></g></g></g><g class="edgePaths"/><g class="edgeLabels"/><g class="nodes"><g class="node default coral" id="st-b0-flowchart-A-0" data-look="classic" transform="translate(173, 120.5)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-130" y="-75" width="260" height="150"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-100, -60)"><rect/><foreignObject width="200" height="120"><div style="color: rgb(255, 233, 231) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>EPIC A<br /><small>CI back to green · suite portability ·<br />fixture guards · repo weight · claims refresh</small></p></span></div></foreignObject></g></g></g></g></g></g></g><defs><filter id="st-b0-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="st-b0-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="st-b0-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f3b64c" stop-opacity="1"/><stop offset="100%" stop-color="hsl(41.5384615385, 4.8275862069%, 21.3725490196%)" stop-opacity="1"/></linearGradient></svg></div></div></div><script type="text/plain" class="diagram-source">
+flowchart LR
+  subgraph NOW["NOW — 0.1.x · relight the proof surface"]
+    direction TB
+    A["EPIC A<br/><small>CI back to green · suite portability ·<br/>fixture guards · repo weight · claims refresh</small>"]
+  end
+  subgraph NEXT["NEXT — 0.2 · settlement goes server-side"]
+    direction TB
+    B["EPIC B<br/><small>the CI eval-gate — re-verify every<br/>green claim where merges happen</small>"]
+    C["EPIC C<br/><small>the Manager — fleet dispatch<br/>across the ready frontier</small>"]
+    D["EPIC D<br/><small>spec-layer interop —<br/>ingest, don't compete</small>"]
+  end
+  subgraph LATER["LATER — 0.3+ · compound"]
+    direction TB
+    E["EPIC E<br/><small>distribution &amp; signed trust</small>"]
+    F["EPIC F<br/><small>Cockpit release gates</small>"]
+    G["EPIC G<br/><small>verification depth</small>"]
+    H["EPIC H<br/><small>platform breadth</small>"]
+  end
+  A --> B
+  B --> C
+  A --> NEXT
+  NEXT --> LATER
+  classDef coral fill:#3a1512,stroke:#ff6b64,color:#ffe9e7
+  classDef gold fill:#2a2210,stroke:#f3b64c,color:#f5f2ea
+  classDef mint fill:#0f2a24,stroke:#73e2c3,color:#e6f7f2
+  class A coral
+  class B,C,D gold
+  class E,F,G,H mint
+</script></figure>
+<div class="grid3">
+<article class="card coral"><div class="label coral">NOW — 0.1.x</div><p><strong>Relight the proof surface.</strong> Every claim the project makes must be measurable again before anything new ships. Six items, all small, all P0.</p></article>
+<article class="card gold"><div class="label">NEXT — 0.2</div><p><strong>Settlement goes server-side.</strong> The two roadmap commitments (eval-gate, Manager) plus the interop bet that positions FAST as the front door.</p></article>
+<article class="card mint"><div class="label mint">LATER — 0.3+</div><p><strong>Compound.</strong> Distribution, the Cockpit's four release gates, deeper verification, wider platforms — value that stacks on a green floor.</p></article>
+</div>
+</section>
+
+<!-- ============================================================ 03 -->
+<section id="deps">
+<div class="section-head"><span class="num">03</span><h2>The dependency graph. <span>What blocks what — edges kept honest and few.</span></h2></div>
+<figure class="diagram-shell tall"><figcaption><strong>Blocked-by, item level</strong><span>same relation Pass 6 mirrors onto a board</span></figcaption><div class="mermaid-wrap"><div class="diagram-controls"><button data-zoom="-1">−</button><button data-reset>1:1</button><button data-fit>⌂</button><button data-expand>⛶</button></div><div class="mermaid-viewport" tabindex="0"><div class="mermaid-canvas"><svg id="st-b1" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 3799.5px; background-color: transparent;" viewBox="0 0 3799.50390625 676" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#st-b1{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:16px;fill:#f5f2ea;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#st-b1 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#st-b1 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#st-b1 .error-icon{fill:#151d29;}#st-b1 .error-text{fill:#eae2d6;stroke:#eae2d6;}#st-b1 .edge-thickness-normal{stroke-width:1px;}#st-b1 .edge-thickness-thick{stroke-width:3.5px;}#st-b1 .edge-pattern-solid{stroke-dasharray:0;}#st-b1 .edge-thickness-invisible{stroke-width:0;fill:none;}#st-b1 .edge-pattern-dashed{stroke-dasharray:3;}#st-b1 .edge-pattern-dotted{stroke-dasharray:2;}#st-b1 .marker{fill:#8d99a6;stroke:#8d99a6;}#st-b1 .marker.cross{stroke:#8d99a6;}#st-b1 svg{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:16px;}#st-b1 p{margin:0;}#st-b1 .label{font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;color:#f5f2ea;}#st-b1 .cluster-label text{fill:#f5f2ea;}#st-b1 .cluster-label span{color:#f5f2ea;}#st-b1 .cluster-label span p{background-color:transparent;}#st-b1 .label text,#st-b1 span{fill:#f5f2ea;color:#f5f2ea;}#st-b1 .node rect,#st-b1 .node circle,#st-b1 .node ellipse,#st-b1 .node polygon,#st-b1 .node path{fill:#1a2330;stroke:#f3b64c;stroke-width:1px;}#st-b1 .rough-node .label text,#st-b1 .node .label text,#st-b1 .image-shape .label,#st-b1 .icon-shape .label{text-anchor:middle;}#st-b1 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#st-b1 .rough-node .label,#st-b1 .node .label,#st-b1 .image-shape .label,#st-b1 .icon-shape .label{text-align:center;}#st-b1 .node.clickable{cursor:pointer;}#st-b1 .root .anchor path{fill:#8d99a6!important;stroke-width:0;stroke:#8d99a6;}#st-b1 .arrowheadPath{fill:#efe9df;}#st-b1 .edgePath .path{stroke:#8d99a6;stroke-width:1px;}#st-b1 .flowchart-link{stroke:#8d99a6;fill:none;}#st-b1 .edgeLabel{background-color:#101620;text-align:center;}#st-b1 .edgeLabel p{background-color:#101620;}#st-b1 .edgeLabel rect{opacity:0.5;background-color:#101620;fill:#101620;}#st-b1 .labelBkg{background-color:rgba(16, 22, 32, 0.5);}#st-b1 .cluster rect{fill:#0c1219;stroke:rgba(141,153,166,0.34);stroke-width:1px;}#st-b1 .cluster text{fill:#f5f2ea;}#st-b1 .cluster span{color:#f5f2ea;}#st-b1 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:Avenir Next,Inter,ui-sans-serif,system-ui,sans-serif;font-size:12px;background:#151d29;border:1px solid hsl(216, 0%, 22.1568627451%);border-radius:2px;pointer-events:none;z-index:100;}#st-b1 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#f5f2ea;}#st-b1 rect.text{fill:none;stroke-width:0;}#st-b1 .icon-shape,#st-b1 .image-shape{background-color:#101620;text-align:center;}#st-b1 .icon-shape p,#st-b1 .image-shape p{background-color:#101620;padding:2px;}#st-b1 .icon-shape .label rect,#st-b1 .image-shape .label rect{opacity:0.5;background-color:#101620;fill:#101620;}#st-b1 .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#st-b1 .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#st-b1 .node .neo-node{stroke:#f3b64c;}#st-b1 [data-look="neo"].node rect,#st-b1 [data-look="neo"].cluster rect,#st-b1 [data-look="neo"].node polygon{stroke:url(#st-b1-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b1 [data-look="neo"].swimlane.cluster rect{filter:none;}#st-b1 [data-look="neo"].node path{stroke:url(#st-b1-gradient);stroke-width:1px;}#st-b1 [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b1 [data-look="neo"].node .neo-line path{stroke:#f3b64c;filter:none;}#st-b1 [data-look="neo"].node circle{stroke:url(#st-b1-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b1 [data-look="neo"].node circle .state-start{fill:#000000;}#st-b1 [data-look="neo"].icon-shape .icon{fill:url(#st-b1-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b1 [data-look="neo"].icon-shape .icon-neo path{stroke:url(#st-b1-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#st-b1 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}#st-b1 .coral&gt;*{fill:rgb(58, 21, 18)!important;stroke:rgb(255, 107, 100)!important;color:rgb(255, 233, 231)!important;}#st-b1 .coral span{fill:rgb(58, 21, 18)!important;stroke:rgb(255, 107, 100)!important;color:rgb(255, 233, 231)!important;}#st-b1 .coral tspan{fill:rgb(255, 233, 231)!important;}#st-b1 .gold&gt;*{fill:rgb(42, 34, 16)!important;stroke:rgb(243, 182, 76)!important;color:rgb(245, 242, 234)!important;}#st-b1 .gold span{fill:rgb(42, 34, 16)!important;stroke:rgb(243, 182, 76)!important;color:rgb(245, 242, 234)!important;}#st-b1 .gold tspan{fill:rgb(245, 242, 234)!important;}</style><g><marker id="st-b1_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="st-b1_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="st-b1_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"><g class="cluster" id="st-b1-EF" data-look="classic"><rect style="" x="8" y="161" width="1248.375" height="330"/><g class="cluster-label" transform="translate(507.71875, 161)"><foreignObject width="248.9375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>EPIC F — Cockpit release gates</p></span></div></foreignObject></g></g><g class="cluster" id="st-b1-ED" data-look="classic"><rect style="" x="2519.328125" y="161" width="610.65625" height="128"/><g class="cluster-label" transform="translate(2712.5390625, 161)"><foreignObject width="224.234375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>EPIC D — spec-layer interop</p></span></div></foreignObject></g></g><g class="cluster" id="st-b1-EC" data-look="classic"><rect style="" x="2504.9296875" y="363" width="330" height="305"/><g class="cluster-label" transform="translate(2580.1484375, 363)"><foreignObject width="179.5625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>EPIC C — the Manager</p></span></div></foreignObject></g></g><g class="cluster" id="st-b1-EB" data-look="classic"><rect style="" x="3149.984375" y="161" width="641.51953125" height="330"/><g class="cluster-label" transform="translate(3367.931640625, 161)"><foreignObject width="205.625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>EPIC B — the CI eval-gate</p></span></div></foreignObject></g></g><g class="cluster" id="st-b1-EA" data-look="classic"><rect style="" x="1276.375" y="8" width="1222.953125" height="281"/><g class="cluster-label" transform="translate(1734.4921875, 8)"><foreignObject width="306.71875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>EPIC A — relight the proof surface · P0</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M2275.323,99L2261.438,105.167C2247.552,111.333,2219.782,123.667,2205.897,134C2192.012,144.333,2192.012,152.667,2158.303,163.776C2124.595,174.885,2057.178,188.77,2023.47,195.713L1989.762,202.656" id="st-b1-L_A1_A6_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A1_A6_0" data-points="W3sieCI6MjI3NS4zMjI2OTI4NzEwOTM4LCJ5Ijo5OX0seyJ4IjoyMTkyLjAxMTcxODc1LCJ5IjoxMzZ9LHsieCI6MjE5Mi4wMTE3MTg3NSwieSI6MTYxfSx7IngiOjE5ODUuODQzNzUsInkiOjIwMy40NjI1ODI4MTA1OTQ3NH1d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M2027.906,111L2027.906,115.167C2027.906,119.333,2027.906,127.667,2027.906,136C2027.906,144.333,2027.906,152.667,2014.389,162.733C2000.871,172.8,1973.836,184.6,1960.318,190.5L1946.8,196.4" id="st-b1-L_A2_A6_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A2_A6_0" data-points="W3sieCI6MjAyNy45MDYyNSwieSI6MTExfSx7IngiOjIwMjcuOTA2MjUsInkiOjEzNn0seyJ4IjoyMDI3LjkwNjI1LCJ5IjoxNjF9LHsieCI6MTk0My4xMzQxNTUyNzM0Mzc1LCJ5IjoxOTh9XQ==" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M1734.641,99L1734.641,105.167C1734.641,111.333,1734.641,123.667,1734.641,134C1734.641,144.333,1734.641,152.667,1748.158,162.733C1761.676,172.8,1788.711,184.6,1802.229,190.5L1815.747,196.4" id="st-b1-L_A3_A6_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A3_A6_0" data-points="W3sieCI6MTczNC42NDA2MjUsInkiOjk5fSx7IngiOjE3MzQuNjQwNjI1LCJ5IjoxMzZ9LHsieCI6MTczNC42NDA2MjUsInkiOjE2MX0seyJ4IjoxODE5LjQxMjcxOTcyNjU2MjUsInkiOjE5OH1d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M1524.636,111L1533.531,115.167C1542.426,119.333,1560.217,127.667,1569.112,136C1578.008,144.333,1578.008,152.667,1610.471,163.684C1642.935,174.702,1707.862,188.404,1740.326,195.255L1772.789,202.106" id="st-b1-L_A4_A6_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A4_A6_0" data-points="W3sieCI6MTUyNC42MzU2MjAxMTcxODc1LCJ5IjoxMTF9LHsieCI6MTU3OC4wMDc4MTI1LCJ5IjoxMzZ9LHsieCI6MTU3OC4wMDc4MTI1LCJ5IjoxNjF9LHsieCI6MTc3Ni43MDMxMjUsInkiOjIwMi45MzE4ODcyNjg3OTI4Mn1d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M2366.326,99L2373.225,105.167C2380.125,111.333,2393.924,123.667,2400.823,134C2407.723,144.333,2407.723,152.667,2536.855,165.927C2665.986,179.188,2924.25,197.376,3053.382,206.47L3182.514,215.564" id="st-b1-L_A1_B1_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A1_B1_0" data-points="W3sieCI6MjM2Ni4zMjU3NDQ2Mjg5MDYyLCJ5Ijo5OX0seyJ4IjoyNDA3LjcyMjY1NjI1LCJ5IjoxMzZ9LHsieCI6MjQwNy43MjI2NTYyNSwieSI6MTYxfSx7IngiOjMxODYuNTAzOTA2MjUsInkiOjIxNS44NDQ4ODE1Mzc3NzM4fV0=" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M3316.504,264L3316.504,268.167C3316.504,272.333,3316.504,280.667,3316.504,291C3316.504,301.333,3316.504,313.667,3316.504,326C3316.504,338.333,3316.504,350.667,3316.504,360.333C3316.504,370,3316.504,377,3316.504,380.5L3316.504,384" id="st-b1-L_B1_B2_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B1_B2_0" data-points="W3sieCI6MzMxNi41MDM5MDYyNSwieSI6MjY0fSx7IngiOjMzMTYuNTAzOTA2MjUsInkiOjI4OX0seyJ4IjozMzE2LjUwMzkwNjI1LCJ5IjozMjZ9LHsieCI6MzMxNi41MDM5MDYyNSwieSI6MzYzfSx7IngiOjMzMTYuNTAzOTA2MjUsInkiOjM4OH1d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M3446.504,251.839L3476.504,258.032C3506.504,264.226,3566.504,276.613,3596.504,288.973C3626.504,301.333,3626.504,313.667,3626.504,326C3626.504,338.333,3626.504,350.667,3626.504,360.333C3626.504,370,3626.504,377,3626.504,380.5L3626.504,384" id="st-b1-L_B1_B3_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B1_B3_0" data-points="W3sieCI6MzQ0Ni41MDM5MDYyNSwieSI6MjUxLjgzODcwOTY3NzQxOTM2fSx7IngiOjM2MjYuNTAzOTA2MjUsInkiOjI4OX0seyJ4IjozNjI2LjUwMzkwNjI1LCJ5IjozMjZ9LHsieCI6MzYyNi41MDM5MDYyNSwieSI6MzYzfSx7IngiOjM2MjYuNTAzOTA2MjUsInkiOjM4OH1d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M3266.23,264L3260.859,268.167C3255.488,272.333,3244.746,280.667,3239.375,291C3234.004,301.333,3234.004,313.667,3234.004,326C3234.004,338.333,3234.004,350.667,3162.321,364.967C3090.637,379.266,2947.271,395.533,2875.587,403.666L2803.904,411.799" id="st-b1-L_B1_C1_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B1_C1_0" data-points="W3sieCI6MzI2Ni4yMzA0Njg3NSwieSI6MjY0fSx7IngiOjMyMzQuMDAzOTA2MjUsInkiOjI4OX0seyJ4IjozMjM0LjAwMzkwNjI1LCJ5IjozMjZ9LHsieCI6MzIzNC4wMDM5MDYyNSwieSI6MzYzfSx7IngiOjI3OTkuOTI5Njg3NSwieSI6NDEyLjI1MDE2NzkzMjc5OTJ9XQ==" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M2669.93,466L2669.93,470.167C2669.93,474.333,2669.93,482.667,2669.93,493C2669.93,503.333,2669.93,515.667,2669.93,529.333C2669.93,543,2669.93,558,2669.93,565.5L2669.93,573" id="st-b1-L_C1_C2_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_C1_C2_0" data-points="W3sieCI6MjY2OS45Mjk2ODc1LCJ5Ijo0NjZ9LHsieCI6MjY2OS45Mjk2ODc1LCJ5Ijo0OTF9LHsieCI6MjY2OS45Mjk2ODc1LCJ5Ijo1Mjh9LHsieCI6MjY2OS45Mjk2ODc1LCJ5Ijo1Nzd9XQ==" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M1397.195,111L1392.475,115.167C1387.755,119.333,1378.315,127.667,1373.595,136C1368.875,144.333,1368.875,152.667,1344.941,162.353C1321.008,172.04,1273.14,183.079,1249.206,188.599L1225.273,194.119" id="st-b1-L_A4_F1_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_A4_F1_0" data-points="W3sieCI6MTM5Ny4xOTUzMTI1LCJ5IjoxMTF9LHsieCI6MTM2OC44NzUsInkiOjEzNn0seyJ4IjoxMzY4Ljg3NSwieSI6MTYxfSx7IngiOjEyMjEuMzc1LCJ5IjoxOTUuMDE4MDE4MDE4MDE4fV0=" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M1091.375,264L1091.375,268.167C1091.375,272.333,1091.375,280.667,1091.375,291C1091.375,301.333,1091.375,313.667,1091.375,326C1091.375,338.333,1091.375,350.667,1036.433,364.418C981.491,378.169,871.608,393.338,816.666,400.923L761.724,408.507" id="st-b1-L_F1_F5_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F1_F5_0" data-points="W3sieCI6MTA5MS4zNzUsInkiOjI2NH0seyJ4IjoxMDkxLjM3NSwieSI6Mjg5fSx7IngiOjEwOTEuMzc1LCJ5IjozMjZ9LHsieCI6MTA5MS4zNzUsInkiOjM2M30seyJ4Ijo3NTcuNzYxNzE4NzUsInkiOjQwOS4wNTQwMDg1MDk5MjEyM31d" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M781.375,264L781.375,268.167C781.375,272.333,781.375,280.667,781.375,291C781.375,301.333,781.375,313.667,781.375,326C781.375,338.333,781.375,350.667,771.99,360.744C762.604,370.821,743.833,378.641,734.448,382.551L725.062,386.462" id="st-b1-L_F2_F5_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F2_F5_0" data-points="W3sieCI6NzgxLjM3NSwieSI6MjY0fSx7IngiOjc4MS4zNzUsInkiOjI4OX0seyJ4Ijo3ODEuMzc1LCJ5IjozMjZ9LHsieCI6NzgxLjM3NSwieSI6MzYzfSx7IngiOjcyMS4zNjk4MTIwMTE3MTg4LCJ5IjozODh9XQ==" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M474.148,252L474.148,258.167C474.148,264.333,474.148,276.667,474.148,289C474.148,301.333,474.148,313.667,474.148,326C474.148,338.333,474.148,350.667,483.534,360.744C492.919,370.821,511.69,378.641,521.076,382.551L530.461,386.462" id="st-b1-L_F3_F5_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F3_F5_0" data-points="W3sieCI6NDc0LjE0ODQzNzUsInkiOjI1Mn0seyJ4Ijo0NzQuMTQ4NDM3NSwieSI6Mjg5fSx7IngiOjQ3NC4xNDg0Mzc1LCJ5IjozMjZ9LHsieCI6NDc0LjE0ODQzNzUsInkiOjM2M30seyJ4Ijo1MzQuMTUzNjI1NDg4MjgxMiwieSI6Mzg4fV0=" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M169.961,252L169.961,258.167C169.961,264.333,169.961,276.667,169.961,289C169.961,301.333,169.961,313.667,169.961,326C169.961,338.333,169.961,350.667,223.934,364.379C277.907,378.091,385.854,393.182,439.827,400.727L493.8,408.272" id="st-b1-L_F4_F5_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_F4_F5_0" data-points="W3sieCI6MTY5Ljk2MDkzNzUsInkiOjI1Mn0seyJ4IjoxNjkuOTYwOTM3NSwieSI6Mjg5fSx7IngiOjE2OS45NjA5Mzc1LCJ5IjozMjZ9LHsieCI6MTY5Ljk2MDkzNzUsInkiOjM2M30seyJ4Ijo0OTcuNzYxNzE4NzUsInkiOjQwOC44MjYxNTU5NTk2MjM1fV0=" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M3626.504,466L3626.504,470.167C3626.504,474.333,3626.504,482.667,3626.504,493C3626.504,503.333,3626.504,515.667,3626.504,527.333C3626.504,539,3626.504,550,3626.504,555.5L3626.504,561" id="st-b1-L_B3_E3_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_B3_E3_0" data-points="W3sieCI6MzYyNi41MDM5MDYyNSwieSI6NDY2fSx7IngiOjM2MjYuNTAzOTA2MjUsInkiOjQ5MX0seyJ4IjozNjI2LjUwMzkwNjI1LCJ5Ijo1Mjh9LHsieCI6MzYyNi41MDM5MDYyNSwieSI6NTY1fV0=" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/><path d="M2669.93,252L2669.93,258.167C2669.93,264.333,2669.93,276.667,2669.93,289C2669.93,301.333,2669.93,313.667,2669.93,326C2669.93,338.333,2669.93,350.667,2669.93,360.333C2669.93,370,2669.93,377,2669.93,380.5L2669.93,384" id="st-b1-L_D1_C1_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_D1_C1_0" data-points="W3sieCI6MjY2OS45Mjk2ODc1LCJ5IjoyNTJ9LHsieCI6MjY2OS45Mjk2ODc1LCJ5IjoyODl9LHsieCI6MjY2OS45Mjk2ODc1LCJ5IjozMjZ9LHsieCI6MjY2OS45Mjk2ODc1LCJ5IjozNjN9LHsieCI6MjY2OS45Mjk2ODc1LCJ5IjozODh9XQ==" data-look="classic" marker-end="url(#st-b1_flowchart-v2-pointEnd)"/></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_A1_A6_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A2_A6_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A3_A6_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A4_A6_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A1_B1_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_B1_B2_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_B1_B3_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_B1_C1_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_C1_C2_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_A4_F1_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_F1_F5_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_F2_F5_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_F3_F5_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_F4_F5_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(3626.50390625, 528)"><g class="label" data-id="L_B3_E3_0" transform="translate(-47.859375, -12)"><foreignObject width="95.71875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>strengthens</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(2669.9296875, 326)"><g class="label" data-id="L_D1_C1_0" transform="translate(-52.8671875, -12)"><foreignObject width="105.734375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>feeds specs t</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default coral" id="st-b1-flowchart-A1-0" data-look="classic" transform="translate(2336.1171875, 72)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-128.2109375" y="-27" width="256.421875" height="54"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-98.2109375, -12)"><rect/><foreignObject width="196.421875" height="24"><div style="color: rgb(255, 233, 231) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A1 · CI execution outage</p></span></div></foreignObject></g></g><g class="node default coral" id="st-b1-flowchart-A2-1" data-look="classic" transform="translate(2027.90625, 72)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(255, 233, 231) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A2 · doctor-host portability</p></span></div></foreignObject></g></g><g class="node default coral" id="st-b1-flowchart-A3-2" data-look="classic" transform="translate(1734.640625, 72)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-113.265625" y="-27" width="226.53125" height="54"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-83.265625, -12)"><rect/><foreignObject width="166.53125" height="24"><div style="color: rgb(255, 233, 231) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A3 · hmac xxd guard</p></span></div></foreignObject></g></g><g class="node default coral" id="st-b1-flowchart-A4-3" data-look="classic" transform="translate(1441.375, 72)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(255, 233, 231) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A4 · Cockpit USER fixture</p></span></div></foreignObject></g></g><g class="node default coral" id="st-b1-flowchart-A5-4" data-look="classic" transform="translate(1437.2421875, 225)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-95.71875" y="-27" width="191.4375" height="54"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-65.71875, -12)"><rect/><foreignObject width="131.4375" height="24"><div style="color: rgb(255, 233, 231) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A5 · repo weight</p></span></div></foreignObject></g></g><g class="node default coral" id="st-b1-flowchart-A6-5" data-look="classic" transform="translate(1881.2734375, 225)"><rect class="basic label-container" style="fill:#3a1512 !important;stroke:#ff6b64 !important" x="-104.5703125" y="-27" width="209.140625" height="54"/><g class="label" style="color:#ffe9e7 !important" transform="translate(-74.5703125, -12)"><rect/><foreignObject width="149.140625" height="24"><div style="color: rgb(255, 233, 231) !important; display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#ffe9e7 !important" class="nodeLabel"><p>A6 · claims refresh</p></span></div></foreignObject></g></g><g class="node default gold" id="st-b1-flowchart-B1-6" data-look="classic" transform="translate(3316.50390625, 225)"><rect class="basic label-container" style="fill:#2a2210 !important;stroke:#f3b64c !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#f5f2ea !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(245, 242, 234) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#f5f2ea !important" class="nodeLabel"><p>B1 · re-verification Action</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-B2-7" data-look="classic" transform="translate(3316.50390625, 427)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>B2 · branch-protection recipe</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-B3-8" data-look="classic" transform="translate(3626.50390625, 427)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>B3 · receipt + provenance verifier</p></span></div></foreignObject></g></g><g class="node default gold" id="st-b1-flowchart-C1-9" data-look="classic" transform="translate(2669.9296875, 427)"><rect class="basic label-container" style="fill:#2a2210 !important;stroke:#f3b64c !important" x="-130" y="-39" width="260" height="78"/><g class="label" style="color:#f5f2ea !important" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div style="color: rgb(245, 242, 234) !important; display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;" xmlns="http://www.w3.org/1999/xhtml"><span style="color:#f5f2ea !important" class="nodeLabel"><p>C1 · frontier dispatch (node)</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-C2-10" data-look="classic" transform="translate(2669.9296875, 604)"><rect class="basic label-container" style="" x="-129.6171875" y="-27" width="259.234375" height="54"/><g class="label" style="" transform="translate(-99.6171875, -12)"><rect/><foreignObject width="199.234375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>C2 · fleet view in Cockpit</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-D1-11" data-look="classic" transform="translate(2669.9296875, 225)"><rect class="basic label-container" style="" x="-115.6015625" y="-27" width="231.203125" height="54"/><g class="label" style="" transform="translate(-85.6015625, -12)"><rect/><foreignObject width="171.203125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>D1 · cvg tasks import</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-D2-12" data-look="classic" transform="translate(2965.2578125, 225)"><rect class="basic label-container" style="" x="-129.7265625" y="-27" width="259.453125" height="54"/><g class="label" style="" transform="translate(-99.7265625, -12)"><rect/><foreignObject width="199.453125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>D2 · FAST-lane front door</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-F1-13" data-look="classic" transform="translate(1091.375, 225)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>F1 · uc-01 rerun on Snapshot 3.0</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-F2-14" data-look="classic" transform="translate(781.375, 225)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>F2 · uc-02/03/04 workspaces</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-F3-15" data-look="classic" transform="translate(474.1484375, 225)"><rect class="basic label-container" style="" x="-127.2265625" y="-27" width="254.453125" height="54"/><g class="label" style="" transform="translate(-97.2265625, -12)"><rect/><foreignObject width="194.453125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>F3 · provider smoke test</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-F4-16" data-look="classic" transform="translate(169.9609375, 225)"><rect class="basic label-container" style="" x="-126.9609375" y="-27" width="253.921875" height="54"/><g class="label" style="" transform="translate(-96.9609375, -12)"><rect/><foreignObject width="193.921875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>F4 · Codex ACP isolation</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-F5-17" data-look="classic" transform="translate(627.76171875, 427)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>F5 · ship Cockpit in the package</p></span></div></foreignObject></g></g><g class="node default" id="st-b1-flowchart-E3-47" data-look="classic" transform="translate(3626.50390625, 604)"><rect class="basic label-container" style="" x="-130" y="-39" width="260" height="78"/><g class="label" style="" transform="translate(-100, -24)"><rect/><foreignObject width="200" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>E3 · signed releases + DSSE</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="st-b1-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="st-b1-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="st-b1-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f3b64c" stop-opacity="1"/><stop offset="100%" stop-color="hsl(41.5384615385, 4.8275862069%, 21.3725490196%)" stop-opacity="1"/></linearGradient></svg></div></div></div><script type="text/plain" class="diagram-source">
+flowchart TD
+  subgraph EA["EPIC A — relight the proof surface · P0"]
+    A1["A1 · CI execution outage"]
+    A2["A2 · doctor-host portability"]
+    A3["A3 · hmac xxd guard"]
+    A4["A4 · Cockpit USER fixture"]
+    A5["A5 · repo weight"]
+    A6["A6 · claims refresh"]
+  end
+  subgraph EB["EPIC B — the CI eval-gate"]
+    B1["B1 · re-verification Action"]
+    B2["B2 · branch-protection recipe"]
+    B3["B3 · receipt + provenance verifier"]
+  end
+  subgraph EC["EPIC C — the Manager"]
+    C1["C1 · frontier dispatch (node)"]
+    C2["C2 · fleet view in Cockpit"]
+  end
+  subgraph ED["EPIC D — spec-layer interop"]
+    D1["D1 · cvg tasks import"]
+    D2["D2 · FAST-lane front door"]
+  end
+  subgraph EF["EPIC F — Cockpit release gates"]
+    F1["F1 · uc-01 rerun on Snapshot 3.0"]
+    F2["F2 · uc-02/03/04 workspaces"]
+    F3["F3 · provider smoke test"]
+    F4["F4 · Codex ACP isolation"]
+    F5["F5 · ship Cockpit in the package"]
+  end
+  A1 --> A6
+  A2 --> A6
+  A3 --> A6
+  A4 --> A6
+  A1 --> B1
+  B1 --> B2
+  B1 --> B3
+  B1 --> C1
+  C1 --> C2
+  A4 --> F1
+  F1 --> F5
+  F2 --> F5
+  F3 --> F5
+  F4 --> F5
+  B3 -.strengthens.-> E3["E3 · signed releases + DSSE"]
+  D1 -.feeds specs to.-> C1
+  classDef coral fill:#3a1512,stroke:#ff6b64,color:#ffe9e7
+  classDef gold fill:#2a2210,stroke:#f3b64c,color:#f5f2ea
+  class A1,A2,A3,A4,A5,A6 coral
+  class B1,C1 gold
+</script></figure>
+<div class="callout steel"><strong>Reading the graph:</strong> A1 gates the whole machine half of this backlog — an eval-gate cannot ship into a CI that does not execute, and the Manager rides on both. The Cockpit chain (F1–F4 → F5) is the release contract already written in <code>apps/cockpit/PROVING-GROUNDS.md</code>: the app ships in the package only when all four cases have exercised the same WorkspaceSnapshot 3.0 contract.</div>
+</section>
+
+<!-- ============================================================ EPIC A -->
+<section id="ea">
+<div class="epic-head"><div class="bigletter">A</div><div>
+<h2>Relight the proof surface <span class="sub">— the claims must be measurable again.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · NOW (0.1.x)</span><span class="chip">6 ITEMS</span><span class="chip">ALL P0</span><span class="chip mint">EXIT · GAUNTLET GREEN + CLAIMS TRUE</span></div>
+</div></div>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">A1</span><span class="pill p0">P0</span><span class="pill eff">S</span><span class="pill info">infra</span></div>
+<h3>Diagnose and fix the CI execution outage</h3>
+<p>Every run since <code>2026-08-03T20:17Z</code> — across <code>main</code>, <code>feat/e2e</code>, and PR branches — completes in 3–13 s with all three jobs failed before any step ran, and job logs 404. Healthy runs took 500–730 s. That shape points at runner allocation, Actions billing/quota, or org policy — not at the tests. Diagnose in Actions settings, fix, then re-run the gauntlet on <code>main</code>.</p>
+<div class="ev"><b>Evidence</b>GitHub Actions API, 2026-08-05: 14 failures / 3 cancelled in the last 30 runs; last green <code>ci.yml</code> run 605 s on 2026-08-03.</div>
+<div class="proves"><b>Proves</b>Two consecutive <code>ci.yml</code> runs on <code>main</code> conclude <span class="tok ok">success</span> on both legs (ubuntu, macos) with normal durations; the README badge renders green.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">A2</span><span class="pill p0">P0</span><span class="pill eff">XS</span><span class="pill info">test-portability</span></div>
+<h3>Make the doctor-host suite portable to apt-installed shellcheck</h3>
+<p>The suite synthesizes “shellcheck absent” by dropping only the homebrew dir from PATH. On hosts where shellcheck lives in <code>/usr/bin</code> — exactly what the CI Linux leg installs — the tool stays visible, rows [2]–[3] report 4 FAILs, and the suite lands <span class="tok bad">DOCTOR_HOST_TESTS=FAIL</span> against correct product behavior. Row [4] already SKIPs honestly in the same situation; reuse the suite's own <code>mirror_without</code> technique (built for python3) for shellcheck.</p>
+<div class="ev"><b>Evidence</b>Suite run 2026-08-05 on Linux with <code>/usr/bin/shellcheck</code>: rows 13, failed 4.</div>
+<div class="proves"><b>Proves</b><span class="tok ok">DOCTOR_HOST_TESTS=PASS</span> on a host with apt shellcheck <em>and</em> on a brew host; absence rows SKIP — never FAIL — when absence cannot be synthesized.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">A3</span><span class="pill p0">P0</span><span class="pill eff">XS</span><span class="pill info">test-deps</span></div>
+<h3>Guard the hmac-envelope suite's xxd dependency</h3>
+<p><code>skills/task-spec/tests/test-hmac-envelope.sh</code> hard-calls <code>xxd</code> (line 77) with no presence check — on a host without it the suite dies rc=127 with a bare <em>command not found</em>. Every other suite in the package either guards its deps or declares an honest UNRUNNABLE. Use an <code>od</code>/<code>printf</code> fallback or a preflight check.</p>
+<div class="ev"><b>Evidence</b>Suite run 2026-08-05: rc=127 at line 77 on a minimal container.</div>
+<div class="proves"><b>Proves</b>The suite exits with its own token on xxd-less hosts — <span class="tok ok">PASS</span> via fallback, or a named UNRUNNABLE — and never a bare 127.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">A4</span><span class="pill p0">P0</span><span class="pill eff">XS</span><span class="pill info">cockpit-test</span></div>
+<h3>Fix the Cockpit agent-registry test's USER assumption</h3>
+<p><code>server/agent-registry.test.mjs</code> builds its ACP environment from <code>process.env</code> and throws <em>“environment USER must be a non-empty bounded string”</em> when <code>USER</code> is unset — common in containers and CI images. The production path (<code>server/index.mjs</code>) already filters empty vars correctly; the fixture should pass an explicit environment.</p>
+<div class="ev"><b>Evidence</b><code>npm run cockpit:check</code> 2026-08-05: 36/37 with USER unset; 37/37 with USER set.</div>
+<div class="proves"><b>Proves</b><span class="tok ok">cockpit:check</span> is green under <code>env -u USER</code>.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">A5</span><span class="pill p0">P0</span><span class="pill eff">S</span><span class="pill info">hygiene</span></div>
+<h3>Take the binary weight out of the repository</h3>
+<p><code>converge-brand-kit-v1.zip</code> (2.2 MB) is committed at the root and duplicates the extracted <code>brand-kit-v1/</code> beside it; <code>brand/</code> carries 13 MB and <code>docs/</code> 17 MB of binaries around a ~300 KB product; <code>.git</code> is 44 MB. Move heavy assets to release attachments or LFS, delete the duplicate zip, and keep the npm <code>files:</code> allowlist as the slim boundary it already is.</p>
+<div class="ev"><b>Evidence</b><code>du</code> audit 2026-08-05.</div>
+<div class="proves"><b>Proves</b>No committed archive duplicates a committed tree; a fresh clone lands under an agreed budget; CI's removed-asset needle check stays green.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">A6</span><span class="pill p0">P0</span><span class="pill eff">XS</span><span class="pill info">honesty</span></div>
+<h3>Refresh the numbers the docs claim</h3>
+<p>The README and the deck say <strong>52</strong> hermetic loop-kernel checks; the suite now proves <strong>57</strong>. Small, but this project's whole brand is that its claims carry receipts — stale numbers are the cheap version of the failure it exists to prevent. Sweep README, deck, and these documents after A1–A4 land.</p>
+<div class="ev"><b>Evidence</b><code>test-loop-kernel.sh</code> 2026-08-05: “PASS — 57 loop-kernel checks green.”</div>
+<div class="proves"><b>Proves</b>Documented counts match a fresh local run's output; ideally a claims-lint joins the version-unity family so drift fails the build.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC B -->
+<section id="eb">
+<div class="epic-head"><div class="bigletter">B</div><div>
+<h2>The CI eval-gate <span class="sub">— settlement moves to where merges happen.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · NEXT (0.2)</span><span class="chip">ROADMAP COMMITMENT</span><span class="chip">3 ITEMS</span><span class="chip mint">EXIT · A PR CANNOT MERGE ON A CLAIM</span></div>
+</div></div>
+<p class="intro">The roadmap names it: <em>“server-side re-verification of every green claim.”</em> Today the referee lives on laptops; a settlement layer that only runs client-side is advice, not enforcement. This epic puts the gate in the merge path — and it is the single highest-leverage strategic move in the backlog: it turns Converge from a method into infrastructure.</p>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">B1</span><span class="pill p0">P0</span><span class="pill eff">M</span><span class="pill info">action</span></div>
+<h3>The re-verification GitHub Action</h3>
+<p>On every PR touching <code>cvg/tasks/</code> or claiming settlement: re-verify the HMAC seal against the repo key, re-run the changed specs' evals in the runner, and publish one check with one token. The stub attack — a faked spec with hand-edited evals — must land RED <em>in CI</em>, not just locally.</p>
+<div class="ev"><b>Evidence</b>README §Status names the CI eval-gate as deliberately absent from 0.1.0; deck p27 lists it as roadmap.</div>
+<div class="proves"><b>Proves</b>Proposed <span class="tok au">EVAL_GATE=OK|FAIL</span> as a required check; a seeded stub-attack fixture PR shows the check RED.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">B2</span><span class="pill p1">P1</span><span class="pill eff">XS</span><span class="pill info">docs</span></div>
+<h3>The branch-protection recipe</h3>
+<p>Document the Git-native settlement pattern the FAQ already sketches: Actions as scheduler, the PR as settlement, branch protection as the gate — with the eval-gate check required. One page, copy-pasteable.</p>
+<div class="ev"><b>Evidence</b>README FAQ “What's the Manager?” names this trio as the intended orchestration substrate.</div>
+<div class="proves"><b>Proves</b>The converge repo itself enforces the recipe; the doc shows the exact protection settings.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">B3</span><span class="pill p1">P1</span><span class="pill eff">S</span><span class="pill info">action</span></div>
+<h3>The receipt &amp; provenance verifier</h3>
+<p>Extend the gate to the rest of the trust chain: verify the receipt hash chain (<code>cvg.execution-receipt.v1</code> pins spec sha, profile sha, eval digest) and re-hash Pass-4 provenance on PRs that touch plans — the same drift check <code>cvg review --check</code> runs, now server-side.</p>
+<div class="ev"><b>Evidence</b>Receipt format and provenance re-hash are shipped client-side (Complete Edition §14).</div>
+<div class="proves"><b>Proves</b>A PR that edits a settled receipt, or a plan after its review, goes RED with the drift named.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC C -->
+<section id="ec">
+<div class="epic-head"><div class="bigletter">C</div><div>
+<h2>The Manager <span class="sub">— fleet dispatch across the ready frontier.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · NEXT (0.2)</span><span class="chip">ROADMAP · TOP ITEM</span><span class="chip">2 ITEMS · 1 NODE</span><span class="chip mint">EXIT · N TASKS, N NAMED LANDINGS</span></div>
+</div></div>
+<p class="intro">The loop is single-task by design today; the Manager decides <em>which</em> task runs, when, in parallel, watching PRs. The design stance is already set — a Git-native world provides most of the orchestration (Actions as scheduler, PR as settlement) — so the Manager schedules <strong>around</strong> the loop rather than replacing it. Its safety story is inherited, not invented: every child is a normal bounded loop under a sealed spec and the write fence.</p>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">C1</span><span class="pill p1">P1</span><span class="pill node">XL · NODE</span><span class="pill info">orchestration</span></div>
+<h3>Frontier dispatch — the node</h3>
+<p>Never runnable; dispatches three children when scheduled: <strong>C1a</strong> the scheduler (consume <code>cvg ready</code>, cap concurrency, one loop per task in its own worktree) · <strong>C1b</strong> the locks (reuse <code>cvg transition</code>'s locked, logged moves so two dispatchers cannot claim one task) · <strong>C1c</strong> the steward (watch each opened PR; on CI red, requeue a bounded fix loop against the same sealed spec).</p>
+<div class="ev"><b>Evidence</b>README §Status: “the Manager … is next on the roadmap”; FAQ commits to the Git-native shape.</div>
+<div class="proves"><b>Proves</b>Proposed <span class="tok au">MANAGER=DISPATCHED|IDLE</span>; N ready tasks yield N terminal states with board parity intact and zero fence violations — proven first with stub engines, in the loop-kernel style.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">C2</span><span class="pill p2">P2</span><span class="pill eff">M</span><span class="pill info">cockpit</span></div>
+<h3>The fleet view in Cockpit</h3>
+<p>Surface the dispatch frontier and each child loop's live state (iteration, strikes, budget burn) in the existing Runs surface — still read-only, still one snapshot door, still zero frontend-derived truth.</p>
+<div class="ev"><b>Evidence</b>Cockpit's Runs surface and SSE bridge already render single-loop attempts.</div>
+<div class="proves"><b>Proves</b>Snapshot schema gains a versioned fleet block; the existing snapshot suite proves emitted = checked-in.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC D -->
+<section id="ed">
+<div class="epic-head"><div class="bigletter">D</div><div>
+<h2>Spec-layer interop <span class="sub">— ingest, don't compete.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · NEXT (0.2)</span><span class="chip">STRATEGIC BET</span><span class="chip">2 ITEMS</span><span class="chip mint">EXIT · OTHER SPECS COMPILE INTO SEALED SPECS</span></div>
+</div></div>
+<p class="intro">The spec-authoring layer is crowded and commoditizing; Converge's moat is the settlement layer beneath it — the seal, the fence, the bounded loop, the cross-family refute. So interoperate upward: accept what Spec Kit or Kiro produce as <em>input</em>, and let Converge be the layer that makes any of them enforceable.</p>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">D1</span><span class="pill p1">P1</span><span class="pill eff">M</span><span class="pill info">cli</span></div>
+<h3><code>cvg tasks import</code> — compile external specs to Task-Specs</h3>
+<p>Map an external spec's tasks onto scaffolded Task-Specs: goals and paths carried over, <strong>evals left TODO and the spec born <code>status: blocked</code></strong> until a human authors and seals them. The trust boundary is explicit: import accelerates authoring; it never auto-signs.</p>
+<div class="ev"><b>Evidence</b>Positioning review 2026-08-05: settlement is the defensible layer; authoring is commoditized.</div>
+<div class="proves"><b>Proves</b>Proposed <span class="tok au">IMPORT=OK</span>; imported specs fail <code>tasks gate</code> until evals exist — proven by a fixture round-trip suite.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">D2</span><span class="pill p1">P1</span><span class="pill eff">XS</span><span class="pill info">positioning</span></div>
+<h3>Make the FAST lane the front door</h3>
+<p>Reorder the story: README and quickstart lead with <code>cvg lane</code> + FAST (task → bind → loop on an existing repo, minutes to first sealed settlement); the full nine-pass descent is positioned as the high-assurance path for new systems and regulated work — not the default ask.</p>
+<div class="ev"><b>Evidence</b>The quickstart already runs FAST-shaped; ceremony-first framing is the main adoption headwind.</div>
+<div class="proves"><b>Proves</b>A newcomer path measured in minutes-to-first-<span class="tok ok">TASK_LOOP=SETTLED</span> on a toy repo, documented and CI-exercised via the clean-room suite.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC E -->
+<section id="ee">
+<div class="epic-head"><div class="bigletter">E</div><div>
+<h2>Distribution &amp; trust <span class="sub">— easier to get, harder to fake.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · LATER (0.3+)</span><span class="chip">4 ITEMS</span><span class="chip mint">EXIT · SIGNED, PUBLISHED, JOINABLE</span></div>
+</div></div>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">E1</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">packaging</span></div>
+<h3>Publish to the npm registry proper</h3>
+<p>Today the npm door is <code>github:</code> installs only. Publish the versioned unit to the registry (scoped name, provenance attestation), keeping the <code>files:</code> allowlist as the boundary.</p>
+<div class="ev"><b>Evidence</b>package.json installs via github: URL; no registry entry.</div>
+<div class="proves"><b>Proves</b><code>npm i -g</code> from the registry → <span class="tok ok">INSTALL=OK</span>; version-unity holds across the published artifact.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">E2</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">docs</span></div>
+<h3>Docs site on Pages</h3>
+<p>Serve the interactive set — the presentation walkthroughs, the Complete Edition v2, and this backlog — from GitHub Pages, so the canonical documents are a URL, not a checkout.</p>
+<div class="ev"><b>Evidence</b>All documents are standalone HTML already; only hosting is missing.</div>
+<div class="proves"><b>Proves</b>A Pages workflow publishes on release; links in README resolve.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">E3</span><span class="pill p2">P2</span><span class="pill eff">M</span><span class="pill info">crypto</span></div>
+<h3>Per-author signatures — the named upgrade</h3>
+<p>The trust ladder is honest about symmetric HMAC: tamper-evident, not tamper-proof, binding “a repo-key holder stamped this.” Ship the named upgrade — Ed25519/DSSE per-author signatures — as an opt-in Tier-1 strengthening, plus signed release artifacts.</p>
+<div class="ev"><b>Evidence</b>Complete Edition §14: “per-author signatures (Ed25519/DSSE) are the named upgrade.”</div>
+<div class="proves"><b>Proves</b>The gate verifies either seal form; a DSSE-signed spec attributes its signer; releases carry verifiable signatures.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">E4</span><span class="pill p2">P2</span><span class="pill eff">XS</span><span class="pill info">community</span></div>
+<h3>The contribution surface</h3>
+<p>CONTRIBUTING.md (the gauntlet is the review bar), issue and PR templates that ask for tokens-not-claims, and a handful of good first issues — this backlog has several.</p>
+<div class="ev"><b>Evidence</b>Single-maintainer repo; no contribution scaffolding yet.</div>
+<div class="proves"><b>Proves</b>Templates live under <code>.github/</code>; a first external PR lands through the gauntlet.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC F -->
+<section id="ef">
+<div class="epic-head"><div class="bigletter">F</div><div>
+<h2>Cockpit release gates <span class="sub">— the contract PROVING-GROUNDS.md already wrote.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · LATER (0.3+)</span><span class="chip">5 ITEMS</span><span class="chip mint">EXIT · ALL FOUR CASES ON SNAPSHOT 3.0</span></div>
+</div></div>
+<p class="intro">The Cockpit's own file states the bar: <em>“The application is release-ready only when all four cases have exercised the same WorkspaceSnapshot 3.0 contract without frontend-derived truth.”</em> These items are that sentence, made schedulable.</p>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">F1</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">proving-ground</span></div>
+<h3>Rerun uc-01 against WorkspaceSnapshot 3.0</h3>
+<p>The prior V0 observation is not current release evidence. Rerun the analytics-engineering FULL-lane case against the 3.0 contract; Cockpit shows whatever the fresh CLI snapshot reports — it must not synthesize lifecycle data.</p>
+<div class="ev"><b>Evidence</b><code>apps/cockpit/PROVING-GROUNDS.md</code>: gate “Open — dated rerun and owner review required.”</div>
+<div class="proves"><b>Proves</b>A dated rerun + owner review recorded in PROVING-GROUNDS.md; the gate row flips.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">F2</span><span class="pill p2">P2</span><span class="pill eff">M</span><span class="pill info">proving-ground</span></div>
+<h3>Stand up uc-02 / uc-03 / uc-04</h3>
+<p>Data-engineering (NORMAL), software-engineering (NORMAL), and AI-engineering (FAST + failure paths) proving workspaces — the failure-path case matters most: the Cockpit must render BLOCKED and REFUTED as first-class, not as gaps.</p>
+<div class="ev"><b>Evidence</b>PROVING-GROUNDS.md: three cases “Not run — no proving-ground workspace present.”</div>
+<div class="proves"><b>Proves</b>Three dated case runs on Snapshot 3.0, each with owner review recorded.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">F3</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">ask-path</span></div>
+<h3>The authorized provider smoke test</h3>
+<p>One explicitly authorized provider turn through Ask, with before/after workspace hashes proving read-only held, and owner review of the provider-data and retention boundary.</p>
+<div class="ev"><b>Evidence</b>PROVING-GROUNDS.md names this as the missing sign-off beside the hermetic fake-agent suites.</div>
+<div class="proves"><b>Proves</b>Before-hash = after-hash across the turn; the review is recorded.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">F4</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">upstream</span></div>
+<h3>Unblock Codex in Ask — adapter isolation</h3>
+<p>Codex stays statically blocked before spawn because the pinned ACP adapter cannot suppress its local read/search tools. Track the upstream adapter; lift the block only when context isolation is provable in the fake-agent suite.</p>
+<div class="ev"><b>Evidence</b>README + Cockpit docs: “Codex choice visible but blocked pending adapter isolation.”</div>
+<div class="proves"><b>Proves</b>The isolation test that today proves the block instead proves the suppression; the static block is removed in the same change.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">F5</span><span class="pill p2">P2</span><span class="pill eff">XS</span><span class="pill info">release</span></div>
+<h3>Ship Cockpit in the package</h3>
+<p>When F1–F4 are green: include the Cockpit in the published unit and retire the one-release <code>control-room:*</code> aliases — restating the dependency claim honestly (the CLI stays zero-dependency; the Cockpit is the optional Node surface).</p>
+<div class="ev"><b>Evidence</b>README: “not included … while the live proving-ground cases are still being completed.”</div>
+<div class="proves"><b>Proves</b>The package ships it; README's claim and <code>files:</code> agree; blocked-by edges F1–F4 all closed.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC G -->
+<section id="eg">
+<div class="epic-head"><div class="bigletter">G</div><div>
+<h2>Verification depth <span class="sub">— close the gaps the docs already admit.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · LATER (0.3+)</span><span class="chip">4 ITEMS</span><span class="chip mint">EXIT · THE HONEST FOOTNOTES RETIRE</span></div>
+</div></div>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">G1</span><span class="pill p2">P2</span><span class="pill eff">M</span><span class="pill info">portability</span></div>
+<h3><code>cvg lint</code> on bash 3.2 — close the declared gap</h3>
+<p>The CHANGELOG says it plainly: the lint uses associative arrays, the portability floor is 3.2, and “the real fix is a bash-3.2 rewrite or dropping the floor.” Rewrite the cycle/overlap checks floor-clean so stock macOS gets a real verdict instead of <span class="tok bad">LINT=UNSUPPORTED</span>.</p>
+<div class="ev"><b>Evidence</b>CHANGELOG [Unreleased] §Documented: “The gap itself is open.”</div>
+<div class="proves"><b>Proves</b><span class="tok ok">LINT=OK|WARN|ISSUES</span> on the macOS 3.2 CI leg; UNSUPPORTED retires from the token grammar.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">G2</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">loop</span></div>
+<h3>Close the worktree resume gap</h3>
+<p>The canonical presentation carries the caveat: “default worktree resume gap may restart attempt 1.” A resumed run must continue at attempt N+1 with its strike counter and fingerprint intact — anything else quietly refunds spent budget.</p>
+<div class="ev"><b>Evidence</b><code>presentation/converge.html</code> §12, resume command annotation.</div>
+<div class="proves"><b>Proves</b>A loop-kernel row: kill at attempt 2, <code>--resume</code>, observe attempt 3 with state.env continuity — in worktree mode.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">G3</span><span class="pill p2">P2</span><span class="pill eff">S</span><span class="pill info">holdout</span></div>
+<h3>Holdout authoring aids</h3>
+<p>The holdout is the highest-leverage anti-reward-hacking device in the chain, and today it is hand-rolled. Ship templates and an authoring checklist in the task-spec skill, and a gate WARN when a High-blast-radius spec carries no <code>## Holdout</code>.</p>
+<div class="ev"><b>Evidence</b>The REFUTED production case was caught by a holdout; blast-radius rules are already computed.</div>
+<div class="proves"><b>Proves</b>The WARN fires on a High spec without holdout in the fixture suite; templates ship in the skill's references.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">G4</span><span class="pill p3">P3</span><span class="pill eff">M</span><span class="pill info">judging</span></div>
+<h3>The judge panel — diversity over redundancy</h3>
+<p><code>cvg verify --panel</code>: N judges with distinct lenses (correctness, security, does-it-reproduce), refutation-majority semantics, per-lens verdicts recorded in the receipt. One judge catches one failure mode; a diverse panel catches the ones redundancy can't.</p>
+<div class="ev"><b>Evidence</b>Single-judge tier-2 is shipped; 2026 verification literature favors lens-diverse refutation.</div>
+<div class="proves"><b>Proves</b>Panel verdicts recorded per lens; a seeded plausible-but-wrong fixture is REFUTED by the panel where the single judge upholds.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ EPIC H -->
+<section id="eh">
+<div class="epic-head"><div class="bigletter">H</div><div>
+<h2>Platform breadth <span class="sub">— more engines, more boards, more hosts.</span></h2>
+<div class="chips"><span class="chip gold">HORIZON · LATER (0.3+)</span><span class="chip">3 ITEMS</span><span class="chip mint">EXIT · WIDER, SAME GATES</span></div>
+</div></div>
+<div class="items">
+<article class="item">
+<div class="row"><span class="id">H1</span><span class="pill p3">P3</span><span class="pill eff">S</span><span class="pill info">engine</span></div>
+<h3>Gemini engine adapter</h3>
+<p>One file, two calls — <code>--available</code> and <code>--prompt-file</code> — and the cross-family pool for Pass 4 and tier-2 grows by a vendor. Engines are adapters by construction; this is the proof by example.</p>
+<div class="ev"><b>Evidence</b>Pass-4 dispatch already names Gemini as an adversary family; no adapter ships.</div>
+<div class="proves"><b>Proves</b><code>cvg doctor</code> counts family <em>google</em>; the loop settles a stub task via the new adapter file, kernel unchanged.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">H2</span><span class="pill p3">P3</span><span class="pill eff">M</span><span class="pill info">tracker</span></div>
+<h3>Jira adapter to parity</h3>
+<p>Bring the Jira adapter through the same six-verb, fake-backed parity suite that proves Linear and GitHub offline — 145 checks, no network, no credentials.</p>
+<div class="ev"><b>Evidence</b>Register names Linear / GitHub / Jira; the offline parity suite is the bar.</div>
+<div class="proves"><b>Proves</b>The register suite passes with the Jira adapter under the fake, verb for verb.</div>
+</article>
+<article class="item">
+<div class="row"><span class="id">H3</span><span class="pill p3">P3</span><span class="pill eff">L</span><span class="pill info">host</span></div>
+<h3>Windows beyond Git Bash</h3>
+<p>Today Windows means Git Bash or WSL, documented honestly. Decide the native story deliberately — a supported PowerShell shim for the referee, or a documented WSL-first stance — rather than by silence.</p>
+<div class="ev"><b>Evidence</b>README requirements: “run everything in Git Bash or WSL.”</div>
+<div class="proves"><b>Proves</b>A decision record (ADR) plus, if native: doctor-host probes for the Windows toolchain and a CI leg to hold it.</div>
+</article>
+</div>
+</section>
+
+<!-- ============================================================ MASTER -->
+<section id="master">
+<div class="section-head"><span class="num">04</span><h2>The master table. <span>Every item, one line each.</span></h2></div>
+<div class="tablebox"><div class="scroll"><table>
+<thead><tr><th>ID</th><th>Item</th><th>Effort</th><th>Priority</th><th>Horizon</th><th>Blocked by</th></tr></thead>
+<tbody>
+<tr><td><strong>A1</strong></td><td>CI execution outage — diagnose &amp; fix</td><td>S</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>—</td></tr>
+<tr><td><strong>A2</strong></td><td>doctor-host suite portability (apt shellcheck)</td><td>XS</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>—</td></tr>
+<tr><td><strong>A3</strong></td><td>hmac-envelope xxd guard</td><td>XS</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>—</td></tr>
+<tr><td><strong>A4</strong></td><td>Cockpit agent-registry USER fixture</td><td>XS</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>—</td></tr>
+<tr><td><strong>A5</strong></td><td>Repo binary weight out (zip dup, heavy assets)</td><td>S</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>—</td></tr>
+<tr><td><strong>A6</strong></td><td>Claims refresh (52 → 57 et al.)</td><td>XS</td><td><span class="pill p0">P0</span></td><td>NOW</td><td>A1–A4</td></tr>
+<tr><td><strong>B1</strong></td><td>Re-verification GitHub Action (the eval-gate)</td><td>M</td><td><span class="pill p0">P0</span></td><td>NEXT</td><td>A1</td></tr>
+<tr><td><strong>B2</strong></td><td>Branch-protection recipe</td><td>XS</td><td><span class="pill p1">P1</span></td><td>NEXT</td><td>B1</td></tr>
+<tr><td><strong>B3</strong></td><td>Receipt &amp; provenance verifier</td><td>S</td><td><span class="pill p1">P1</span></td><td>NEXT</td><td>B1</td></tr>
+<tr><td><strong>C1</strong></td><td>Frontier dispatch — node (C1a scheduler · C1b locks · C1c steward)</td><td>XL</td><td><span class="pill p1">P1</span></td><td>NEXT</td><td>B1</td></tr>
+<tr><td><strong>C2</strong></td><td>Fleet view in Cockpit</td><td>M</td><td><span class="pill p2">P2</span></td><td>NEXT</td><td>C1</td></tr>
+<tr><td><strong>D1</strong></td><td><code>cvg tasks import</code> — external specs in</td><td>M</td><td><span class="pill p1">P1</span></td><td>NEXT</td><td>—</td></tr>
+<tr><td><strong>D2</strong></td><td>FAST lane as the front door</td><td>XS</td><td><span class="pill p1">P1</span></td><td>NEXT</td><td>—</td></tr>
+<tr><td><strong>E1</strong></td><td>npm registry publish + provenance</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>E2</strong></td><td>Docs site on Pages</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>E3</strong></td><td>Ed25519/DSSE per-author signatures + signed releases</td><td>M</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>E4</strong></td><td>Contribution surface</td><td>XS</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>F1</strong></td><td>uc-01 rerun on Snapshot 3.0</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>A4</td></tr>
+<tr><td><strong>F2</strong></td><td>uc-02 / uc-03 / uc-04 proving workspaces</td><td>M</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>F3</strong></td><td>Authorized provider smoke test</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>F4</strong></td><td>Codex ACP isolation unblock</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>upstream</td></tr>
+<tr><td><strong>F5</strong></td><td>Ship Cockpit in the package</td><td>XS</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>F1–F4</td></tr>
+<tr><td><strong>G1</strong></td><td><code>cvg lint</code> bash-3.2 rewrite</td><td>M</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>G2</strong></td><td>Worktree resume gap</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>G3</strong></td><td>Holdout authoring aids + WARN</td><td>S</td><td><span class="pill p2">P2</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>G4</strong></td><td>The judge panel (lens diversity)</td><td>M</td><td><span class="pill p3">P3</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>H1</strong></td><td>Gemini engine adapter</td><td>S</td><td><span class="pill p3">P3</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>H2</strong></td><td>Jira adapter to parity</td><td>M</td><td><span class="pill p3">P3</span></td><td>LATER</td><td>—</td></tr>
+<tr><td><strong>H3</strong></td><td>Windows beyond Git Bash</td><td>L</td><td><span class="pill p3">P3</span></td><td>LATER</td><td>—</td></tr>
+</tbody></table></div></div>
+<div class="callout steel">C1's three children (C1a–C1c) are counted inside the node, Task-Spec style — an XL is never runnable and only its children dispatch. 31 items total: 28 rows here plus the three children the node will cut.</div>
+</section>
+
+<!-- ============================================================ METHOD -->
+<section id="method">
+<div class="section-head"><span class="num">05</span><h2>Backlog → Task-Specs. <span>This document is upstream of Pass 5, on purpose.</span></h2></div>
+<p class="intro">This backlog sits at plan altitude — the same altitude as swimlane legs: one responsibility, a proves-line, no eval bodies. Scheduling an item means walking it through the factory's own front half, not around it:</p>
+<div class="terminal">$ cvg lane "fix the doctor-host suite portability"     <span style="color:var(--muted)"># → FAST</span>
+$ cvg tasks new fix-doctor-host-portability XS         <span style="color:var(--muted)"># scaffold — evals FIRST</span>
+<span style="color:var(--muted)"># author the evals from this item's “proves” line, then:</span>
+$ cvg tasks validate cvg/tasks/T-*.md
+$ cvg tasks gate --stamp cvg/tasks/T-*.md              <span style="color:var(--gold)">VERDICT: DELEGATE · TIER=1</span>
+$ cvg bind --task cvg/tasks/T-*.md && cvg loop --issue T-… --agent codex
+<span style="color:var(--mint)">TASK_LOOP=SETTLED</span>                                      <span style="color:var(--muted)"># the item leaves this page</span></div>
+<div class="grid2">
+<article class="card mint"><div class="label mint">The exit criterion for this whole document</div><p>Every P0 item settled through the loop with its token green, the eval-gate required on <code>main</code>, and the README's status section describing a state that a stranger can re-measure. At that point this backlog regenerates from the board — it stops being a file and becomes a query.</p></article>
+<article class="card"><div class="label">Provenance of this backlog</div><p>Compiled 2026-08-05 from: the GitHub Actions API (A1), local runs of all 22 suites (A2–A4, A6), a du audit (A5), README §Status and FAQ (B, C), <code>apps/cockpit/PROVING-GROUNDS.md</code> (F), CHANGELOG [Unreleased] (G1), <code>presentation/converge.html</code> §12 (G2), the Complete Edition's trust ladder (E3), and the 2026-08-05 positioning review (D). Where an item's need was measured, the measurement is quoted on the item.</p></article>
+</div>
+</section>
+
+<footer class="footer">CONVERGE · THE BACKLOG · v0.1.0 → 0.3 — evals first, even here · every item names the gate that will prove it
+<div class="crosslinks"><a class="tool" href="converge-complete-v2.html">The Complete Edition v2</a><a class="tool" href="../presentation/converge.html">Method walkthrough</a><a class="tool" href="../presentation/task-spec.html">Task-Spec</a></div></footer>
+</main></div>
+
+<script type="module">
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const shells=[...document.querySelectorAll(".diagram-shell")];
+const api=new Map();
+function normalize(svg){if(svg?.viewBox?.baseVal){svg.style.width=`${svg.viewBox.baseVal.width}px`;svg.style.height=`${svg.viewBox.baseVal.height}px`;svg.style.maxWidth="none"}}
+function syncExpandControl(btn){const shell=btn.closest(".diagram-shell"),on=shell.classList.contains("expanded");btn.setAttribute("aria-label",on?"Exit full screen":"Full screen");btn.title=btn.getAttribute("aria-label");btn.setAttribute("aria-expanded",String(on))}
+shells.forEach((shell,i)=>{
+const viewport=shell.querySelector(".mermaid-viewport"),canvas=shell.querySelector(".mermaid-canvas");
+let scale=1,x=0,y=0,drag=false,px=0,py=0;
+const apply=()=>canvas.style.transform=`translate(${x}px,${y}px) scale(${scale})`;
+const fit=()=>{const svg=canvas.querySelector("svg");if(!svg)return;normalize(svg);const vb=svg.viewBox.baseVal,w=vb.width||svg.getBoundingClientRect().width,h=vb.height||svg.getBoundingClientRect().height;scale=clamp(Math.min((viewport.clientWidth-36)/w,(viewport.clientHeight-36)/h),.05,2);x=(viewport.clientWidth-w*scale)/2;y=(viewport.clientHeight-h*scale)/2;apply()};
+api.set(shell,{canvas,fit});
+requestAnimationFrame(fit);
+viewport.addEventListener("pointerdown",e=>{drag=true;px=e.clientX;py=e.clientY;viewport.setPointerCapture(e.pointerId)});
+viewport.addEventListener("pointermove",e=>{if(!drag)return;x+=e.clientX-px;y+=e.clientY-py;px=e.clientX;py=e.clientY;apply()});
+viewport.addEventListener("pointerup",()=>drag=false);viewport.addEventListener("pointercancel",()=>drag=false);
+viewport.addEventListener("wheel",e=>{e.preventDefault();const r=viewport.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,d=e.deltaY<0?1.12:.9,ns=clamp(scale*d,.05,6);x=mx-(mx-x)*(ns/scale);y=my-(my-y)*(ns/scale);scale=ns;apply()},{passive:false});
+shell.querySelector("[data-zoom]").addEventListener("click",()=>{scale=clamp(scale*.82,.05,6);apply()});
+shell.querySelector("[data-reset]").addEventListener("click",()=>{scale=1;x=18;y=18;apply()});
+shell.querySelector("[data-fit]").addEventListener("click",fit);
+const ex=shell.querySelector("[data-expand]");ex.addEventListener("click",()=>{shell.classList.toggle("expanded");document.body.style.overflow=shell.classList.contains("expanded")?"hidden":"";syncExpandControl(ex);requestAnimationFrame(fit)});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&shell.classList.contains("expanded")){shell.classList.remove("expanded");document.body.style.overflow="";syncExpandControl(ex);requestAnimationFrame(fit)}});
+new ResizeObserver(()=>{if(!drag)fit()}).observe(viewport);
+const caption=shell.querySelector("figcaption");if(caption){caption.id||=`dcap-${i+1}`;viewport.id||=`dvp-${i+1}`;viewport.setAttribute("role","img");viewport.setAttribute("aria-labelledby",caption.id)}
+});
+const bar=document.querySelector(".progress");addEventListener("scroll",()=>{const h=document.documentElement,p=h.scrollTop/(h.scrollHeight-h.clientHeight);bar.style.width=`${p*100}%`},{passive:true});
+const links=[...document.querySelectorAll(".toc a")],map=new Map(links.map(a=>[a.hash.slice(1),a]));
+const spy=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove("active"));const a=map.get(e.target.id);if(a){a.classList.add("active");}}})},{rootMargin:"-10% 0px -78% 0px"});
+document.querySelectorAll("main section[id]").forEach(s=>spy.observe(s));
+document.querySelector("[data-print]")?.addEventListener("click",()=>print());
+// The diagrams above are pre-rendered at build time, so the page is complete offline.
+// When the mermaid CDN is reachable, re-render live so the sources stay editable.
+try{
+const mermaid=(await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")).default;
+const rs=getComputedStyle(document.documentElement),dark=true;
+mermaid.initialize({startOnLoad:false,securityLevel:"loose",theme:"base",fontFamily:"Avenir Next, Inter, sans-serif",themeVariables:{darkMode:dark,background:rs.getPropertyValue("--panel").trim(),primaryColor:dark?"#1a2330":"#efe9db",primaryTextColor:rs.getPropertyValue("--ink").trim(),primaryBorderColor:rs.getPropertyValue("--gold").trim(),lineColor:rs.getPropertyValue("--muted").trim(),secondaryColor:dark?"#2a2210":"#f3e7cd",tertiaryColor:rs.getPropertyValue("--raised").trim(),clusterBkg:dark?"#0c1219":"#f3efe5",clusterBorder:rs.getPropertyValue("--line2").trim(),edgeLabelBackground:rs.getPropertyValue("--panel").trim(),noteBkgColor:rs.getPropertyValue("--raised").trim(),noteTextColor:rs.getPropertyValue("--muted").trim(),noteBorderColor:rs.getPropertyValue("--line2").trim(),actorBkg:dark?"#1a2330":"#efe9db",actorBorder:rs.getPropertyValue("--gold").trim(),actorTextColor:rs.getPropertyValue("--ink").trim(),signalColor:rs.getPropertyValue("--muted").trim(),signalTextColor:rs.getPropertyValue("--ink").trim(),labelBoxBkgColor:dark?"#2a2210":"#f3e7cd",labelBoxBorderColor:rs.getPropertyValue("--gold").trim(),labelTextColor:rs.getPropertyValue("--ink").trim(),loopTextColor:rs.getPropertyValue("--ink").trim(),activationBkgColor:dark?"#2a2210":"#f3e7cd",activationBorderColor:rs.getPropertyValue("--gold").trim()}});
+for(let i=0;i<shells.length;i++){const shell=shells[i],src=shell.querySelector(".diagram-source").textContent.trim();try{const {svg}=await mermaid.render(`cvg-live-${i}`,src);const a=api.get(shell);a.canvas.innerHTML=svg;normalize(a.canvas.querySelector("svg"));requestAnimationFrame(a.fit)}catch(e){}}
+}catch(e){/* offline — the embedded build-time render stays */}
+</script>
+</body>
+</html>
