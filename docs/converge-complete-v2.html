@@ -150,7 +150,31 @@ td code{white-space:nowrap}
 @media(max-width:960px){.layout{display:block;padding:18px 14px}.toc{position:sticky;top:0;z-index:20;display:flex;gap:4px;overflow-x:auto;max-height:none;margin:0 -14px 18px;padding:9px 14px;background:var(--bg);border-bottom:1px solid var(--line)}.toc strong{display:none}.toc a{flex:0 0 auto;border:1px solid var(--line);border-bottom:2px solid transparent;border-radius:6px;white-space:nowrap}.toc a.active{border-left-color:var(--line);border-bottom-color:var(--gold)}section{scroll-margin-top:54px}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4,.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.mermaid-viewport{height:340px}.pass-head{grid-template-columns:56px 1fr;gap:12px}.pass-head .bignum{font-size:52px}}
 @media(max-width:580px){h1{font-size:44px}.lead{font-size:15.5px}.kpis,.grid2,.grid3,.grid4{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.diagram-shell figcaption{display:block;padding-right:140px}.mermaid-viewport{height:300px}.terminal{font-size:10.5px}.edition{display:none}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-@media print{.toc,.progress,.tools,.diagram-controls,.skip{display:none!important}.layout{display:block;padding:0}.diagram-shell,.card,.callout,.tablebox,.win,.refusal{break-inside:avoid}.mermaid-viewport{height:420px}.diagram-shell.tall .mermaid-viewport{height:640px}body{background:none}}
+@page{size:A4 landscape;margin:9mm 10mm 13mm;
+  @bottom-left{content:"CONVERGE · THE COMPLETE EDITION v2 · v0.1.0";font:600 7.5px Menlo,monospace;letter-spacing:1.5px;color:#8d99a6}
+  @bottom-right{content:counter(page) " / " counter(pages);font:600 8.5px Menlo,monospace;letter-spacing:1px;color:#f3b64c}}
+@media print{
+*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+.toc,.progress,.tools,.diagram-controls,.skip{display:none!important}
+body{background-color:var(--bg)!important;font-size:12.8px}
+.layout{display:block;max-width:none;padding:0}
+header.doc{display:flex;flex-direction:column;justify-content:center;min-height:82vh;padding:0}
+section{break-before:page;padding-top:10px;scroll-margin-top:0}
+.section-head,.pass-head,.epic-head{break-after:avoid;break-inside:avoid}
+.diagram-shell,.card,.callout,.win,.refusal,.item,.kpi,.step,.keyline,.terminal{break-inside:avoid}
+h3{break-after:avoid}
+.tablebox{break-inside:auto}
+tr{break-inside:avoid}
+.mermaid-viewport{height:auto!important;overflow:visible!important;background:none!important;cursor:default}
+.mermaid-canvas{position:static!important;transform:none!important;width:auto!important;height:auto!important;display:flex;justify-content:center}
+.mermaid-canvas svg{width:100%!important;height:auto!important;max-height:152mm!important}
+.diagram-shell.expanded{position:static;inset:auto;box-shadow:none}
+.scroll{overflow:visible}
+.terminal{white-space:pre-wrap;word-break:break-word}
+table{font-size:11.5px}
+a{color:inherit;text-decoration:none}
+.footer{break-inside:avoid}
+}
 </style>
 </head>
 <body>
