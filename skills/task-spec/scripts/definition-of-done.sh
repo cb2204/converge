@@ -3,7 +3,7 @@
 # matrix, and gate on it. The 2026 agent-spec SOTA (Brodner, Moai, Thread AI, Nimbalyst)
 # converges on ONE highest-value artifact: a reviewable "every acceptance criterion →
 # its verifying eval → result" matrix, so "is this done?" is answerable in seconds and
-# an agent cannot stop early. cvg already carries the data (Behavior B-N + the Validation
+# an agent cannot stop early. taskspec already carries the data (Behavior B-N + the Validation
 # Card's `verifies:` mapping); this surfaces it and makes an untraced behavior FAIL.
 #
 # Usage: definition-of-done.sh <task-spec.md>
@@ -16,7 +16,7 @@ set -euo pipefail
 # --version). Source the shared lib only for ts_version_flag / TASKSPEC_VERSION;
 # the analysis itself remains Python-stdlib.
 _DOD_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$_DOD_LIB"
 ts_version_flag "$@"
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kurv-edp.local/schemas/task-spec/v2.1.1/agent-contract.schema.json",
+  "$id": "https://taskspec.dev/schema/v2.1.1/agent-contract.schema.json",
   "title": "Task-Spec Validation Card v2.1.1",
   "description": "Schema for the YAML validation_card block of a Task-Spec v2.1.1 file. Includes success_criteria, retry_policy, and agent_contract (v2).",
   "type": "object",

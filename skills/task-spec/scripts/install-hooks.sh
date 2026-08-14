@@ -10,7 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
@@ -30,36 +30,24 @@ mkdir -p "$HOOK_DIR"
 cat > "$PRE_COMMIT" << 'HOOK'
 #!/usr/bin/env bash
 # pre-commit hook — task-spec state enforcement
-# Auto-installed by .claude/skills/task-spec/scripts/install-hooks.sh
+# Auto-installed by taskspec.
 
 set -euo pipefail
 
 # Only run if task files are being committed
-# Match the bare layout AND the cvg/ workspace layout (any depth), so the hook
-# fires in a nested workspace too.
+# Match Task-Spec files at any repository depth.
 if git diff --cached --name-only | grep -qE '(^|/)tasks/(queue/|done/|parked/)?T-.*\.md$'; then
   REPO_ROOT="$(git rev-parse --show-toplevel)"
-  SKILL_DIR=""
-  for candidate in \
-    "$REPO_ROOT/.agents/skills/task-spec/scripts" \
-    "$REPO_ROOT/.claude/skills/task-spec/scripts"; do
-    if [[ -f "$candidate/rebuild-state.sh" ]]; then
-      SKILL_DIR="$candidate"
-      break
-    fi
-  done
-
-  if [[ -f "$SKILL_DIR/rebuild-state.sh" ]]; then
-    if [[ -d "$REPO_ROOT/cvg/tasks" ]]; then
-      TASKSPEC_BACKLOG_DIR="$REPO_ROOT/cvg/tasks"
-    else
-      TASKSPEC_BACKLOG_DIR="$REPO_ROOT/tasks"
-    fi
+  if command -v taskspec >/dev/null 2>&1; then
+    TASKSPEC_BACKLOG_DIR="$REPO_ROOT/tasks"
     export TASKSPEC_BACKLOG_DIR
-    bash "$SKILL_DIR/rebuild-state.sh"
+    taskspec rebuild-state
     if [[ -f "$TASKSPEC_BACKLOG_DIR/_state.yaml" ]]; then
       git add "$TASKSPEC_BACKLOG_DIR/_state.yaml"
     fi
+  else
+    echo "task-spec: taskspec is not on PATH; derived state was not refreshed" >&2
+    exit 1
   fi
 fi
 HOOK

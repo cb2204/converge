@@ -15,7 +15,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 ts_require_bash4 "$@"

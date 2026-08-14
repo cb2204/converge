@@ -16,7 +16,7 @@ set -euo pipefail
 
 # Source shared lib (TASKSPEC_VERSION, ts_version_flag, ts_die)
 _LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$_LIB"
 
 # Handle --version uniformly across all task-spec scripts
@@ -96,6 +96,14 @@ if ! ts_size_is_leaf "$EFFORT"; then
   echo "      the worker dispatches the children (leaves), never the node. See references/concepts/effort-gate.md" >&2
 fi
 
+CHILDREN_FIELD=""
+TOUCHES_PATHS_FIELD="touches_paths:
+  - {{TODO: path/to/file}}"
+if ! ts_size_is_leaf "$EFFORT"; then
+  CHILDREN_FIELD="children: []  # fill with at least $(ts_size_min_children "$EFFORT") child Task-Spec ids"
+  TOUCHES_PATHS_FIELD="touches_paths: []"
+fi
+
 case "$PROFILE" in
   lite|standard|full) ;;
   *)
@@ -140,7 +148,8 @@ ts_render_template "$TEMPLATE" "$TARGET" \
   ID "$ID" TITLE "{{TODO: one-line title in imperative voice}}" \
   STATUS "$STATUS" PROFILE "$PROFILE" EFFORT "$EFFORT" \
   BUDGET_ITERATIONS 15 AGENT "$AGENT" DEPENDS_ON "[]" \
-  TOUCHES_PATHS_YAML "  - {{TODO: path/to/file}}" SOURCE_NOTE "$SOURCE_NOTE" \
+  CHILDREN_FIELD "$CHILDREN_FIELD" TOUCHES_PATHS_FIELD "$TOUCHES_PATHS_FIELD" \
+  SOURCE_NOTE "$SOURCE_NOTE" \
   CREATED "$CREATED" TAGS "[]" \
   WHY_ONE_PARAGRAPH "{{TODO: 1-2 sentence why}}" \
   GOAL_ONE_PARAGRAPH "{{TODO: concrete success in one paragraph}}" \
@@ -178,9 +187,9 @@ echo "       || echo 0); [ \"\$count\" -eq 0 ]')"
 echo "     - anti-patterns + do-not-touch"
 echo ""
 echo "  2. VALIDATE (pre-gate structural linter — does NOT stamp signed_off):"
-echo "     bash $SKILL_DIR/scripts/validate-task-spec.sh $TARGET"
+echo "     bash $SKILL_DIR/src/gate/validate-task-spec.sh $TARGET"
 echo ""
-echo "Next: bash $SKILL_DIR/scripts/safe-to-delegate.sh --stamp $TARGET"
+echo "Next: bash $SKILL_DIR/src/gate/safe-to-delegate.sh --stamp $TARGET"
 echo ""
 echo "     The gate is THE only path to signed_off:true. Hand-stamping the"
 echo "     signed_off field is rejected by the structural sign-off envelope check."

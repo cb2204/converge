@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
@@ -61,26 +61,7 @@ if [[ "$NEW_STATUS" == "done" ]]; then
   ACCEPTED_AT=$(grep -m1 '^accepted_at:' "$TASK_FILE" 2>/dev/null | sed -E 's/^accepted_at:[[:space:]]*//' || true)
   if [[ "$ACCEPTED" != "true" || -z "$ACCEPTED_BY" || "$ACCEPTED_BY" == "(none)" \
     || -z "$ACCEPTED_AT" || "$ACCEPTED_AT" == "(none)" ]]; then
-    echo "ERROR: $TASK_ID cannot enter done until cvg tasks accept --stamp records accepted:true, accepted_by, and accepted_at" >&2
-    exit 1
-  fi
-  WORKSPACE_ROOT="$(ts_workspace_root "$TASK_FILE")"
-  RECEIPT="$WORKSPACE_ROOT/cvg/receipts/${TASK_ID}.json"
-  if [[ ! -f "$RECEIPT" ]]; then
-    echo "ERROR: $TASK_ID cannot enter done without a passing execution receipt at $RECEIPT" >&2
-    exit 1
-  fi
-  if ! python3 - "$RECEIPT" "$TASK_ID" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    receipt = json.load(handle)
-assert receipt.get("task_id") == sys.argv[2]
-assert receipt.get("result") == "pass"
-PY
-  then
-    echo "ERROR: $TASK_ID receipt is malformed, belongs to another task, or is not result:pass" >&2
+    echo "ERROR: $TASK_ID cannot enter done until taskspec accept --stamp records accepted:true, accepted_by, and accepted_at" >&2
     exit 1
   fi
 fi

@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
@@ -26,7 +26,9 @@ DATE="$(date +%Y%m%d-%H%M%S)"
 REPO_NAME="$(basename "$(pwd)")"
 ARCHIVE="${DEST_DIR}/backlog-${REPO_NAME}-${DATE}.tar.gz"
 
-tar czf "$ARCHIVE" tasks/
+BACKLOG_PARENT="$(cd "$(dirname "$TASKSPEC_BACKLOG_DIR")" && pwd)"
+BACKLOG_NAME="$(basename "$TASKSPEC_BACKLOG_DIR")"
+tar -C "$BACKLOG_PARENT" -czf "$ARCHIVE" "$BACKLOG_NAME"
 
 # Cleanup: keep last 30 days
 find "$DEST_DIR" -name "backlog-${REPO_NAME}-*.tar.gz" -mtime +30 -delete 2>/dev/null || true

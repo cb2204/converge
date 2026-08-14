@@ -1,124 +1,89 @@
-#!/bin/bash
-# test-effort-sizing.sh — the six-tier effort gate (v3.4, tasks-all-the-way-down).
-# Proves, discriminating:
-#   · each LEAF tier (XS/S/M/L) validates within its write-surface budget
-#   · a mis-sized leaf still validates but WARNS (budgets expose coarse decomposition)
-#   · L requires execution_backend: glm
-#   · an XL/XXL NODE without enough children FAILS (must decompose — no SDD escape)
-#   · an XL/XXL NODE with children validates as a composition unit
-#   · an unknown size FAILS
-# The size dimension is isolated: every fixture is otherwise a valid profile: lite spec.
-# bash 3.2-safe. Uses --skip-touches-paths so synthetic paths need not exist on disk.
+#!/usr/bin/env bash
+# Six-tier effort contract: leaves are runnable; XL/XXL are composition nodes.
 set -u
-HERE="$(cd "$(dirname "$0")" && pwd)"
-VAL="$HERE/../scripts/validate-task-spec.sh"
-TOTAL=0; FAILED=0
-pass() { printf 'ok    %-22s (exit %s)\n' "$1" "$2"; }
-fail() { printf 'FAIL  %-22s %s\n' "$1" "$2"; FAILED=$((FAILED + 1)); }
 
-# mkspec <file> <effort> <touches-csv> <creates-csv> <children-csv> <backend>
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VALIDATE="$ROOT/scripts/validate-task-spec.sh"
+TOTAL=0
+FAILED=0
+
+pass() { printf 'ok    %-28s\n' "$1"; }
+fail() { printf 'FAIL  %-28s %s\n' "$1" "$2" >&2; FAILED=$((FAILED + 1)); }
+
 mkspec() {
-  local f="$1" eff="$2" tou="$3" cre="$4" chi="$5" be="${6:-any}" slug p c
-  slug="$(printf '%s' "$eff" | tr '[:upper:]' '[:lower:]' | tr -cd '[:lower:]')"; [ -n "$slug" ] || slug="x"
+  local file="$1" effort="$2" touches="$3" creates="$4" children="$5" backend="$6"
+  local slug path child
+  slug="$(printf '%s' "$effort" | tr '[:upper:]' '[:lower:]' | tr -cd '[:lower:]')"
+  [ -n "$slug" ] || slug="unknown"
   {
-    printf -- '---\n'
-    printf 'id: T-20260721-size-%s\n' "$slug"
-    printf 'title: sizing fixture %s\n' "$eff"
+    printf '%s\n' '---'
+    printf 'id: T-20260811-size-%s\n' "$slug"
+    printf 'title: Size fixture %s\n' "$effort"
     printf 'status: ready\nformat_version: 3\nprofile: lite\n'
-    printf 'effort: %s\nbudget_iterations: 8\nagent: any\ndepends_on: []\n' "$eff"
-    printf 'execution_backend: %s\n' "$be"
-    printf 'touches_paths:\n'
-    if [ -n "$tou" ]; then IFS=','; for p in $tou; do printf -- '  - %s\n' "$p"; done; unset IFS
-    else printf -- '  - README.md\n'; fi
-    if [ -n "$cre" ]; then printf 'creates_paths:\n'; IFS=','; for p in $cre; do printf -- '  - %s\n' "$p"; done; unset IFS; fi
-    if [ -n "$chi" ]; then printf 'children:\n'; IFS=','; for c in $chi; do printf -- '  - %s\n' "$c"; done; unset IFS; fi
-    printf 'source_note: sizing test\ncreated: 2026-07-21T00:00:00Z\n'
-    printf -- '---\n'
-    cat <<'BODY'
-
-# sizing fixture
-
-## Goal
-Prove the effort-gate tier behaves.
-
-## Success Criteria
-```bash
-eval_1() { true; }
-```
-
-## Validation Card
-```yaml
-success_criteria:
-  - id: eval_1
-    description: synthetic
-    runnable: bash
-    check_type: deterministic
-    terminal: true
-    expected_duration_sec: 1
-retry_policy:
-  max_iterations: 8
-  circuit_breaker_no_progress: 3
-  on_terminal_failure: park_with_context
-agent_contract:
-  version: 2
-  read: [intent]
-  produce: [code]
-  required_tools: [bash]
-  timeout_minutes: 10
-  sandbox_type: host
-  output_artifacts: []
-  mcp_dependencies: []
-  emit: [pass, fail]
-  backend_metadata: {}
-```
-
-## Exit Check
-```bash
-eval_1
-```
-BODY
-  } > "$f"
+    printf 'effort: %s\nbudget_iterations: 8\nagent: any\ndepends_on: []\n' "$effort"
+    if [ -n "$touches" ]; then
+      printf 'touches_paths:\n'
+      old_ifs="$IFS"; IFS=','
+      for path in $touches; do printf '  - %s\n' "$path"; done
+      IFS="$old_ifs"
+    else
+      printf 'touches_paths: []\n'
+    fi
+    if [ -n "$creates" ]; then
+      printf 'creates_paths:\n'
+      old_ifs="$IFS"; IFS=','
+      for path in $creates; do printf '  - %s\n' "$path"; done
+      IFS="$old_ifs"
+    else
+      printf 'creates_paths: []\n'
+    fi
+    if [ -n "$children" ]; then
+      printf 'children:\n'
+      old_ifs="$IFS"; IFS=','
+      for child in $children; do printf '  - %s\n' "$child"; done
+      IFS="$old_ifs"
+    fi
+    printf 'source_note: sizing test\ncreated: 2026-08-11T00:00:00Z\n'
+    printf 'execution_backend: %s\nsigned_off: false\nsigned_off_by: (none)\nsigned_off_at: (none)\n' "$backend"
+    printf '%s\n' '---' '' '# Size fixture' '' '## Goal' 'Prove the sizing rule.' '' '## Success Criteria' '```bash' 'eval_1() { true; }' '```' '' '## Validation Card' '```yaml' 'success_criteria:' '  - id: eval_1' '    description: sizing' '    runnable: bash' '    check_type: deterministic' '    terminal: true' '    expected_duration_sec: 1' 'retry_policy:' '  max_iterations: 8' '  circuit_breaker_no_progress: 3' '  on_terminal_failure: park_with_context' 'agent_contract:' '  version: 2' '  read: [intent]' '  produce: [code]' '  required_tools: [bash]' '  timeout_minutes: 5' '  sandbox_type: host' '  emit: [pass, fail]' '```' '' '## Exit Check' '```bash' 'eval_1' '```'
+  } > "$file"
 }
 
-# run <name> <want_exit> <grep> <effort> <touches> <creates> <children> <backend>
 run() {
+  local name="$1" expected="$2" pattern="$3" effort="$4" touches="$5" creates="$6" children="$7" backend="$8"
+  local tmp file out rc slug
   TOTAL=$((TOTAL + 1))
-  local name="$1" we="$2" g="$3"; shift 3
-  local eff="$1" slug d f out rc
-  slug="$(printf '%s' "$eff" | tr '[:upper:]' '[:lower:]' | tr -cd '[:lower:]')"; [ -n "$slug" ] || slug="x"
-  d="$(mktemp -d)"; f="$d/T-20260721-size-$slug.md"   # id must match filename basename
-  mkspec "$f" "$@"
-  out="$(bash "$VAL" --skip-touches-paths "$f" 2>&1)"; rc=$?
-  rm -rf "$d"
-  if [ "$rc" -ne "$we" ]; then fail "$name" "exit $rc want $we"; printf '%s\n' "$out" | tail -3 | sed 's/^/      | /'; return; fi
-  if [ -n "$g" ] && ! printf '%s\n' "$out" | grep -qiE "$g"; then fail "$name" "missing /$g/"; printf '%s\n' "$out" | tail -3 | sed 's/^/      | /'; return; fi
-  pass "$name" "$rc"
+  tmp="$(mktemp -d -t taskspec-size-XXXXXX)"
+  slug="$(printf '%s' "$effort" | tr '[:upper:]' '[:lower:]' | tr -cd '[:lower:]')"; [ -n "$slug" ] || slug="unknown"
+  file="$tmp/T-20260811-size-$slug.md"
+  mkspec "$file" "$effort" "$touches" "$creates" "$children" "$backend"
+  out="$(bash "$VALIDATE" --no-state --skip-depends-on --skip-touches-paths "$file" 2>&1)"; rc=$?
+  rm -rf "$tmp"
+  if [ "$rc" -ne "$expected" ]; then fail "$name" "exit $rc, expected $expected"; return; fi
+  if [ -n "$pattern" ] && ! printf '%s\n' "$out" | grep -qiE "$pattern"; then fail "$name" "missing /$pattern/"; return; fi
+  pass "$name"
 }
 
-echo "== effort-gate v3.4 · six-tier sizing =="
-# leaves within budget → valid
-run "XS leaf ok"        0 ''                          XS  "README.md"          "" "" any
-run "S leaf ok"         0 ''                          S   "a1,a2"              "" "" any
-run "M leaf ok"         0 ''                          M   "a1,a2,a3"           "" "" any
-run "L leaf glm ok"     0 ''                          L   "a1,a2,a3,a4,a5"     "" "" glm
-# The L gate is about LONG-HORIZON capability, not one vendor: execution_backend
-# is an open string, so the eligible set is configurable (TS_LONG_HORIZON_BACKENDS).
-run "L leaf claude ok"  0 ''                          L   "a1,a2,a3,a4,a5"     "" "" claude
-run "L leaf codex ok"   0 ''                          L   "a1,a2,a3,a4,a5"     "" "" codex
-run "L leaf kimi ok"    0 ''                          L   "a1,a2,a3,a4,a5"     "" "" kimi
-# L guardrail
-run "L needs long-horizon" 1 'requires a LONG-HORIZON builder' L "a1"          "" "" any
-# mis-sized leaf → valid but WARNS (budget breach = coarse decomposition)
-run "S mis-sized warns" 0 'Mis-sized'                 S   "a1,a2,a3,a4,a5"     "" "" any
-# NODES must decompose — no SDD escape
-run "XL no children"    1 'MUST declare children'     XL  "a1"                 "" ""          any
-run "XXL too few kids"  1 'MUST declare children'     XXL "a1"                 "" "T-1,T-2"   any
-# NODES with children → valid composition units
-run "XL with children"  0 'composition unit'          XL  "a1"                 "" "T-a,T-b"       any
-run "XXL with children" 0 'composition unit'          XXL "a1"                 "" "T-a,T-b,T-c"   any
-# unknown size
-run "bad size fails"    1 'effort must be one of'     ZZ  "a1"                 "" "" any
+echo "== effort sizing and composition =="
+run "XS leaf" 0 "" XS "README.md" "" "" any
+run "S leaf union budget" 0 "" S "README.md" "new.md" "" any
+run "M leaf" 0 "" M "a,b" "c" "" any
+run "L long horizon" 0 "accepted.*long-horizon" L "a,b,c" "d,e" "" codex
+run "L wrong backend" 1 "requires a LONG-HORIZON" L "a" "" "" any
+run "S over budget warns" 0 "Mis-sized" S "a,b" "c" "" any
+run "leaf cannot have children" 1 "only XL/XXL nodes" S "a" "" "T-20260811-child-one,T-20260811-child-two" any
+run "XL needs children" 1 "MUST declare children" XL "" "" "" any
+run "XXL needs three children" 1 "MUST declare children" XXL "" "" "T-20260811-child-one,T-20260811-child-two" any
+run "XL composition node" 0 "composition unit" XL "" "" "T-20260811-child-one,T-20260811-child-two" any
+run "XXL composition node" 0 "composition unit" XXL "" "" "T-20260811-child-one,T-20260811-child-two,T-20260811-child-three" any
+run "node owns no writes" 1 "must own no write surface" XL "a" "" "T-20260811-child-one,T-20260811-child-two" any
+run "invalid child id" 1 "invalid Task-Spec id" XL "" "" "T-a,T-b" any
+run "unknown size" 1 "effort must be one of" ZZ "a" "" "" any
 
 echo
-if [ "$FAILED" -eq 0 ]; then echo "PASS — all $TOTAL rows green."; exit 0
-else echo "FAIL — $FAILED of $TOTAL rows red." >&2; exit 1; fi
+if [ "$FAILED" -eq 0 ]; then
+  echo "PASS — all $TOTAL sizing rows green."
+  exit 0
+fi
+echo "FAIL — $FAILED of $TOTAL sizing rows red." >&2
+exit 1

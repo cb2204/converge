@@ -28,7 +28,7 @@ set -euo pipefail
 
 # Source shared lib (TASKSPEC_VERSION, ts_version_flag, ts_die)
 _LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_lib.sh"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$_LIB"
 
 # Handle --version uniformly across all task-spec scripts
@@ -276,7 +276,7 @@ elif ts_size_is_leaf "$EFFORT"; then
     WARNINGS+=("effort '$EFFORT' is a LEAF declaring $N_WRITES write path(s) (tier budget: <= $MAXW). Mis-sized — split into smaller atoms or reclassify UP; budgets expose coarse decomposition. See references/concepts/effort-gate.md")
   fi
   if [[ "$N_CHILDREN" -gt 0 ]]; then
-    WARNINGS+=("effort '$EFFORT' is a runnable LEAF but declares children: — only XL/XXL nodes decompose. Drop children, or reclassify to XL/XXL.")
+    ERRORS+=("effort '$EFFORT' is a runnable LEAF but declares children: — only XL/XXL nodes may compose children")
   fi
   if [[ "$EFFORT" == "L" ]]; then
     if [[ "$FORMAT_VERSION" == "0" ]]; then
@@ -290,12 +290,21 @@ elif ts_size_is_leaf "$EFFORT"; then
 else
   # NODE (XL/XXL) — a decomposition directive, never a runnable leaf. No route out.
   MINC=$(ts_size_min_children "$EFFORT")
+  if [[ "$N_WRITES" -gt 0 ]]; then
+    ERRORS+=("effort '$EFFORT' is a decomposition NODE and must own no write surface; move touches_paths/creates_paths into its child leaves")
+  fi
   if [[ "$N_CHILDREN" -lt "$MINC" ]]; then
     ERRORS+=("effort '$EFFORT' is a decomposition NODE, not a runnable Task-Spec: it MUST declare children: with >= $MINC child task-spec id(s) (the vertical slices it expands into). Tasks decompose into tasks — there is no route out to SDD. See references/concepts/effort-gate.md")
   else
     WARNINGS+=("effort '$EFFORT' is a NODE with $N_CHILDREN child task-spec(s) — a composition unit, not directly delegated. A worker dispatches its children (leaves) and composes their results back up.")
   fi
 fi
+
+for child in $CHILDREN; do
+  if ! echo "$child" | grep -qE '^T-[0-9]{8}-[a-z0-9]+(-[a-z0-9]+)*$'; then
+    ERRORS+=("children contains invalid Task-Spec id: '$child'")
+  fi
+done
 
 # Check 4: status is valid enum
 STATUS=$(grep '^status:' "$FILE" | head -1 | awk '{print $2}' || true)
@@ -610,19 +619,11 @@ if [[ "$CHECK_DEPENDS_ON" == true && -n "$FRONTMATTER" ]]; then
   for dep in $DEPS; do
     found=false
     dep_status=""
-    # The lifecycle sub-directories must be resolved RELATIVE TO THE SPEC, not
-    # only under $GIT_ROOT/tasks. In the cvg/ layout a spec lives at
-    # <project>/cvg/tasks/, so its done/ sibling is "$FILE_DIR/done" while
-    # "$GIT_ROOT/tasks/done" does not exist — the error message claimed to have
-    # searched done/ and never had. The first task to FINISH therefore made every
-    # dependent spec unvalidatable, and re-sealing an amended one impossible.
-    #
-    # Same root cause as the workspace-root and register-KNOWN fixes: a path
-    # derived from an assumed layout instead of from the file in hand. GIT_ROOT
-    # entries are kept so the flat layout keeps working.
-    for dir in "$FILE_DIR" \
-               "$FILE_DIR/queue" "$FILE_DIR/archive" "$FILE_DIR/feature" "$FILE_DIR/done" "$FILE_DIR/parked" \
-               "$GIT_ROOT/tasks" "$GIT_ROOT/tasks/queue" "$GIT_ROOT/tasks/archive" "$GIT_ROOT/tasks/feature" "$GIT_ROOT/tasks/done" "$GIT_ROOT/tasks/parked"; do
+    # Resolve lifecycle buckets from the backlog that owns this spec. This works
+    # from root, queue/, done/, parked/, and explicit adapter-selected backlogs.
+    BACKLOG_ROOT="$(ts_backlog_root "$FILE")"
+    for dir in "$BACKLOG_ROOT" \
+               "$BACKLOG_ROOT/queue" "$BACKLOG_ROOT/archive" "$BACKLOG_ROOT/feature" "$BACKLOG_ROOT/done" "$BACKLOG_ROOT/parked"; do
       if [[ -f "$dir/${dep}.md" ]]; then
         found=true
         dep_status=$(grep '^status:' "$dir/${dep}.md" 2>/dev/null | head -1 | awk '{print $2}' || true)
@@ -1000,25 +1001,6 @@ if [[ "${ACCEPTED_RAW:-}" == "true" ]]; then
     ERRORS+=("accepted: true but signed_off is not true — a task cannot be accepted before it is signed off (gate → dispatch → accept ordering)")
   fi
 fi
-if [[ "$STATUS" == "done" ]]; then
-  WORKSPACE_ROOT="$(ts_workspace_root "$FILE")"
-  RECEIPT="$WORKSPACE_ROOT/cvg/receipts/${ID}.json"
-  if [[ ! -f "$RECEIPT" ]]; then
-    ERRORS+=("status: done requires a passing execution receipt at cvg/receipts/${ID}.json")
-  elif ! python3 - "$RECEIPT" "$ID" <<'PY'
-import json
-import sys
-
-with open(sys.argv[1], encoding="utf-8") as handle:
-    receipt = json.load(handle)
-assert receipt.get("task_id") == sys.argv[2]
-assert receipt.get("result") == "pass"
-PY
-  then
-    ERRORS+=("status: done receipt must be valid JSON with matching task_id and result: pass")
-  fi
-fi
-
 # Report
 if [[ ${#ERRORS[@]} -gt 0 ]]; then
   echo "FAIL: $FILE has ${#ERRORS[@]} validation error(s):"

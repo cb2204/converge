@@ -43,7 +43,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source shared lib (TASKSPEC_VERSION, ts_version_flag, ts_die)
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 
 # Handle --version uniformly across all task-spec scripts
@@ -92,8 +92,7 @@ if [[ ! -f "$FILE" ]]; then
 fi
 
 BOLD=$'\033[1m'; GREEN=$'\033[32m'; RED=$'\033[31m'; YELLOW=$'\033[33m'; RESET=$'\033[0m'
-# Disable color when not a TTY
-if [[ ! -t 1 ]]; then BOLD=""; GREEN=""; RED=""; YELLOW=""; RESET=""; fi
+if ! ts_color_enabled; then BOLD=""; GREEN=""; RED=""; YELLOW=""; RESET=""; fi
 
 blockers=0
 notes=()
@@ -115,7 +114,7 @@ echo "────────────────────────�
 # authority — the fresh MAC still requires the signing key, and without one the
 # spec lands at Tier 2 (supervised only) just as it would on a first stamp.
 if [[ "$STAMP" == true ]] && grep -q '^signed_off_sig:' "$FILE"; then
-  _ss_tmp="$(mktemp -t cvg-reseal.XXXXXX)"
+  _ss_tmp="$(mktemp -t taskspec-reseal.XXXXXX)"
   if grep -v '^signed_off_sig:' "$FILE" > "$_ss_tmp" && mv "$_ss_tmp" "$FILE"; then
     echo "   ${YELLOW}re-sealing${RESET} — the previous signature is superseded by this stamp"
   else

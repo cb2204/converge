@@ -16,7 +16,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
@@ -48,7 +48,7 @@ _dep_met() {
     [[ -f "$_dm_f" ]] || continue
     [[ "$(grep -m1 '^id:' "$_dm_f" | awk '{print $2}')" == "$_dm_dep" ]] || continue
     case "$(grep -m1 '^status:' "$_dm_f" | awk '{print $2}')" in
-      done|accepted) return 0 ;;
+      done)           return 0 ;;
       *)             return 1 ;;
     esac
   done
@@ -69,6 +69,11 @@ for FILE in "$TASKSPEC_BACKLOG_DIR"/T-*.md; do
   STATUS=$(grep '^status:' "$FILE" | head -1 | awk '{print $2}')
   [[ "$STATUS" == "ready" ]] || continue
 
+  EFFORT=$(grep '^effort:' "$FILE" | head -1 | awk '{print $2}')
+  case "$EFFORT" in
+    XL|XXL) NODES_SKIPPED=$((${NODES_SKIPPED:-0} + 1)); continue ;;
+  esac
+
   if [[ "$SHOW_ALL" -eq 0 ]]; then
     BLOCKED=0
     while IFS= read -r DEP; do
@@ -78,7 +83,6 @@ for FILE in "$TASKSPEC_BACKLOG_DIR"/T-*.md; do
     [[ "$BLOCKED" -eq 0 ]] || { SKIPPED=$((${SKIPPED:-0} + 1)); continue; }
   fi
 
-  EFFORT=$(grep '^effort:' "$FILE" | head -1 | awk '{print $2}')
   AGENT=$(grep '^agent:' "$FILE" | head -1 | awk '{print $2}')
   ID=$(grep '^id:' "$FILE" | head -1 | awk '{print $2}')
   TITLE=$(grep '^title:' "$FILE" | head -1 | sed 's/^title: *//')
@@ -91,4 +95,7 @@ done
 
 if [[ "$SHOW_ALL" -eq 0 && "${SKIPPED:-0}" -gt 0 ]]; then
   printf '\n(%d ready spec(s) hidden — blocked by an unmet depends_on; --all shows them)\n' "${SKIPPED:-0}"
+fi
+if [[ "${NODES_SKIPPED:-0}" -gt 0 ]]; then
+  printf '(%d composition node(s) hidden — dispatch their child leaves)\n' "${NODES_SKIPPED:-0}"
 fi

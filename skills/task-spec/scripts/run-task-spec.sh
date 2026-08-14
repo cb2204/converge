@@ -14,7 +14,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
@@ -77,7 +77,7 @@ GIT_ROOT=$(cd "$(dirname "$FILE")" && git rev-parse --show-toplevel 2>/dev/null 
 
 # WHERE THE EVALS ACTUALLY RUN
 #
-# A spec's relative paths ("cvg/capture/orders.py") are written against its own
+# A spec's relative paths ("src/orders.py") are written against its own
 # WORKSPACE, not against whatever repository happens to contain it. For a
 # workspace nested inside a larger repo — or any run inside a git worktree —
 # the git root is the wrong directory, and every `test -f` fails in 0s without
@@ -85,7 +85,7 @@ GIT_ROOT=$(cd "$(dirname "$FILE")" && git rev-parse --show-toplevel 2>/dev/null 
 # except by the suspiciously round duration.
 #
 # TASKSPEC_WORKSPACE_ROOT lets the caller state the workspace explicitly.
-# Otherwise infer it: a spec at <ws>/tasks/ or <ws>/cvg/tasks/ means <ws>.
+# Otherwise infer it from the backlog that owns the spec.
 EVAL_CWD=""
 if [ -n "${TASKSPEC_WORKSPACE_ROOT:-}" ] && [ -d "${TASKSPEC_WORKSPACE_ROOT}" ]; then
   EVAL_CWD="$(cd "$TASKSPEC_WORKSPACE_ROOT" && pwd)"

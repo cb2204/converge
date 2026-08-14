@@ -18,15 +18,15 @@
 #   1 — one or more issues found
 #   3 — cannot run here (needs bash 4+ for associative arrays; see LINT=UNSUPPORTED)
 #
-# WHY THE TOKEN: every other Converge surface ends with a machine token, and this
-# one did not — so a Manager reading `cvg lint` could not tell a clean backlog from
+# WHY THE TOKEN: Task-Spec command surfaces end with a machine token, and this
+# one did not — so a caller could not tell a clean backlog from
 # a lint that never ran. WARN and ISSUES both exit 1, as before; the token is what
 # distinguishes them, so no caller's exit-code branch changes.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 TS_BASH4_TOKEN="LINT=UNSUPPORTED" ts_require_bash4 "$@"
@@ -53,7 +53,7 @@ if [[ -d "$TASKSPEC_BACKLOG_DIR" ]]; then
   TASKSPEC_BACKLOG_DIR="$(cd "$TASKSPEC_BACKLOG_DIR" && pwd)"
   export TASKSPEC_BACKLOG_DIR
 fi
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && git rev-parse --show-toplevel 2>/dev/null || echo "$SCRIPT_DIR/../../..")"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
 # Data structures
@@ -245,7 +245,7 @@ done
 # a convention nobody checked. Reporting it turns the design discipline into
 # something an operator (or a fleet manager) can read and rely on.
 #
-# The prefix is depth 2 (`cvg/capture`, `cvg/serve`), which is the granularity a
+# The prefix is depth 2 (`src/capture`, `src/serve`), which is the granularity a
 # swimlane actually owns. Deeper would report per-directory noise; shallower
 # would collapse every lane into one group.
 declare -A prefix_tasks

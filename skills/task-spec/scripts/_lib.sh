@@ -23,7 +23,7 @@
 #   3) add a CHANGELOG.md entry
 #   4) bump version field in plugin.json + marketplace.json (if present)
 # The doc-consistency lint asserts (1) == (2) == (4).
-TASKSPEC_VERSION="0.1.0"
+TASKSPEC_VERSION="3.6.0"
 
 # ----- Resolve skill root from this file's location -----
 # Works whether sourced from scripts/ or via an indirect symlink.
@@ -32,22 +32,9 @@ TASKSPEC_SKILL_DIR="$(cd "$__lib_dir/.." && pwd)"
 export TASKSPEC_VERSION TASKSPEC_SKILL_DIR
 
 # ----- Configurable backlog dir (allow downstream users to override) -----
-# Resolution order, highest first:
-#   1. TASKSPEC_BACKLOG_DIR from the environment  (explicit always wins)
-#   2. cvg/tasks   — the Converge workspace layout that cvg/INDEX.md prescribes
-#   3. tasks       — the bare layout (preserves the original behavior)
-#
-# Passes 0-3 already auto-discover cvg/docs, cvg/docs/adrs and cvg/swimlanes. The
-# task family did not, so `cvg ready`, `cvg lint` and the Pass 8 loop all
-# reported an empty backlog inside a perfectly valid workspace. Fixing it here
-# rather than in each script covers every consumer, task-loop included.
-if [ -z "${TASKSPEC_BACKLOG_DIR:-}" ]; then
-  if [ -d "cvg/tasks" ]; then
-    TASKSPEC_BACKLOG_DIR="cvg/tasks"
-  else
-    TASKSPEC_BACKLOG_DIR="tasks"
-  fi
-fi
+# The standalone default is always tasks/. Integrations with a different
+# workspace layout select it explicitly through TASKSPEC_BACKLOG_DIR.
+: "${TASKSPEC_BACKLOG_DIR:=tasks}"
 export TASKSPEC_BACKLOG_DIR
 
 # ----- --version handler -----
@@ -67,6 +54,17 @@ ts_version_flag() {
 ts_die() {
   echo "ERROR: $*" >&2
   exit 1
+}
+
+# Color is presentation only. NO_COLOR always disables; TASKSPEC_COLOR=0|1
+# provides an explicit override; otherwise use ANSI only on a TTY.
+ts_color_enabled() {
+  [[ -n "${NO_COLOR:-}" ]] && return 1
+  case "${TASKSPEC_COLOR:-}" in
+    0) return 1 ;;
+    1) return 0 ;;
+  esac
+  [[ -t 1 ]]
 }
 
 # Append one valid JSON object to the lifecycle ledger. Arguments after the
@@ -273,6 +271,22 @@ ts_a2a_state_v1() {
 # lint-backlog.sh all call it instead of re-implementing the awk. $1 = spec path.
 ts_frontmatter() {
   awk 'NR==1 && /^---[[:space:]]*$/{s=1; next} s && /^---[[:space:]]*$/{exit} s{print}' "$1" 2>/dev/null || true
+}
+
+# Echo a top-level frontmatter list one item per line. Supports both the inline
+# `[a, b]` and indented `- a` forms used by the format.
+ts_frontmatter_list() {
+  local file="$1" key="$2" block line
+  block="$(ts_frontmatter "$file")"
+  line="$(printf '%s\n' "$block" | grep -m1 "^${key}:" || true)"
+  [[ -n "$line" ]] || return 0
+  if printf '%s\n' "$line" | grep -q '\['; then
+    printf '%s\n' "$line" | sed -n 's/^[^[]*\[\(.*\)\].*/\1/p' | tr ',' '\n' \
+      | sed -E 's/^[[:space:]]*["'"'']?//; s/["'"'']?[[:space:]]*$//' | grep -v '^$' || true
+  else
+    printf '%s\n' "$block" | sed -n "/^${key}:/,/^[^ #]/p" | tail -n +2 \
+      | sed '/^[^ ]/d' | sed -E 's/^[[:space:]]*-[[:space:]]*["'"'']?//; s/["'"'']?[[:space:]]*$//' | grep -v '^$' || true
+  fi
 }
 
 # ----- Behavior / eval extraction for traceability (C3/C4) -----
@@ -831,7 +845,7 @@ ts_signoff_payload() {
 }
 
 # Compute the full signed_off_sig field value for a spec, given a key.
-# Format: hmac-sha256-v1:<keyid>:<hex>
+# Format: hmac-sha256-v2:<keyid>:<hex> (v1 remains a verification-only legacy path)
 # Echoes the value; returns 1 (and echoes nothing) if crypto is unavailable.
 # $3 = envelope version ("v2" default, "v1" only to re-verify a legacy seal).
 ts_compute_signoff_sig() {
@@ -868,8 +882,8 @@ ts_compute_signoff_sig() {
 #   - If no bash 4+ is found, print a one-line remediation and exit 3.
 #
 # TS_BASH4_TOKEN (optional, set by the caller before invoking): a machine token to
-# print on stdout when the guard bails. Every other Converge surface ends with a
-# token as its last stdout line, and a caller that dies inside a shared helper was
+# print on stdout when the guard bails. Task-Spec command surfaces end with a
+# token as their last stdout line, and a caller that dies inside a shared helper was
 # the one place that contract broke — a Manager saw a bare non-zero exit with
 # nothing to branch on. The variable is opt-in, so existing callers are unchanged.
 ts_require_bash4() {
@@ -900,44 +914,31 @@ ts_require_bash4() {
 
 # ts_workspace_root <path-inside-the-workspace>
 #
-# THE ONE definition of "where does this workspace begin". A spec's relative paths
-# (`cvg/capture/pipelines/x.py`) resolve against its WORKSPACE, never against
-# whatever repository happens to contain it.
-#
-# The rule: the workspace is the parent of the `cvg` component. Asking that
-# structural question is what makes it correct for tasks/, tasks/done/,
-# tasks/archive/ and any future nesting. Two separate hand-rolled versions of this
-# both counted path LEVELS instead, and both broke the moment a spec finished and
-# moved into tasks/done/: one silently resolved the workspace to `cvg/tasks`, the
-# other skipped its inference entirely and fell back to the git root. In both cases
-# every eval failed in 0s, so a COMPLETED task could no longer pass its own evals.
-#
-# That is one root cause with six recorded symptoms (eval CWD, settlement base,
-# tier-2 diff, receipt location, and these two). Centralising the derivation is the
-# start of retiring the class rather than patching it a seventh time.
+# THE ONE definition of "where does this workspace begin". A spec's relative
+# paths resolve against its own workspace, never against whichever repository
+# happens to contain the engine. The owning backlog is either the explicit
+# TASKSPEC_BACKLOG_DIR or the nearest ancestor named `tasks`; its parent is the
+# workspace. This remains correct for tasks/, tasks/done/, tasks/archive/, and
+# custom backlog paths selected by an integration adapter.
 ts_workspace_root() {
   _tswr_d="$1"
   [ -d "$_tswr_d" ] || _tswr_d="$(dirname "$_tswr_d")"
   _tswr_d="$(cd "$_tswr_d" 2>/dev/null && pwd)" || return 1
-  _tswr_p="$_tswr_d"
-  while [ -n "$_tswr_p" ] && [ "$_tswr_p" != "/" ]; do
-    if [ "$(basename "$_tswr_p")" = "cvg" ]; then
-      dirname "$_tswr_p"; return 0
-    fi
-    _tswr_next="$(dirname "$_tswr_p")"
-    [ "$_tswr_next" = "$_tswr_p" ] && break
-    _tswr_p="$_tswr_next"
-  done
-  # Flat layout (<ws>/tasks with no cvg/ ancestor): walk up past tasks/done etc.
-  _tswr_p="$_tswr_d"
-  while [ -n "$_tswr_p" ] && [ "$_tswr_p" != "/" ]; do
-    case "$(basename "$_tswr_p")" in
-      tasks) dirname "$_tswr_p"; return 0 ;;
+  _tswr_backlog="$(ts_backlog_root "$_tswr_d" 2>/dev/null || true)"
+  _tswr_is_backlog=false
+  [ -n "$_tswr_backlog" ] && [ "$(basename "$_tswr_backlog")" = "tasks" ] && _tswr_is_backlog=true
+  if [ -n "${TASKSPEC_BACKLOG_DIR:-}" ] && [ -d "$TASKSPEC_BACKLOG_DIR" ]; then
+    _tswr_explicit="$(cd "$TASKSPEC_BACKLOG_DIR" 2>/dev/null && pwd || true)"
+    [ -n "$_tswr_explicit" ] && [ "$_tswr_backlog" = "$_tswr_explicit" ] && _tswr_is_backlog=true
+  fi
+  if [ "$_tswr_is_backlog" = true ]; then
+    case "$_tswr_d" in
+      "$_tswr_backlog"|"$_tswr_backlog"/*)
+        dirname "$_tswr_backlog"
+        return 0
+        ;;
     esac
-    _tswr_next="$(dirname "$_tswr_p")"
-    [ "$_tswr_next" = "$_tswr_p" ] && break
-    _tswr_p="$_tswr_next"
-  done
+  fi
   printf '%s' "$_tswr_d"
 }
 

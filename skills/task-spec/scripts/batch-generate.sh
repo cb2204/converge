@@ -27,11 +27,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=./_lib.sh
+# shellcheck source=../lib/_lib.sh
 source "$SCRIPT_DIR/_lib.sh"
 ts_version_flag "$@"
 
-SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SKILL_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Defaults
 INTENT_FILE=""
@@ -236,7 +236,8 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   ts_render_template "$TEMPLATE" "$TARGET" \
     ID "$ID" TITLE "$description" STATUS ready PROFILE "$PROFILE" \
     EFFORT "$EFFORT" BUDGET_ITERATIONS 15 AGENT "$AGENT" DEPENDS_ON "[]" \
-    TOUCHES_PATHS_YAML "  - {{TODO: path/to/file}}" SOURCE_NOTE "$SOURCE_NOTE" \
+    CHILDREN_FIELD "" TOUCHES_PATHS_FIELD "touches_paths:
+  - {{TODO: path/to/file}}" SOURCE_NOTE "$SOURCE_NOTE" \
     CREATED "$CREATED_AT" TAGS "[]" \
     WHY_ONE_PARAGRAPH "{{TODO: 1-2 sentence why}}" \
     GOAL_ONE_PARAGRAPH "{{TODO: concrete success in one paragraph}}" \
@@ -294,7 +295,7 @@ echo ""
 echo "Next steps:"
 echo "  1. Fill in the {{TODO}} stubs in each generated file"
 echo "  2. Re-run validation after editing:"
-echo "     bash $SKILL_DIR/scripts/validate-task-spec.sh $OUTDIR/T-*.md"
+echo "     bash $SKILL_DIR/src/gate/validate-task-spec.sh $OUTDIR/T-*.md"
 echo "  3. Commit:"
 echo "     git add $OUTDIR/"
 
