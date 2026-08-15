@@ -19,10 +19,10 @@
 #   3. a bare slug / tail        (bronze-views  →  T-*-bronze-views.md)
 #   4. a tracker ref             (matches linear_ref: / tracker_issue: N)
 #
-# Delegation: if .claude/skills/task-spec/scripts/run-task-spec.sh exists it is
-# reused (it already carries a heredoc-safe eval extractor). Otherwise this
-# script extracts and runs the bash blocks directly. Both paths honor the same
-# contract: exit 0 ⇒ GREEN, non-zero ⇒ RED.
+# Delegation: evaluation is owned by the independently installed Task-Spec
+# engine. Converge resolves the task and workspace, then calls its public
+# `taskspec run` surface. There is deliberately no embedded evaluator fallback:
+# two implementations would create two meanings of the same sealed task.
 #
 # Exit codes:
 #   0 — GREEN  (Exit Check exited 0)
@@ -153,6 +153,8 @@ _resolve_workspace_root() {  # _resolve_workspace_root <tasks-dir>
   dirname "$1"
 }
 WORKSPACE_ROOT="$(_resolve_workspace_root "$TASKS_DIR")"
+export TASKSPEC_WORKSPACE_ROOT="$WORKSPACE_ROOT"
+export TASKSPEC_BACKLOG_DIR="$TASKS_DIR"
 
 # ----- Resolve --issue to a task-spec file -----
 # Portable, bash-3.2-safe: no arrays required for the happy paths.
@@ -311,98 +313,19 @@ if [ -n "$TASK_SIGNED" ] && printf '%s' "$TASK_SIGNED" | grep -qi '^false'; then
   echo "      PR should not be opened until Pass 5B signs it off." >&2
 fi
 
-# ----- Inline eval runner (fallback when run-task-spec.sh is absent) -----
-# Extracts the fenced ```bash block from the "## Success Criteria" and
-# "## Exit Check" sections, then runs `<success criteria>; <exit check>` in ONE
-# isolated `set -euo pipefail` subshell rooted at the repo. Heredoc-aware so eval
-# bodies that write fenced fixtures do not trip fence/section detection. Prints
-# the subshell output; returns the Exit Check's exit code.
-extract_bash_block() {
-  # $1 = section header text, lowercased (e.g. "success criteria"); $2 = file
-  awk -v want="$1" '
-    function strip(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-    BEGIN { in_section=0; in_block=0; hd=""; top_fence=0 }
-    {
-      line=$0
-      lower=tolower(strip(line))
-      if (in_block) {
-        if (hd != "") { if (strip(line) == hd) { hd="" } ; print line; next }
-        if (line ~ /^```$/) { exit }
-        if (match(line, /<<-?[ \t]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*["'"'"']?/)) {
-          d=substr(line, RSTART, RLENGTH)
-          gsub(/^<<-?[ \t]*["'"'"']?/, "", d)
-          gsub(/["'"'"']?$/, "", d)
-          hd=d
-        }
-        print line; next
-      }
-      if (in_section) {
-        if (line ~ /^```bash$/) { in_block=1; next }
-        if (line ~ /^## /) { exit }
-        next
-      }
-      if (top_fence) { if (line ~ /^```$/) top_fence=0 ; next }
-      if (line ~ /^```/) { top_fence=1; next }
-      if (lower == "## " want) { in_section=1 }
-    }
-  ' "$2"
-}
-
-run_eval_inline() {
-  _file="$1"
-  _sc="$(extract_bash_block "success criteria" "$_file")"
-  _ec="$(extract_bash_block "exit check" "$_file")"
-  if [ -z "$_sc" ]; then
-    echo "no bash block found in Success Criteria" >&2
-    return 1
-  fi
-  if [ -z "$_ec" ]; then
-    echo "no bash block found in Exit Check" >&2
-    return 1
-  fi
-  _tmp="$(mktemp -d)"
-  trap 'rm -rf "$_tmp"' RETURN
-  _script="$_tmp/eval.sh"
-  {
-    echo '#!/usr/bin/env bash'
-    echo 'set -euo pipefail'
-    printf 'GIT_ROOT="%s"\n' "$GIT_ROOT"
-    printf 'WORKSPACE_ROOT="%s"\n' "$WORKSPACE_ROOT"
-    echo 'export GIT_ROOT WORKSPACE_ROOT'
-    printf 'cd "%s" || exit 1\n' "$WORKSPACE_ROOT"
-    echo "$_sc"
-    echo "$_ec"
-  } > "$_script"
-  # stdin from /dev/null so a body that reads stdin gets EOF, never hangs.
-  bash "$_script" < /dev/null
-}
-
-# ----- Run the eval -----
-RUNNER="$SCRIPT_DIR/../../task-spec/scripts/run-task-spec.sh"
-
+# ----- Run the eval through the standalone Task-Spec engine -----
+TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
+command -v "$TASKSPEC_ENGINE" >/dev/null 2>&1 \
+  || err "Task-Spec engine is unavailable: $TASKSPEC_ENGINE (requires taskspec 3.8.x)"
 EVAL_OUT=""
 EVAL_RC=0
-
-if [ -f "$RUNNER" ]; then
-  # Reuse the task-spec runner: it already extracts eval_N() + Exit Check in a
-  # heredoc-safe way and runs each under `set -euo pipefail`. Its exit code IS
-  # the Exit Check verdict, which is exactly our GREEN/RED gate.
-  set +e
-  # State the workspace explicitly. This script computes WORKSPACE_ROOT
-  # correctly and then USED to throw it away at the delegation boundary — the
-  # runner re-derived the git root and ran every eval in the wrong directory,
-  # so they failed in 0s without touching the work. Inferring it twice, in two
-  # places, is how the two halves drifted apart; passing it removes the guess.
-  EVAL_OUT="$(TASKSPEC_WORKSPACE_ROOT="$WORKSPACE_ROOT" bash "$RUNNER" "$TASK_FILE" 2>&1)"
-  EVAL_RC=$?
-  set -e
-else
-  # Fallback: no bundled runner — extract and run the bash blocks directly.
-  set +e
-  EVAL_OUT="$(run_eval_inline "$TASK_FILE")"
-  EVAL_RC=$?
-  set -e
-fi
+set +e
+EVAL_OUT="$(
+  cd "$WORKSPACE_ROOT" &&
+    "$TASKSPEC_ENGINE" run "$TASK_FILE" < /dev/null 2>&1
+)"
+EVAL_RC=$?
+set -e
 
 # ----- Verdict -----
 if [ "$EVAL_RC" -eq 0 ]; then

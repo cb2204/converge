@@ -141,6 +141,19 @@ def _workspace_path(
 def _is_framework_path(path: str, profile: dict) -> bool:
     receipt_value = str(profile.get("receipt", {}).get("path", ""))
     framework_paths = {receipt_value} if receipt_value else set()
+    enforcement = profile.get("enforcement", {})
+    profile_path = str(profile.get("_profile_path", ""))
+    if profile_path:
+        framework_paths.add(profile_path)
+    brief_path = str(enforcement.get("task_brief", ""))
+    if brief_path:
+        framework_paths.add(brief_path)
+    for entry in enforcement.get("adapters", []):
+        if isinstance(entry, dict) and entry.get("path"):
+            framework_paths.add(str(entry["path"]))
+    task_id = str(profile.get("task", {}).get("id", "")).strip()
+    if task_id:
+        framework_paths.add(f"cvg/execution/{task_id}/task-handoff.json")
     task_dir = Path(profile["task"]["spec_ref"]["path"]).parent
     framework_paths.update(
         {
@@ -151,7 +164,6 @@ def _is_framework_path(path: str, profile: dict) -> bool:
     )
     if path in framework_paths:
         return True
-    task_id = str(profile.get("task", {}).get("id", "")).strip()
     loop_prefixes = ["cvg/loop/"]
     if task_id:
         loop_prefixes.append(f"cvg/loop/{task_id}/")
@@ -267,6 +279,9 @@ def main() -> int:
 
         profile_path = resolve_inside_repo(str(args.profile), workspace)
         profile = load_profile(profile_path)
+        profile["_profile_path"] = normalize_repo_path(
+            profile_path.relative_to(workspace).as_posix()
+        )
         task = profile_task_path(profile, workspace)
         frontmatter, body = parse_frontmatter(task)
         allowed = task_paths(frontmatter)

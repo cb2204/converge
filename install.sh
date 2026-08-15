@@ -8,7 +8,7 @@
 #                  → <target>/.grok/skills/*     for Grok Build
 #   2. the CLI     → `cvg` on your PATH          so the gates are runnable by hand
 #
-# Copy (default) pins the complete 0.1.0 tool surface so a consuming repository
+# Copy (default) pins the complete 0.2.0-alpha.1 tool surface so a consuming repository
 # does not depend on this checkout. `--symlink` is the explicit development mode.
 #
 # It also works with no checkout at all — the one-line install:
@@ -18,7 +18,7 @@
 # When run standalone it shallow-clones the released source to a temp dir and
 # hands off to the installer inside the clone. No TTY is assumed (a piped
 # script has none), and every choice is overridable:
-#   CVG_REF=v0.1.0        pin an exact release tag  (default: main)
+#   CVG_REF=v0.2.0-alpha.1 pin an exact release tag  (default: main)
 #   CVG_REPO_URL=<url>    install from a fork or mirror
 #
 # This script installs. It never configures, never writes a credential, and
@@ -106,6 +106,22 @@ fi
 [ -d "$TARGET" ] || { echo "ERROR: target '$TARGET' does not exist" >&2; exit 2; }
 TARGET="$(cd "$TARGET" && pwd)"
 
+# Task-Spec is an independent engine and release lineage. Converge installs its
+# own orchestration skills only; it refuses to smuggle an older engine copy into
+# the consuming repository.
+TASKSPEC_BIN="$(command -v taskspec 2>/dev/null || true)"
+[ -n "$TASKSPEC_BIN" ] || {
+  echo "ERROR: Task-Spec engine is required. Install taskspec 3.8.x first:" >&2
+  echo "  git clone https://github.com/luanmorenommaciel/task-spec.git" >&2
+  echo "  bash task-spec/install.sh --global --copy" >&2
+  exit 2
+}
+TASKSPEC_VERSION="$("$TASKSPEC_BIN" version 2>/dev/null | tail -1 | tr -d '[:space:]')"
+case "$TASKSPEC_VERSION" in
+  3.8.*|3.9.*|3.[1-9][0-9].*) ;;
+  *) echo "ERROR: Converge 0.2 requires taskspec >=3.8.0 and <4.0.0 (found '$TASKSPEC_VERSION')" >&2; exit 2 ;;
+esac
+
 if [ "$TARGET" = "$CVG_SRC" ]; then
   echo "ERROR: target is the Converge checkout itself. Install INTO a consuming repo." >&2
   exit 2
@@ -130,6 +146,7 @@ for SKILL_DIR in "$TARGET/.agents/skills" "$TARGET/.claude/skills" "$TARGET/.gro
   for src in "$CVG_SRC"/skills/*/; do
     [ -f "$src/SKILL.md" ] || continue
     name="$(basename "$src")"
+    [ "$name" = "task-spec" ] && continue
     dest="$SKILL_DIR/$name"
     if [ -e "$dest" ] || [ -L "$dest" ]; then
       if [ "$FORCE" -eq 1 ]; then
@@ -155,6 +172,30 @@ for SKILL_DIR in "$TARGET/.agents/skills" "$TARGET/.claude/skills" "$TARGET/.gro
     INSTALLED=$((INSTALLED + 1))
   done
 done
+
+# The copied CLI resolves its tool home to <project>/.agents. Keep Converge's
+# native planning helpers and workspace templates there; Task-Spec itself stays
+# on PATH as the separately installed engine.
+mkdir -p "$TARGET/.agents/bin" "$TARGET/.agents/contracts" "$TARGET/.agents/templates/workspace"
+if [ "$MODE" = "copy" ]; then
+  cp "$CVG_SRC/bin/_cvg_compose.py" "$TARGET/.agents/bin/_cvg_compose.py"
+  cp "$CVG_SRC/bin/cvg-agent-context.py" "$TARGET/.agents/bin/cvg-agent-context.py"
+  cp "$CVG_SRC/bin/cvg-classify-lane.py" "$TARGET/.agents/bin/cvg-classify-lane.py"
+  cp "$CVG_SRC/bin/cvg-plan-tasks.py" "$TARGET/.agents/bin/cvg-plan-tasks.py"
+  cp "$CVG_SRC/contracts/"*.json "$TARGET/.agents/contracts/"
+  cp "$CVG_SRC/templates/workspace/"*.md "$TARGET/.agents/templates/workspace/"
+else
+  ln -sf "$CVG_SRC/bin/_cvg_compose.py" "$TARGET/.agents/bin/_cvg_compose.py"
+  ln -sf "$CVG_SRC/bin/cvg-agent-context.py" "$TARGET/.agents/bin/cvg-agent-context.py"
+  ln -sf "$CVG_SRC/bin/cvg-classify-lane.py" "$TARGET/.agents/bin/cvg-classify-lane.py"
+  ln -sf "$CVG_SRC/bin/cvg-plan-tasks.py" "$TARGET/.agents/bin/cvg-plan-tasks.py"
+  for contract in "$CVG_SRC"/contracts/*.json; do
+    ln -sf "$contract" "$TARGET/.agents/contracts/$(basename "$contract")"
+  done
+  for template in "$CVG_SRC"/templates/workspace/*.md; do
+    ln -sf "$template" "$TARGET/.agents/templates/workspace/$(basename "$template")"
+  done
+fi
 
 # --- 2. the CLI --------------------------------------------------------------
 BIN_NOTE=""
@@ -193,11 +234,11 @@ fi
 # --- 3. verify ---------------------------------------------------------------
 echo
 VALIDATOR="$TARGET/.agents/skills/skill-creator/scripts/quick_validate.py"
-if [ -f "$VALIDATOR" ] && python3 "$VALIDATOR" "$TARGET/.agents/skills/task-spec" >/dev/null 2>&1; then
-  echo "verified: the installed skills parse (task-spec is valid)"
+if [ -f "$VALIDATOR" ] && python3 "$VALIDATOR" "$TARGET/.agents/skills/idea-to-brd" >/dev/null 2>&1; then
+  echo "verified: Converge skills parse; Task-Spec engine is $TASKSPEC_VERSION"
 else
   echo "WARNING: could not verify the install — run:"
-  echo "  python3 $VALIDATOR $SKILL_DIR/task-spec"
+  echo "  python3 $VALIDATOR $TARGET/.agents/skills/idea-to-brd"
 fi
 
 echo

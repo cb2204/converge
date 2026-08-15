@@ -14,6 +14,9 @@ CMD="${CVG_CODEX_CMD:-codex}"
 [ "$ENG_MODE" = "available" ] && { command -v "$CMD" >/dev/null 2>&1; exit $?; }
 
 RC=0
+TRANSCRIPT="$(mktemp -t cvg-codex-transcript.XXXXXX)" || exit 4
+cleanup_transcript() { rm -f "$TRANSCRIPT"; }
+trap cleanup_transcript EXIT HUP INT TERM
 cd "$ENG_WORKDIR" || exit 4
 # Positional prompt rather than stdin: `codex exec [PROMPT]` accepts it directly,
 # and passing it as an argument removes a whole class of plumbing failure (a
@@ -40,6 +43,14 @@ case "$ENG_EFFORT" in
 esac
 
 to "$ENG_TIMEOUT" "$CMD" exec --sandbox workspace-write \
-  "${ENG_ARGS[@]+"${ENG_ARGS[@]}"}" "$(cat "$ENG_PROMPT")" </dev/null 2>&1 || RC=$?
+  "${ENG_ARGS[@]+"${ENG_ARGS[@]}"}" "$(cat "$ENG_PROMPT")" \
+  </dev/null >"$TRANSCRIPT" 2>&1 || RC=$?
+
+# A provider CLI may start MCP children that outlive the CLI process. If those
+# children inherit this adapter's stdout pipe, the loop's command substitution
+# never observes EOF even though the provider already completed the work. A
+# regular file does not have that lifetime coupling: publish the completed
+# transcript after the provider exits, then let cleanup unlink the inode.
+cat "$TRANSCRIPT"
 
 eng_finish "$RC"

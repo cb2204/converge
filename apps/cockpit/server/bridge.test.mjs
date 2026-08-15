@@ -335,7 +335,7 @@ test("runner invokes only declared read-only cvg commands with no shell or crede
   const methodology = await runner.run("agentContext");
   assert.deepEqual(invocations.map((invocation) => invocation.args), [
     ["snapshot", "--json"],
-    ["agent-context", "--json"],
+    ["agent-context"],
   ]);
   const invocation = invocations[0];
   assert.equal(invocation.file, "/tool/bin/cvg");

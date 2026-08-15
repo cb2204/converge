@@ -23,7 +23,8 @@ VERIFY="$SKILL_DIR/scripts/verify-registration.sh"
 PARSE="$SKILL_DIR/scripts/_parse.sh"
 FAKE="$SKILL_DIR/scripts/adapters/fake.sh"
 REPO_ROOT="$(cd "$SELF_DIR" && git rev-parse --show-toplevel 2>/dev/null || echo "")"
-TS_LIB="$REPO_ROOT/skills/task-spec/scripts/_lib.sh"
+TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
+INTEGRATION_FIXTURE="$REPO_ROOT/tests/fixtures/T-20260602-golden.md"
 
 DATE="20260723"   # fixed — ids need no real date, only a valid T-YYYYMMDD- prefix
 
@@ -194,35 +195,39 @@ if [[ ! -s "$S/issues.tsv" ]]; then ok "preflight fail wrote no issues"; else ba
 
 # -----------------------------------------------------------------------------
 echo; echo "[K] HMAC-safety: the receipt stamp leaves the sign-off payload invariant"
-if [[ -f "$TS_LIB" && -f "$PARSE" ]]; then
+if command -v "$TASKSPEC_ENGINE" >/dev/null 2>&1 \
+  && [[ -f "$INTEGRATION_FIXTURE" && -f "$PARSE" ]]; then
   RES="$(
     set +e
-    source "$TS_LIB" 2>/dev/null
     source "$PARSE"  2>/dev/null
-    SPEC="$WORK/k.md"
-    cat > "$SPEC" <<'SIGNED'
----
-id: T-20260723-reg-sealed
-title: sealed fixture
-status: ready
-signed_off: true
-signed_off_by: test
-signed_off_at: 2026-07-23T00:00:00Z
-depends_on: []
----
-
-## Goal
-A spec whose body must not change when a receipt is stamped.
-
-## Exit Check
-```bash
-eval_1
-```
-SIGNED
-    BEFORE="$(ts_signoff_payload "$SPEC")"
+    KROOT="$WORK/k"
+    mkdir -p "$KROOT/tasks"
+    SPEC="$KROOT/tasks/T-20260602-golden.md"
+    cp "$INTEGRATION_FIXTURE" "$SPEC"
+    printf '# integration fixture\n' > "$KROOT/README.md"
+    git -C "$KROOT" init --quiet
+    git -C "$KROOT" config user.email register@test.local
+    git -C "$KROOT" config user.name "register test"
+    git -C "$KROOT" add README.md tasks/T-20260602-golden.md
+    git -C "$KROOT" commit --quiet -m fixture
+    KEY="$KROOT/taskspec-signing-key"
+    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$KEY"
+    GATE_LOG="$(TASKSPEC_SIGNING_KEY="$KEY" TASKSPEC_BACKLOG_DIR="$KROOT/tasks" \
+      TASKSPEC_WORKSPACE_ROOT="$KROOT" "$TASKSPEC_ENGINE" gate --stamp \
+      --stamp-by register-test "$SPEC" 2>&1)" || {
+        printf 'GATE_FAILED: %s\n' "$GATE_LOG"
+        exit 1
+      }
+    BEFORE_JSON="$(TASKSPEC_SIGNING_KEY="$KEY" TASKSPEC_BACKLOG_DIR="$KROOT/tasks" \
+      TASKSPEC_WORKSPACE_ROOT="$KROOT" "$TASKSPEC_ENGINE" --json status "$SPEC")"
+    BEFORE="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["authorization"]["task_revision_digest"])' <<<"$BEFORE_JSON")"
     tsi_set_tracker_ref "$SPEC" "fake:FAKE-1" >/dev/null 2>&1
-    AFTER="$(ts_signoff_payload "$SPEC")"
-    if [[ "$BEFORE" == "$AFTER" ]] && grep -q '^tracker_ref: fake:FAKE-1' "$SPEC"; then
+    AFTER_JSON="$(TASKSPEC_SIGNING_KEY="$KEY" TASKSPEC_BACKLOG_DIR="$KROOT/tasks" \
+      TASKSPEC_WORKSPACE_ROOT="$KROOT" "$TASKSPEC_ENGINE" --json status "$SPEC")"
+    AFTER="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["authorization"]["task_revision_digest"])' <<<"$AFTER_JSON")"
+    TIER="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["authorization"]["tier"])' <<<"$AFTER_JSON")"
+    if [[ "$BEFORE" == "$AFTER" && "$TIER" == "1" ]] \
+      && grep -q '^tracker_ref: fake:FAKE-1' "$SPEC"; then
       echo "INVARIANT_OK"
     else
       echo "INVARIANT_BROKEN"
@@ -234,7 +239,7 @@ SIGNED
     bad "receipt stamp changed the sign-off payload — the seal would break ($RES)"
   fi
 else
-  echo "  skip — task-spec _lib.sh not found; HMAC-safety proof skipped"
+  bad "standalone Task-Spec HMAC-safety prerequisites missing"
 fi
 
 # -----------------------------------------------------------------------------

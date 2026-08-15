@@ -1,6 +1,6 @@
 {
   "name": "cvg",
-  "description": "Converge — compile intent into shipped software. The dark factory for coding agents: one install ships the twelve /converge skills and the zero-dependency cvg CLI, over git, no package manager.",
+  "description": "Converge — compile intent into shipped software. One install ships eleven Converge-owned skills and the cvg CLI; Task-Spec is installed and versioned independently.",
   "owner": {
     "name": "Luan Moreno M. Maciel",
     "url": "https://github.com/luanmorenommaciel"
@@ -9,8 +9,8 @@
     {
       "name": "converge",
       "source": "./",
-      "description": "The nine-pass Converge method (twelve skills) plus the cvg referee CLI on PATH. Zero dependencies: bash 3.2+, no npm, no pip.",
-      "version": "0.1.0",
+      "description": "The nine-pass Converge method (eleven owned skills) plus the cvg referee CLI on PATH. Requires the independently installed Task-Spec 3.8 engine.",
+      "version": "0.2.0-alpha.1",
       "license": "MIT",
       "category": "workflow",
       "keywords": ["agentic", "task-spec", "evals", "delivery", "referee"]

@@ -49,6 +49,19 @@ jobs:
           # No step pushes or fetches private content after checkout.
           persist-credentials: false
 
+      - name: install the pinned standalone Task-Spec engine
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
+          engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
+          gh repo clone luanmorenommaciel/task-spec "$engine_dir" -- --quiet
+          git -C "$engine_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          bash "$engine_dir/install.sh" --global --copy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$engine_dir" >> "$GITHUB_ENV"
+          printf 'COMPOSE_DEMO_REQUIRE_ENGINE_PROVENANCE=1\n' >> "$GITHUB_ENV"
+
       - name: set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -66,13 +79,24 @@ jobs:
           --require-hashes
           -r .github/requirements-ci.txt
 
+      - name: install the pinned standalone Seamwise engine
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
+          engine_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
+          gh repo clone luanmorenommaciel/seamwise "$engine_dir" -- --quiet
+          git -C "$engine_dir" checkout --quiet --detach 29a087c63ee97cb07ab4635aaba87ecab48dc2f1
+          python -m pip install --disable-pip-version-check "$engine_dir"
+          test "$(seamwise --version)" = "seamwise, version 0.2.0-alpha.1"
+          printf 'CVG_SEAMWISE_SOURCE_ROOT=%s\n' "$engine_dir" >> "$GITHUB_ENV"
+
       - name: set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # Major-only for the same reason as Python above; the lockfile pins deps.
+          # Task-Spec is an independently installed engine; Converge has no root
+          # Node dependency tree to cache here.
           node-version: "22"
-          cache: npm
-          cache-dependency-path: skills/task-spec/references/examples/package-lock.json
 
       - name: actionlint
         if: runner.os == 'Linux'
@@ -95,7 +119,7 @@ jobs:
           files=(bin/cvg install.sh)
           while IFS= read -r -d '' file; do
             files+=("$file")
-          done < <(find skills tests -type f -name '*.sh' -print0)
+          done < <(find skills tests scripts -type f -name '*.sh' -print0)
           shellcheck -S error "${files[@]}"
 
       - name: every skill is valid
@@ -113,6 +137,7 @@ jobs:
           }
           for d in skills/*/; do
             [ -f "$d/SKILL.md" ] || continue
+            [ "$(basename "$d")" = "task-spec" ] && continue
             if ! out="$(python3 skills/skill-creator/scripts/quick_validate.py "$d" 2>&1)"; then
               echo "INVALID: $d"; indent "$out"; fail=1
             elif [ "$out" != "Skill is valid!" ]; then
@@ -129,7 +154,7 @@ jobs:
           done
           while IFS= read -r -d '' file; do
             bash -n "$file" || { echo "SYNTAX: $file"; fail=1; }
-          done < <(find skills tests -type f -name '*.sh' -print0)
+          done < <(find skills tests scripts -type f -name '*.sh' -print0)
           if [ "$fail" -ne 0 ]; then
             exit 1
           fi
@@ -137,26 +162,13 @@ jobs:
       - name: the npm package carries the whole tool surface
         # `npm i -g github:…` and `npx` ship whatever `files` whitelists. A
         # missing anchor here means a broken install for every npm consumer.
+        run: bash tests/test-package.sh
+
+      - name: standalone Task-Spec boundary
         run: |
-          npm pack --dry-run --json > /tmp/pack.json
-          python3 - <<'PY'
-          import json
-          files = {f["path"] for f in json.load(open("/tmp/pack.json"))[0]["files"]}
-          need = ["bin/cvg", "bin/_ui.sh", "install.sh", "VERSION",
-                  "skills/task-spec/SKILL.md", ".claude-plugin/plugin.json"]
-          missing = [p for p in need if p not in files]
-          assert not missing, f"npm package is missing: {missing}"
-          print(f"npm package OK — {len(files)} files, all anchors present")
-          PY
-
-      - name: task-spec
-        run: bash skills/task-spec/tests/test-task-spec-skill.sh
-
-      - name: hmac envelope
-        run: bash skills/task-spec/tests/test-hmac-envelope.sh
-
-      - name: bash 3.2 portability
-        run: bash skills/task-spec/tests/test-bash-portability.sh
+          test "$(taskspec version)" = "3.8.0"
+          taskspec demo | tee /tmp/taskspec-demo.txt
+          grep -q '^DEMO=READY$' /tmp/taskspec-demo.txt
 
       - name: runtime contract (Pass 7)
         run: bash skills/task-to-runtime-contract/tests/run-tests.sh
@@ -165,7 +177,24 @@ jobs:
         run: bash skills/task-specs-to-issues/tests/test-register.sh
 
       - name: cvg json envelope
-        run: bash tests/test-cvg-json-envelope.sh
+        run: |
+          bash tests/test-cvg-json-envelope.sh
+          python3 tests/test-cvg-json-matrix.py
+
+      - name: composed external-engine boundary
+        run: bash tests/test-compose.sh
+
+      - name: documentation contracts
+        run: bash tests/test-docs.sh
+
+      - name: retained live Codex evidence
+        run: python scripts/validate-live-evidence.py
+
+      - name: deterministic composed settlement demo
+        run: bash scripts/demo-composed.sh
+
+      - name: Codex adapter closes after provider exit
+        run: bash tests/test-codex-engine.sh
 
       - name: cvg snapshot — canonical Cockpit read model
         run: bash tests/test-cvg-snapshot.sh
@@ -241,25 +270,11 @@ jobs:
           bash skills/reqs-to-swimlane-plans/tests/run-tests.sh
           bash skills/sketch-plans-adversarial-review/tests/run-tests.sh
 
-      - name: task-spec — the rest of the engine's own suites
-        run: |
-          bash skills/task-spec/tests/test-effort-sizing.sh
-          bash skills/task-spec/tests/test-extractor-fuzz.sh
-          bash skills/task-spec/tests/test-portability-e2e.sh
-          bash skills/task-spec/tests/test-v3-closed-loop-e2e.sh
-
       - name: companions (teaching · skill-creator · conductor)
         run: |
           bash skills/pass-to-lesson/tests/run-tests.sh
           bash skills/skill-creator/tests/test-skill-creator.sh
           bash skills/evidence-to-next-pass/tests/run-tests.sh
-
-      - name: task-spec doc consistency
-        # A LINT, not a suite — so the coverage gate below cannot see it. It is
-        # wired by hand because it earned it: it caught plugin.json and
-        # marketplace.json still claiming 3.6.0 after the version unification,
-        # which every suite in the package had missed.
-        run: bash skills/task-spec/scripts/lint-skill-docs.sh
 
       - name: every suite in the package is wired into this workflow
         # The gate that keeps this list honest. Without it the next suite someone
@@ -288,7 +303,8 @@ jobs:
           needle='uc-''analytics'
           hits="$(
             git grep -n "$needle" -- . \
-              ':(exclude)CHANGELOG.md' 2>/dev/null || true
+              ':(exclude)CHANGELOG.md' \
+              ':(exclude)review/**' 2>/dev/null || true
             while IFS= read -r -d '' file; do
               grep -InH "$needle" "$file" 2>/dev/null || true
             done < <(git ls-files --others --exclude-standard -z)
@@ -325,6 +341,129 @@ jobs:
 
       - name: production build
         run: npm run cockpit:build
+
+  json-contract:
+    name: json (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: install the pinned standalone Task-Spec engine
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
+          engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
+          gh repo clone luanmorenommaciel/task-spec "$engine_dir" -- --quiet
+          git -C "$engine_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          bash "$engine_dir/install.sh" --global --copy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: universal JSON contract
+        run: |
+          bash tests/test-cvg-json-envelope.sh
+          python3 tests/test-cvg-json-matrix.py
+
+  docs:
+    name: docs (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: documentation links, anchors, snippets, versions, and archive truth
+        run: bash tests/test-docs.sh
+
+  package:
+    name: package (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: clean package allowlist
+        run: bash tests/test-package.sh
+
+  composed-e2e:
+    name: composed-e2e (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-ci.txt
+
+      - name: install locked validation dependencies
+        run: >-
+          python -m pip install
+          --disable-pip-version-check
+          --require-hashes
+          -r .github/requirements-ci.txt
+
+      - name: install shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            if [ "$RUNNER_OS" = "macOS" ]; then
+              brew install shellcheck
+            else
+              sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+            fi
+          fi
+
+      - name: install exact external engine candidates
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
+          taskspec_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
+          seamwise_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
+          gh repo clone luanmorenommaciel/task-spec "$taskspec_dir" -- --quiet
+          git -C "$taskspec_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          bash "$taskspec_dir/install.sh" --global --copy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
+          git -C "$seamwise_dir" checkout --quiet --detach 29a087c63ee97cb07ab4635aaba87ecab48dc2f1
+          python -m pip install --disable-pip-version-check "$seamwise_dir"
+          {
+            printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$taskspec_dir"
+            printf 'CVG_SEAMWISE_SOURCE_ROOT=%s\n' "$seamwise_dir"
+            printf 'COMPOSE_DEMO_REQUIRE_ENGINE_PROVENANCE=1\n'
+          } >> "$GITHUB_ENV"
+
+      - name: composition contract and negative cases
+        run: bash tests/test-compose.sh
+
+      - name: deterministic reviewed intent to accepted software
+        run: bash scripts/demo-composed.sh
 
       - name: install Chromium
         working-directory: apps/cockpit

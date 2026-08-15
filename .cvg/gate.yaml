@@ -37,8 +37,6 @@ protected_paths:
   - "bin/cvg"
   - "skills/task-to-runtime-contract/scripts/**"
   - "skills/task-loop/scripts/**"
-  - "skills/task-spec/scripts/**"
-  - "skills/task-spec/configs/**"
   # CI defines what "verified" means. An agent that edits its own verifier is
   # the specification-gaming failure mode, not a productive one.
   - ".github/workflows/**"

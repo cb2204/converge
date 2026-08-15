@@ -27,7 +27,7 @@ mkdir -p \
   "$WS/cvg/loop" \
   "$WS/cvg/receipts"
 
-cp "$ROOT/skills/task-spec/templates/workspace/INDEX.md" "$WS/cvg/INDEX.md"
+cp "$ROOT/templates/workspace/INDEX.md" "$WS/cvg/INDEX.md"
 cp "$ROOT/skills/task-to-runtime-contract/templates/gate.yaml" "$WS/.cvg/gate.yaml"
 cp "$ROOT/skills/idea-to-brd/tests/fixtures/golden-signed-brd.md" \
   "$WS/cvg/docs/brd/snapshot.md"
@@ -42,7 +42,7 @@ sed -i.bak '1a\
 FORK: B (task-driven) — every leg has a cheap runnable eval.
 ' "$WS/cvg/swimlanes/swimlane-checkout/swimlane-checkout.plan.md"
 rm -f "$WS/cvg/swimlanes/swimlane-checkout/swimlane-checkout.plan.md.bak"
-cp "$ROOT/skills/task-spec/tests/fixtures/T-20260602-golden.md" \
+cp "$ROOT/tests/fixtures/T-20260602-golden.md" \
   "$WS/cvg/tasks/T-20260602-golden.md"
 sed -i.bak 's/^signed_off: false$/signed_off: true/' \
   "$WS/cvg/tasks/T-20260602-golden.md"
@@ -415,7 +415,7 @@ if [ "$INVALID_RC" -eq 2 ] \
   && printf '%s' "$INVALID" | python3 -c "import json,sys
 d=json.load(sys.stdin)
 assert d['ok'] is False and d['exit_code']==2
-assert d['error']['code']=='ERROR'
+assert d['error']['code']=='USAGE_ERROR'
 assert 'invalid lane' in d['error']['message']
 " 2>/dev/null; then
   ok "invalid configured lane fails closed in the JSON envelope"

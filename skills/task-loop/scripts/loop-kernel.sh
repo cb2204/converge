@@ -379,6 +379,38 @@ if [ "$ISOLATION" = "worktree" ]; then
   fi
 fi
 
+# Task-Spec's configured roots must follow the dispatch workspace too. Keeping
+# the original checkout's absolute backlog here would let an isolated attempt
+# append metrics or acceptance state outside its own worktree.
+export TASKSPEC_BACKLOG_DIR="$RESOLVED_TASKS_DIR"
+export TASKSPEC_WORKSPACE_ROOT="$WORKSPACE_ROOT"
+export TASKSPEC_ACCEPTANCE_DIR="$(dirname "$RESOLVED_TASKS_DIR")/.taskspec/acceptance"
+
+# TaskHandoff/v3 is an ATTEMPT contract, not a bind-time project artifact. Mint
+# it only after the final workspace and immutable base exist. This is what keeps
+# worktree dispatch honest: a handoff issued in the original checkout names the
+# wrong workspace and cannot be accepted in the isolated one.
+ATTEMPT_HANDOFF=""
+if [ "$LEGACY_NO_CONTRACT" != true ] && [ "$DRY_RUN" != true ]; then
+  TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
+  ATTEMPT_HANDOFF="$WORKSPACE_ROOT/cvg/execution/$TASK_ID/task-handoff.json"
+  _handoff_backend="$(grep -m1 '^execution_backend:' "$TASK_FILE" 2>/dev/null | awk '{print $2}')"
+  : "${_handoff_backend:=any}"
+  mkdir -p "$(dirname "$ATTEMPT_HANDOFF")"
+  HANDOFF_OUT="$(
+    cd "$WORKSPACE_ROOT" &&
+      "$TASKSPEC_ENGINE" handoff "$TASK_FILE" --backend "$_handoff_backend" \
+        --out "$ATTEMPT_HANDOFF" --force 2>&1
+  )"
+  HANDOFF_RC=$?
+  printf '%s\n' "$HANDOFF_OUT"
+  if [ "$HANDOFF_RC" -ne 0 ] || ! printf '%s\n' "$HANDOFF_OUT" | grep -q '^HANDOFF=WRITTEN '; then
+    err "Task-Spec could not issue the dispatch handoff in the final workspace"
+    printf 'TASK_LOOP=ERROR\n'
+    exit 4
+  fi
+fi
+
 # Discard the isolated checkout unless the run earned a keep. Registered on EXIT
 # so a crash cannot leave orphaned worktrees accumulating on disk.
 KEEP_WORKTREE=false
@@ -1011,6 +1043,7 @@ SETTLE_ARGS=(--issue "$TASK_FILE" --tasks-dir "$RESOLVED_TASKS_DIR" --agent "$AG
 [ -n "$SETTLE_BASE" ] && SETTLE_ARGS+=(--base "$SETTLE_BASE")
 [ -n "$LOOP_BASE_BRANCH" ] && SETTLE_ARGS+=(--pr-base "$LOOP_BASE_BRANCH")
 [ -n "$CONTRACT" ] && SETTLE_ARGS+=(--contract "$CONTRACT")
+[ -n "$ATTEMPT_HANDOFF" ] && SETTLE_ARGS+=(--handoff "$ATTEMPT_HANDOFF")
 [ "$LEGACY_NO_CONTRACT" = true ] && SETTLE_ARGS+=(--legacy-no-contract)
 SETTLE_RC=0
 SETTLE_OUT="$(cd "$WORKSPACE_ROOT" && bash "$SETTLER" "${SETTLE_ARGS[@]}" 2>&1)" || SETTLE_RC=$?

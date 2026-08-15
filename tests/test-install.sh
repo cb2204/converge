@@ -56,7 +56,7 @@ fi
 AGENT_COUNT="$(find "$T/.agents/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
 CLAUDE_COUNT="$(find "$T/.claude/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
 GROK_COUNT="$(find "$T/.grok/skills" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')"
-EXPECTED="$(find "$SRC/skills" -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
+EXPECTED="$(find "$SRC/skills" -maxdepth 2 -name SKILL.md ! -path '*/task-spec/SKILL.md' | wc -l | tr -d ' ')"
 if [ "$AGENT_COUNT" = "$EXPECTED" ] && [ "$CLAUDE_COUNT" = "$EXPECTED" ] && [ "$GROK_COUNT" = "$EXPECTED" ]; then
   ok "every skill installs for Codex/Kimi, Claude Code, and Grok Build ($EXPECTED each)"
 else
@@ -67,7 +67,10 @@ fi
 VOUT="$("$T/bin/cvg" version 2>&1)"
 if printf '%s' "$VOUT" | grep -q '^cvg ' \
   && [ -f "$T/bin/cvg" ] && [ ! -L "$T/bin/cvg" ] \
-  && [ -f "$T/bin/.cvg-ui.sh" ]; then
+  && [ -f "$T/bin/.cvg-ui.sh" ] \
+  && [ -f "$T/.agents/bin/_cvg_compose.py" ] \
+  && [ -f "$T/.agents/bin/cvg-agent-context.py" ] \
+  && [ -f "$T/.agents/contracts/cli-command-matrix.json" ]; then
   ok "pinned cvg copy runs with its packaged UI companion"
 else
   bad "pinned cvg package is incomplete: $(printf '%s' "$VOUT" | head -1)"
@@ -231,10 +234,15 @@ fi
 T2="$(mktemp -d -t cvg-install2.XXXXXX)"
 git -C "$T2" init --quiet
 bash "$SRC/install.sh" --target "$T2" --no-bin --copy >/dev/null 2>&1
-if [ -d "$T2/.agents/skills/task-spec" ] && [ ! -L "$T2/.agents/skills/task-spec" ] \
-  && [ -d "$T2/.claude/skills/task-spec" ] && [ ! -L "$T2/.claude/skills/task-spec" ] \
-  && [ -d "$T2/.grok/skills/task-spec" ] && [ ! -L "$T2/.grok/skills/task-spec" ]; then
-  ok "--copy pins real shared, Claude, and Grok skill directories"
+if [ -d "$T2/.agents/skills/idea-to-brd" ] && [ ! -L "$T2/.agents/skills/idea-to-brd" ] \
+  && [ -d "$T2/.claude/skills/idea-to-brd" ] && [ ! -L "$T2/.claude/skills/idea-to-brd" ] \
+  && [ -d "$T2/.grok/skills/idea-to-brd" ] && [ ! -L "$T2/.grok/skills/idea-to-brd" ] \
+  && [ -f "$T2/.agents/bin/_cvg_compose.py" ] \
+  && [ -f "$T2/.agents/bin/cvg-agent-context.py" ] \
+  && [ -f "$T2/.agents/bin/cvg-plan-tasks.py" ] \
+  && [ -f "$T2/.agents/contracts/converge-composition-receipt-v1.schema.json" ] \
+  && [ ! -d "$T2/.agents/skills/task-spec" ]; then
+  ok "--copy pins Converge skills and helpers without embedding Task-Spec"
 else
   bad "--copy still produced a symlink"
 fi
@@ -243,9 +251,13 @@ fi
 T3="$(mktemp -d -t cvg-install3.XXXXXX)"
 git -C "$T3" init --quiet
 bash "$SRC/install.sh" --target "$T3" --symlink --bin-dir "$T3/bin" >/dev/null 2>&1
-if [ -L "$T3/.agents/skills/task-spec" ] \
-  && [ -L "$T3/.claude/skills/task-spec" ] \
-  && [ -L "$T3/.grok/skills/task-spec" ] \
+if [ -L "$T3/.agents/skills/idea-to-brd" ] \
+  && [ -L "$T3/.claude/skills/idea-to-brd" ] \
+  && [ -L "$T3/.grok/skills/idea-to-brd" ] \
+  && [ -L "$T3/.agents/bin/_cvg_compose.py" ] \
+  && [ -L "$T3/.agents/bin/cvg-agent-context.py" ] \
+  && [ -L "$T3/.agents/bin/cvg-plan-tasks.py" ] \
+  && [ -L "$T3/.agents/contracts/cli-command-matrix.json" ] \
   && [ -L "$T3/bin/cvg" ] \
   && "$T3/bin/cvg" version >/dev/null 2>&1; then
   ok "--symlink explicitly enables the live development install"

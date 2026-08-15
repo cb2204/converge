@@ -7,9 +7,9 @@ export PYTHONDONTWRITEBYTECODE=1
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOL_HOME="$(cd "$SKILL_DIR/../.." && pwd)"
 CVG="$TOOL_HOME/bin/cvg"
-SAFE="$TOOL_HOME/skills/task-spec/scripts/safe-to-delegate.sh"
+TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
 EVAL_RUNNER="$TOOL_HOME/skills/task-loop/scripts/run-issue-eval.sh"
-FIXTURE="$TOOL_HOME/skills/task-spec/tests/fixtures/T-20260602-golden.md"
+FIXTURE="$TOOL_HOME/tests/fixtures/T-20260602-golden.md"
 LOOP="$TOOL_HOME/skills/task-loop/scripts/run-issue-eval.sh"
 OPEN_PR="$TOOL_HOME/skills/task-loop/scripts/open-issue-pr.sh"
 
@@ -57,7 +57,7 @@ printf 'runtime-contract-test-key-material-32bytes\n' > "$KEY_FILE"
 (
   cd "$TMP_REPO"
   TASKSPEC_SIGNING_KEY="$KEY_FILE" \
-    bash "$SAFE" --stamp --stamp-by runtime-test tasks/T-20260602-golden.md >/dev/null
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by runtime-test tasks/T-20260602-golden.md >/dev/null
 )
 
 PROFILE="$TMP_REPO/cvg/execution/T-20260602-golden/execution-profile.yaml"
@@ -127,7 +127,7 @@ sed \
 (
   cd "$TMP_REPO"
   TASKSPEC_SIGNING_KEY="$KEY_FILE" \
-    bash "$SAFE" --stamp --stamp-by runtime-test \
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by runtime-test \
     tasks/T-20260602-runtime-derived.md >/dev/null
   TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
     --task tasks/T-20260602-runtime-derived.md >/dev/null
@@ -320,7 +320,7 @@ printf 'test\n' > "$TMP_REPO/tests/test_unit.py"
 (
   cd "$TMP_REPO"
   TASKSPEC_SIGNING_KEY="$KEY_FILE" \
-    bash "$SAFE" --stamp --stamp-by runtime-test tasks/T-20260602-parallel.md >/dev/null
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by runtime-test tasks/T-20260602-parallel.md >/dev/null
 )
 set +e
 PARALLEL_OK_OUT="$(
@@ -420,7 +420,7 @@ cp "$FIXTURE" "$TMP_REPO/tasks/T-20260602-golden.md"
 (
   cd "$TMP_REPO"
   TASKSPEC_SIGNING_KEY="$KEY_FILE" \
-    bash "$SAFE" --stamp --stamp-by runtime-test tasks/T-20260602-golden.md >/dev/null
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by runtime-test tasks/T-20260602-golden.md >/dev/null
   TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind \
     --task tasks/T-20260602-golden.md \
     --knowledge cvg/knowledge/failures/locking.md \
@@ -737,7 +737,7 @@ else
 fi
 
 # The lane classifier ROUTES but never WAIVES.
-LANE="$TOOL_HOME/skills/task-spec/scripts/classify-lane.py"
+LANE="$TOOL_HOME/bin/cvg-classify-lane.py"
 if python3 "$LANE" "fix a typo in the readme" | grep -q '^LANE=FAST$' \
   && python3 "$LANE" "add oauth token refresh to billing" | grep -q '^LANE=NORMAL$' \
   && python3 "$LANE" "build a new service from scratch" | grep -q '^LANE=FULL$'; then
@@ -846,7 +846,8 @@ printf '# readme\n' > "$WS/README.md"
 printf '# root\n' > "$NEST_REPO/README.md"
 (
   cd "$WS"
-  TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$SAFE" --stamp --stamp-by nest cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" TASKSPEC_WORKSPACE_ROOT="$WS" \
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by nest cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
   TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind --task cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
 ) || true
 git -C "$NEST_REPO" add -A >/dev/null 2>&1
@@ -896,17 +897,24 @@ cp "$FIXTURE" "$WP4_REPO/tasks/T-20260602-golden.md"
 printf '# readme\n' > "$WP4_REPO/README.md"
 (
   cd "$WP4_REPO"
-  TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$SAFE" --stamp --stamp-by wp4 tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" \
+    "$TASKSPEC_ENGINE" gate --stamp --stamp-by wp4 tasks/T-20260602-golden.md >/dev/null 2>&1
   TASKSPEC_SIGNING_KEY="$KEY_FILE" CVG_HOME="$TOOL_HOME" "$CVG" bind --task tasks/T-20260602-golden.md >/dev/null 2>&1
   git add -A && git commit --quiet -m "baseline"
+  printf '/cvg/receipts/*.json\n/cvg/execution/*/task-handoff.json\n' >> .git/info/exclude
+  mkdir -p cvg/execution/T-20260602-golden
+  TASKSPEC_SIGNING_KEY="$KEY_FILE" \
+    "$TASKSPEC_ENGINE" handoff tasks/T-20260602-golden.md --backend any \
+      --out cvg/execution/T-20260602-golden/task-handoff.json >/dev/null
 ) || true
+WP4_HANDOFF="$WP4_REPO/cvg/execution/T-20260602-golden/task-handoff.json"
 
 # The authorized change alone must settle — locally, because external writes are
 # denied by the profile. The artifact and the behaviour have to agree.
 printf 'authorized change\n' >> "$WP4_REPO/README.md"
 set +e
 LOCAL_OUT="$(cd "$WP4_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$OPEN_PR" \
-  --issue T-20260602-golden --tasks-dir tasks --base main 2>&1)"
+  --issue T-20260602-golden --tasks-dir tasks --base main --handoff "$WP4_HANDOFF" 2>&1)"
 LOCAL_RC=$?
 set -e
 if [ "$LOCAL_RC" -eq 0 ] \
@@ -914,7 +922,7 @@ if [ "$LOCAL_RC" -eq 0 ] \
   && ! grep -q 'git push' <<<"$LOCAL_OUT"; then
   ok "external_writes=deny settles locally — no push, no PR (WP4)"
 else
-  bad "settlement ignored the external-writes policy: $(tail -3 <<<"$LOCAL_OUT")"
+  bad "settlement ignored the external-writes policy: $LOCAL_OUT"
 fi
 
 # The success receipt exists only because settlement actually happened.
@@ -936,7 +944,7 @@ printf 'smuggled\n' > "$WP4_REPO/src/not-authorized.py"
 printf 'more authorized\n' >> "$WP4_REPO/README.md"
 set +e
 (cd "$WP4_REPO" && TASKSPEC_SIGNING_KEY="$KEY_FILE" bash "$OPEN_PR" \
-  --issue T-20260602-golden --tasks-dir tasks --base main >/dev/null 2>&1)
+  --issue T-20260602-golden --tasks-dir tasks --base main --handoff "$WP4_HANDOFF" >/dev/null 2>&1)
 set -e
 SMUGGLED="$(git -C "$WP4_REPO" log --all --name-only --format= 2>/dev/null | grep -c 'not-authorized' || true)"
 if [ "${SMUGGLED//[^0-9]/}" = "0" ]; then

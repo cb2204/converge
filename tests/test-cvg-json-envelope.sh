@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.1.0):
+# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.2.0-alpha.1):
 # the uniform --json response envelope {ok,data,error,meta,…} on every command, and
 # --dry-run on mutations. Proves, discriminating:
 #   · the envelope carries every SOTA key + a versioned meta
@@ -8,7 +8,7 @@
 #   · --json is position-independent and leaves the DEFAULT path byte-parity-exact
 #   · --dry-run on a mutation changes nothing (changed=false / dry_run=true)
 #   · snapshot remains enveloped at data.snapshot and holds THE BARRIER
-#   · agent-context stays raw JSON (not double-enveloped)
+#   · agent-context, help, and version use the same universal envelope
 # bash 3.2-safe. Python is stdlib-only. Uses product-neutral skill fixtures.
 # shellcheck disable=SC2015  # file-wide, intentional: `A && B || bad` — ok()/bad() ARE the branches (ok always returns 0)
 set -u
@@ -38,6 +38,7 @@ d=json.load(sys.stdin)
 need=['ok','command','converge_pass','token','verdict','exit_code','changed','dry_run','data','error','warnings','meta']
 assert all(k in d for k in need), [k for k in need if k not in d]
 assert set(['ok','data','error','meta']).issubset(d)
+assert d['contract']=='ConvergeCLIResult/v1' and d['schema_version']==1
 assert d['meta']['schema_version']=='1.0' and d['meta']['tool']=='cvg' and d['meta']['cvg_version']
 " 2>/dev/null; then ok "envelope shape + meta{schema_version,version}"; else bad "envelope shape" "missing keys/meta"; fi
 
@@ -99,11 +100,10 @@ O="$(jrun --json --dry-run capture "$GOOD_BRD")"
   && ok "--dry-run read-only: runs, changed=false" || bad "dry-run read-only" "field mismatch"
 
 # --- subcommand mutability is classified by the exact form, not its parent ---
-SPEC="skills/task-spec/tests/fixtures/T-20260602-golden.md"
-STATE="$PG/skills/task-spec/tests/fixtures/_state.yaml"
-STATE_BEFORE="$(shasum -a 256 "$STATE" | awk '{print $1}')"
+SPEC="tests/fixtures/T-20260602-golden.md"
+STATE_BEFORE="$(git -C "$PG" status --porcelain=v1 --untracked-files=all | shasum -a 256 | awk '{print $1}')"
 O="$(jrun --json tasks validate --no-state "$SPEC")"
-STATE_AFTER="$(shasum -a 256 "$STATE" | awk '{print $1}')"
+STATE_AFTER="$(git -C "$PG" status --porcelain=v1 --untracked-files=all | shasum -a 256 | awk '{print $1}')"
 [ "$(printf '%s' "$O" | jget "d['changed']")" = "False" ] \
   && [ "$(printf '%s' "$O" | jget "d['dry_run']")" = "False" ] \
   && [ "$STATE_BEFORE" = "$STATE_AFTER" ] \
@@ -135,7 +135,7 @@ mkdir -p \
   "$SNAP_WS/cvg/execution" \
   "$SNAP_WS/cvg/loop" \
   "$SNAP_WS/cvg/receipts"
-cp "$ROOT/skills/task-spec/templates/workspace/INDEX.md" "$SNAP_WS/cvg/INDEX.md"
+cp "$ROOT/templates/workspace/INDEX.md" "$SNAP_WS/cvg/INDEX.md"
 cp "$ROOT/skills/task-to-runtime-contract/templates/gate.yaml" "$SNAP_WS/.cvg/gate.yaml"
 cp "$ROOT/skills/idea-to-brd/tests/fixtures/golden-signed-brd.md" \
   "$SNAP_WS/cvg/docs/brd/snapshot.md"
@@ -143,7 +143,7 @@ cp "$ROOT/skills/brd-docs-to-tech-req/tests/fixtures/golden-signed-tech-spec.md"
   "$SNAP_WS/cvg/docs/tech-spec/snapshot.md"
 cp -R "$ROOT/skills/reqs-to-swimlane-plans/tests/fixtures/good/." \
   "$SNAP_WS/cvg/swimlanes/"
-cp "$ROOT/skills/task-spec/tests/fixtures/T-20260602-golden.md" \
+cp "$ROOT/tests/fixtures/T-20260602-golden.md" \
   "$SNAP_WS/cvg/tasks/T-20260602-golden.md"
 sed -i.bak 's/^signed_off: false$/signed_off: true/' \
   "$SNAP_WS/cvg/tasks/T-20260602-golden.md"
@@ -343,7 +343,7 @@ if [ "$INVALID_LANE_RC" -eq 2 ] \
   && printf '%s' "$INVALID_LANE" | python3 -c "import json,sys
 d=json.load(sys.stdin)
 assert d['ok'] is False and d['exit_code']==2
-assert d['error']['code']=='ERROR'
+assert d['error']['code']=='USAGE_ERROR'
 assert 'invalid lane' in d['error']['message']
 " 2>/dev/null; then
   ok "snapshot fails closed on an invalid configured lane"
@@ -376,11 +376,25 @@ assert len(rows)==1 and rows[0]['mutating'] is False
   && ok "agent-context declares snapshot non-mutating" \
   || bad "snapshot agent-context" "missing or mutating"
 
-# --- agent-context stays raw JSON under --json (not double-enveloped) ---
+# --- agent-context participates in the universal --json envelope ---
 jrun --json agent-context | python3 -c "import json,sys
 d=json.load(sys.stdin)
-assert d.get('tool')=='cvg' and 'commands' in d and 'ok' not in d" 2>/dev/null \
-  && ok "agent-context raw JSON (not enveloped)" || bad "agent-context under --json" "double-enveloped"
+assert d['contract']=='ConvergeCLIResult/v1' and d['ok'] is True
+manifest=d['data']['agent_context']
+assert manifest.get('tool')=='cvg' and len(manifest['commands'])==57" 2>/dev/null \
+  && ok "agent-context uses the universal envelope" || bad "agent-context under --json" "missing envelope or matrix"
+
+# Help and version are no longer exceptions to the machine contract.
+jrun help --json | python3 -c "import json,sys
+d=json.load(sys.stdin)
+assert d['contract']=='ConvergeCLIResult/v1' and d['command']=='help' and d['ok'] is True
+assert 'compose materialize' in d['data']['output']" 2>/dev/null \
+  && ok "help uses ConvergeCLIResult/v1" || bad "help under --json" "not universally enveloped"
+jrun --json version | python3 -c "import json,sys
+d=json.load(sys.stdin)
+assert d['contract']=='ConvergeCLIResult/v1' and d['command']=='version' and d['ok'] is True
+assert '0.2.0-alpha.1' in d['data']['output']" 2>/dev/null \
+  && ok "version uses ConvergeCLIResult/v1" || bad "version under --json" "not universally enveloped"
 
 echo
 if [ "$F" -eq 0 ]; then echo "PASS — all $T rows green."; exit 0
