@@ -453,6 +453,7 @@
 <!-- Settlement Fold icon symbol (light mark, for dark surfaces) -->
 </head>
 <body>
+<div role="note" style="position:fixed;inset:0 0 auto 0;z-index:99999;padding:9px 16px;background:#7f1d1d;color:#fff;text-align:center;font:700 13px/1.35 system-ui,sans-serif;letter-spacing:.03em;">ARCHIVED v0.1 EVIDENCE — not the current operating guide. Use <a href="converge-v0.2.0-alpha.1.pdf" style="color:#fff;text-decoration:underline;">the composed-alpha release guide</a> for current candidate behavior.</div>
 <svg width="0" height="0" style="position:absolute">
   <defs>
     <g id="fold-icon">
@@ -508,7 +509,7 @@
     <p class="cover-abstract">
       The dark factory for coding agents: a raw idea enters a <b>nine-gate production line</b>
       and leaves as merged, proven work. Autonomous agents do the building; machines do the
-      checking. One method, one referee CLI, twelve portable skills — <b>zero runtime dependencies</b>.
+      checking. One method, one referee CLI, eleven Converge skills, and a compatible standalone Task-Spec engine.
     </p>
 
     <div class="cover-meta">
@@ -574,7 +575,7 @@
     <div class="toc-card">
       <div class="ch">CHAPTER 05</div>
       <h4>The skills</h4>
-      <div class="toc-row"><span>Utilities &amp; the twelve-skill catalog</span><span class="pg">20</span></div>
+      <div class="toc-row"><span>Utilities &amp; the eleven-skill catalog</span><span class="pg">20</span></div>
     </div>
     <div class="toc-card">
       <div class="ch">CHAPTER 06</div>
@@ -2457,7 +2458,7 @@
         <!-- harness -->
         <rect x="20" y="92" width="520" height="58" rx="11" fill="#111720" stroke="#29313A" stroke-width="1.5"/>
         <text class="arch-t" x="40" y="116">HARNESS AGENT</text>
-        <text class="arch-s" x="40" y="136">Claude Code · Codex · Kimi · Grok Build — twelve skills installed in each harness's native directory</text>
+        <text class="arch-s" x="40" y="136">Claude Code · Codex · Kimi · Grok Build — eleven Converge skills plus standalone Task-Spec</text>
         <path d="M280 150 V174" stroke="#8D99A6" stroke-width="1.5" marker-end="url(#arr)"/>
         <text class="arch-m" x="294" y="168">drives the gates</text>
 
@@ -2913,9 +2914,8 @@ cvg-install</pre></div>
   <div style="display:flex; gap:44px; margin-top:30px;" class="z">
     <div style="width:600px; flex-shrink:0;">
       <h2 class="slide-title" style="font-size:54px;">Done is <em style="font-style:normal; color:var(--gold);">proven</em>.</h2>
-      <p class="slide-sub" style="margin-top:18px;">Converge 0.1.0 ships the CLI, twelve skills,
-      and the Task-Spec engine as <b>one versioned unit</b> — the first release where every claim
-      has a receipt behind it. One number everywhere: <code class="mono">VERSION</code> is the
+      <p class="slide-sub" style="margin-top:18px;">Historical migration annotation for the untagged 0.2 alpha candidate (not release evidence): the CLI and eleven skills ship together;
+      Task-Spec 3.8 remains an <b>independently versioned engine</b> — with local receipts behind the implemented claims. One Converge number across CLI and skills: <code class="mono">VERSION</code> is the
       single source of truth, and a CI gate fails the build on drift.</p>
 
       <div class="info-card" style="margin-top:24px;">
@@ -2927,7 +2927,7 @@ cvg-install</pre></div>
       </div>
 
       <div class="cover-meta" style="margin-top:24px;">
-        <span class="chip">v0.1.0 · 2026-07-30</span>
+        <span class="chip">next prerelease · version bump required</span>
         <span class="chip dim">MIT — ONE LICENSE, WHOLE UNIT</span>
         <span class="chip dim">CI GREEN · macOS + LINUX</span>
       </div>
