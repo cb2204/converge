@@ -9,7 +9,7 @@ TASKSPEC_BIN="${CVG_TASKSPEC_BIN:-taskspec}"
 SEAMWISE_BIN="${CVG_SEAMWISE_BIN:-seamwise}"
 DEMO_AGENT="${COMPOSE_DEMO_AGENT:-deterministic}"
 EXPECTED_TASKSPEC_COMMIT="0e6180cfc3009bd4ef9cf7ab050b463e10d4af91"
-EXPECTED_SEAMWISE_COMMIT="29a087c63ee97cb07ab4635aaba87ecab48dc2f1"
+EXPECTED_SEAMWISE_COMMIT="3d144a90be5a35b090599088027e457661784785"
 TASKSPEC_SOURCE_ROOT="${CVG_TASKSPEC_SOURCE_ROOT:-}"
 SEAMWISE_SOURCE_ROOT="${CVG_SEAMWISE_SOURCE_ROOT:-}"
 REQUIRE_ENGINE_PROVENANCE="${COMPOSE_DEMO_REQUIRE_ENGINE_PROVENANCE:-0}"
@@ -179,8 +179,8 @@ assert receipt["contract"] == "ConvergeCompositionReceipt/v1"
 assert receipt["dispatch_authorized"] is False
 assert receipt["source"]["commit"] == source_commit
 assert receipt["versions"] == {
-    "converge": "0.2.0-alpha.1",
-    "seamwise": "0.2.0-alpha.1",
+    "converge": "0.2.0",
+    "seamwise": "0.2.0",
     "task_spec": "3.8.0",
 }
 assert [item["task_id"] for item in receipt["tasks"]] == ["T-20260815-health-status"]
@@ -352,7 +352,7 @@ snapshot = {
 environment = {
     "contract": "ComposedDemoEnvironment/v1",
     "versions": {
-        "converge": "0.2.0-alpha.1",
+        "converge": "0.2.0",
         "task_spec": output([taskspec, "version"]),
         "seamwise": output([seamwise, "--version"]),
         "executor": output(["codex", "--version"]) if agent == "codex" else "deterministic-fixture/v1",

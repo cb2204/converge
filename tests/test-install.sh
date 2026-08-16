@@ -239,7 +239,7 @@ if [ -d "$T2/.agents/skills/idea-to-brd" ] && [ ! -L "$T2/.agents/skills/idea-to
   && [ -d "$T2/.grok/skills/idea-to-brd" ] && [ ! -L "$T2/.grok/skills/idea-to-brd" ] \
   && [ -f "$T2/.agents/bin/_cvg_compose.py" ] \
   && [ -f "$T2/.agents/bin/cvg-agent-context.py" ] \
-  && [ -f "$T2/.agents/bin/cvg-plan-tasks.py" ] \
+  && [ ! -e "$T2/.agents/bin/cvg-plan-tasks.py" ] \
   && [ -f "$T2/.agents/contracts/converge-composition-receipt-v1.schema.json" ] \
   && [ ! -d "$T2/.agents/skills/task-spec" ]; then
   ok "--copy pins Converge skills and helpers without embedding Task-Spec"
@@ -256,7 +256,7 @@ if [ -L "$T3/.agents/skills/idea-to-brd" ] \
   && [ -L "$T3/.grok/skills/idea-to-brd" ] \
   && [ -L "$T3/.agents/bin/_cvg_compose.py" ] \
   && [ -L "$T3/.agents/bin/cvg-agent-context.py" ] \
-  && [ -L "$T3/.agents/bin/cvg-plan-tasks.py" ] \
+  && [ ! -e "$T3/.agents/bin/cvg-plan-tasks.py" ] \
   && [ -L "$T3/.agents/contracts/cli-command-matrix.json" ] \
   && [ -L "$T3/bin/cvg" ] \
   && "$T3/bin/cvg" version >/dev/null 2>&1; then

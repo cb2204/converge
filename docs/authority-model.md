@@ -1,6 +1,6 @@
 # Authority model compatibility pointer
 
-The canonical Converge 0.2.0-alpha.1 authority model is
+The canonical Converge 0.2.0 authority model is
 [architecture.md](architecture.md).
 
 This path is retained so existing links do not break. Historical v0.1 diagrams

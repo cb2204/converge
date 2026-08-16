@@ -45,25 +45,25 @@ state_hash() {
   done | shasum -a 256 | awk '{print $1}'
 }
 
-OUT="$(run --json compose status 2>/dev/null)"; RC=$?
+OUT="$(TASKSPEC_BIN="$ROOM/missing-taskspec" run --json compose status 2>/dev/null)"; RC=$?
 if [ "$RC" -eq 0 ] \
   && [ "$(printf '%s' "$OUT" | field 'd["contract"]')" = "ConvergeCLIResult/v1" ] \
   && [ "$(printf '%s' "$OUT" | field 'd["token"]')" = "COMPOSE=BLOCKED" ] \
   && [ "$(printf '%s' "$OUT" | field 'd["changed"]')" = "False" ]; then
-  ok "fresh status is read-only and names prepare"
+  ok "fresh status needs only Seamwise and names prepare"
 else
   bad "fresh compose status" "rc=$RC $OUT"
 fi
 
 BEFORE="$(state_hash)"
-OUT="$(run compose prepare --source recipe.yaml --json 2>/dev/null)"; RC=$?
+OUT="$(TASKSPEC_BIN="$ROOM/missing-taskspec" run decompose --source recipe.yaml --json 2>/dev/null)"; RC=$?
 AFTER="$(state_hash)"
 if [ "$RC" -eq 0 ] \
   && [ "$(printf '%s' "$OUT" | field 'd["token"]')" = "COMPOSE=NEEDS_REVIEW" ] \
   && [ "$(printf '%s' "$OUT" | field 'd["changed"]')" = "True" ] \
   && [ "$BEFORE" != "$AFTER" ] \
   && [ ! -e "$ROOM/seamwise/task-plan.json" ]; then
-  ok "prepare stops at the explicit review boundary"
+  ok "decompose delegates to Seamwise without requiring Task-Spec"
 else
   bad "prepare review boundary" "rc=$RC $OUT"
 fi
@@ -77,7 +77,7 @@ else
   bad "missing-review rejection" "rc=$RC $OUT"
 fi
 
-OUT="$(run --json compose review --reviewer alpha-owner --reason "single task topology accepted" 2>/dev/null)"; RC=$?
+OUT="$(TASKSPEC_BIN="$ROOM/missing-taskspec" run --json compose review --reviewer release-owner --reason "single task topology accepted" 2>/dev/null)"; RC=$?
 if [ "$RC" -eq 0 ] \
   && [ "$(printf '%s' "$OUT" | field 'd["token"]')" = "COMPOSE=PREVIEW_READY" ] \
   && [ -f "$ROOM/seamwise/reviews/delivery-plan-review.json" ] \
@@ -85,6 +85,15 @@ if [ "$RC" -eq 0 ] \
   ok "review records acceptance and performs no compilation"
 else
   bad "review-only authority" "rc=$RC $OUT"
+fi
+
+OUT="$(TASKSPEC_BIN="$ROOM/missing-taskspec" run compose preview --json 2>/dev/null)"; RC=$?
+if [ "$RC" -eq 3 ] \
+  && [ "$(printf '%s' "$OUT" | field 'd["token"]')" = "COMPOSE=ENGINE_UNAVAILABLE" ] \
+  && [ ! -e "$ROOM/cvg/tasks/T-20260815-health-status.md" ]; then
+  ok "preview fails closed when Task-Spec is unavailable"
+else
+  bad "preview Task-Spec boundary" "rc=$RC $OUT"
 fi
 
 OUT="$(run compose preview --json 2>/dev/null)"; RC=$?
@@ -130,8 +139,8 @@ jsonschema.validate(value, schema)
 assert value["contract"] == "ConvergeCompositionReceipt/v1"
 assert value["dispatch_authorized"] is False
 assert value["versions"] == {
-    "converge": "0.2.0-alpha.1",
-    "seamwise": "0.2.0-alpha.1",
+    "converge": "0.2.0",
+    "seamwise": "0.2.0",
     "task_spec": "3.8.0",
 }
 assert [item["task_id"] for item in value["tasks"]] == ["T-20260815-health-status"]

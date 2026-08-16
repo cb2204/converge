@@ -86,9 +86,9 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
           engine_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
           gh repo clone luanmorenommaciel/seamwise "$engine_dir" -- --quiet
-          git -C "$engine_dir" checkout --quiet --detach 29a087c63ee97cb07ab4635aaba87ecab48dc2f1
+          git -C "$engine_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
           python -m pip install --disable-pip-version-check "$engine_dir"
-          test "$(seamwise --version)" = "seamwise, version 0.2.0-alpha.1"
+          test "$(seamwise --version)" = "seamwise, version 0.2.0"
           printf 'CVG_SEAMWISE_SOURCE_ROOT=%s\n' "$engine_dir" >> "$GITHUB_ENV"
 
       - name: set up Node
@@ -220,10 +220,9 @@ jobs:
         # nothing and no gate's job was to look.
         run: bash tests/test-cvg-doctor-evidence.sh
 
-      - name: cvg tasks plan — the Pass 5 dry run derives, never invents
-        # A preview that fills gaps with plausible tasks hides the defect worth
-        # catching. The load-bearing rows are negative: a leg with no Yields
-        # section must decompose to NOTHING and say so.
+      - name: cvg tasks plan — exact Task-Spec delegation
+        # Converge must not derive tasks from local swimlane prose. This proves
+        # the public compatibility form forwards the TaskPlan unchanged.
         run: bash tests/test-cvg-tasks-plan.sh
 
       - name: cvg tasks dod — the checklist must not weaken a criterion
@@ -462,7 +461,7 @@ jobs:
           bash "$taskspec_dir/install.sh" --global --copy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
-          git -C "$seamwise_dir" checkout --quiet --detach 29a087c63ee97cb07ab4635aaba87ecab48dc2f1
+          git -C "$seamwise_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
           python -m pip install --disable-pip-version-check "$seamwise_dir"
           {
             printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$taskspec_dir"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove the v0.1 experience from a stranger's empty Git repository.
+# Prove the v0.2.0 experience from a stranger's empty Git repository.
 # No installed file may depend on this source checkout after install.
 
 set -uo pipefail
@@ -33,7 +33,7 @@ file_mode() {
 }
 
 echo "=================================================================="
-echo "v0.2 composed-alpha clean-room install → init → task → receipt → done"
+echo "v0.2.0 clean-room install → init → task → receipt → done"
 echo "=================================================================="
 
 git -C "$ROOM" init --quiet
@@ -277,9 +277,10 @@ else
   bad "receipt hashes or JSONL lifecycle events disagree"
 fi
 
-TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" taskspec rebuild-state >/dev/null
+TASKSPEC_REBUILD_BIN="${TASKSPEC_BIN:-${CVG_TASKSPEC_BIN:-taskspec}}"
+TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" "$TASKSPEC_REBUILD_BIN" rebuild-state >/dev/null
 STATE_ONE="$(shasum -a 256 "$ROOM/cvg/tasks/_state.yaml" | awk '{print $1}')"
-TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" taskspec rebuild-state >/dev/null
+TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" "$TASKSPEC_REBUILD_BIN" rebuild-state >/dev/null
 STATE_TWO="$(shasum -a 256 "$ROOM/cvg/tasks/_state.yaml" | awk '{print $1}')"
 if [ "$STATE_ONE" = "$STATE_TWO" ] \
   && grep -q "path: tasks/done/$SPEC_ID.md" "$ROOM/cvg/tasks/_state.yaml" \

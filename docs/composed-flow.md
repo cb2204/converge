@@ -1,6 +1,6 @@
 # Composed flow
 
-Status: canonical operating guide for Converge 0.2.0-alpha.1.
+Status: canonical operating guide for Converge 0.2.0.
 
 ## Before starting
 
@@ -13,8 +13,8 @@ git add recipe.yaml
 git commit -m "pin composed delivery recipe"
 ```
 
-The release pairing is Task-Spec 3.8.0, Seamwise 0.2.0-alpha.1, and Converge
-0.2.0-alpha.1. `cvg compose status` is always safe and read-only.
+The release pairing is Task-Spec 3.8.0, Seamwise 0.2.0, and Converge
+0.2.0. `cvg compose status` is always safe and read-only.
 
 ## 1. Prepare
 

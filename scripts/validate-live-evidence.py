@@ -10,10 +10,10 @@ import re
 import jsonschema
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-EVIDENCE = ROOT / "evidence/releases/v0.2.0-alpha.1/live-codex"
+EVIDENCE = ROOT / "evidence/releases/v0.2.0/live-codex"
 EXPECTED_COMMITS = {
-    "task_spec": "44c23e974b6448cdaf21e7514f297a757154beac",
-    "seamwise": "29a087c63ee97cb07ab4635aaba87ecab48dc2f1",
+    "task_spec": "0e6180cfc3009bd4ef9cf7ab050b463e10d4af91",
+    "seamwise": "3d144a90be5a35b090599088027e457661784785",
 }
 SECRET_ASSIGNMENT = re.compile(
     r"(?:OPENAI|GITHUB|TASKSPEC|ANTHROPIC)_[A-Z_]*?(?:KEY|TOKEN)\s*[=:]",
@@ -35,7 +35,7 @@ def main() -> int:
     versions = environment["versions"]
     assert isinstance(versions, dict)
     assert versions["task_spec"] == "3.8.0"
-    assert versions["seamwise"] == "seamwise, version 0.2.0-alpha.1"
+    assert versions["seamwise"] == "seamwise, version 0.2.0"
     assert environment["credentials_recorded"] is False
 
     composition = read_json("composition-receipt.json")

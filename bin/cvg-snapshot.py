@@ -78,8 +78,8 @@ PASS_DEFINITIONS = (
         "order": 3,
         "label": "Decompose",
         "summary": "A linked, seam-aware delivery plan across explicit lanes.",
-        "command": "cvg decompose",
-        "args": ("decompose",),
+        "command": "Seamwise decomposition evidence",
+        "args": ("_observe-decomposition",),
         "optional": False,
     },
     {

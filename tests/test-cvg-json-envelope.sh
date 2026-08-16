@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.2.0-alpha.1):
+# test-cvg-json-envelope.sh — the agent-native output layer (cvg 0.2.0):
 # the uniform --json response envelope {ok,data,error,meta,…} on every command, and
 # --dry-run on mutations. Proves, discriminating:
 #   · the envelope carries every SOTA key + a versioned meta
@@ -52,13 +52,13 @@ O="$(jrun --json capture "$GOOD_BRD")"
   && [ "$(printf '%s' "$O" | jget "d['error']")" = "" ] \
   && ok "pass: ok/token/verdict/exit0/changed=false/error=null" || bad "pass envelope" "field mismatch"
 
-# --- fail (a discriminating no-thread swimlane fixture) ---
+# --- retired local decomposition fails with an explicit migration error ---
 O="$(jrun --json decompose --dir "$BAD")"
 [ "$(printf '%s' "$O" | jget "d['ok']")" = "False" ] \
-  && [ "$(printf '%s' "$O" | jget "d['exit_code']")" = "1" ] \
-  && [ "$(printf '%s' "$O" | jget "d['token']")" = "CHECK_PLAN=FAIL" ] \
-  && [ "$(printf '%s' "$O" | jget "d['error']['code']")" = "FAIL" ] \
-  && ok "fail: ok=false/exit1/token=FAIL/error.code" || bad "fail envelope" "field mismatch"
+  && [ "$(printf '%s' "$O" | jget "d['exit_code']")" = "2" ] \
+  && [ "$(printf '%s' "$O" | jget "d['token']")" = "COMPOSE=BLOCKED" ] \
+  && [ "$(printf '%s' "$O" | jget "d['error']['code']")" = "USAGE_ERROR" ] \
+  && ok "retired decompose --dir returns a migration usage error" || bad "decompose migration" "field mismatch"
 
 # --- usage error ---
 O="$(jrun --json capture --bogus)"
@@ -393,7 +393,7 @@ assert 'compose materialize' in d['data']['output']" 2>/dev/null \
 jrun --json version | python3 -c "import json,sys
 d=json.load(sys.stdin)
 assert d['contract']=='ConvergeCLIResult/v1' and d['command']=='version' and d['ok'] is True
-assert '0.2.0-alpha.1' in d['data']['output']" 2>/dev/null \
+assert '0.2.0' in d['data']['output']" 2>/dev/null \
   && ok "version uses ConvergeCLIResult/v1" || bad "version under --json" "not universally enveloped"
 
 echo

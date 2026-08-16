@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the current composed-alpha PDF from canonical Markdown sources."""
+"""Build the current composed v0.2 release PDF from canonical Markdown sources."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 SOURCES = [ROOT / "README.md", ROOT / "docs" / "architecture.md", ROOT / "docs" / "composed-flow.md"]
-OUTPUT = ROOT / "docs" / "converge-v0.2.0-alpha.1.pdf"
+OUTPUT = ROOT / "docs" / "converge-v0.2.0.pdf"
 MERMAID_DIR = ROOT / "tmp" / "pdfs" / "mermaid"
 INK = colors.HexColor("#14231F")
 GREEN = colors.HexColor("#176B56")
@@ -93,7 +93,7 @@ def page(canvas, doc) -> None:  # type: ignore[no-untyped-def]
         canvas.line(20 * mm, height - 15 * mm, width - 20 * mm, height - 15 * mm)
         canvas.setFont("Helvetica-Bold", 7.5)
         canvas.setFillColor(GREEN)
-        canvas.drawString(20 * mm, height - 11.5 * mm, "CONVERGE COMPOSED ALPHA")
+        canvas.drawString(20 * mm, height - 11.5 * mm, "CONVERGE COMPOSED RELEASE")
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(MUTED)
         footer = f"Converge {VERSION}  |  {doc.page}"
@@ -149,6 +149,11 @@ def document_story(path: pathlib.Path, style: dict[str, ParagraphStyle]) -> list
     index = 0
     while index < len(lines):
         line = lines[index]
+        if line.strip() == "<!-- pagebreak -->":
+            flush()
+            story.append(PageBreak())
+            index += 1
+            continue
         if line.startswith("<div") or line.startswith("</div") or line.startswith("[!["):
             index += 1
             continue
@@ -171,7 +176,7 @@ def document_story(path: pathlib.Path, style: dict[str, ParagraphStyle]) -> list
                 # the final failure-posture sentence on a new page at 92 mm.
                 # Tighten that one diagram while keeping every other visual at
                 # the larger ceiling.
-                max_height = (70 if path.name == "architecture.md" and mermaid_index == 2 else 92) * mm
+                max_height = (52 if path.name == "architecture.md" and mermaid_index == 2 else 92) * mm
                 scale = min(max_width / image.imageWidth, max_height / image.imageHeight)
                 image.drawWidth = image.imageWidth * scale
                 image.drawHeight = image.imageHeight * scale
@@ -228,7 +233,7 @@ def main() -> int:
         rightMargin=20 * mm,
         topMargin=22 * mm,
         bottomMargin=18 * mm,
-        title=f"Converge {VERSION} composed alpha guide",
+        title=f"Converge {VERSION} composed release guide",
         author="Converge project",
         subject="Canonical composed architecture and operating guide",
     )
@@ -238,7 +243,7 @@ def main() -> int:
         Spacer(1, 42 * mm),
         Paragraph("CONVERGE", style["cover"]),
         Spacer(1, 5 * mm),
-        Paragraph(f"Composed alpha release guide<br/>Version {VERSION}", style["cover_sub"]),
+        Paragraph(f"Composed release guide<br/>Version {VERSION}", style["cover_sub"]),
         Spacer(1, 10 * mm),
         Table(
             [[Paragraph("SEAMWISE", style["caption"]), Paragraph("TASK-SPEC", style["caption"]), Paragraph("CONVERGE", style["caption"])],

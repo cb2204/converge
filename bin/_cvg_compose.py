@@ -147,8 +147,10 @@ class Coordinator:
     def __init__(self, root: pathlib.Path, cvg_version: str, seamwise: str, taskspec: str):
         self.root = root.resolve()
         self.cvg_version = cvg_version
-        self.seamwise = resolve_binary(seamwise or os.environ.get("CVG_SEAMWISE_BIN"), "seamwise", "Seamwise")
-        self.taskspec = resolve_binary(taskspec or os.environ.get("CVG_TASKSPEC_BIN"), "taskspec", "Task-Spec")
+        self.seamwise_override = seamwise or os.environ.get("CVG_SEAMWISE_BIN", "")
+        self.taskspec_override = taskspec or os.environ.get("CVG_TASKSPEC_BIN", "")
+        self.seamwise = ""
+        self.taskspec = ""
         self.backlog = self.root / "cvg" / "tasks"
         self.acceptance = self.root / "cvg" / ".taskspec" / "acceptance"
         self.receipt_root = self.root / "cvg" / "receipts" / "composition"
@@ -157,9 +159,9 @@ class Coordinator:
         self.composition_path = self.receipt_root / "composition-receipt.json"
         self.seamwise_version = ""
         self.taskspec_version = ""
-        self._negotiate()
 
     def _seamwise(self, *args: str) -> tuple[dict[str, Any], int]:
+        self._require_seamwise()
         value, rc = run_json(
             [self.seamwise, "--workspace", str(self.root), "--json", *args], cwd=self.root
         )
@@ -170,6 +172,7 @@ class Coordinator:
         return value, rc
 
     def _taskspec(self, *args: str) -> tuple[dict[str, Any], int]:
+        self._require_taskspec()
         environment = os.environ.copy()
         environment.update(
             {
@@ -186,7 +189,10 @@ class Coordinator:
             raise ComposeError("Task-Spec version changed during composition", exit_code=3, engine=True)
         return value, rc
 
-    def _negotiate(self) -> None:
+    def _require_seamwise(self) -> None:
+        if self.seamwise:
+            return
+        self.seamwise = resolve_binary(self.seamwise_override, "seamwise", "Seamwise")
         capabilities, rc = run_json(
             [self.seamwise, "--workspace", str(self.root), "--json", "capabilities"], cwd=self.root
         )
@@ -206,8 +212,14 @@ class Coordinator:
         if data.get("materializes_tasks") is not False or data.get("dispatch_authority") is not False:
             raise ComposeError("Seamwise capabilities claim forbidden Task-Spec authority", exit_code=3, engine=True)
         self.seamwise_version = str(data.get("engine_version", ""))
-        if version_tuple(self.seamwise_version) < (0, 2, 0):
-            raise ComposeError("Converge compose requires Seamwise >=0.2.0-alpha.1 and <1.0.0", exit_code=3, engine=True)
+        parsed = version_tuple(self.seamwise_version)
+        if parsed < (0, 2, 0) or parsed >= (0, 3, 0):
+            raise ComposeError("Converge compose requires Seamwise >=0.2.0 and <0.3.0", exit_code=3, engine=True)
+
+    def _require_taskspec(self) -> None:
+        if self.taskspec:
+            return
+        self.taskspec = resolve_binary(self.taskspec_override, "taskspec", "Task-Spec")
         version, rc = run_json([self.taskspec, "--json", "version"], cwd=self.root)
         self.taskspec_version = str(version.get("engine_version", ""))
         if rc != 0 or version.get("contract") != TASKSPEC_RESULT:
@@ -460,6 +472,8 @@ class Coordinator:
         }
 
     def _verify_composition_receipt(self) -> dict[str, Any]:
+        self._require_seamwise()
+        self._require_taskspec()
         receipt = load_json(safe_path(self.root, str(self.composition_path.relative_to(self.root))))
         if receipt.get("contract") != COMPOSITION_RECEIPT or receipt.get("dispatch_authorized") is not False:
             raise ComposeError("composition receipt contract or dispatch authority is invalid")

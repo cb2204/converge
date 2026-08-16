@@ -1,6 +1,6 @@
 # Converge composed architecture
 
-Status: canonical for Converge 0.2.0-alpha.1.
+Status: canonical for Converge 0.2.0.
 
 ## Architectural invariant
 
@@ -10,20 +10,16 @@ has one authority, and each boundary artifact is digest-bound before the next
 authority may act.
 
 ```mermaid
-flowchart TB
-    H["Human owner"] -->|"approved initiative"| S["Seamwise"]
-    S -->|"delivery plan"| R{"Explicit topology review"}
-    H -->|"reviewer + reason"| R
-    R -->|"reviewed TaskPlan/v1 + lineage"| C["Converge coordinator"]
-    C -->|"taskspec plan"| T["Task-Spec"]
-    T -->|"TaskMaterializationReceipt/v1"| C
-    C -->|"ConvergeCompositionReceipt/v1"| E["Repository evidence"]
-    T -->|"unsigned Task-Spec leaves"| A{"Per-leaf gate stamp"}
-    H -->|"authorization"| A
-    A --> B["Converge runtime binding"]
-    B --> X["Executor"]
-    X --> V["Independent eval and acceptance"]
-    V --> Q["Settlement receipt"]
+flowchart LR
+    H["Human owner"] --> S["Seamwise<br/>decompose + review"]
+    S --> P["TaskPlan/v1<br/>+ lineage"]
+    P --> C["Converge<br/>coordinate"]
+    C --> T["Task-Spec<br/>validate + materialize + authorize"]
+    T --> C
+    C --> X["Executor<br/>bounded changes"]
+    X --> T
+    T --> A["Independent<br/>acceptance"]
+    C --> R["Composition +<br/>settlement receipts"]
 ```
 
 ## Authority table
@@ -45,8 +41,13 @@ flowchart TB
 
 Converge resolves engines with these explicit overrides:
 
-- `CVG_TASKSPEC_BIN`: required for the core Converge task lifecycle and compose.
-- `CVG_SEAMWISE_BIN`: required only for `cvg compose`.
+- `CVG_TASKSPEC_BIN`: required for the core task lifecycle and the compose
+  preview, materialize, and materialized-status phases.
+- `CVG_SEAMWISE_BIN`: required for `cvg decompose` and every `cvg compose` phase.
+
+Engine discovery and capability negotiation are lazy. A Seamwise-only prepare
+or review does not require Task-Spec to be installed; Converge resolves
+Task-Spec only when the workflow reaches its authority boundary.
 
 Composition first asks Seamwise for `SeamwiseCapabilities/v1` and verifies:
 
@@ -117,7 +118,9 @@ for independent acceptance before settlement. A successful run provides both:
 
 Cockpit reads `WorkspaceSnapshot 3.0`. It may explain evidence, but cannot
 approve a review, stamp a task, alter a receipt, or change settlement state.
-Manager fleet scheduling remains outside the alpha scope.
+Manager fleet scheduling remains outside the v0.2.0 release scope.
+
+<!-- pagebreak -->
 
 ## Security and failure posture
 

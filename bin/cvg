@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-CVG_VERSION="0.2.0-alpha.1"
+CVG_VERSION="0.2.0"
 CVG_TASKSPEC_REQUIRED="3.8.0"
 
 # Resolve THIS script through any symlink chain before locating its companions.
@@ -143,7 +143,7 @@ resolve_taskspec() {
   case "$version" in
     3.8.*|3.9.*|3.[1-9][0-9].*) ;;
     *)
-      ui_err "incompatible Task-Spec engine '$version' at $candidate — Converge 0.1 requires >=3.8.0 and <4.0.0"
+      ui_err "incompatible Task-Spec engine '$version' at $candidate — Converge 0.2 requires >=3.8.0 and <4.0.0"
       return 1
       ;;
   esac
@@ -1692,9 +1692,9 @@ cmd_help() {
   printf '  structure [--final] [--dir d]\n'
   printf '                           Pass 2 gate — finds cvg/docs/adrs/ (then\n'
   printf '                           docs/adrs/); --final requires nothing proposed\n'
-  printf '  decompose [--dir d]      Pass 3 gate — finds cvg/swimlanes/ (then the\n'
-  printf '                           legacy cvg/swimlanes/)\n'
-  printf '                           swimlane-*/ tree; CHECK_PLAN token\n'
+  printf '  decompose --source <recipe>\n'
+  printf '                           compatibility alias for compose prepare; Seamwise\n'
+  printf '                           alone owns decomposition (COMPOSE token)\n'
   printf '  review --adversary E     Pass 4 dispatch — a different-family model\n'
   printf '                           (codex|kimi|claude) attacks the swimlanes headless;\n'
   printf '                           a comma-list (codex,kimi) dispatches both + merges\n'
@@ -1761,10 +1761,9 @@ cmd_help() {
   printf '                           blocks the descent (CHECK_LESSON token)\n'
   printf '\n'
   printf '%stask lifecycle%s\n' "$UI_CYAN" "$UI_RESET"
-  printf '  tasks plan [--lane s]     Pass 5 DRY RUN — which Task-Specs the accepted\n'
-  printf '                           legs would become, and WHY, before anything is\n'
-  printf '                           written. Derived from each leg s own Yields\n'
-  printf '                           section; read-only (TASKS_PLAN token)\n'
+  printf '  tasks plan --manifest <TaskPlan>\n'
+  printf '                           delegate TaskPlan validation and preview to the\n'
+  printf '                           independently installed Task-Spec engine\n'
   printf '  tasks new <slug> [options]\n'
   printf '                           create a Task-Spec in canonical cvg/tasks/\n'
   printf '  tasks validate [--no-state] <spec>\n'
@@ -1873,6 +1872,7 @@ is_mutating() {
         *) return 1 ;;
       esac
       ;;
+    decompose)  return 0 ;;
     review)     for a in "$@"; do case "$a" in --adversary|--adversary=*|--resolve|--resolve=*) return 0 ;; esac; done; return 1 ;;
     compose)
       case "${1:-}" in
@@ -2056,7 +2056,7 @@ export CVG_TOOL_HOME="$CVG_HOME_DIR"
 export CVG_PROJECT_ROOT="$CVG_PROJECT_ROOT_DIR"
 # Compatibility for existing adapters that use CVG_HOME_DIR as their tool root.
 export CVG_HOME_DIR
-if [ "$CMD" = "compose" ]; then
+if [ "$CMD" = "compose" ] || [ "$CMD" = "decompose" ] || [ "$CMD" = "_observe-decomposition" ]; then
   TASKSPEC_BIN="${CVG_TASKSPEC_BIN:-$(command -v taskspec 2>/dev/null || true)}"
 else
   TASKSPEC_BIN="$(resolve_taskspec)" || exit 3
@@ -2097,40 +2097,10 @@ case "$CMD" in
     cvg_init "$@"
     ;;
   tasks)
-    # `tasks plan` is the Pass 5 DRY RUN: it reads the gated swimlane tree and
-    # shows which Task-Specs would be created and WHY, before anything is written.
-    # It lives here rather than under `decompose` because the units it lists are
-    # Pass 5's output; it reads Pass 3's plans only because that is where each
-    # leg already declared what it becomes.
-    if [ "${1:-}" = "plan" ]; then
-      shift
-      PLANNER="$CVG_HOME_DIR/bin/cvg-plan-tasks.py"
-      [ -f "$PLANNER" ] || { ui_err "Converge task planner is missing under $CVG_HOME_DIR/bin"; printf 'TASKS_PLAN=USAGE_ERROR\n'; exit 2; }
-      TP_DIR=""
-      while [ $# -gt 0 ]; do
-        case "$1" in
-          --dir)   TP_DIR="${2:-}"; shift 2 ;;
-          --dir=*) TP_DIR="${1#--dir=}"; shift ;;
-          *)       break ;;
-        esac
-      done
-      if [ -z "$TP_DIR" ]; then
-        TP_N=0
-        for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
-          [ -d "$D" ] || continue
-          _cvg_has_lane "$D" || continue
-          TP_N=$((TP_N + 1)); TP_DIR="$D"
-        done
-        if [ "$TP_N" -ne 1 ]; then
-          ui_err "no unique swimlane tree (cvg/swimlanes/<seam>/, or the legacy cvg/sketch/) under cvg/ or . from '$PWD' — pass --dir <swimlanes>"
-          printf 'TASKS_PLAN=USAGE_ERROR\n'; exit 2
-        fi
-      fi
-      exec python3 "$PLANNER" --dir "$TP_DIR" "$@"
-    fi
     SUB="${1:-}"
     [ $# -gt 0 ] && shift
     case "$SUB" in
+      plan)     route_taskspec plan "$@" ;;
       new)      route_taskspec new "$@" ;;
       validate) route_taskspec validate "$@" ;;
       gate)     route_taskspec gate "$@" ;;
@@ -2386,53 +2356,75 @@ case "$CMD" in
     # shellcheck disable=SC2086  # STR_FLAGS is a controlled flag list (--final only)
     exec bash "$GATE" --check $STR_FLAGS --dir "$STR_DIR"
     ;;
-  decompose)
-    # Pass 3 gate: locate the swimlanes/ tree, route to the reqs-to-swimlane-plans
-    # checker. Exact exec pass-through (R3.P proves by byte-diff). Discovery/flag
-    # errors exist ONLY on the exit-2 path and end in CHECK_PLAN=USAGE_ERROR.
+  _observe-decomposition)
+    # Private, read-only compatibility observation for snapshots of historical
+    # v0.1 workspaces. This validates existing lane evidence; it never creates
+    # a decomposition and is intentionally absent from the public CLI matrix.
     GATE="$CVG_HOME_DIR/skills/reqs-to-swimlane-plans/scripts/new-plan.sh"
+    DEC_N=0
     DEC_DIR=""
-    while [ $# -gt 0 ]; do
-      case "$1" in
-        --dir)
-          if [ $# -lt 2 ]; then
-            ui_err "--dir needs a path — cvg decompose --dir <sketch-dir>"
-            printf 'CHECK_PLAN=USAGE_ERROR\n'
-            exit 2
-          fi
-          DEC_DIR="$2"; shift 2 ;;
-        --dir=*) DEC_DIR="${1#--dir=}"; shift ;;
-        -*)
-          ui_err "unknown decompose flag '$1' — expected --dir <path>"
-          printf 'CHECK_PLAN=USAGE_ERROR\n'
-          exit 2 ;;
-        *)       DEC_DIR="$1"; shift ;;
-      esac
+    for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
+      [ -d "$D" ] || continue
+      _cvg_has_lane "$D" || continue
+      DEC_N=$((DEC_N + 1))
+      DEC_DIR="$D"
     done
-    if [ -z "$DEC_DIR" ]; then
-      DEC_N=0
-      DEC_LIST=""
-      for D in cvg/swimlanes cvg/sketch swimlanes sketch; do
-        [ -d "$D" ] || continue
-        _cvg_has_lane "$D" || continue
-        DEC_N=$((DEC_N + 1))
-        DEC_DIR="$D"
-        DEC_LIST="${DEC_LIST}  ${D}
-"
-      done
-      if [ "$DEC_N" -eq 0 ]; then
-        ui_err "no swimlane set (swimlanes/<seam>/_lane.md, or the legacy swimlanes/<seam>/) found under cvg/ or . from '$PWD' — pass it: cvg decompose --dir <sketch-dir>"
-        printf 'CHECK_PLAN=USAGE_ERROR\n'
-        exit 2
-      fi
-      if [ "$DEC_N" -gt 1 ]; then
-        ui_err "ambiguous: $DEC_N sketch trees found — pass one explicitly:"
-        printf '%s' "$DEC_LIST" >&2
-        printf 'CHECK_PLAN=USAGE_ERROR\n'
-        exit 2
-      fi
+    if [ "$DEC_N" -eq 0 ]; then
+      printf 'CHECK_PLAN=EMPTY\n'
+      exit 2
+    fi
+    if [ "$DEC_N" -gt 1 ]; then
+      ui_err "multiple historical decomposition trees are present"
+      printf 'CHECK_PLAN=USAGE_ERROR\n'
+      exit 2
     fi
     exec bash "$GATE" --check --dir "$DEC_DIR"
+    ;;
+  decompose)
+    # Compatibility surface only. Seamwise owns decomposition; Converge passes
+    # the recipe through the same coordinator used by `compose prepare`.
+    DEC_SOURCE=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --source)
+          if [ $# -lt 2 ]; then
+            ui_err "--source needs a recipe — cvg decompose --source <recipe>"
+            printf 'COMPOSE=BLOCKED\n'
+            exit 2
+          fi
+          DEC_SOURCE="$2"; shift 2 ;;
+        --source=*) DEC_SOURCE="${1#--source=}"; shift ;;
+        --dir|--dir=*)
+          ui_err "cvg decompose --dir was retired in 0.2.0; use cvg decompose --source <recipe> or cvg compose prepare --source <recipe>"
+          printf 'COMPOSE=BLOCKED\n'
+          exit 2 ;;
+        -*)
+          ui_err "unknown decompose flag '$1' — expected --source <recipe>"
+          printf 'COMPOSE=BLOCKED\n'
+          exit 2 ;;
+        *)
+          ui_err "decompose requires an explicit --source <recipe>"
+          printf 'COMPOSE=BLOCKED\n'
+          exit 2 ;;
+      esac
+    done
+    if [ -z "$DEC_SOURCE" ]; then
+      ui_err "decompose requires --source <recipe>"
+      printf 'COMPOSE=BLOCKED\n'
+      exit 2
+    fi
+    COMPOSER="$CVG_HOME_DIR/bin/_cvg_compose.py"
+    [ -f "$COMPOSER" ] || {
+      ui_err "Converge composition coordinator is missing under $CVG_HOME_DIR/bin"
+      printf 'COMPOSE=BLOCKED\n'
+      exit 2
+    }
+    exec python3 "$COMPOSER" \
+      --project-root "$CVG_PROJECT_ROOT_DIR" \
+      --cvg-version "$CVG_VERSION" \
+      --seamwise-bin "${CVG_SEAMWISE_BIN:-}" \
+      --taskspec-bin "$TASKSPEC_BIN" \
+      prepare --source "$DEC_SOURCE"
     ;;
   review)
     # Pass 4 · Consensus. Two modes:

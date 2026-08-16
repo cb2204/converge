@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EVIDENCE="$ROOT/evidence/releases/v0.2.0-alpha.1/live-codex"
+EVIDENCE="$ROOT/evidence/releases/v0.2.0/live-codex"
 
 COMPOSE_DEMO_AGENT=codex \
 COMPOSE_DEMO_EVIDENCE_DIR="$EVIDENCE" \

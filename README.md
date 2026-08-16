@@ -11,7 +11,7 @@
 [![bash 3.2+](https://img.shields.io/badge/bash-3.2%2B-4EAA25?logo=gnubash&logoColor=white)](#requirements)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Converge 0.2.0-alpha.1 | cvg 0.2.0-alpha.1 | Seamwise 0.2.0-alpha.1 | Task-Spec 3.8.0
+Converge 0.2.0 | cvg 0.2.0 | Seamwise 0.2.0 | Task-Spec 3.8.0
 
 [Install](#install) · [First composed journey](#first-composed-journey) · [Authority model](docs/architecture.md) · [Composed flow](docs/composed-flow.md) · [CLI reference](docs/cli-reference.md)
 
@@ -19,7 +19,7 @@ Converge 0.2.0-alpha.1 | cvg 0.2.0-alpha.1 | Seamwise 0.2.0-alpha.1 | Task-Spec 
 
 ## Release truth
 
-This checkout is the Converge 0.2.0-alpha.1 release candidate. The composed
+This checkout is the Converge 0.2.0 release candidate. The composed
 implementation, deterministic cross-engine tests, and authenticated Codex demo
 are locally verified against the exact candidate commits.
 Publication is not complete until the exact Task-Spec, Seamwise, and Converge
@@ -27,16 +27,16 @@ commits pass hosted macOS and Linux CI and are tagged in dependency order.
 
 | Claim | Current evidence |
 |---|---|
-| Task-Spec 3.8.0 implementation | Local `CHECK=READY`, `CONFORMANCE=L2`; draft PR on commit `44c23e974b6448cdaf21e7514f297a757154beac` |
-| Seamwise 0.2.0-alpha.1 implementation | Local `RELEASE=READY`; draft PR on commit `29a087c63ee97cb07ab4635aaba87ecab48dc2f1` |
-| Converge 0.2.0-alpha.1 implementation | Local `release-check` green; 57 forms / 227 JSON calls; authenticated Codex settled and accepted on the exact engine candidates |
-| Hosted CI | Blocked before execution while GitHub jobs report zero steps; sibling private-repository jobs also require a scoped `RELEASE_STACK_READ_TOKEN` |
+| Task-Spec 3.8.0 | Published from immutable commit `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91`; hosted Ubuntu/macOS release installation green |
+| Seamwise 0.2.0 implementation | Local `RELEASE=READY`, 111 tests; PR #1 candidate `3d144a90be5a35b090599088027e457661784785` |
+| Converge 0.2.0 implementation | Current `feat/e2e` release worktree; publication gates remain open |
+| Hosted CI | Billing is repaired; sibling private-repository jobs require a scoped `RELEASE_STACK_READ_TOKEN` before they can execute |
 | Published tags | The new three-repository stack is not published until hosted gates pass |
 | Historical Converge 0.1.0 | Published and immutable; it documents the former bundled Task-Spec architecture |
 
 The release never retags or moves `v0.1.0`. See
-[alpha readiness](docs/alpha-readiness.md) for the live gate ledger and
-[release notes](docs/releases/v0.2.0-alpha.1.md) for migration details.
+[release readiness](docs/release-readiness.md) for the live gate ledger and
+[release notes](docs/releases/v0.2.0.md) for migration details.
 
 ## What Converge owns
 
@@ -78,7 +78,7 @@ does not sign a task, and model narration is never settlement evidence.
 - Bash 3.2 or newer
 - Python 3
 - Task-Spec 3.8.0 for every Converge installation
-- Seamwise 0.2.0-alpha.1 only for `cvg compose`
+- Seamwise 0.2.0 only for decomposition and `cvg compose`
 - Node 22 only for the npm door and Cockpit
 
 After the tags are published, install in dependency order:
@@ -88,9 +88,9 @@ git clone --branch v3.8.0 https://github.com/luanmorenommaciel/task-spec.git
 bash task-spec/install.sh --global --copy
 taskspec demo
 
-python3 -m pip install   "git+https://github.com/luanmorenommaciel/seamwise.git@v0.2.0-alpha.1"
+python3 -m pip install   "git+https://github.com/luanmorenommaciel/seamwise.git@v0.2.0"
 
-git clone --branch v0.2.0-alpha.1   https://github.com/luanmorenommaciel/converge.git
+git clone --branch v0.2.0   https://github.com/luanmorenommaciel/converge.git
 bash converge/install.sh --target /absolute/path/to/your-project --copy
 ```
 
@@ -108,7 +108,7 @@ cvg-install
 or, after publication:
 
 ```bash
-CVG_REF=v0.2.0-alpha.1   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenomaciel/converge/main/install.sh)"
+CVG_REF=v0.2.0   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenomaciel/converge/main/install.sh)"
 ```
 
 The installer projects exactly eleven Converge skills to `.agents/skills/`,
@@ -159,10 +159,11 @@ the immutable source commit, Seamwise review/lineage/TaskPlan digests,
 Task-Spec materialization evidence, and every task hash. It always records
 `dispatch_authorized: false`.
 
-## Existing direct flow
+## Strict engine delegation
 
-The established nine-pass flow remains available. Task lifecycle verbs are thin
-delegations to the standalone Task-Spec engine.
+Converge coordinates the independent engines. It generates neither the
+decomposition nor Task-Spec content. `cvg decompose` is a compatibility alias
+for Seamwise preparation, and every `cvg tasks` verb delegates to Task-Spec.
 
 ```bash
 cvg init
@@ -172,12 +173,10 @@ cvg lane "add a health endpoint"
 cvg capture
 cvg intent
 cvg structure
-cvg decompose
-cvg review --adversary codex
-cvg review --check
-
-cvg tasks plan
-cvg tasks new add-health-endpoint S
+cvg decompose --source recipe.yaml
+cvg compose review --reviewer owner --reason "Topology accepted"
+cvg tasks plan --manifest seamwise/task-plan.json
+cvg compose materialize
 cvg tasks validate cvg/tasks/T-20260815-health-status.md
 cvg tasks gate --stamp cvg/tasks/T-20260815-health-status.md
 cvg bind --task cvg/tasks/T-20260815-health-status.md
@@ -260,10 +259,10 @@ make release-check
 macOS, Cockpit, JSON, docs, package, and composed-E2E jobs must run on the exact
 commit. A zero-step GitHub job is infrastructure evidence, not a passed gate.
 
-## Scope of this alpha
+## Scope of v0.2.0
 
-This alpha promises a reproducible composed single-task path and preserves the
-existing direct Converge flow. It does not promise Manager fleet scheduling,
+This release promises a reproducible composed single-task path with strict
+external-engine boundaries. It does not promise Manager fleet scheduling,
 production reliability, a live tracker, or autonomous approval of human
 decisions.
 
@@ -272,8 +271,8 @@ decisions.
 - [Architecture and authority](docs/architecture.md)
 - [Composed flow and failure semantics](docs/composed-flow.md)
 - [CLI reference](docs/cli-reference.md)
-- [Alpha readiness ledger](docs/alpha-readiness.md)
-- [0.2.0-alpha.1 release notes](docs/releases/v0.2.0-alpha.1.md)
+- [Release readiness ledger](docs/release-readiness.md)
+- [0.2.0 release notes](docs/releases/v0.2.0.md)
 - [Documentation and archive inventory](docs/README.md)
 - [Skill catalog](skills/README.md)
 - [Cockpit guide](apps/cockpit/README.md)

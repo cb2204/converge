@@ -34,7 +34,9 @@ def digest_tree(root: pathlib.Path) -> str:
         if relative.startswith(".git/objects/") or relative.startswith(".git/logs/"):
             continue
         if path.is_symlink():
-            digest.update(b"L\0" + relative.encode() + b"\0" + os.readlink(path).encode())
+            digest.update(
+                b"L\0" + relative.encode() + b"\0" + os.readlink(path).encode()
+            )
         elif path.is_file():
             digest.update(b"F\0" + relative.encode() + b"\0" + path.read_bytes())
     return digest.hexdigest()
@@ -50,7 +52,12 @@ def invoke(
     environment: dict[str, str] | None = None,
 ) -> tuple[dict[str, object], int]:
     flags = ["--json", *(["--dry-run"] if dry_run else [])]
-    command = [str(CVG), *(flags if flags_first else []), *arguments, *([] if flags_first else flags)]
+    command = [
+        str(CVG),
+        *(flags if flags_first else []),
+        *arguments,
+        *([] if flags_first else flags),
+    ]
     completed = subprocess.run(
         command,
         cwd=workspace,
@@ -74,7 +81,9 @@ def invoke(
     try:
         envelope = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
-        raise AssertionError(f"stdout is not exactly one JSON document: {completed.stdout!r}") from error
+        raise AssertionError(
+            f"stdout is not exactly one JSON document: {completed.stdout!r}"
+        ) from error
     jsonschema.validate(envelope, RESULT_SCHEMA)
     assert envelope["exit_code"] == completed.returncode
     assert envelope["ok"] is (completed.returncode == 0)
@@ -185,12 +194,24 @@ def main() -> int:
             workspace.mkdir()
             workspace = workspace.resolve()
             subprocess.run(["git", "init", "--quiet", str(workspace)], check=True)
-            subprocess.run(["git", "-C", str(workspace), "config", "user.name", "JSON Matrix"], check=True)
             subprocess.run(
-                ["git", "-C", str(workspace), "config", "user.email", "matrix@example.invalid"],
+                ["git", "-C", str(workspace), "config", "user.name", "JSON Matrix"],
                 check=True,
             )
-            (workspace / "README.md").write_text("# JSON matrix fixture\n", encoding="utf-8")
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(workspace),
+                    "config",
+                    "user.email",
+                    "matrix@example.invalid",
+                ],
+                check=True,
+            )
+            (workspace / "README.md").write_text(
+                "# JSON matrix fixture\n", encoding="utf-8"
+            )
             (workspace / "cvg" / "tasks").mkdir(parents=True)
             (workspace / ".cvg").mkdir()
             (workspace / "cvg" / "tasks" / "T-20260602-golden.md").write_bytes(
@@ -206,11 +227,16 @@ def main() -> int:
                 ).read_bytes()
             )
             subprocess.run(["git", "-C", str(workspace), "add", "-A"], check=True)
-            subprocess.run(["git", "-C", str(workspace), "commit", "--quiet", "-m", "fixture"], check=True)
+            subprocess.run(
+                ["git", "-C", str(workspace), "commit", "--quiet", "-m", "fixture"],
+                check=True,
+            )
 
             arguments = shlex.split(row["example"])
             assert arguments and arguments.pop(0) == "cvg"
-            arguments = [item for item in arguments if item not in {"--json", "--dry-run"}]
+            arguments = [
+                item for item in arguments if item not in {"--json", "--dry-run"}
+            ]
             arguments = [
                 item.replace("tasks/T-...md", "cvg/tasks/T-20260602-golden.md")
                 .replace("T-...md", "cvg/tasks/T-20260602-golden.md")
@@ -234,7 +260,9 @@ def main() -> int:
                 require_success=bool(row["mutating"]),
             )
             after = digest_tree(workspace)
-            assert before == middle == after, f"read-only/dry-run state changed for {name}"
+            assert before == middle == after, (
+                f"read-only/dry-run state changed for {name}"
+            )
             assert (first["token"], first["verdict"], first_rc) == (
                 second["token"],
                 second["verdict"],
@@ -253,7 +281,9 @@ def main() -> int:
                 dry_run=False,
             )
             usage_after = digest_tree(workspace)
-            assert usage_before == usage_after, f"usage failure changed state for {name}"
+            assert usage_before == usage_after, (
+                f"usage failure changed state for {name}"
+            )
             assert usage_rc != 0 and usage["error"] is not None, name
             if usage_rc == 2:
                 assert usage["error"]["code"] == "USAGE_ERROR", name
@@ -262,16 +292,25 @@ def main() -> int:
             calls += 1
 
             if name != "help":
+                missing_engine = {"CVG_TASKSPEC_BIN": "/definitely/missing/taskspec"}
+                if name.startswith(
+                    ("compose prepare", "compose review", "compose status")
+                ) or name.startswith("decompose "):
+                    missing_engine = {
+                        "CVG_SEAMWISE_BIN": "/definitely/missing/seamwise"
+                    }
                 contract_before = digest_tree(workspace)
                 contract, contract_rc = invoke(
                     workspace,
                     arguments,
                     flags_first=(number % 2 == 1),
                     dry_run=False,
-                    environment={"CVG_TASKSPEC_BIN": "/definitely/missing/taskspec"},
+                    environment=missing_engine,
                 )
                 contract_after = digest_tree(workspace)
-                assert contract_before == contract_after, f"engine failure changed state for {name}"
+                assert contract_before == contract_after, (
+                    f"engine failure changed state for {name}"
+                )
                 assert contract_rc != 0 and contract["error"] is not None, name
                 calls += 1
 

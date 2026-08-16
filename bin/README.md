@@ -1,4 +1,4 @@
-# cvg 0.2.0-alpha.1
+# cvg 0.2.0
 
 `cvg` is the Converge composition coordinator and assurance referee. It
 preserves the established command paths, delegates Task-Spec lifecycle
@@ -19,7 +19,6 @@ The generated human reference is
 | `_cvg_compose.py` | Private subprocess coordinator for Seamwise and Task-Spec |
 | `cvg-agent-context.py` | Renders agent context from the canonical matrix |
 | `cvg-classify-lane.py` | Deterministic FAST, NORMAL, or FULL lane classifier |
-| `cvg-plan-tasks.py` | Historical direct-flow Pass 5 preview helper |
 | `cvg-snapshot.py` | Read-only WorkspaceSnapshot 3.0 builder |
 
 The private coordinator imports neither external engine. It consumes their

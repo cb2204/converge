@@ -17,8 +17,8 @@ CANONICAL = [
     ROOT / "docs" / "architecture.md",
     ROOT / "docs" / "composed-flow.md",
     ROOT / "docs" / "cli-reference.md",
-    ROOT / "docs" / "alpha-readiness.md",
-    ROOT / "docs" / "releases" / "v0.2.0-alpha.1.md",
+    ROOT / "docs" / "release-readiness.md",
+    ROOT / "docs" / "releases" / "v0.2.0.md",
     ROOT / "bin" / "README.md",
 ]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -98,7 +98,7 @@ def main() -> int:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for claim in (
         f"Converge {VERSION}",
-        "Seamwise 0.2.0-alpha.1",
+        "Seamwise 0.2.0",
         "Task-Spec 3.8.0",
         "Hosted CI",
         "Historical Converge 0.1.0",
@@ -142,9 +142,9 @@ def main() -> int:
     ):
         if "ARCHIVED v0.1 EVIDENCE" not in historical_html.read_text(encoding="utf-8"):
             fail(f"historical HTML missing intrinsic archive notice: {historical_html.relative_to(ROOT)}", failures)
-    current_pdf = ROOT / "docs" / "converge-v0.2.0-alpha.1.pdf"
+    current_pdf = ROOT / "docs" / "converge-v0.2.0.pdf"
     if not current_pdf.is_file() or current_pdf.stat().st_size < 10_000:
-        fail("current composed-alpha PDF is missing or implausibly small", failures)
+        fail("current composed release PDF is missing or implausibly small", failures)
 
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True

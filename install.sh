@@ -8,7 +8,7 @@
 #                  → <target>/.grok/skills/*     for Grok Build
 #   2. the CLI     → `cvg` on your PATH          so the gates are runnable by hand
 #
-# Copy (default) pins the complete 0.2.0-alpha.1 tool surface so a consuming repository
+# Copy (default) pins the complete 0.2.0 tool surface so a consuming repository
 # does not depend on this checkout. `--symlink` is the explicit development mode.
 #
 # It also works with no checkout at all — the one-line install:
@@ -18,7 +18,7 @@
 # When run standalone it shallow-clones the released source to a temp dir and
 # hands off to the installer inside the clone. No TTY is assumed (a piped
 # script has none), and every choice is overridable:
-#   CVG_REF=v0.2.0-alpha.1 pin an exact release tag  (default: main)
+#   CVG_REF=v0.2.0 pin an exact release tag  (default: main)
 #   CVG_REPO_URL=<url>    install from a fork or mirror
 #
 # This script installs. It never configures, never writes a credential, and
@@ -181,14 +181,12 @@ if [ "$MODE" = "copy" ]; then
   cp "$CVG_SRC/bin/_cvg_compose.py" "$TARGET/.agents/bin/_cvg_compose.py"
   cp "$CVG_SRC/bin/cvg-agent-context.py" "$TARGET/.agents/bin/cvg-agent-context.py"
   cp "$CVG_SRC/bin/cvg-classify-lane.py" "$TARGET/.agents/bin/cvg-classify-lane.py"
-  cp "$CVG_SRC/bin/cvg-plan-tasks.py" "$TARGET/.agents/bin/cvg-plan-tasks.py"
   cp "$CVG_SRC/contracts/"*.json "$TARGET/.agents/contracts/"
   cp "$CVG_SRC/templates/workspace/"*.md "$TARGET/.agents/templates/workspace/"
 else
   ln -sf "$CVG_SRC/bin/_cvg_compose.py" "$TARGET/.agents/bin/_cvg_compose.py"
   ln -sf "$CVG_SRC/bin/cvg-agent-context.py" "$TARGET/.agents/bin/cvg-agent-context.py"
   ln -sf "$CVG_SRC/bin/cvg-classify-lane.py" "$TARGET/.agents/bin/cvg-classify-lane.py"
-  ln -sf "$CVG_SRC/bin/cvg-plan-tasks.py" "$TARGET/.agents/bin/cvg-plan-tasks.py"
   for contract in "$CVG_SRC"/contracts/*.json; do
     ln -sf "$contract" "$TARGET/.agents/contracts/$(basename "$contract")"
   done

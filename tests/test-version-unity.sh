@@ -188,7 +188,8 @@ echo
 echo "[4] Task-Spec is independently versioned and compatibility-gated"
 SCHEMA_OK=0
 REQUIRED="$(grep -m1 '^CVG_TASKSPEC_REQUIRED=' bin/cvg | cut -d'"' -f2)"
-ENGINE="$(taskspec version 2>/dev/null | tail -1 | tr -d '[:space:]')"
+TASKSPEC_VERSION_BIN="${TASKSPEC_BIN:-${CVG_TASKSPEC_BIN:-taskspec}}"
+ENGINE="$("$TASKSPEC_VERSION_BIN" version 2>/dev/null | tail -1 | tr -d '[:space:]')"
 if [ "$REQUIRED" = "3.8.0" ]; then
   ok "Converge declares the Task-Spec 3.8 compatibility floor"
 else
