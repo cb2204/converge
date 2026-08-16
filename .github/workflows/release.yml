@@ -43,10 +43,10 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required"; exit 5; }
           taskspec_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
           seamwise_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
-          gh repo clone luanmorenomaciel/task-spec "$taskspec_dir" -- --quiet
+          gh repo clone luanmorenommaciel/task-spec "$taskspec_dir" -- --quiet
           git -C "$taskspec_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$taskspec_dir/install.sh" --global --copy
-          gh repo clone luanmorenomaciel/seamwise "$seamwise_dir" -- --quiet
+          gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
           git -C "$seamwise_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
           python -m pip install --disable-pip-version-check "$seamwise_dir"
           {

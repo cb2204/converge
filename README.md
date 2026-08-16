@@ -1,13 +1,13 @@
 <div align="center">
 
-[![Converge - turn reviewed intent into independently proven software](assets/banner.png)](https://github.com/luanmorenomaciel/converge)
+[![Converge - turn reviewed intent into independently proven software](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
 
 # Converge
 
 **Coordinate intent, decomposition, task authority, execution, and settlement without duplicating authority.**
 
-[![ci](https://github.com/luanmorenomaciel/converge/actions/workflows/ci.yml/badge.svg)](https://github.com/luanmorenomaciel/converge/actions/workflows/ci.yml)
-[![release](https://img.shields.io/github/v/release/luanmorenomaciel/converge)](https://github.com/luanmorenomaciel/converge/releases)
+[![ci](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml/badge.svg)](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/luanmorenommaciel/converge)](https://github.com/luanmorenommaciel/converge/releases)
 [![bash 3.2+](https://img.shields.io/badge/bash-3.2%2B-4EAA25?logo=gnubash&logoColor=white)](#requirements)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -101,14 +101,14 @@ as a published release.
 Converge also supports:
 
 ```bash
-npm install -g github:luanmorenomaciel/converge
+npm install -g github:luanmorenommaciel/converge
 cvg-install
 ```
 
 or, after publication:
 
 ```bash
-CVG_REF=v0.2.0   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenomaciel/converge/main/install.sh)"
+CVG_REF=v0.2.0   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh)"
 ```
 
 The installer projects exactly eleven Converge skills to `.agents/skills/`,
