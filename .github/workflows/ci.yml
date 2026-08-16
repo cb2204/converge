@@ -56,7 +56,7 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
           engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
           gh repo clone luanmorenommaciel/task-spec "$engine_dir" -- --quiet
-          git -C "$engine_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          git -C "$engine_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$engine_dir/install.sh" --global --copy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$engine_dir" >> "$GITHUB_ENV"
@@ -326,6 +326,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: install the pinned standalone Task-Spec engine
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
+          engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
+          gh repo clone luanmorenommaciel/task-spec "$engine_dir" -- --quiet
+          git -C "$engine_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
+          bash "$engine_dir/install.sh" --global --copy
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -360,7 +371,7 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
           engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
           gh repo clone luanmorenommaciel/task-spec "$engine_dir" -- --quiet
-          git -C "$engine_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          git -C "$engine_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$engine_dir/install.sh" --global --copy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
@@ -447,7 +458,7 @@ jobs:
           taskspec_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
           seamwise_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
           gh repo clone luanmorenommaciel/task-spec "$taskspec_dir" -- --quiet
-          git -C "$taskspec_dir" checkout --quiet --detach 44c23e974b6448cdaf21e7514f297a757154beac
+          git -C "$taskspec_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$taskspec_dir/install.sh" --global --copy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
