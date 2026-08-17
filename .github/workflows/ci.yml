@@ -449,6 +449,16 @@ jobs:
           --require-hashes
           -r .github/requirements-ci.txt
 
+      - name: set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/cockpit/package-lock.json
+
+      - name: install Cockpit dependencies
+        run: npm ci --prefix apps/cockpit
+
       - name: install shellcheck
         run: |
           if ! command -v shellcheck >/dev/null 2>&1; then
