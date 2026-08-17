@@ -54,7 +54,7 @@ def main() -> int:
         "--taskspec-commit", default="0e6180cfc3009bd4ef9cf7ab050b463e10d4af91"
     )
     parser.add_argument(
-        "--seamwise-commit", default="3d144a90be5a35b090599088027e457661784785"
+        "--seamwise-commit", default="5a398169c3fefcb65eb1a47c0cb4f967dfdc0515"
     )
     args = parser.parse_args()
 

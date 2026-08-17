@@ -2,26 +2,26 @@
   "contract": "TaskHandoff/v3",
   "task_id": "T-20260815-health-status",
   "format_version": 3,
-  "spec": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.KAa7AKDaFU/cvg/tasks/T-20260815-health-status.md",
-  "spec_digest": "sha256:617b9ec3f0144b5edaa092aa773c0699dea60bab1139f47da70663ca34078d47",
+  "spec": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.LYolfUWbMa/cvg/tasks/T-20260815-health-status.md",
+  "spec_digest": "sha256:1c40cd403a9e9425888dee43e83fdeb8601250a15fdf9c4d33c5375ace75be28",
   "task_revision_digest": "sha256:e1caec7dd91eb6a076af446c3f2bd0a2908e2badc6eccacd036192c8f4c3bf7b",
   "signoff_tier": 1,
   "backend": "any",
-  "workspace": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.KAa7AKDaFU",
+  "workspace": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.LYolfUWbMa",
   "authorization": {
     "scheme": "hmac-sha256-v3",
-    "ref": "hmac-sha256-v3:e8f34fee:66d2842799b8f8b2a7b729361540ecc50edd7700211c55777e72be6f58f236b8",
+    "ref": "hmac-sha256-v3:1d57ef5a:6ac48b7fa55a63591754d9f50309d319c023c79e76d3e82c0b2b80105c88dbc9",
     "tier": 1,
     "signed_by": "deterministic-demo",
-    "signed_at": "2026-08-16T20:16:40Z"
+    "signed_at": "2026-08-17T15:25:12Z"
   },
   "attempt": {
-    "id": "fbfb5bb3-5391-476e-91a0-e18d42bb7286",
-    "issued_at": "2026-08-16T20:16:47Z"
+    "id": "2e991729-b7eb-49cd-8682-8f34642484ac",
+    "issued_at": "2026-08-17T15:25:22Z"
   },
   "source": {
-    "workspace": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.KAa7AKDaFU",
-    "base_commit": "399182216f9699c1bbbc28b6d73ce6daeb4fbe32"
+    "workspace": "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.LYolfUWbMa",
+    "base_commit": "51618e04b5a2e1b7aafe31f0d6bf57892dddbde6"
   },
   "dependency_closure": {
     "contract": "DependencyClosure/v1",
@@ -82,7 +82,7 @@
     "taskspec",
     "run",
     "--ci",
-    "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.KAa7AKDaFU/cvg/tasks/T-20260815-health-status.md"
+    "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.LYolfUWbMa/cvg/tasks/T-20260815-health-status.md"
   ],
   "acceptance_command": [
     "taskspec",
@@ -90,7 +90,7 @@
     "--stamp",
     "--handoff",
     "<handoff.json>",
-    "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.KAa7AKDaFU/cvg/tasks/T-20260815-health-status.md"
+    "/private/var/folders/zf/r0gsd5px2v9_q24j3tfnyb5c0000gn/T/cvg-composed-demo.XXXXXX.LYolfUWbMa/cvg/tasks/T-20260815-health-status.md"
   ],
   "evaluation_policy": {},
   "environment_contract": {},

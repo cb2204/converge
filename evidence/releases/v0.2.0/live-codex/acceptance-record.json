@@ -1,6 +1,6 @@
 {
   "acceptance_tier": 1,
-  "accepted_at": "2026-08-16T20:18:23Z",
+  "accepted_at": "2026-08-17T15:27:44Z",
   "accepted_by": "converge-loop",
   "contract": "AcceptanceRecord/v1",
   "gate_outcomes": {
@@ -31,9 +31,9 @@
   },
   "receipts": [],
   "subject": {
-    "attempt_id": "fbfb5bb3-5391-476e-91a0-e18d42bb7286",
-    "authorization_ref": "hmac-sha256-v3:e8f34fee:66d2842799b8f8b2a7b729361540ecc50edd7700211c55777e72be6f58f236b8",
-    "base_commit": "399182216f9699c1bbbc28b6d73ce6daeb4fbe32",
+    "attempt_id": "2e991729-b7eb-49cd-8682-8f34642484ac",
+    "authorization_ref": "hmac-sha256-v3:1d57ef5a:6ac48b7fa55a63591754d9f50309d319c023c79e76d3e82c0b2b80105c88dbc9",
+    "base_commit": "51618e04b5a2e1b7aafe31f0d6bf57892dddbde6",
     "task_id": "T-20260815-health-status",
     "task_revision_digest": "sha256:e1caec7dd91eb6a076af446c3f2bd0a2908e2badc6eccacd036192c8f4c3bf7b"
   }

@@ -13,7 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / "evidence/releases/v0.2.0/live-codex"
 EXPECTED_COMMITS = {
     "task_spec": "0e6180cfc3009bd4ef9cf7ab050b463e10d4af91",
-    "seamwise": "3d144a90be5a35b090599088027e457661784785",
+    "seamwise": "5a398169c3fefcb65eb1a47c0cb4f967dfdc0515",
 }
 SECRET_ASSIGNMENT = re.compile(
     r"(?:OPENAI|GITHUB|TASKSPEC|ANTHROPIC)_[A-Z_]*?(?:KEY|TOKEN)\s*[=:]",

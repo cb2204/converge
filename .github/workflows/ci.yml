@@ -86,7 +86,7 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
           engine_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
           gh repo clone luanmorenommaciel/seamwise "$engine_dir" -- --quiet
-          git -C "$engine_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
+          git -C "$engine_dir" checkout --quiet --detach 5a398169c3fefcb65eb1a47c0cb4f967dfdc0515
           python -m pip install --disable-pip-version-check "$engine_dir"
           test "$(seamwise --version)" = "seamwise, version 0.2.0"
           printf 'CVG_SEAMWISE_SOURCE_ROOT=%s\n' "$engine_dir" >> "$GITHUB_ENV"
@@ -461,7 +461,7 @@ jobs:
           bash "$taskspec_dir/install.sh" --global --copy
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
-          git -C "$seamwise_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
+          git -C "$seamwise_dir" checkout --quiet --detach 5a398169c3fefcb65eb1a47c0cb4f967dfdc0515
           python -m pip install --disable-pip-version-check "$seamwise_dir"
           {
             printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$taskspec_dir"

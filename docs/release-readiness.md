@@ -1,7 +1,7 @@
 # v0.2.0 release readiness ledger
 
-Status: **release candidates are locally verified; publication is blocked on
-the hosted cross-repository credential and the resulting CI gates**.
+Status: **Task-Spec and Seamwise are published; Converge hosted gates, merge,
+and publication remain**.
 
 This ledger separates implementation, local verification, hosted verification,
 and publication. Planned or queued checks are never reported as green.
@@ -11,8 +11,8 @@ and publication. Planned or queued checks are never reported as green.
 | Repository | Candidate | Local gate | Hosted/publication |
 |---|---|---|---|
 | Task-Spec | `v3.8.0` at `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91` | `CHECK=READY`, `CONFORMANCE=L2` | Published; Ubuntu/macOS installation green |
-| Seamwise | `v0.2.0` candidate at `3d144a90be5a35b090599088027e457661784785` | `RELEASE=READY`, 111 tests | PR #1; hosted checks require `RELEASE_STACK_READ_TOKEN` |
-| Converge | current `feat/e2e` release candidate | `release-check` green; deterministic and live Codex E2E accepted | PR #13; credential-independent docs/package green, engine-dependent checks require `RELEASE_STACK_READ_TOKEN` |
+| Seamwise | `v0.2.0` at `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515` | `RELEASE=READY`, 111 tests | Published; exact-commit and packaged Ubuntu/macOS gates green; release checksums and clean wheel installation verified |
+| Converge | current `feat/e2e` release candidate | `release-check` green; deterministic and authenticated Codex E2E accepted against the published engine commits | PR #13; rerun all hosted checks after the evidence refresh |
 
 ## Closed locally
 
@@ -26,10 +26,6 @@ and publication. Planned or queued checks are never reported as green.
 
 ## Open hard gates
 
-- Provision a fine-grained read-only `RELEASE_STACK_READ_TOKEN` for Seamwise and Converge CI.
-- Obtain hosted Ubuntu/macOS green on Seamwise PR #1, merge, tag, and publish Seamwise 0.2.0.
-- Pin the exact Seamwise merge commit in Converge.
-- Regenerate deterministic and authenticated Codex evidence against that published Seamwise commit.
 - Obtain all Converge hosted checks on the exact merge commit.
 - Tag and publish Converge 0.2.0 with checksums and clean-install proof.
 

@@ -8,7 +8,7 @@
   },
   "release_candidate_commits": {
     "task_spec": "0e6180cfc3009bd4ef9cf7ab050b463e10d4af91",
-    "seamwise": "3d144a90be5a35b090599088027e457661784785"
+    "seamwise": "5a398169c3fefcb65eb1a47c0cb4f967dfdc0515"
   },
   "release_candidate_provenance_verified": true,
   "commands": [

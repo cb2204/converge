@@ -3,8 +3,8 @@
   "approved": true,
   "kind": "TaskPlan",
   "metadata": {
-    "delivery_plan_review_sha256": "b6bcf683addd7eebb235d6caa7f11e6b9ccfd840d859a1f9cfd2f3f9ae89e53f",
-    "delivery_plan_sha256": "eecc89aac9cbd8bdba4e6c3146a9bd4e5d3bf3bd29ba74ac77c25263d7bc084f",
+    "delivery_plan_review_sha256": "450db04c2d80d553e5b1b65938aa0f64db29d7dbfc283c171e7098fa1239ee27",
+    "delivery_plan_sha256": "3f0937b8692416d54b76c1e8aa1b45a0732cd4220679332497c8f9244d89f4e1",
     "name": "DI-HEALTH-STATUS",
     "producer": "seamwise",
     "producer_version": "0.2.0",

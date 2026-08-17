@@ -47,7 +47,7 @@ jobs:
           git -C "$taskspec_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$taskspec_dir/install.sh" --global --copy
           gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
-          git -C "$seamwise_dir" checkout --quiet --detach 3d144a90be5a35b090599088027e457661784785
+          git -C "$seamwise_dir" checkout --quiet --detach 5a398169c3fefcb65eb1a47c0cb4f967dfdc0515
           python -m pip install --disable-pip-version-check "$seamwise_dir"
           {
             printf 'PATH=%s/.local/bin:%s\n' "$HOME" "$PATH"

@@ -28,10 +28,10 @@ commits pass hosted macOS and Linux CI and are tagged in dependency order.
 | Claim | Current evidence |
 |---|---|
 | Task-Spec 3.8.0 | Published from immutable commit `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91`; hosted Ubuntu/macOS release installation green |
-| Seamwise 0.2.0 implementation | Local `RELEASE=READY`, 111 tests; PR #1 candidate `3d144a90be5a35b090599088027e457661784785` |
+| Seamwise 0.2.0 | Published from immutable commit `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515`; exact-commit and packaged Ubuntu/macOS gates green |
 | Converge 0.2.0 implementation | Current `feat/e2e` release worktree; publication gates remain open |
-| Hosted CI | Billing is repaired; sibling private-repository jobs require a scoped `RELEASE_STACK_READ_TOKEN` before they can execute |
-| Published tags | The new three-repository stack is not published until hosted gates pass |
+| Hosted CI | Billing and scoped cross-repository credentials are working; Converge hosted gates remain before publication |
+| Published tags | Task-Spec `v3.8.0` and Seamwise `v0.2.0` are published; Converge remains unpublished |
 | Historical Converge 0.1.0 | Published and immutable; it documents the former bundled Task-Spec architecture |
 
 The release never retags or moves `v0.1.0`. See

@@ -1,6 +1,6 @@
 {
   "contract": "SeamwiseTaskPlanLineage/v1",
-  "delivery_plan_sha256": "eecc89aac9cbd8bdba4e6c3146a9bd4e5d3bf3bd29ba74ac77c25263d7bc084f",
+  "delivery_plan_sha256": "3f0937b8692416d54b76c1e8aa1b45a0732cd4220679332497c8f9244d89f4e1",
   "engine_version": "0.2.0",
   "intent": {
     "id": "DI-HEALTH-STATUS",
@@ -8,14 +8,14 @@
   },
   "review": {
     "fixture": false,
-    "plan_sha256": "eecc89aac9cbd8bdba4e6c3146a9bd4e5d3bf3bd29ba74ac77c25263d7bc084f",
-    "reviewed_at": "2026-08-16T20:16:35.267614+00:00",
+    "plan_sha256": "3f0937b8692416d54b76c1e8aa1b45a0732cd4220679332497c8f9244d89f4e1",
+    "reviewed_at": "2026-08-17T15:25:05.935898+00:00",
     "reviewer": "release-owner",
-    "sha256": "b6bcf683addd7eebb235d6caa7f11e6b9ccfd840d859a1f9cfd2f3f9ae89e53f"
+    "sha256": "450db04c2d80d553e5b1b65938aa0f64db29d7dbfc283c171e7098fa1239ee27"
   },
   "task_plan": {
     "contract": "TaskPlan/v1",
-    "digest": "a600b7bbd94c66a2dc2257b95af2e0c82ca125d70a548a2ee1db29c4cf7cc97f",
+    "digest": "5de965b73344a1d57abcbe2a1025e7a0ace5cb513e1975e7d740761265a72a09",
     "path": "seamwise/task-plan.json"
   },
   "units": {
