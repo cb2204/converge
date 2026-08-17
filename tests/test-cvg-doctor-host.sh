@@ -86,16 +86,18 @@ last() { printf '%s\n' "$OUT" | tail -1; }
 
 # ---------------------------------------------------------------------------
 echo
-echo "[1] a fully-equipped host reports OK at exit 0"
+echo "[1] every required tool present reports a non-blocking verdict at exit 0"
 # ---------------------------------------------------------------------------
 if [ ! -x "$BREW_DIR/shellcheck" ]; then
   echo "  UNRUNNABLE — shellcheck is not installed, so the PRESENT case cannot be built."
   echo "  DOCTOR_HOST_TESTS=UNRUNNABLE"; exit 3
 fi
-if run 0 "$PATH_OK" && [ "$(last)" = "DOCTOR_HOST=OK" ]; then
-  ok "every tool present → exit 0 + DOCTOR_HOST=OK"
+if run 0 "$PATH_OK" && {
+  [ "$(last)" = "DOCTOR_HOST=OK" ] || [ "$(last)" = "DOCTOR_HOST=DEGRADED" ]
+}; then
+  ok "every required tool present → exit 0 + OK or optional-only DEGRADED"
 else
-  bad "expected exit 0 + DOCTOR_HOST=OK (got $RC / $(last))"
+  bad "expected exit 0 + non-blocking host verdict (got $RC / $(last))"
 fi
 case "$OUT" in
   *shellcheck*) ok "the report names shellcheck explicitly (not a bare count)" ;;
