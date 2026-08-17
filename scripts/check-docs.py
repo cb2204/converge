@@ -18,7 +18,6 @@ CANONICAL = [
     ROOT / "docs" / "composed-flow.md",
     ROOT / "docs" / "cli-reference.md",
     ROOT / "docs" / "release-readiness.md",
-    ROOT / "docs" / "releases" / "v0.2.0.md",
     ROOT / "bin" / "README.md",
 ]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
@@ -138,7 +137,7 @@ def main() -> int:
         if historical not in archive or asset_url not in archive:
             fail(f"historical evidence inventory missing {historical}", failures)
     for historical_html in (
-        ROOT / "docs" / "converge-deck.html",
+        ROOT / "docs" / "decks" / "converge-deck.html",
         ROOT / "docs" / "decks" / "asd-agentic-loop.html",
         ROOT / "docs" / "decks" / "converge.html",
         ROOT / "docs" / "decks" / "cvg-passes-skills-cli.html",

@@ -6,7 +6,7 @@ The current truth hierarchy is intentionally small:
 2. [`architecture.md`](architecture.md): authority and cross-repository data flow.
 3. [`composed-flow.md`](composed-flow.md): prepare through settlement.
 4. [`cli-reference.md`](cli-reference.md): generated from the canonical command matrix.
-5. [`releases/v0.2.0.md`](releases/v0.2.0.md): migration and release scope.
+5. [0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0): migration and release scope, published with the tag.
 6. [`release-readiness.md`](release-readiness.md): evidence ledger and publication policy.
 
 ## Historical evidence
@@ -26,8 +26,7 @@ rather than carried in the working tree, so a clone does not pay for them:
 
 These stay in the tree because they are small and browsable:
 
-- `converge-deck.html`
-- decks under `decks/`
+- decks under `decks/`, including `converge-deck.html`
 
 The current generated release guide is `converge-v0.2.0.pdf`. Its
 canonical sources are the root README, `architecture.md`, and

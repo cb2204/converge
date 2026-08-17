@@ -35,7 +35,7 @@ published Task-Spec and Seamwise commits. The immutable distribution is the
 
 The release never retags or moves `v0.1.0`. See
 [release readiness](docs/release-readiness.md) for the live gate ledger and
-[release notes](docs/releases/v0.2.0.md) for migration details.
+[release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0) for migration details.
 
 ## What Converge owns
 
@@ -268,7 +268,7 @@ decisions.
 - [Composed flow and failure semantics](docs/composed-flow.md)
 - [CLI reference](docs/cli-reference.md)
 - [Release readiness ledger](docs/release-readiness.md)
-- [0.2.0 release notes](docs/releases/v0.2.0.md)
+- [0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0)
 - [Documentation and archive inventory](docs/README.md)
 - [Skill catalog](skills/README.md)
 - [Cockpit guide](apps/cockpit/README.md)
