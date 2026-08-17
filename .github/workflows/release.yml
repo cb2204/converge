@@ -43,14 +43,17 @@ jobs:
           test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required"; exit 5; }
           taskspec_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
           seamwise_dir="$(mktemp -d -t seamwise-engine.XXXXXX)"
-          gh repo clone luanmorenommaciel/task-spec "$taskspec_dir" -- --quiet
+          gh auth setup-git
+          git clone --quiet https://github.com/luanmorenommaciel/task-spec.git "$taskspec_dir"
           git -C "$taskspec_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
           bash "$taskspec_dir/install.sh" --global --copy
-          gh repo clone luanmorenommaciel/seamwise "$seamwise_dir" -- --quiet
+          git clone --quiet https://github.com/luanmorenommaciel/seamwise.git "$seamwise_dir"
           git -C "$seamwise_dir" checkout --quiet --detach 5a398169c3fefcb65eb1a47c0cb4f967dfdc0515
           python -m pip install --disable-pip-version-check "$seamwise_dir"
           {
             printf 'PATH=%s/.local/bin:%s\n' "$HOME" "$PATH"
+            printf 'CVG_TASKSPEC_BIN=%s/.local/bin/taskspec\n' "$HOME"
+            printf 'CVG_SEAMWISE_BIN=%s\n' "$(command -v seamwise)"
             printf 'CVG_TASKSPEC_SOURCE_ROOT=%s\n' "$taskspec_dir"
             printf 'CVG_SEAMWISE_SOURCE_ROOT=%s\n' "$seamwise_dir"
             printf 'COMPOSE_DEMO_REQUIRE_ENGINE_PROVENANCE=1\n'

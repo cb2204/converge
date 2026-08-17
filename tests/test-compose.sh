@@ -4,8 +4,8 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CVG="$ROOT/bin/cvg"
-SEAMWISE_BIN="${CVG_SEAMWISE_BIN:-/Users/luanmorenomaciel/GitHub/seamwise/.venv/bin/seamwise}"
-TASKSPEC_BIN="${CVG_TASKSPEC_BIN:-/Users/luanmorenomaciel/GitHub/task-spec/bin/taskspec}"
+SEAMWISE_BIN="${CVG_SEAMWISE_BIN:-$(command -v seamwise 2>/dev/null || true)}"
+TASKSPEC_BIN="${CVG_TASKSPEC_BIN:-$(command -v taskspec 2>/dev/null || true)}"
 SCHEMA_PYTHON="${COMPOSE_JSONSCHEMA_PYTHON:-python3}"
 T=0
 F=0
