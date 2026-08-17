@@ -31,7 +31,10 @@ def digest_tree(root: pathlib.Path) -> str:
     digest = hashlib.sha256()
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root).as_posix()
-        if relative.startswith(".git/objects/") or relative.startswith(".git/logs/"):
+        # Git may refresh the index stat cache during a read-only status query.
+        # Hash repository semantics explicitly below instead of volatile .git
+        # implementation bytes.
+        if relative == ".git" or relative.startswith(".git/"):
             continue
         if path.is_symlink():
             digest.update(
@@ -39,6 +42,28 @@ def digest_tree(root: pathlib.Path) -> str:
             )
         elif path.is_file():
             digest.update(b"F\0" + relative.encode() + b"\0" + path.read_bytes())
+    logical_git_state = (
+        ("HEAD", ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"]),
+        (
+            "INDEX",
+            [
+                "git",
+                "-C",
+                str(root),
+                "diff",
+                "--cached",
+                "--binary",
+                "--no-ext-diff",
+            ],
+        ),
+        (
+            "CONFIG",
+            ["git", "-C", str(root), "config", "--local", "--null", "--list"],
+        ),
+    )
+    for label, command in logical_git_state:
+        completed = subprocess.run(command, capture_output=True, check=True)
+        digest.update(b"G\0" + label.encode() + b"\0" + completed.stdout)
     return digest.hexdigest()
 
 
