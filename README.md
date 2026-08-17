@@ -1,6 +1,6 @@
 <div align="center">
 
-[![Converge - turn reviewed intent into independently proven software](brand/banner.png)](https://github.com/luanmorenommaciel/converge)
+[![Converge - turn reviewed intent into independently proven software](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
 
 # Converge
 
