@@ -1,8 +1,12 @@
 SHELL := /bin/bash
 
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-TASKSPEC_BIN ?= taskspec
-SEAMWISE_BIN ?= seamwise
+ifeq ($(origin TASKSPEC_BIN),undefined)
+TASKSPEC_BIN := $(if $(CVG_TASKSPEC_BIN),$(CVG_TASKSPEC_BIN),taskspec)
+endif
+ifeq ($(origin SEAMWISE_BIN),undefined)
+SEAMWISE_BIN := $(if $(CVG_SEAMWISE_BIN),$(CVG_SEAMWISE_BIN),seamwise)
+endif
 PYTHON ?= python3
 
 export CVG_TASKSPEC_BIN := $(TASKSPEC_BIN)
