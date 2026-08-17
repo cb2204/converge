@@ -129,16 +129,20 @@ def main() -> int:
     if rendered.returncode != 0:
         fail("docs/cli-reference.md is stale against the command matrix", failures)
 
+    # Historical v0.1 binaries live as assets on the immutable v0.1.0 release,
+    # not in the tree. The inventory must still name each one AND carry a
+    # download link, so retiring the local copy cannot silently orphan it.
     archive = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     for historical in ("converge-v0.1.pdf", "task-spec-v0.1.pdf", "converge-deck.pdf"):
-        if historical not in archive or not (ROOT / "docs" / historical).is_file():
+        asset_url = f"releases/download/v0.1.0/{historical}"
+        if historical not in archive or asset_url not in archive:
             fail(f"historical evidence inventory missing {historical}", failures)
     for historical_html in (
         ROOT / "docs" / "converge-deck.html",
-        ROOT / "presentation" / "asd-agentic-loop.html",
-        ROOT / "presentation" / "converge.html",
-        ROOT / "presentation" / "cvg-passes-skills-cli.html",
-        ROOT / "presentation" / "task-spec.html",
+        ROOT / "docs" / "decks" / "asd-agentic-loop.html",
+        ROOT / "docs" / "decks" / "converge.html",
+        ROOT / "docs" / "decks" / "cvg-passes-skills-cli.html",
+        ROOT / "docs" / "decks" / "task-spec.html",
     ):
         if "ARCHIVED v0.1 EVIDENCE" not in historical_html.read_text(encoding="utf-8"):
             fail(f"historical HTML missing intrinsic archive notice: {historical_html.relative_to(ROOT)}", failures)

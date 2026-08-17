@@ -11,22 +11,31 @@ The current truth hierarchy is intentionally small:
 
 ## Historical evidence
 
-The following files are retained as historical v0.1 evidence. They are not the
-current composed behavior and must not be used as 0.2 implementation proof:
+The following are retained as historical v0.1 evidence. They are not the
+current composed behavior and must not be used as 0.2 implementation proof.
 
-- `converge-v0.1.pdf`
-- `task-spec-v0.1.pdf`
-- `converge.pdf`
-- `converge-deck.pdf`
+Large binaries are published as assets on the immutable
+[`v0.1.0` release](https://github.com/luanmorenommaciel/converge/releases/tag/v0.1.0)
+rather than carried in the working tree, so a clone does not pay for them:
+
+- [`converge-v0.1.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/converge-v0.1.pdf)
+- [`task-spec-v0.1.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/task-spec-v0.1.pdf)
+- [`converge.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/converge.pdf)
+- [`converge-deck.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/converge-deck.pdf)
+- [`converge-brand-concepts-round-01.zip`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/converge-brand-concepts-round-01.zip)
+
+These stay in the tree because they are small and browsable:
+
 - `converge-deck.html`
-- presentations under `presentation/`
+- decks under `decks/`
 
 The current generated release guide is `converge-v0.2.0.pdf`. Its
 canonical sources are the root README, `architecture.md`, and
 `composed-flow.md`.
 
-`converge-v0.2.0-alpha.1.pdf` is retained only as superseded candidate
-evidence and is not the current operating guide.
+[`converge-v0.2.0-alpha.1.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/converge-v0.2.0-alpha.1.pdf)
+is retained only as superseded candidate evidence and is not the current
+operating guide.
 
 `authority-model.md` remains only as a compatibility pointer to
 `architecture.md`.

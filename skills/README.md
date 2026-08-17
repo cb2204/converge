@@ -200,7 +200,7 @@ metrics ledger, an L0–L2 executor conformance suite, and dispatch recipes
 (Claude, Codex, Kimi, Gemini, taskship, anthive, custom) round out the runtime.
 **Converge consumes:** the external CLI and its published contracts; it does not install a mirrored Task-Spec skill.
 **Gate:** every task carries a runnable eval — *no eval, not a task yet.*
-Full details: [Task-Spec repository](https://github.com/luanmorenommaciel/task-spec) · deep-dive PDF: [`../docs/task-spec-v0.1.pdf`](../docs/task-spec-v0.1.pdf).
+Full details: [Task-Spec repository](https://github.com/luanmorenommaciel/task-spec) · deep-dive PDF: [`task-spec-v0.1.pdf`](https://github.com/luanmorenommaciel/converge/releases/download/v0.1.0/task-spec-v0.1.pdf).
 
 ### 6 · `task-specs-to-issues` — the tracker as state · **opt-in**
 
