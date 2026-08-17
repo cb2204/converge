@@ -1,456 +1,282 @@
 <div align="center">
 
-[![Converge — compile intent into shipped software. The dark factory where done is proven, not claimed.](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
+[![Converge - turn reviewed intent into independently proven software](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
 
 # Converge
 
-**Compile intent into shipped software.**
-*The dark factory for coding agents — autonomous delivery where `done` is proven by runnable evals, never claimed by the agent.*
+**Coordinate intent, decomposition, task authority, execution, and settlement without duplicating authority.**
 
 [![ci](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml/badge.svg)](https://github.com/luanmorenommaciel/converge/actions/workflows/ci.yml)
-[![release](https://img.shields.io/github/v/release/luanmorenommaciel/converge)](https://github.com/luanmorenommaciel/converge/releases/latest)
+[![release](https://img.shields.io/github/v/release/luanmorenommaciel/converge)](https://github.com/luanmorenommaciel/converge/releases)
 [![bash 3.2+](https://img.shields.io/badge/bash-3.2%2B-4EAA25?logo=gnubash&logoColor=white)](#requirements)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Works with **Claude Code · Codex · Kimi · Grok Build** — one method, one referee CLI, twelve portable skills, zero runtime dependencies
+Converge 0.2.0 | cvg 0.2.0 | Seamwise 0.2.0 | Task-Spec 3.8.0
 
-[Install](#-install) ·
-[Quickstart](#-quickstart-your-first-gated-task) ·
-[Steer from chat](#-steering-the-factory-from-chat) ·
-[How it works](#-how-it-works) ·
-[Cockpit](#-cockpit) ·
-[The passes](#-the-nine-passes) ·
-[The CLI](#-the-cvg-cli) ·
-[Docs](#-documentation)
+[Install](#install) · [First composed journey](#first-composed-journey) · [Authority model](docs/architecture.md) · [Composed flow](docs/composed-flow.md) · [CLI reference](docs/cli-reference.md)
 
 </div>
 
----
+## Release truth
 
-## What is Converge?
+This checkout is the Converge 0.2.0 release candidate. The composed
+implementation, deterministic cross-engine tests, and authenticated Codex demo
+are locally verified against the exact candidate commits.
+Publication is not complete until the exact Task-Spec, Seamwise, and Converge
+commits pass hosted macOS and Linux CI and are tagged in dependency order.
 
-Converge **compiles intent into software**: a raw idea enters a nine-gate production line and
-comes out the other end as merged, proven work — the *dark factory* model, where autonomous
-agents do the building and machines do the checking. Whatever coding agent you run — Claude
-Code, Codex, Kimi, Grok Build — it works against **signed task specs whose completion is
-enforced by evals, not by the agent's word**. Every task ships with runnable bash evals
-authored *before* the work; a task only settles when those evals exit green, and an
-adversarial judge from a **different model family** can be asked to refute the result against
-holdout criteria the builder never saw.
+| Claim | Current evidence |
+|---|---|
+| Task-Spec 3.8.0 | Published from immutable commit `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91`; hosted Ubuntu/macOS release installation green |
+| Seamwise 0.2.0 | Published from immutable commit `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515`; exact-commit and packaged Ubuntu/macOS gates green |
+| Converge 0.2.0 implementation | Current `feat/e2e` release worktree; publication gates remain open |
+| Hosted CI | Billing and scoped cross-repository credentials are working; Converge hosted gates remain before publication |
+| Published tags | Task-Spec `v3.8.0` and Seamwise `v0.2.0` are published; Converge remains unpublished |
+| Historical Converge 0.1.0 | Published and immutable; it documents the former bundled Task-Spec architecture |
 
-The unit of work is the **Task-Spec**: a self-verifying markdown file with a machine-checked
-format, an effort budget, an HMAC sign-off seal, and its own definition of done. The `cvg` CLI
-is the **referee** around it — it frames, dispatches, and gates, but holds **zero model
-credentials** and never writes a line of product code. Agents play; the referee scores. And
-because the referee is plain bash + stdlib Python, the same install serves every harness.
+The release never retags or moves `v0.1.0`. See
+[release readiness](docs/release-readiness.md) for the live gate ledger and
+[release notes](docs/releases/v0.2.0.md) for migration details.
 
-## Why it's different
+## What Converge owns
 
-- **The eval decides done.** A task cannot settle until its evals exit 0 — completion is a
-  state-machine invariant, not an agent's claim. The maximal stub attack (all nine specs faked)
-  lands all nine RED.
-- **The referee is never a player.** `cvg` holds no API keys and calls no models. Engine CLIs
-  authenticate themselves; the referee only frames, dispatches headlessly, and gates.
-- **Cross-family verification.** Tier-2 acceptance sends the diff, the intent, and **holdout
-  criteria the builder never saw** to a different vendor's model, prompted to refute. Proven
-  live in both directions — including one REFUTED verdict that caught a fail-open bug green
-  evals could not see.
-- **A loop with brakes.** `cvg loop` runs attempt → verify → repeat under three-axis budgets
-  (iterations · wall-clock · tokens), a stagnation detector, and eight named terminal states —
-  only `SETTLED`, `LOCAL_SETTLED`, and `NO_OP` exit zero. An exhausted budget is never a success.
-- **Harness-agnostic by construction.** Engines are one adapter file each; skills install into
-  every harness's native discovery directory. The same signed spec dispatches to any of them —
-  and the gate that scores the work is identical.
+Converge is the thin coordinator and assurance layer around two independent
+engines. It calls their public binaries. It does not import, vendor, or copy
+their implementations.
 
-## ✦ Cockpit
+```mermaid
+flowchart LR
+    I["Reviewed delivery intent"] --> S["Seamwise 0.2"]
+    S --> R{"Human accepts topology"}
+    R --> P["TaskPlan/v1 + lineage"]
+    P --> T["Task-Spec 3.8"]
+    T --> M["Unsigned Task-Spec Markdown"]
+    M --> A["taskspec gate --stamp"]
+    A --> B["Converge runtime bind"]
+    B --> L["Bounded task loop"]
+    L --> X["Independent Task-Spec acceptance"]
+    X --> Z["Settlement + composition evidence"]
+```
 
-The repository-first [Cockpit](apps/cockpit/) makes a workspace observable
-without creating a second source of truth. Its nine views cover Ask, Overview,
-Journey, Decompose, Work, Runs, Docs, Activity, and Health: the real nine-pass
-lineage, typed seams and delivery legs, work queue, attempts, readable
-documents, receipts, health, adversarial objections, and the current frontier
-authorized by `cvg`. The CLI still owns execution and proof.
+| System | Sole authority |
+|---|---|
+| Seamwise | Evidence-backed seams, swimlanes, capability legs, reviewed decomposition, `TaskPlan/v1`, and lineage |
+| Task-Spec | TaskPlan validation, materialization, Task-Spec structure, authorization, handoff, evals, and acceptance |
+| Converge | Cross-engine sequencing, executable binding, bounded execution, settlement, and composition receipts |
+| Human reviewer | Acceptance of Seamwise topology and explicit risk decisions |
+| Executor | Product-code changes inside the authorized runtime contract; never self-acceptance |
+
+Duplicate capability is tolerable. Duplicate authority is not. A Seamwise
+review does not authorize task dispatch, a Task-Spec materialization receipt
+does not sign a task, and model narration is never settlement evidence.
+
+## Install
+
+### Requirements
+
+- Git
+- Bash 3.2 or newer
+- Python 3
+- Task-Spec 3.8.0 for every Converge installation
+- Seamwise 0.2.0 only for decomposition and `cvg compose`
+- Node 22 only for the npm door and Cockpit
+
+After the tags are published, install in dependency order:
 
 ```bash
-npm run cockpit:install
-npm run cockpit:dev -- \
-  --cvg-home "$PWD" \
-  --project-root /absolute/path/to/your/converge-workspace
+git clone --branch v3.8.0 https://github.com/luanmorenommaciel/task-spec.git
+bash task-spec/install.sh --global --copy
+taskspec demo
+
+python3 -m pip install   "git+https://github.com/luanmorenommaciel/seamwise.git@v0.2.0"
+
+git clone --branch v0.2.0   https://github.com/luanmorenommaciel/converge.git
+bash converge/install.sh --target /absolute/path/to/your-project --copy
 ```
 
-The observation path invokes only `cvg snapshot --json`, binds to loopback, and
-exposes the CLI-owned `WorkspaceSnapshot 3.0`. Artifact previews are bound to
-the snapshot and SHA-256 so changed bytes cannot masquerade as the bytes that
-were observed.
+Until hosted CI is repaired and the tags exist, use the exact release-candidate
+commits listed in [Release truth](#release-truth). Do not treat a source checkout
+as a published release.
 
-Ask Converge is a separate, optional ACP interpretation path. It sends a bounded
-snapshot summary, selected entity, and explicitly selected artifact text to the
-chosen provider. Claude must enter plan mode with built-in tools disabled before
-prompting, launches outside the workspace, receives no client MCP servers, and
-has permission requests rejected. The Codex choice remains visible but blocked
-because the pinned ACP adapter cannot suppress its local read/search tools.
-Agent prose is interpretation, never a gate verdict, receipt, or proof;
-provider retention policies still apply. See the
-[Cockpit guide](apps/cockpit/README.md) for the architecture,
-contract, production build, and verification commands.
-
-The legacy `control-room:*` npm scripts remain aliases for one release. Cockpit
-is not included in the published zero-runtime-dependency Converge package while
-the live proving-ground cases are still being completed.
-
-## 📦 Install
-
-Three doors, same result: the twelve skills land in every harness's native directory and the
-`cvg` CLI lands on your PATH. Pick the one that matches your stack.
-
-**① Plugin marketplace** — inside Claude Code (Grok Build reads Claude marketplaces natively):
-
-```
-/plugin marketplace add luanmorenommaciel/converge
-/plugin install converge@cvg
-```
-
-**② npm / npx** — anywhere Node lives; the package embeds the CLI *and* all skills:
+Converge also supports:
 
 ```bash
 npm install -g github:luanmorenommaciel/converge
 cvg-install
 ```
 
-Prefer project-local? `npm install -D github:luanmorenommaciel/converge`, then use
-`npx cvg …` and `npx cvg-install`.
-
-**③ One-line shell** — no Node needed, only git + bash:
+or, after publication:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh | bash
+CVG_REF=v0.2.0   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh)"
 ```
 
-Where skills land, per harness — one install covers all four:
+The installer projects exactly eleven Converge skills to `.agents/skills/`,
+`.claude/skills/`, and `.grok/skills/`. It installs no Task-Spec or Seamwise
+implementation. Copy mode pins the coordinator, contracts, templates, and
+skills into the consumer.
 
-| Harness | Skills discovered from | Also gets |
-|---|---|---|
-| **Claude Code** | `.claude/skills/` | marketplace plugin (skills + `cvg` on session PATH) |
-| **Codex** | `.agents/skills/` (AGENTS.md family) | `cvg` via any install door |
-| **Kimi** | `.agents/skills/` | `cvg` via any install door |
-| **Grok Build** | `.grok/skills/` | reads Claude marketplaces + `AGENTS.md` natively |
+## First composed journey
 
-<details>
-<summary><b>More: pinning, forks, development installs, requirements</b></summary>
+Start from a Git repository whose recipe is committed. Explicit binary
+overrides make the exact engine candidates auditable.
 
-- **Pin an exact release:** `CVG_REF=v0.1.0 curl -fsSL …/install.sh | bash`, or
-  `npm i -g github:luanmorenommaciel/converge#v0.1.0`.
-- **Install from a fork:** `CVG_REPO_URL=<url>` for the one-liner, or point npm at your fork.
-- **Development:** `git clone` the repo, then `bash /path/to/converge/install.sh --symlink`
-  from your project — skills and CLI stay live-linked to the checkout.
-  `install.sh --help` lists every flag (`--target`, `--no-bin`, `--bin-dir`, `--force`).
-- **Windows:** run everything in Git Bash or WSL, and use real `curl` (`curl.exe`, not the
-  PowerShell alias).
-- **Requirements:** `bash` 3.2+ and `git`. The binding/verification gates use `python3`
-  (stdlib only, no pip). Node is needed only for the npm door. Engine CLIs (`claude`,
-  `codex`, `kimi`, `grok`) are needed only by the passes that dispatch to them, and each
-  authenticates itself — Converge never holds a key.
+```bash
+export CVG_TASKSPEC_BIN=/absolute/path/to/task-spec/bin/taskspec
+export CVG_SEAMWISE_BIN=/absolute/path/to/seamwise/bin/seamwise
 
-Installing is idempotent, never writes a credential, and verifies the installed skills parse
-before reporting `INSTALL=OK`.
-</details>
+cvg compose prepare --source recipe.yaml
+# COMPOSE=NEEDS_REVIEW
 
-## ⚡ Quickstart: your first gated task
+cvg compose review   --reviewer "repository-owner"   --reason "The seams, ownership, dependencies, and rollback paths are accepted."
+# COMPOSE=PREVIEW_READY
 
-Once installed, everything happens in the repository you want to deliver into.
+cvg compose preview
+# COMPOSE=PREVIEW_READY
 
-**1 · Stand up the control plane.** Two tracked artifacts (the write fence and the workspace)
-plus a repo-private signing key that never enters git:
+cvg compose materialize
+# COMPOSE=MATERIALIZED
+
+cvg compose status
+# COMPOSE=MATERIALIZED
+```
+
+The materialized leaves still contain `signed_off: false`.
+Authorization remains explicit and per leaf:
+
+```bash
+taskspec gate --stamp cvg/tasks/T-20260815-health-status.md
+cvg bind --task cvg/tasks/T-20260815-health-status.md
+git add cvg/tasks cvg/execution
+git commit -m "authorize and bind health status task"
+cvg loop --issue T-20260815-health-status --agent codex
+```
+
+A successful loop must end in `TASK_LOOP=LOCAL_SETTLED` or
+`TASK_LOOP=SETTLED` and `ACCEPTED=1`. The composition receipt is stored at
+`cvg/receipts/composition/composition-receipt.json`; it binds engine versions,
+the immutable source commit, Seamwise review/lineage/TaskPlan digests,
+Task-Spec materialization evidence, and every task hash. It always records
+`dispatch_authorized: false`.
+
+## Strict engine delegation
+
+Converge coordinates the independent engines. It generates neither the
+decomposition nor Task-Spec content. `cvg decompose` is a compatibility alias
+for Seamwise preparation, and every `cvg tasks` verb delegates to Task-Spec.
 
 ```bash
 cvg init
 cvg setup signing
-cvg setup
-```
-
-`cvg setup` ends with `SETUP=READY` and your exact next step if anything is missing.
-
-**2 · Route, author, seal.** Ask how much ceremony the change earns, scaffold the spec, write
-its evals *first*, then let the gate seal it:
-
-```bash
 cvg lane "add a health endpoint"
-cvg tasks plan
-cvg tasks new add-health-endpoint XS
-cvg tasks validate cvg/tasks/T-*.md
-cvg tasks gate --stamp cvg/tasks/T-*.md
+
+cvg capture
+cvg intent
+cvg structure
+cvg decompose --source recipe.yaml
+cvg compose review --reviewer owner --reason "Topology accepted"
+cvg tasks plan --manifest seamwise/task-plan.json
+cvg compose materialize
+cvg tasks validate cvg/tasks/T-20260815-health-status.md
+cvg tasks gate --stamp cvg/tasks/T-20260815-health-status.md
+cvg bind --task cvg/tasks/T-20260815-health-status.md
+cvg loop --issue T-20260815-health-status --agent codex
 ```
 
-The gate answers `VERDICT: DELEGATE` and stamps the HMAC seal — from here on, editing an eval
-breaks the seal.
+The task backlog lives under `cvg/tasks/`. Converge exports
+`TASKSPEC_WORKSPACE_ROOT`, `TASKSPEC_BACKLOG_DIR`, and
+`TASKSPEC_ACCEPTANCE_DIR` to keep nested workspaces on the same explicit root.
 
-**3 · Bind and run the loop.** Freeze the execution contract, then let an engine attempt while
-the evals verify:
+## Machine contract
+
+Every public form accepts global `--json` and `--dry-run` in any position.
 
 ```bash
-cvg bind --task cvg/tasks/T-*.md
-cvg loop --issue T-… --agent claude
+cvg --json help
+cvg version --json
+cvg agent-context --json
+cvg compose --json status
 ```
 
-The loop lands in exactly one terminal state — `TASK_LOOP=SETTLED` on success, an honest named
-failure otherwise. Swap `--agent claude` for `codex` or `kimi`; the gates don't change. And in
-day-to-day use you rarely type these commands at all — see the next section.
+`--json` emits one `ConvergeCLIResult/v1` document, preserves the underlying
+exit code, emits no ANSI, and reports `changed` and `dry_run`. The canonical
+57-form matrix is [contracts/cli-command-matrix.json](contracts/cli-command-matrix.json);
+the human reference and test coverage derive from it.
 
----
+Stable compose states are:
 
-## 💬 Steering the factory from chat
+- `COMPOSE=NEEDS_REVIEW`
+- `COMPOSE=PREVIEW_READY`
+- `COMPOSE=MATERIALIZED`
+- `COMPOSE=BLOCKED`
+- `COMPOSE=ENGINE_UNAVAILABLE`
 
-The commands above are the referee's surface — but the skills are installed *in your harness*,
-and `cvg agent-context` hands any agent the whole surface as one JSON manifest. So in practice
-you don't type `cvg` yourself: **you steer in plain language, stage by stage, and the agent
-drives the gates.** You never need to memorize the sequence either — **`cvg next`** derives
-where the descent stands from workspace evidence and names the next pass, its steering prompt,
-and its closing gate; `cvg lane` tells you which passes a change earns; `cvg setup` prints the
-exact next step when anything is missing; and `cvg ready` answers "what now?" between tasks.
+`cvg compose status` is read-only and returns one safe next action. It blocks on
+a stale review, changed plan, mismatched task set, changed task bytes,
+incompatible engine, or stale receipt.
 
-A real run reads like this:
+## Cockpit
 
-```text
-you   › I want a storm-alerts feed for our customers. Start a Converge run — capture it.
-agent › Pass 0 (idea-to-brd): drafting the BRD, grilling the gaps out of the idea…
-        CHECK_BRD=PASS — the brief is signed.
-
-you   › Take it to requirements and architecture.
-agent › Pass 1 (brd-docs-to-tech-req): CHECK_TECH_SPEC=PASS.
-        Pass 2 (tech-req-to-adrs): five ADRs recorded — CHECK_ADR=OK.
-
-you   › Break it down, then have Codex attack the plan.
-agent › Pass 3: two swimlanes, six legs — CHECK_PLAN=OK.
-        Pass 4: codex raised 3 objections. Two resolved; one needs your call.
-
-you   › Objection two is right — merge the retry logic into one leg. Then sign.
-agent › Plan amended. CHECK_CONSENSUS=OK — the barrier is behind us.
-
-you   › Cut the tasks and put them on the board.
-agent › Pass 5: six Task-Specs, evals authored first, all TIER=1 and HMAC-sealed.
-        Pass 6: six issues, dependencies as blocked-by — CHECK_REGISTER=OK.
-
-you   › Ship the first ready task.
-agent › Pass 7: contract bound — CHECK_RUNTIME_CONTRACT=PASS.
-        Pass 8: attempt → verify → repeat… evals green on iteration 2.
-        TASK_LOOP=SETTLED — PR opened, receipt written. Next ready task: 2 of 6.
-```
-
-**You own intent and judgment; the factory owns procedure and proof.** Your voice is needed at
-exactly the moments that deserve it: the barrier sign-off after the adversarial review, and any
-objection the machines cannot settle. Everything else runs on gates.
-
-## 🔁 How it works
-
-A raw idea descends through nine gates. Passes 0–4 are the **design half** — documents in,
-adversarial review out. Pass 5 is the **cornerstone** — intent becomes signed, self-verifying
-Task-Specs. Passes 6–8 are the **machine half** — the board mirrors the backlog, the bind
-freezes an enforceable contract, and the loop drives each task to a terminal state a script
-can read. Evidence and lessons flow back to feed the next pass.
-
-```mermaid
-flowchart LR
-    I([raw idea]) --> P0["0 · Capture"] --> P1["1 · Intent"] --> P2["2 · Structure"] --> P3["3 · Decompose"]
-    P3 --> P4{{"4 · Consensus<br/>THE BARRIER — cross-family<br/>adversary + human sign-off"}}
-    P4 --> P5["5 · Tasking<br/>signed Task-Specs, evals first"]
-    P5 --> P6["6 · Register (opt-in)<br/>specs ⇄ tracker board"]
-    P5 --> P7["7 · Bind<br/>execution profile + write fence"]
-    P6 --> P7
-    P7 --> P8["8 · The Loop<br/>attempt → verify → repeat"]
-    P8 --> D([settled: green evals,<br/>receipt, PR])
-    D -. evidence + lessons feed the next pass .-> P0
-    style P4 fill:#3a2f12,stroke:#f5b042,color:#f7f2e8
-    style P8 fill:#0f2a24,stroke:#2dd4bf,color:#e6f7f2
-```
-
-Not every change earns all nine passes. `cvg lane` routes work to the ceremony it deserves —
-**FAST** (5, 7, 8), **NORMAL** (1, 2, 5, 7, 8), or **FULL** (0–8) — and it **routes but never
-waives**: nothing irreversible rides FAST, and no lane dispatches an unsigned spec.
-
-## 🧩 The nine passes
-
-Each pass is an installable skill with one job, one output, and one gate. You (or your agent)
-do the work; the gate proves it happened.
-
-| # | Pass · skill | What you do | The gate proves | Token |
-|:--:|---|---|---|---|
-| 0 | **Capture** *(optional)*<br>[`idea-to-brd`](skills/idea-to-brd/) | Turn a raw idea into a BRD — the skill grills the gaps out of you | the brief is complete and signed | `CHECK_BRD=PASS` |
-| 1 | **Intent**<br>[`brd-docs-to-tech-req`](skills/brd-docs-to-tech-req/) | Derive testable tech requirements from the BRD | every requirement is testable, blockers resolved | `CHECK_TECH_SPEC=PASS` |
-| 2 | **Structure**<br>[`tech-req-to-adrs`](skills/tech-req-to-adrs/) | Record the architecture as ADRs | the decision set is canonical and consistent | `CHECK_ADR=OK` |
-| 3 | **Decompose**<br>[`reqs-to-swimlane-plans`](skills/reqs-to-swimlane-plans/) | Split the work into swimlanes of ordered legs | tree shape and dependencies are sound | `CHECK_PLAN=OK` |
-| 4 | **Consensus — the barrier**<br>[`sketch-plans-adversarial-review`](skills/sketch-plans-adversarial-review/) | A *different-family* model attacks the plan; you resolve objections and sign | cross-family review really ran; provenance stamped | `CHECK_CONSENSUS=OK` |
-| 5 | **Tasking — the cornerstone**<br>[`task-spec`](skills/task-spec/) | Author Task-Specs: evals first, then budget, then the HMAC seal | each spec is atomic, sized, and safe to delegate | `TIER=1` |
-| 6 | **Register** *(opt-in)*<br>[`task-specs-to-issues`](skills/task-specs-to-issues/) | Project specs onto Linear / GitHub / Jira, one spec = one issue | board ⇄ backlog is 1:1, dependency DAG intact | `CHECK_REGISTER=OK` |
-| 7 | **Bind**<br>[`task-to-runtime-contract`](skills/task-to-runtime-contract/) | Freeze the execution contract: profile, write fence, pinned hashes | this host can actually enforce it | `CHECK_RUNTIME_CONTRACT=PASS` |
-| 8 | **The Loop**<br>[`task-loop`](skills/task-loop/) | An engine attempts, evals verify, repeat — bounded on three axes | evals green within budget, receipt written | `TASK_LOOP=SETTLED` |
-
-Three utilities round out the twelve: [`evidence-to-next-pass`](skills/evidence-to-next-pass/) (the
-sequence layer — derives where the descent stands from workspace evidence, enforces order
-with pre/post hooks, and owns the canonical pass prompts; surfaced as `cvg next`),
-[`pass-to-lesson`](skills/pass-to-lesson/) (teach what a pass just did — every component, the
-decision it encodes, what breaks downstream without it; surfaced as `cvg lesson`), and
-[`skill-creator`](skills/skill-creator/) (author + validate new skills).
-The full catalog with per-skill detail: [`skills/README.md`](skills/README.md).
-
-## 🛠 The `cvg` CLI
-
-One referee for the whole descent. Every wrapped gate is a byte-exact pass-through, and every
-verdict ends in one greppable token.
+[Cockpit](apps/cockpit/) is a read-only observation and interpretation surface
+over `cvg snapshot`. It does not become a second source of truth and it cannot
+authorize work.
 
 ```bash
-# ── start ────────────────────────────────────────────────────────────────────
-cvg init                        # tracked control plane: write fence + workspace
-cvg setup                       # readiness board with your exact next step
-cvg setup signing               # repo-private HMAC key — specs become signable
-cvg setup tracker linear        # connect a board; the key goes to the OS keychain
-cvg doctor                      # engine readiness: ≥2 engines, ≥1 cross-family
-cvg doctor host                 # can THIS machine sign, bind, loop and settle?
-                                #   names the verbs each missing tool blocks
-cvg doctor plugin               # is this project loading a STALE Converge?
-cvg doctor evidence             # can git show the floor the gates stand on?
-
-# ── design (passes 0–4) ──────────────────────────────────────────────────────
-cvg capture                     # Pass 0 gate: the BRD exit contract
-cvg intent                      # Pass 1 gate: testable requirements
-cvg structure                   # Pass 2 gate: the ADR set
-cvg decompose                   # Pass 3 gate: the swimlane tree
-cvg review --adversary codex    # Pass 4 dispatch: a cross-family model attacks the plan
-cvg review --timeout 900        # …raise the wall-clock cap; a big plan set needs it
-cvg review --resolve C7 --fix   # record the OWNER's decision on one objection
-cvg review --check              # Pass 4 gate: objections resolved, provenance intact
-cvg lane "what you'll build"    # route the work: FAST | NORMAL | FULL
-
-# ── author & sign (pass 5) ───────────────────────────────────────────────────
-cvg tasks plan                  # read-only preview: proposed specs + rationale
-cvg tasks new <slug> <effort>   # scaffold a Task-Spec — you write the evals FIRST
-cvg tasks validate <spec>       # structure + six-tier sizing gate
-cvg tasks gate --stamp <spec>   # sign-off: VERDICT + the HMAC seal
-cvg tasks dod <spec>            # definition of done + traceability matrix
-cvg tasks rebuild-state         # re-derive _state.yaml from the specs' frontmatter
-cvg eval <spec>                 # run the spec's own evals
-cvg lint                        # lint the whole backlog: cycles, overlaps
-                                #   ⚠ needs bash 4+ (associative arrays). Stock
-                                #   macOS ships 3.2 → LINT=UNSUPPORTED, exit 3.
-                                #   `brew install bash` and it re-execs itself.
-
-# ── board (pass 6, opt-in) ───────────────────────────────────────────────────
-cvg register                    # specs → tracker issues, 1:1, deps as blocked-by
-cvg register --check            # gate the mapping: parity, DAG, no orphans
-cvg ready                       # the dispatchable frontier: ready AND unblocked
-cvg transition <id> <state>     # move a task between statuses, locked + logged
-
-# ── execute (passes 7–8) ─────────────────────────────────────────────────────
-cvg bind --task <spec>          # freeze the execution contract + write fence
-cvg loop --issue <id>           # attempt → verify → repeat, bounded on three axes
-cvg verify --task <spec>        # tier-2: a different-family judge tries to refute
-cvg gate --path <p>             # ask the repo write fence about one path
-
-# ── know where you are · understand what closed ──────────────────────────────
-cvg next                        # which pass is current and which is next, from evidence
-cvg lesson                      # gate the lesson a closed pass earned (optional)
-
-# ── for agents ───────────────────────────────────────────────────────────────
-cvg agent-context               # the whole surface as one JSON manifest
-cvg <anything> --json           # uniform response envelope, any command
-cvg <mutation> --dry-run        # preview without performing
+npm run cockpit:install
+npm run cockpit:dev --   --cvg-home "$PWD"   --project-root /absolute/path/to/project
 ```
 
-What a session actually looks like:
+Ask Converge is optional ACP interpretation. Agent prose is not a gate verdict,
+receipt, or acceptance record.
 
-```console
-$ cvg tasks gate --stamp cvg/tasks/T-20260730-add-health-endpoint.md
-VERDICT: DELEGATE
-TIER=1
+## Repository map
 
-$ cvg loop --issue T-20260730-add-health-endpoint --agent codex
-TRACKER=OK
-TASK_LOOP=SETTLED
-
-$ cvg register --check
-CHECK_REGISTER=OK
-```
-
-Exit codes are contracts with a published retryable / side-effects taxonomy. The complete
-surface ledger — every command, what it wraps, and what proved it — is
-[`bin/README.md`](bin/README.md).
-
-## 🧾 Status
-
-**Converge 0.1.0** ships the CLI, twelve skills, and the Task-Spec engine as one versioned unit —
-the first release where every claim has a receipt behind it:
-
-- **CI is public and green on macOS (bash 3.2) and Linux** — 21 hermetic suites, no secrets, no
-  live services: [the gauntlet](.github/workflows/ci.yml).
-- **The clean-room acceptance suite** builds an empty repo, installs pinned copies for every
-  harness, and proves the full chain — init → sign → bind → bounded RED→GREEN loop → acceptance →
-  receipt hash chain — with a stub engine: [`tests/test-clean-room-install-e2e.sh`](tests/test-clean-room-install-e2e.sh).
-- **The loop kernel is proven by 52 hermetic checks** (brakes, stagnation, exhaustion, resume,
-  cancel, honest no-op): [`tests/test-loop-kernel.sh`](tests/test-loop-kernel.sh).
-- **Tier-2 verification has graded real work in both directions** — cross-family, no shared
-  vendor: one UPHELD (settled through a merged PR), one **REFUTED** that caught a fail-open bug
-  the deterministic evals could not see. *A green eval is necessary, not sufficient — demonstrated.*
-- One number, everywhere: `VERSION` is the single source of truth (`cvg 0.1.0` across the CLI,
-  skills, and every manifest) and [`tests/test-version-unity.sh`](tests/test-version-unity.sh)
-  fails the build on drift.
-
-What's deliberately **not** in 0.1.0: the Manager (fleet dispatch across ready tasks — the loop
-is single-task by design today) and the CI eval-gate (server-side re-verification). Both are next
-on the roadmap; full history in the [CHANGELOG](CHANGELOG.md).
-
-## 📚 Documentation
-
-| Read | For |
+| Path | Role |
 |---|---|
-| [`docs/converge-v0.1.pdf`](docs/converge-v0.1.pdf) | **the canonical blueprint** — the descent, the barrier, the architecture, the agent protocol |
-| [`docs/task-spec-v0.1.pdf`](docs/task-spec-v0.1.pdf) | the cornerstone unit in depth — six tiers, dual gates, anti-reward-hacking |
-| [`presentation/converge.html`](presentation/converge.html) | interactive walkthrough — method, trust chain, evidence model |
-| [`presentation/task-spec.html`](presentation/task-spec.html) | Task-Spec anatomy, authoring, signing, execution, recovery |
-| [`presentation/cvg-passes-skills-cli.html`](presentation/cvg-passes-skills-cli.html) | all nine passes, the skills, and the CLI, step by step |
-| [`presentation/asd-agentic-loop.html`](presentation/asd-agentic-loop.html) | the agentic loop: bounded autonomy and settlement |
-| [`skills/README.md`](skills/README.md) | the skill catalog — what each pass ships and gates |
-| [`bin/README.md`](bin/README.md) | the CLI surface ledger — every command and what proved it |
+| `bin/` | Stable CLI plus focused private helpers |
+| `contracts/` | Canonical CLI matrix and versioned JSON Schemas |
+| `skills/` | Exactly eleven Converge orchestration and assurance skills |
+| `apps/cockpit/` | Read-only observer UI |
+| `templates/` | Consumer workspace templates |
+| `tests/` | Hermetic gate, install, loop, JSON, and composed-flow suites |
+| `docs/` | Architecture, composed flow, CLI reference, release notes, and archived evidence |
 
-## ❓ FAQ
+## Verification
 
-<details>
-<summary><b>Does my agent have to support Converge?</b></summary>
+One Makefile owns the release entrypoints:
 
-No. Skills install as plain markdown + scripts into each harness's native discovery directory
-(`.claude/skills/`, `.agents/skills/`, `.grok/skills/`); the CLI is plain bash. Any harness
-that can run shell commands can drive the gates, and `cvg agent-context` gives an agent the
-full surface as JSON in one call.
-</details>
+```bash
+make check
+make check-json
+make check-docs
+make check-composed
+make check-live-evidence
+make demo-composed
+make release-check
+```
 
-<details>
-<summary><b>Why signed specs?</b></summary>
+`release-check` is necessary but not sufficient for publication. Hosted Ubuntu,
+macOS, Cockpit, JSON, docs, package, and composed-E2E jobs must run on the exact
+commit. A zero-step GitHub job is infrastructure evidence, not a passed gate.
 
-The sign-off HMAC seals the eval bodies at the moment a human said "safe to delegate". If an
-agent (or anyone) edits an eval afterwards to make it pass, the seal breaks and the gate refuses.
-Hand-stamping is rejected; the only path to autonomy is through the gate.
-</details>
+## Scope of v0.2.0
 
-<details>
-<summary><b>What's the "Manager", and why isn't it a skill?</b></summary>
+This release promises a reproducible composed single-task path with strict
+external-engine boundaries. It does not promise Manager fleet scheduling,
+production reliability, a live tracker, or autonomous approval of human
+decisions.
 
-The Manager decides *which* task runs, when, in parallel, watching PRs — an orchestration layer a
-Git-native world mostly provides already (Actions as scheduler, the PR as settlement, branch
-protection as the gate). Converge ships the execution **Loop** now; the Manager schedules around
-it later in CI/CD. It's the top item on the roadmap.
-</details>
+## Documentation
 
-<details>
-<summary><b>Can I use it on an existing repository?</b></summary>
-
-Yes — `cvg init` is non-clobbering and the write fence (`.cvg/gate.yaml`) is a tracked file you
-review like any other. Start with `cvg lane` on your next change; nothing forces the full descent.
-</details>
-
-## Provenance
-
-Converge practices what it enforces: this repository's own backlog was driven through the loop —
-nine tasks settled through merged PRs, one fully unattended — and its CI runs the same gates it
-asks of everyone else. Built with Claude Code, Codex, and Kimi in all three seats.
+- [Architecture and authority](docs/architecture.md)
+- [Composed flow and failure semantics](docs/composed-flow.md)
+- [CLI reference](docs/cli-reference.md)
+- [Release readiness ledger](docs/release-readiness.md)
+- [0.2.0 release notes](docs/releases/v0.2.0.md)
+- [Documentation and archive inventory](docs/README.md)
+- [Skill catalog](skills/README.md)
+- [Cockpit guide](apps/cockpit/README.md)
 
 ## License
 
-[MIT](LICENSE) — one license for the whole unit.
+[MIT](LICENSE)

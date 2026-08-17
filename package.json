@@ -1,7 +1,7 @@
 {
   "name": "@luanmorenommaciel/converge",
-  "version": "0.1.0",
-  "description": "Compile intent into shipped software — the dark factory for coding agents. Nine gated passes, twelve portable skills, and the cvg referee CLI (bash 3.2+, zero runtime dependencies); done is proven by runnable evals, never claimed.",
+  "version": "0.2.0",
+  "description": "Compile intent into shipped software — eleven orchestration and assurance skills around the independently versioned Task-Spec engine, plus the cvg referee CLI; done is proven by runnable evals, never claimed.",
   "bin": {
     "cvg": "bin/cvg",
     "cvg-install": "install.sh"
@@ -20,10 +20,27 @@
   },
   "files": [
     "bin/",
-    "skills/",
+    "contracts/",
+    "skills/brd-docs-to-tech-req/",
+    "skills/evidence-to-next-pass/",
+    "skills/idea-to-brd/",
+    "skills/pass-to-lesson/",
+    "skills/reqs-to-swimlane-plans/",
+    "skills/sketch-plans-adversarial-review/",
+    "skills/skill-creator/",
+    "skills/task-loop/",
+    "skills/task-specs-to-issues/",
+    "skills/task-to-runtime-contract/",
+    "skills/tech-req-to-adrs/",
+    "templates/",
     "install.sh",
     "VERSION",
-    ".claude-plugin/"
+    ".claude-plugin/",
+    "!**/__pycache__/**",
+    "!**/*.pyc",
+    "!**/*.pyo",
+    "!**/.DS_Store",
+    "!**/*.tsbuildinfo"
   ],
   "repository": {
     "type": "git",

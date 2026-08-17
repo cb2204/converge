@@ -26,6 +26,7 @@ function mapClientError(error) {
     ACP_ADAPTER_EXITED: "ASK_AGENT_FAILED",
     ACP_AUTH_REQUIRED: "ASK_AUTH_REQUIRED",
     ACP_AUTH_UNSUPPORTED: "ASK_AUTH_UNSUPPORTED",
+    ACP_CONFIG_REJECTED: "ASK_CONFIG_REJECTED",
     ACP_OUTPUT_LIMIT: "ASK_OUTPUT_LIMIT",
     ACP_PROTOCOL_MISMATCH: "ASK_PROTOCOL_MISMATCH",
     ACP_SAFE_MODE_UNAVAILABLE: "ASK_AGENT_UNAVAILABLE",
@@ -99,6 +100,35 @@ export class AskService {
     });
   }
 
+  /**
+   * Opens a disposable ACP session purely to read the model and reasoning
+   * selectors the agent advertises, then tears it down. No prompt is sent, so
+   * this costs a process spawn and zero model tokens. It is what lets the
+   * composer show real options before the first question is asked.
+   */
+  async probeAgentConfig(agentId) {
+    const adapter = this.registry.get(agentId);
+    if (!adapter) throw new AskError("ASK_AGENT_NOT_FOUND");
+    if (adapter.contextIsolation !== "verified") {
+      throw new AskError("ASK_AGENT_UNAVAILABLE");
+    }
+    const client = this.clientFactory({ adapter, onEvent: () => true });
+    try {
+      const connection = await client.connect();
+      const session = await client.createSession();
+      return Object.freeze({
+        schemaVersion: "1.0",
+        agentId,
+        agentInfo: connection.agentInfo ?? null,
+        configOptions: session.configOptions ?? Object.freeze([]),
+      });
+    } catch (error) {
+      throw mapClientError(error);
+    } finally {
+      await client.close();
+    }
+  }
+
   async createSession(candidate) {
     const request = parseCreateAskSessionRequest(candidate);
     await this.#removeExpired();
@@ -133,11 +163,13 @@ export class AskService {
       createdAt: this.now(),
       expiresAt: this.now() + this.sessionTtlMs,
       grounding: askContext.grounding,
+      stats: askContext.stats,
       contextText: askContext.contextText,
       client: null,
       connection: null,
       acpSessionId: null,
       modes: null,
+      configOptions: Object.freeze([]),
       events: [],
       eventBytes: 0,
       nextSequence: 1,
@@ -158,6 +190,13 @@ export class AskService {
       const acpSession = await client.createSession();
       record.acpSessionId = acpSession.sessionId;
       record.modes = sanitizeModes(acpSession.modes);
+      record.configOptions = acpSession.configOptions ?? Object.freeze([]);
+      // Selections are applied to the fresh session before any prompt, which
+      // keeps one disposable session per turn while still honouring the chosen
+      // model and reasoning level.
+      for (const selection of request.config) {
+        record.configOptions = await client.setConfigOption(selection);
+      }
       record.state = "ready";
       return this.#sessionDocument(record);
     } catch (error) {
@@ -320,6 +359,8 @@ export class AskService {
         capabilities: record.connection?.capabilities ?? null,
         authMethods: record.connection?.authMethods ?? Object.freeze([]),
         modes: record.modes,
+        configOptions: record.configOptions,
+        stats: record.stats,
       }),
     });
   }

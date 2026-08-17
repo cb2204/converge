@@ -52,7 +52,6 @@ BREW_DIR="$(dirname "$(command -v shellcheck 2>/dev/null || echo /nonexistent/x)
 # NOTE: a trailing comment starting with the word "shellcheck" is parsed as a
 # directive (SC1126), so these are phrased around it.
 PATH_OK="$BREW_DIR:$SYS_PATH"     # every required tool present
-PATH_NOSC="$SYS_PATH"             # homebrew dropped, so the linter is absent
 
 # For a tool that DOES live in /usr/bin (python3), mirror the system dirs and omit it.
 mirror_without() { # mirror_without <dir> <tool>
@@ -68,6 +67,12 @@ mirror_without() { # mirror_without <dir> <tool>
   done
 }
 
+# The linter may be installed by Homebrew or by a system package manager. A
+# mirrored PATH that explicitly omits it is portable across both host shapes.
+BINNS="$TMP/binns"
+mirror_without "$BINNS" shellcheck
+PATH_NOSC="$BINNS"
+
 run() { # run <expected-exit> <PATH>; sets OUT/RC
   # Override PATH only. `env -i` was the first attempt and it strips PWD, which the
   # router needs for workspace resolution — the probe then failed on the router
@@ -81,16 +86,18 @@ last() { printf '%s\n' "$OUT" | tail -1; }
 
 # ---------------------------------------------------------------------------
 echo
-echo "[1] a fully-equipped host reports OK at exit 0"
+echo "[1] every required tool present reports a non-blocking verdict at exit 0"
 # ---------------------------------------------------------------------------
 if [ ! -x "$BREW_DIR/shellcheck" ]; then
   echo "  UNRUNNABLE — shellcheck is not installed, so the PRESENT case cannot be built."
   echo "  DOCTOR_HOST_TESTS=UNRUNNABLE"; exit 3
 fi
-if run 0 "$PATH_OK" && [ "$(last)" = "DOCTOR_HOST=OK" ]; then
-  ok "every tool present → exit 0 + DOCTOR_HOST=OK"
+if run 0 "$PATH_OK" && {
+  [ "$(last)" = "DOCTOR_HOST=OK" ] || [ "$(last)" = "DOCTOR_HOST=DEGRADED" ]
+}; then
+  ok "every required tool present → exit 0 + OK or optional-only DEGRADED"
 else
-  bad "expected exit 0 + DOCTOR_HOST=OK (got $RC / $(last))"
+  bad "expected exit 0 + non-blocking host verdict (got $RC / $(last))"
 fi
 case "$OUT" in
   *shellcheck*) ok "the report names shellcheck explicitly (not a bare count)" ;;

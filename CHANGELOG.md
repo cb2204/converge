@@ -1,28 +1,36 @@
 # Changelog
 
-All notable changes to **Converge** are documented here — the CLI (`bin/cvg`), the
-twelve skills, and the task-spec engine, which ship as ONE unit at ONE version.
+All notable changes to **Converge** are documented here — the CLI (`bin/cvg`) and
+the eleven Converge-owned skills, which ship as one unit at one version. Task-Spec
+is a separately versioned engine with an explicit compatibility range.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 The version lives in the root `VERSION` file and nowhere else authoritative.
 Every declaration in the package must equal it, and
-`tests/test-version-unity.sh` fails the build if one drifts; bump `VERSION`, then
-run that gate with `--sync`. Release versions unify; **schema/format versions
-deliberately do not** (`format_version: 3`, `VALIDATOR_VERSION`,
-`agent_contract.version`, `hmac-sha256-v2`) — those describe data contracts whose
-whole purpose is to change independently of a release.
+`tests/test-version-unity.sh` fails the build if one drifts and independently
+checks the compatible Task-Spec engine range. Converge release versions unify;
+Task-Spec releases and schema/format versions deliberately do not.
 
 ## A note on the numbering below
 
 Entries from **3.6.0 and earlier describe the `task-spec` skill alone**, when it
 versioned itself independently — this file began life as
-`skills/task-spec/CHANGELOG.md`. That history is kept verbatim because it is the
-real lineage of the engine now at the centre of Pass 5; only the numbering
-convention changed. From **0.1.0 onward, one entry covers the whole package.**
+`skills/task-spec/CHANGELOG.md`. That history is kept verbatim as imported
+lineage. The published **0.1.0** entry records the combined bundle; the
+unreleased line above externalizes Task-Spec, whose current history now lives in
+the standalone repository.
 
 ---
 
 ## [Unreleased]
+
+### Changed
+- **Task-Spec is externalized.** Converge now requires a compatible standalone
+  Task-Spec 3.8 engine instead of installing or executing its historical mirror.
+  Plugin discovery and npm packaging expose exactly eleven Converge skills.
+- **Settlement is attempt-bound.** Pass 8 mints `TaskHandoff/v3` in the final
+  workspace and requires independent `taskspec accept` plus
+  `AcceptanceRecord/v1` before publication is permitted.
 
 ### Added
 - **`cvg tasks rebuild-state`** — re-derive `tasks/_state.yaml` from the frontmatter of
@@ -401,14 +409,14 @@ convention changed. From **0.1.0 onward, one entry covers the whole package.**
   the CLI, matching the convention set when the signing ceremony was fixed.
 - **Every pass skill's optional-debrief handoff names the verb** (`cvg lesson`),
   so the offer to teach is actionable at the point the pass closes.
-- `skills/README.md` said **11 skill packages (9 spine + 2 utility)**; the package
-  has shipped twelve since `evidence-to-next-pass` landed.
+- The skill catalog now distinguishes eleven Converge-owned skills from the
+  separately installed Task-Spec engine.
 - `readme.md`'s CLI tour was missing both companions — `cvg next` and
   `cvg lesson` now appear in it.
 
 ---
 
-## [0.1.0] — 2026-07-30
+## [0.1.0] — 2026-08-03
 
 The first release where the number means the same thing everywhere.
 

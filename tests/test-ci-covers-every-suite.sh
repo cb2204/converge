@@ -88,7 +88,7 @@ echo "  ok   — every suite in the package is invoked by the workflow"
 # references no suites at all, the loop above would trivially "cover" nothing.
 REFS="$(grep -cE '^[[:space:]]+bash (skills|tests)/' "$WORKFLOW" 2>/dev/null || echo 0)"
 REFS="${REFS//[^0-9]/}"; REFS="${REFS:-0}"
-if [ "$REFS" -lt 10 ]; then
+if [ "$REFS" -lt 8 ]; then
   echo "  FAIL — the workflow only invokes $REFS suite(s); that cannot be right"
   echo "CI_COVERAGE=FAIL"; exit 1
 fi

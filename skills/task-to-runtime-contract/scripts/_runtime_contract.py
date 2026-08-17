@@ -277,55 +277,41 @@ def verify_signoff_pure(task: Path, repo: Path, tool_home: Path) -> tuple[int, s
     Returns (tier, note): 1 = envelope v2 verified, 2 = structural or legacy-v1,
     3 = mismatch. Never raises for an unsigned spec; the caller decides.
     """
-    lib = tool_home / "skills/task-spec/scripts/_lib.sh"
-    if not lib.is_file():
-        return 2, f"task-spec library not found at {lib}; structural only"
-    # A tiny bash shim that only READS: source the lib, recompute, compare.
-    script = (
-        f'source "{lib}" >/dev/null 2>&1 || exit 9\n'
-        f'file="{task}"\n'
-        'sig=$(grep -m1 "^signed_off_sig:" "$file" 2>/dev/null | sed -E "s/^signed_off_sig:[[:space:]]*//")\n'
-        'so=$(grep -m1 "^signed_off:" "$file" 2>/dev/null | sed -E "s/^signed_off:[[:space:]]*//" | tr -d " ")\n'
-        '[ "$so" = "true" ] || { echo "UNSIGNED"; exit 0; }\n'
-        'key=$(ts_resolve_signing_key "$file" 2>/dev/null || true)\n'
-        '[ -n "$key" ] && [ -n "$sig" ] || { echo "STRUCTURAL"; exit 0; }\n'
-        'want=$(ts_compute_signoff_sig "$file" "$key" 2>/dev/null || true)\n'
-        '[ "$want" = "$sig" ] && { echo "TIER1"; exit 0; }\n'
-        'case "$sig" in hmac-sha256-v1:*)\n'
-        '  legacy=$(ts_compute_signoff_sig "$file" "$key" v1 2>/dev/null || true)\n'
-        '  [ "$legacy" = "$sig" ] && { echo "LEGACY_V1"; exit 0; } ;;\n'
-        'esac\n'
-        'echo "MISMATCH"\n'
-    )
-    proc = subprocess.run(
-        ["bash", "-c", script], cwd=repo, text=True, capture_output=True, check=False
-    )
-    verdict = (proc.stdout or "").strip().splitlines()[-1] if proc.stdout.strip() else "ERROR"
-    return {
-        "TIER1": (1, "HMAC verified (envelope v2)"),
-        "LEGACY_V1": (2, "legacy envelope v1 — authentic but authorization fields unsealed; re-stamp"),
-        "STRUCTURAL": (2, "structural only — no key or no signature"),
-        "UNSIGNED": (3, "spec is not signed off"),
-        "MISMATCH": (3, "HMAC mismatch — body or authorization fields changed after stamping"),
-    }.get(verdict, (3, f"could not verify sign-off ({verdict})"))
+    del tool_home  # Task-Spec is a separately installed engine, not a Converge subtree.
+    engine = os.environ.get("CVG_TASKSPEC_BIN") or os.environ.get("TASKSPEC_BIN", "taskspec")
+    try:
+        proc = subprocess.run(
+            [engine, "--json", "status", str(task)],
+            cwd=repo,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        return 3, f"Task-Spec engine unavailable ({exc})"
+    try:
+        envelope = json.loads(proc.stdout)
+        authorization = (envelope.get("data") or {}).get("authorization") or {}
+        tier = int(authorization.get("tier", 3))
+        verification = str(authorization.get("verification", "unknown"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return 3, "Task-Spec status returned an invalid machine envelope"
+    return tier, f"Task-Spec authorization {verification}"
 
 
 def run_signoff_gate(
     task: Path, repo: Path, tool_home: Path, supervised: bool
 ) -> tuple[int, str]:
-    candidates = [
-        tool_home / "skills/task-spec/scripts/safe-to-delegate.sh",
-        tool_home / ".claude/skills/task-spec/scripts/safe-to-delegate.sh",
-    ]
-    gate = next((path for path in candidates if path.is_file()), candidates[0])
-    if not gate.is_file():
-        searched = ", ".join(str(path) for path in candidates)
-        raise ContractError(f"Task-Spec sign-off gate not found (searched: {searched})")
-    command = ["bash", str(gate)]
+    del tool_home
+    engine = os.environ.get("CVG_TASKSPEC_BIN") or os.environ.get("TASKSPEC_BIN", "taskspec")
+    command = [engine, "gate"]
     if not supervised:
         command.append("--require-tier1")
     command.append(str(task))
-    proc = subprocess.run(command, cwd=repo, text=True, capture_output=True, check=False)
+    try:
+        proc = subprocess.run(command, cwd=repo, text=True, capture_output=True, check=False)
+    except OSError as exc:
+        raise ContractError(f"Task-Spec engine unavailable: {exc}") from exc
     output = (proc.stdout + "\n" + proc.stderr).strip()
     if proc.returncode != 0:
         tail = "\n".join(output.splitlines()[-12:])

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove the v0.1 experience from a stranger's empty Git repository.
+# Prove the v0.2.0 experience from a stranger's empty Git repository.
 # No installed file may depend on this source checkout after install.
 
 set -uo pipefail
@@ -33,7 +33,7 @@ file_mode() {
 }
 
 echo "=================================================================="
-echo "v0.1 clean-room install → init → task → receipt → done"
+echo "v0.2.0 clean-room install → init → task → receipt → done"
 echo "=================================================================="
 
 git -C "$ROOM" init --quiet
@@ -48,7 +48,7 @@ else
   bad "installer failed: $INSTALL_OUT"
 fi
 
-EXPECTED="$(find "$SRC/skills" -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
+EXPECTED="$(find "$SRC/skills" -maxdepth 2 -name SKILL.md ! -path '*/task-spec/SKILL.md' | wc -l | tr -d ' ')"
 AGENT_COUNT="$(find "$ROOM/.agents/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
 CLAUDE_COUNT="$(find "$ROOM/.claude/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
 if [ "$AGENT_COUNT" = "$EXPECTED" ] && [ "$CLAUDE_COUNT" = "$EXPECTED" ]; then
@@ -58,7 +58,9 @@ else
 fi
 
 LINKS="$(find "$ROOM/bin" "$ROOM/.agents/skills" "$ROOM/.claude/skills" -type l -print)"
-if [ -z "$LINKS" ] && [ -f "$ROOM/bin/cvg" ] && [ -f "$ROOM/bin/.cvg-ui.sh" ]; then
+if [ -z "$LINKS" ] && [ -f "$ROOM/bin/cvg" ] && [ -f "$ROOM/bin/.cvg-ui.sh" ] \
+  && [ -f "$ROOM/.agents/bin/_cvg_compose.py" ] \
+  && [ -f "$ROOM/.agents/contracts/cli-command-matrix.json" ]; then
   ok "pinned install contains no source-checkout symlinks"
 else
   bad "copy install still contains symlinks or an incomplete CLI: $LINKS"
@@ -156,11 +158,18 @@ else
 fi
 run_cvg transition "$PATH_ID" parked "clean-room path proof" >/dev/null 2>&1 || \
   bad "generated path-proof task could not be parked"
+# The generated file intentionally still contains TODOs. Task-Spec 3.8 scans the
+# complete lifecycle graph and correctly refuses an invalid parked node, so keep
+# this path-only probe out of the real acceptance backlog.
+rm -f "$ROOM/cvg/tasks/parked/$PATH_ID.md"
+run_cvg tasks rebuild-state >/dev/null
 
 printf '# clean-room readme\n' > "$ROOM/README.md"
 SPEC_ID="T-20260602-golden"
 SPEC="cvg/tasks/$SPEC_ID.md"
-cp "$ROOM/.agents/skills/task-spec/tests/fixtures/$SPEC_ID.md" "$ROOM/$SPEC"
+cp "$SRC/tests/fixtures/$SPEC_ID.md" "$ROOM/$SPEC"
+git -C "$ROOM" add -A
+git -C "$ROOM" commit --quiet -m "clean-room authorized baseline"
 
 GATE_TASK_OUT="$(run_cvg tasks gate --stamp --stamp-by clean-room "$SPEC" 2>&1)"
 if printf '%s\n' "$GATE_TASK_OUT" | grep -q '^TIER=1$'; then
@@ -168,6 +177,8 @@ if printf '%s\n' "$GATE_TASK_OUT" | grep -q '^TIER=1$'; then
 else
   bad "installed task gate did not reach Tier 1: $GATE_TASK_OUT"
 fi
+git -C "$ROOM" add -A
+git -C "$ROOM" commit --quiet -m "seal clean-room task"
 
 BIND_OUT="$(run_cvg bind --task "$SPEC" 2>&1)"
 if printf '%s\n' "$BIND_OUT" | grep -q '^CHECK_RUNTIME_CONTRACT=PASS$'; then
@@ -175,9 +186,9 @@ if printf '%s\n' "$BIND_OUT" | grep -q '^CHECK_RUNTIME_CONTRACT=PASS$'; then
 else
   bad "runtime binding failed: $BIND_OUT"
 fi
-
 git -C "$ROOM" add -A
-git -C "$ROOM" commit --quiet -m "clean-room baseline"
+git -C "$ROOM" commit --quiet -m "bind clean-room execution policy"
+
 printf 'NEVERMATCH\n' >> "$ROOM/README.md"
 git -C "$ROOM" add README.md
 git -C "$ROOM" commit --quiet -m "make task deterministically red"
@@ -206,11 +217,13 @@ else
   bad "clean-room loop did not settle: $LOOP_OUT"
 fi
 
-ACCEPT_OUT="$(run_cvg tasks accept --stamp --no-blast-radius --accepted-by clean-room "$SPEC" 2>&1)"
-if printf '%s\n' "$ACCEPT_OUT" | grep -q '^ACCEPTED=1$'; then
-  ok "post-execution acceptance stamps the Task-Spec"
+ACCEPTANCE_RECORD="$(find "$ROOM/cvg/.taskspec/acceptance/$SPEC_ID" -type f -name '*.json' -print 2>/dev/null | head -1)"
+if grep -q '^accepted: true$' "$ROOM/$SPEC" \
+  && [ -f "$ACCEPTANCE_RECORD" ] \
+  && printf '%s\n' "$LOOP_OUT" | grep -q '^ACCEPTED=1$'; then
+  ok "loop performs protected Task-Spec acceptance before settlement"
 else
-  bad "acceptance failed: $ACCEPT_OUT"
+  bad "loop did not persist Task-Spec acceptance: $LOOP_OUT"
 fi
 
 DONE_OUT="$(run_cvg transition "$SPEC_ID" done "clean-room settlement" 2>&1)"
@@ -264,15 +277,15 @@ else
   bad "receipt hashes or JSONL lifecycle events disagree"
 fi
 
-REBUILD="$ROOM/.agents/skills/task-spec/scripts/rebuild-state.sh"
-TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" bash "$REBUILD" >/dev/null
+TASKSPEC_REBUILD_BIN="${TASKSPEC_BIN:-${CVG_TASKSPEC_BIN:-taskspec}}"
+TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" "$TASKSPEC_REBUILD_BIN" rebuild-state >/dev/null
 STATE_ONE="$(shasum -a 256 "$ROOM/cvg/tasks/_state.yaml" | awk '{print $1}')"
-TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" bash "$REBUILD" >/dev/null
+TASKSPEC_BACKLOG_DIR="$ROOM/cvg/tasks" "$TASKSPEC_REBUILD_BIN" rebuild-state >/dev/null
 STATE_TWO="$(shasum -a 256 "$ROOM/cvg/tasks/_state.yaml" | awk '{print $1}')"
 if [ "$STATE_ONE" = "$STATE_TWO" ] \
-  && grep -q "path: cvg/tasks/done/$SPEC_ID.md" "$ROOM/cvg/tasks/_state.yaml" \
+  && grep -q "path: tasks/done/$SPEC_ID.md" "$ROOM/cvg/tasks/_state.yaml" \
   && grep -q 'done: 1' "$ROOM/cvg/tasks/_state.yaml" \
-  && grep -q 'parked: 1' "$ROOM/cvg/tasks/_state.yaml"; then
+  && grep -q 'parked: 0' "$ROOM/cvg/tasks/_state.yaml"; then
   ok "derived state is deterministic, relative, and complete"
 else
   bad "derived state is not reproducible or disagrees with task frontmatter"

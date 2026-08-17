@@ -14,8 +14,8 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$(cd "$HERE/.." && pwd)"
 KERNEL="$SRC/skills/task-loop/scripts/loop-kernel.sh"
-FIXTURE="$SRC/skills/task-spec/tests/fixtures/T-20260602-golden.md"
-SAFE="$SRC/skills/task-spec/scripts/safe-to-delegate.sh"
+FIXTURE="$SRC/tests/fixtures/T-20260602-golden.md"
+TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
 CVG="$SRC/bin/cvg"
 PASS=0; FAIL=0
 ok()  { printf '  ok   — %s\n' "$1"; PASS=$((PASS + 1)); }
@@ -66,10 +66,13 @@ new_ws() {
   git -C "$W" init --quiet
   git -C "$W" config user.email loop@test.local
   git -C "$W" config user.name "loop test"
+  printf '/cvg/execution/*/task-handoff.json\n/cvg/loop/\n/cvg/receipts/*.json\n/cvg/STATE.md\n' \
+    >> "$W/.git/info/exclude"
   mkdir -p "$W/cvg/tasks" "$W/engines"
   cp "$FIXTURE" "$W/cvg/tasks/T-20260602-golden.md"
   printf '# readme\n' > "$W/README.md"
-  ( cd "$W" && TASKSPEC_SIGNING_KEY="$KEY" bash "$SAFE" --stamp --stamp-by loop cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+  ( cd "$W" && TASKSPEC_SIGNING_KEY="$KEY" TASKSPEC_BACKLOG_DIR="$W/cvg/tasks" \
+      TASKSPEC_WORKSPACE_ROOT="$W" "$TASKSPEC_ENGINE" gate --stamp --stamp-by loop cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
     TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" "$CVG" bind --task cvg/tasks/T-20260602-golden.md >/dev/null 2>&1 ) || true
   git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m base >/dev/null 2>&1
   # Make the eval RED: the golden fixture asserts NEVERMATCH is absent, so
@@ -529,7 +532,8 @@ printf '# readme\n' > "$NEST/projects/demo/README.md"
 printf '# root readme\n' > "$NEST/README.md"
 (
   cd "$NEST/projects/demo"
-  TASKSPEC_SIGNING_KEY="$KEY" bash "$SAFE" --stamp --stamp-by cwd cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
+  TASKSPEC_SIGNING_KEY="$KEY" TASKSPEC_BACKLOG_DIR="$NEST/projects/demo/cvg/tasks" \
+    TASKSPEC_WORKSPACE_ROOT="$NEST/projects/demo" "$TASKSPEC_ENGINE" gate --stamp --stamp-by cwd cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
   TASKSPEC_SIGNING_KEY="$KEY" CVG_HOME="$SRC" "$CVG" bind --task cvg/tasks/T-20260602-golden.md >/dev/null 2>&1
 ) || true
 git -C "$NEST" add -A >/dev/null 2>&1; git -C "$NEST" commit --quiet -m base >/dev/null 2>&1
@@ -556,7 +560,7 @@ git -C "$W" add -A >/dev/null 2>&1; git -C "$W" commit --quiet -m keyed >/dev/nu
 WT="$(mktemp -d -t cvg-keywt.XXXXXX)"; rm -rf "$WT"
 git -C "$W" worktree add --quiet -b probe/key "$WT" >/dev/null 2>&1
 TIER_OUT="$( (cd "$WT" && env -u TASKSPEC_SIGNING_KEY \
-  bash "$SRC/skills/task-spec/scripts/validate-task-spec.sh" cvg/tasks/T-20260602-golden.md 2>&1) || true )"
+  "$TASKSPEC_ENGINE" validate --no-state cvg/tasks/T-20260602-golden.md 2>&1) || true )"
 if grep -q 'Tier 1' <<<"$TIER_OUT"; then
   ok "the signing key resolves inside a worktree (Tier 1 survives isolation)"
 else

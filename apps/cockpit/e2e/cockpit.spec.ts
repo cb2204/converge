@@ -276,6 +276,14 @@ test("exposes branded Codex and Claude Agent ACP choices", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Ask", exact: true })).toBeVisible();
   await expect(page.locator(".command-bar__panel-toggle--right")).toBeHidden();
   await expect(page.locator(".inspector")).toBeHidden();
+  await expect(
+    page.getByRole("textbox", { name: "Question for the selected ACP agent" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Read-only ACP\. Converge/)).toBeVisible();
+
+  // Engine and model live behind a composer popover, so the choices are only
+  // reachable once it is open.
+  await page.getByRole("button", { name: /^Engine and model:/ }).click();
   const agentGroup = page.getByRole("group", { name: "Choose ACP agent" });
   await expect(agentGroup).toBeVisible();
   const codexButton = agentGroup.getByRole("button", { name: /^Codex,/i });
@@ -284,32 +292,28 @@ test("exposes branded Codex and Claude Agent ACP choices", async ({ page }) => {
   await expect(claudeButton).toBeVisible();
   await expect(page.getByRole("button", { name: /ChatGPT/i })).toHaveCount(0);
 
+  // The marks are inline so they inherit the interface colour; they still have to
+  // be drawn at a legible size rather than collapsing to an empty box.
   for (const provider of ["codex", "claude"]) {
-    const mark = agentGroup.locator(`img[data-provider-mark="${provider}"]`);
+    const mark = agentGroup.locator(`.ask-agent-mark--${provider}`);
     await expect(mark).toBeVisible();
+    await expect(mark.locator("svg")).toBeVisible();
     const box = await mark.boundingBox();
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(20);
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(20);
-    const source = await mark.getAttribute("src");
-    expect(source).toMatch(
-      new RegExp(`${provider}-color(?:-[^/]+)?\\.svg(?:\\?.*)?$`),
-    );
-    const asset = await page.request.get(source as string);
-    expect(asset.ok()).toBe(true);
-    expect(asset.headers()["content-type"]).toContain("image/svg+xml");
   }
 
-  await expect(
-    page.getByRole("textbox", { name: "Question for the selected ACP agent" }),
-  ).toBeVisible();
-  await expect(page.getByText(/Read-only ACP\. Converge/)).toBeVisible();
-  await codexButton.focus();
-  await page.keyboard.press("Enter");
-  await expect(codexButton).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText(/Codex cannot start safely/)).toBeVisible();
+  // Codex is blocked by the safe-access policy: it stays focusable so the reason
+  // is reachable, announces itself as disabled, and cannot become the engine.
+  await expect(claudeButton).toHaveAttribute("aria-pressed", "true");
+  await expect(codexButton).toHaveAttribute("aria-disabled", "true");
+  await expect(codexButton).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByText(/cannot suppress local read and search tools/i)).toBeVisible();
-  await claudeButton.focus();
+
+  await codexButton.focus();
+  await expect(codexButton).toBeFocused();
   await page.keyboard.press("Enter");
+  await expect(codexButton).toHaveAttribute("aria-pressed", "false");
   await expect(claudeButton).toHaveAttribute("aria-pressed", "true");
 });
 

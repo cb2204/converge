@@ -39,6 +39,8 @@ apps/cockpit/*.tsbuildinfo
 # Browser QA output is local evidence, not product source.
 output/playwright/
 .playwright-cli/
+test-results/
+playwright-report/
 
 # Scratch page-render artifacts (spine PDF build leftovers — kept on disk, out of git)
 temp/spine-*

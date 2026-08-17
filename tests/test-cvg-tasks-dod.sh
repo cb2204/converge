@@ -3,7 +3,7 @@
 #
 # WHY THIS EXISTS
 # `cvg tasks dod` renders the matrix a human ticks off to declare a task done, and
-# it shipped with ZERO suites — the only verb in the task-spec engine with a machine
+# it shipped with ZERO suites — the only verb in the Task-Spec engine with a machine
 # token and no test. It cost exactly what an untested gate costs: the checklist was
 # reading `description:` with a character class that excluded `,`, so every block-style
 # prose description was cut at its first comma. English puts the DEMANDING clause
@@ -30,7 +30,11 @@ set -uo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SELF_DIR/.." && pwd)"
 CVG="$REPO/bin/cvg"
-DOD="$REPO/skills/task-spec/scripts/definition-of-done.sh"
+TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
+command -v "$TASKSPEC_ENGINE" >/dev/null 2>&1 || {
+  echo "TASKS_DOD_TESTS=UNRUNNABLE missing compatible Task-Spec engine" >&2
+  exit 3
+}
 
 rows=0; failed=0
 ok()  { printf '  ok   — %s\n' "$1"; rows=$((rows+1)); }
@@ -106,7 +110,7 @@ mk_spec "$TMP/block.md" "$BLOCK"
 run() { # run <expected-exit> <args...>; sets OUT/RC
   local want="$1"; shift
   local rc=0
-  OUT="$(bash "$DOD" "$@" 2>&1)" || rc=$?
+  OUT="$("$TASKSPEC_ENGINE" dod "$@" 2>&1)" || rc=$?
   RC="$rc"
   [ "$rc" = "$want" ]
 }
@@ -246,33 +250,33 @@ fi
 echo
 echo "[5] the token is the LAST stdout line, and usage fails closed"
 # ---------------------------------------------------------------------------
-if OUT="$(bash "$DOD" "$TMP/block.md" 2>/dev/null)"; then
+if OUT="$("$TASKSPEC_ENGINE" dod "$TMP/block.md" 2>/dev/null)"; then
   [ "$(printf '%s\n' "$OUT" | tail -1)" = "DOD=COMPLETE" ] \
     && ok "the machine token is the last STDOUT line (gaps go to stderr)" \
     || bad "the token is not the last stdout line"
 else
   bad "the happy path must exit 0"
 fi
-rc=0; OUT="$(bash "$DOD" "$TMP/nope.md" 2>&1)" || rc=$?
+rc=0; OUT="$("$TASKSPEC_ENGINE" dod "$TMP/nope.md" 2>&1)" || rc=$?
 if [ "$rc" = 2 ] && [ "$(printf '%s\n' "$OUT" | tail -1)" = "DOD=USAGE_ERROR" ]; then
   ok "a missing spec → exit 2 + DOD=USAGE_ERROR"
 else
   bad "expected exit 2 + DOD=USAGE_ERROR (got $rc / $(printf '%s\n' "$OUT" | tail -1))"
 fi
-rc=0; OUT="$(bash "$DOD" 2>&1)" || rc=$?
+rc=0; OUT="$("$TASKSPEC_ENGINE" dod 2>&1)" || rc=$?
 [ "$rc" = 2 ] && ok "no argument → exit 2" || bad "no argument should be a usage error (got $rc)"
 
 # ---------------------------------------------------------------------------
 echo
-echo "[6] the CLI door is byte-parity with the script, and read-only"
+echo "[6] the CLI door is byte-parity with the standalone engine, and read-only"
 # ---------------------------------------------------------------------------
 BEFORE="$(cd "$TMP" && find . -type f -exec cksum {} + | sort)"
-DIRECT="$(bash "$DOD" "$TMP/block.md" 2>&1)"
+DIRECT="$("$TASKSPEC_ENGINE" dod "$TMP/block.md" 2>&1)"
 VIA="$(cd "$TMP" && bash "$CVG" tasks dod "block.md" 2>&1)"
 if [ "$DIRECT" = "$VIA" ]; then
-  ok "cvg tasks dod is byte-identical to the script it fronts"
+  ok "cvg tasks dod is byte-identical to the standalone engine"
 else
-  bad "the CLI door diverges from the script"
+  bad "the CLI door diverges from the standalone engine"
 fi
 AFTER="$(cd "$TMP" && find . -type f -exec cksum {} + | sort)"
 if [ "$BEFORE" = "$AFTER" ]; then

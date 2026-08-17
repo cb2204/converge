@@ -2,22 +2,22 @@
 # test-version-unity.sh — Converge ships as ONE unit, at ONE version.
 #
 # WHY THIS EXISTS
-# Before 2026-07-29 the package carried NINE independent version lineages: the
+# Before 2026-07-29 the package carried NINE accidental version lineages: the
 # skills once declared seven different `metadata.version` values (0.3.0 .. 1.1.0)
-# or none at all, `bin/cvg` said 0.21.0, `task-spec` said 3.6.0, and two gate
+# or none at all, `bin/cvg` said 0.21.0, and two gate
 # scripts kept private numbers behind their own `--version` flags. Nothing
 # reconciled them, so "which version of Converge is this?" had no answer — and a
 # skill could be edited without anything downstream noticing.
 #
-# The fix is not a naming convention, it is a gate. The root VERSION file is the
-# single source of truth; every declaration in the package must equal it. Bumping
-# a release is then one edit plus `--sync`, and a drifted file fails CI instead of
-# shipping.
+# The fix is not to force independent products onto one number. VERSION owns the
+# Converge package; Task-Spec is now an external engine with an explicit compatible
+# range. A Converge declaration must equal VERSION, and the engine boundary must
+# resolve to >=3.8.0 and <4.0.0.
 #
 # WHAT COUNTS AS A VERSION HERE
 # RELEASE versions unify — they answer "which Converge is this?". SCHEMA/FORMAT
 # versions deliberately do NOT: `format_version: 3`, `VALIDATOR_VERSION="2"`,
-# `agent_contract.version: 2` and `hmac-sha256-v2` describe a DATA CONTRACT whose
+# `agent_contract.version: 2` and `hmac-sha256-v3` describe a DATA CONTRACT whose
 # whole purpose is to change independently of the release. Conflating the two
 # would force a data migration on every release, which is the opposite of what a
 # schema version is for. This gate checks release versions only, and the SCHEMA
@@ -65,7 +65,6 @@ esac
 # assignments so a comment mentioning a version is never mistaken for one.
 SITES="
 bin/cvg|CVG_VERSION|the CLI
-skills/task-spec/scripts/_lib.sh|TASKSPEC_VERSION|the task-spec engine
 skills/idea-to-brd/scripts/check-brd.sh|CHECK_BRD_VERSION|the Pass 0 gate
 skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh|CHECK_TECH_SPEC_VERSION|the Pass 1 gate
 "
@@ -95,7 +94,6 @@ done
 CODE_DRIFT=0
 for pair in \
   "bin/cvg:CVG_VERSION" \
-  "skills/task-spec/scripts/_lib.sh:TASKSPEC_VERSION" \
   "skills/idea-to-brd/scripts/check-brd.sh:CHECK_BRD_VERSION" \
   "skills/brd-docs-to-tech-req/scripts/check-tech-spec.sh:CHECK_TECH_SPEC_VERSION"
 do
@@ -112,8 +110,7 @@ done
 # enumerate them, including the ones that are not shell variables.
 echo
 echo "[1b] JSON manifests equal VERSION"
-for jf in skills/task-spec/plugin.json skills/task-spec/marketplace.json \
-          .claude-plugin/plugin.json .claude-plugin/marketplace.json \
+for jf in .claude-plugin/plugin.json .claude-plugin/marketplace.json \
           package.json; do
   if [ ! -f "$jf" ]; then bad "$jf is missing"; continue; fi
   got="$(grep -m1 -E '"version"[[:space:]]*:' "$jf" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
@@ -134,6 +131,7 @@ echo "[2] every skill declares metadata.version = VERSION"
 SKILL_N=0; SKILL_BAD=0
 for d in skills/*/; do
   [ -f "$d/SKILL.md" ] || continue
+  [ "$(basename "$d")" = "task-spec" ] && continue
   SKILL_N=$((SKILL_N+1))
   name="$(basename "$d")"
   got="$(awk '/^---[[:space:]]*$/{n++; next} n==1' "$d/SKILL.md" \
@@ -185,24 +183,23 @@ else
   bad "README.md claims a version the package denies (wants: Converge $PKG / cvg $PKG)"
 fi
 
-# ----- schema versions must NOT have been swept up -----
-# The counter-test. If a future edit "unifies" a data-contract version into the
-# release number, specs stop validating against their own declared schema. These
-# are asserted to be UNCHANGED, which is what makes check [1] safe to automate.
+# ----- the independent engine boundary must be explicit and satisfiable -----
 echo
-echo "[4] schema/format versions are deliberately NOT unified"
+echo "[4] Task-Spec is independently versioned and compatibility-gated"
 SCHEMA_OK=0
-if grep -qE '^VALIDATOR_VERSION="2"' skills/task-spec/scripts/validate-task-spec.sh 2>/dev/null; then
-  ok "VALIDATOR_VERSION stays 2 (a data contract, not a release)"
+REQUIRED="$(grep -m1 '^CVG_TASKSPEC_REQUIRED=' bin/cvg | cut -d'"' -f2)"
+TASKSPEC_VERSION_BIN="${TASKSPEC_BIN:-${CVG_TASKSPEC_BIN:-taskspec}}"
+ENGINE="$("$TASKSPEC_VERSION_BIN" version 2>/dev/null | tail -1 | tr -d '[:space:]')"
+if [ "$REQUIRED" = "3.8.0" ]; then
+  ok "Converge declares the Task-Spec 3.8 compatibility floor"
 else
-  bad "VALIDATOR_VERSION was changed — that is a spec-format version, not a release version"
+  bad "CVG_TASKSPEC_REQUIRED must declare the reviewed 3.8.0 floor"
   SCHEMA_OK=1
 fi
-if grep -qE '^format_version: 3$' skills/task-spec/templates/task-spec.md.tpl 2>/dev/null; then
-  ok "task-spec template format_version stays 3"
-else
-  bad "task-spec template format_version drifted — schema versions are not release versions"
-fi
+case "$ENGINE" in
+  3.8.*|3.9.*|3.[1-9][0-9].*) ok "installed Task-Spec engine is compatible ($ENGINE)" ;;
+  *) bad "installed Task-Spec engine is incompatible or missing ('$ENGINE')"; SCHEMA_OK=1 ;;
+esac
 
 echo
 echo "=================================================================="

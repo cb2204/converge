@@ -121,10 +121,19 @@ which bytes were observed, not that their claims are current or approved.
 | `/api/events` | `GET` | Semantic snapshot updates over server-sent events |
 | `/api/artifact` | `GET` | Snapshot-bound derived preview of an allowlisted artifact |
 | `/api/ask/agents` | `GET` | Configured ACP adapter states, context policy, and per-process request token |
+| `/api/ask/options` | `POST` | Model and reasoning selectors an adapter advertises, read from a disposable probe session that sends no prompt |
 | `/api/ask` | `POST` | One snapshot-bound turn with exact-origin, custom-header, CSRF, JSON, and size checks |
 
 The Ask POST is not a general execution API. It cannot select an executable,
 arguments, environment, MCP server, working directory, or provider mode.
+
+A turn may carry model and reasoning selections, which are applied to the fresh
+session with `session/set_config_option` before the prompt is sent. Only the
+ACP `model`, `model_config`, and `thought_level` categories are accepted, and a
+value must be one the agent advertised. The `mode` category is refused, so a
+selection can never move the session off plan mode — the pinned Claude adapter
+offers `bypassPermissions`, `acceptEdits`, and `dontAsk` under that category. A
+mid-session mode change is detected and fails the turn before it prompts.
 
 ## Verify
 

@@ -28,6 +28,74 @@ function adapter(...args) {
   });
 }
 
+test("AcpClient exposes model selectors but refuses to drive session mode", async (t) => {
+  const client = new AcpClient({ adapter: adapter() });
+  t.after(() => client.close());
+  await client.connect();
+  const session = await client.createSession();
+
+  const byId = new Map(session.configOptions.map((option) => [option.id, option]));
+  assert.equal(byId.get("model").type, "select");
+  assert.equal(byId.get("model").currentValue, "fake-sonnet");
+  assert.deepEqual(
+    byId.get("model").values.map((entry) => entry.value),
+    ["fake-sonnet", "fake-opus"],
+  );
+  // Model and reasoning selectors are settable; a mode selector is advertised
+  // but explicitly not settable, so safe mode cannot be changed from the UI.
+  assert.equal(byId.get("model").settable, true);
+  assert.equal(byId.get("thinking").settable, true);
+  assert.equal(byId.get("danger-mode").settable, false);
+
+  const applied = await client.setConfigOption({
+    configId: "model",
+    type: "select",
+    value: "fake-opus",
+  });
+  assert.equal(
+    applied.find((option) => option.id === "model").currentValue,
+    "fake-opus",
+  );
+  const withThinking = await client.setConfigOption({
+    configId: "thinking",
+    type: "boolean",
+    value: true,
+  });
+  assert.equal(
+    withThinking.find((option) => option.id === "thinking").currentValue,
+    true,
+  );
+  // The agent echoes only the option it changed. The earlier model selection
+  // must survive that partial response, or a second selection in the same turn
+  // would be rejected as unadvertised.
+  assert.equal(
+    withThinking.find((option) => option.id === "model").currentValue,
+    "fake-opus",
+  );
+  assert.equal(withThinking.find((option) => option.id === "danger-mode")?.settable, false);
+
+  // Every rejection path fails before a request reaches the agent.
+  await assert.rejects(
+    client.setConfigOption({ configId: "danger-mode", type: "select", value: "agent" }),
+    { code: "ACP_CONFIG_REJECTED" },
+  );
+  await assert.rejects(
+    client.setConfigOption({ configId: "model", type: "select", value: "not-offered" }),
+    { code: "ACP_CONFIG_REJECTED" },
+  );
+  await assert.rejects(
+    client.setConfigOption({ configId: "unknown", type: "select", value: "fake-opus" }),
+    { code: "ACP_CONFIG_REJECTED" },
+  );
+  await assert.rejects(
+    client.setConfigOption({ configId: "model", type: "boolean", value: true }),
+    { code: "ACP_CONFIG_REJECTED" },
+  );
+  // Safe mode survived the whole exchange.
+  assert.equal(client.safeModeEstablished, true);
+  assert.equal(client.modeDrifted, false);
+});
+
 test("AcpClient performs ACP v1 stdio flow, denies permissions, and redacts output", async (t) => {
   const events = [];
   const client = new AcpClient({

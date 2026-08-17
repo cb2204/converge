@@ -2,7 +2,7 @@
 name: evidence-to-next-pass
 description: Converge descent conductor — owns the canonical pass prompts and the sequence itself. Derives which pass is CURRENT and which comes NEXT from workspace evidence (never from memory), enforces order with a pre-hook (refuse pass N until pass N-1 left its artifact) and a post-hook (verify the artifact landed in the right cvg/ folder), and hands the agent the right steering prompt for each pass. Use whenever someone asks "what's next", "where are we in the descent", "continue the run", "start pass N", or before steering ANY pass in a chat session — the pre-hook runs first, the pass prompt second, the post-hook and the cvg gate last. Reduces per-session cognitive load: an agent reads ONE prompt per pass instead of the whole method. Do NOT use it to waive or replace a cvg gate (evidence presence is not a verdict — the gates stay authoritative) and do NOT use it to pick the lane (cvg lane owns that).
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   compatibility: "Converge chain · sequence layer above all passes. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe); read-only — never mutates the workspace."
 ---
 

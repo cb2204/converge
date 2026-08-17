@@ -3,7 +3,12 @@ import { redactSensitiveText } from "./security.mjs";
 export const ASK_LIMITS = Object.freeze({
   maxAgentIdLength: 48,
   maxArtifactCount: 3,
-  maxContextBytes: 96 * 1024,
+  // The Converge methodology manifest alone serializes past 21 KiB, so a 96 KiB
+  // ceiling silently forced every section through the compaction profiles in
+  // ask-context.mjs. The bound is raised so full-fidelity method and project
+  // evidence both fit; see METHOD_CONTEXT_BYTES for the per-section split.
+  maxContextBytes: 128 * 1024,
+  maxConfigSelections: 8,
   maxEventBytes: 256 * 1024,
   maxEvents: 256,
   maxHistoryBytes: 12 * 1024,
@@ -38,6 +43,8 @@ const PUBLIC_ERRORS = Object.freeze({
   ASK_AUTH_UNSUPPORTED: [400, "This authentication method is not supported by Ask Converge.", false],
   ASK_BUSY: [409, "This Ask session already has an active turn.", true],
   ASK_CANCELLED: [409, "The Ask turn was cancelled.", true],
+  ASK_CONFIG_REJECTED: [400, "The selected model or reasoning option is not offered by this agent.", false],
+  ASK_CONFIG_UNSUPPORTED: [409, "This agent does not expose selectable model options.", false],
   ASK_CONTEXT_LIMIT: [413, "The selected evidence is too large for an Ask turn.", false],
   ASK_ENTITY_NOT_FOUND: [404, "The selected workspace entity is unavailable.", false],
   ASK_INVALID_REQUEST: [400, "The Ask request does not match the expected contract.", false],
@@ -159,10 +166,54 @@ export function parseAskHistory(value) {
   return Object.freeze(messages);
 }
 
+/**
+ * Session configuration selections (model, reasoning level) requested for a
+ * turn. Only the option identity and value cross this boundary; which
+ * categories may be applied is decided by the ACP client, so a selection can
+ * never reach a `mode` selector and weaken safe mode.
+ */
+export function parseAskConfigSelections(value) {
+  if (value === undefined || value === null) return Object.freeze([]);
+  if (!Array.isArray(value) || value.length > ASK_LIMITS.maxConfigSelections) {
+    throw new AskError("ASK_INVALID_REQUEST");
+  }
+  const selections = value.map((candidate) => {
+    if (
+      !isPlainObject(candidate) ||
+      !hasOnlyKeys(candidate, new Set(["configId", "type", "value"])) ||
+      !validIdentifier(candidate.configId, 160)
+    ) {
+      throw new AskError("ASK_INVALID_REQUEST");
+    }
+    if (candidate.type === "boolean") {
+      if (typeof candidate.value !== "boolean") {
+        throw new AskError("ASK_INVALID_REQUEST");
+      }
+      return Object.freeze({
+        configId: candidate.configId,
+        type: "boolean",
+        value: candidate.value,
+      });
+    }
+    if (candidate.type !== "select" || !validIdentifier(candidate.value, 160)) {
+      throw new AskError("ASK_INVALID_REQUEST");
+    }
+    return Object.freeze({
+      configId: candidate.configId,
+      type: "select",
+      value: candidate.value,
+    });
+  });
+  if (new Set(selections.map((entry) => entry.configId)).size !== selections.length) {
+    throw new AskError("ASK_INVALID_REQUEST");
+  }
+  return Object.freeze(selections);
+}
+
 export function parseCreateAskSessionRequest(value) {
   if (
     !isPlainObject(value) ||
-    !hasOnlyKeys(value, new Set(["agentId", "snapshotId", "context"])) ||
+    !hasOnlyKeys(value, new Set(["agentId", "snapshotId", "context", "config"])) ||
     !validIdentifier(value.agentId, ASK_LIMITS.maxAgentIdLength) ||
     !validIdentifier(value.snapshotId, 160)
   ) {
@@ -172,7 +223,19 @@ export function parseCreateAskSessionRequest(value) {
     agentId: value.agentId,
     snapshotId: value.snapshotId,
     context: parseContext(value.context),
+    config: parseAskConfigSelections(value.config),
   });
+}
+
+export function parseAskAgentIdRequest(value) {
+  if (
+    !isPlainObject(value) ||
+    !hasOnlyKeys(value, new Set(["agentId"])) ||
+    !validIdentifier(value.agentId, ASK_LIMITS.maxAgentIdLength)
+  ) {
+    throw new AskError("ASK_INVALID_REQUEST");
+  }
+  return Object.freeze({ agentId: value.agentId });
 }
 
 export function parseAskTurnRequest(value) {

@@ -20,7 +20,8 @@
 #   bash open-issue-pr.sh --issue <id|slug|path> [--dry-run] [--base COMMIT]
 #                         [--pr-base BRANCH]
 #                         [--agent claude|codex|kimi] [--tasks-dir DIR]
-#                         [--contract PROFILE] [--legacy-no-contract]
+#                         [--contract PROFILE] [--handoff TaskHandoff/v3]
+#                         [--legacy-no-contract]
 #
 # Exit codes:
 #   0 — GREEN and the PR was opened (or, with --dry-run, would be)
@@ -51,6 +52,7 @@ PR_BASE=""
 AGENT="claude"
 TASKS_DIR=""
 CONTRACT=""
+HANDOFF=""
 LEGACY_NO_CONTRACT=false
 ALLOW_EXTERNAL=false
 
@@ -69,6 +71,8 @@ while [ $# -gt 0 ]; do
     --tasks-dir=*) TASKS_DIR="${1#--tasks-dir=}"; shift ;;
     --contract)   [ $# -ge 2 ] || err "--contract requires a value"; CONTRACT="$2"; shift 2 ;;
     --contract=*) CONTRACT="${1#--contract=}"; shift ;;
+    --handoff)    [ $# -ge 2 ] || err "--handoff requires a value"; HANDOFF="$2"; shift 2 ;;
+    --handoff=*)  HANDOFF="${1#--handoff=}"; shift ;;
     --legacy-no-contract) LEGACY_NO_CONTRACT=true; shift ;;
     --allow-external-writes) ALLOW_EXTERNAL=true; shift ;;
     --help|-h)   sed -n '2,32p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -113,6 +117,9 @@ if [ "$(basename "$WORKSPACE_ROOT")" = "cvg" ]; then
 fi
 [ -d "$WORKSPACE_ROOT" ] || WORKSPACE_ROOT="$GIT_ROOT"
 cd "$WORKSPACE_ROOT"
+export TASKSPEC_BACKLOG_DIR="${TASKSPEC_BACKLOG_DIR:-$RESOLVED_TASKS_DIR}"
+export TASKSPEC_WORKSPACE_ROOT="${TASKSPEC_WORKSPACE_ROOT:-$WORKSPACE_ROOT}"
+export TASKSPEC_ACCEPTANCE_DIR="${TASKSPEC_ACCEPTANCE_DIR:-$(dirname "$RESOLVED_TASKS_DIR")/.taskspec/acceptance}"
 
 # ----- Run the gate first (RED/GREEN decides everything below) -----
 EVAL_ARGS=(--issue "$ISSUE")
@@ -447,6 +454,56 @@ else
   echo "nothing authorized to commit (assuming the branch already carries the work)."
 fi
 
+# --- protected settlement: independent Task-Spec acceptance before publishing ---
+# The worker's green eval and Converge path guard are necessary but not final.
+# Task-Spec re-runs the eval, binds the immutable base/attempt/closure, and writes
+# AcceptanceRecord/v1. No push or PR is allowed before this succeeds.
+if [ "$LEGACY_NO_CONTRACT" != true ]; then
+  if [ "$DRY_RUN" = true ]; then
+    HANDOFF_PREVIEW="${HANDOFF:-cvg/execution/$TASK_ID/task-handoff.json}"
+    echo "DRY-RUN would run: taskspec accept --handoff $HANDOFF_PREVIEW --stamp --accepted-by converge-loop $TASK_FILE"
+  else
+    [ -n "$HANDOFF" ] && [ -f "$HANDOFF" ] || {
+      echo "RED — protected settlement requires the dispatch TaskHandoff/v3." >&2
+      write_receipt blocked || true
+      exit 1
+    }
+    # This receipt records execution + path-policy proof. If independent
+    # acceptance rejects, it is immediately superseded by a blocked receipt.
+    write_receipt pass || {
+      echo "RED — execution proof could not be persisted before acceptance." >&2
+      exit 1
+    }
+    TASKSPEC_ENGINE="${CVG_TASKSPEC_BIN:-${TASKSPEC_BIN:-taskspec}}"
+    set +e
+    ACCEPT_OUT="$(
+      cd "$WORKSPACE_ROOT" &&
+        "$TASKSPEC_ENGINE" accept --handoff "$HANDOFF" --stamp \
+          --acceptance-dir "$TASKSPEC_ACCEPTANCE_DIR" \
+          --accepted-by converge-loop "$TASK_FILE" 2>&1
+    )"
+    ACCEPT_RC=$?
+    set -e
+    printf '%s\n' "$ACCEPT_OUT"
+    if [ "$ACCEPT_RC" -ne 0 ] || ! printf '%s\n' "$ACCEPT_OUT" | grep -q '^ACCEPTED=1$'; then
+      write_receipt blocked || true
+      echo "RED — Task-Spec protected acceptance rejected the attempted settlement." >&2
+      exit 1
+    fi
+
+    ATTEMPT_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["attempt"]["id"])' "$HANDOFF")"
+    ACCEPTANCE_RECORD="$TASKSPEC_ACCEPTANCE_DIR/$TASK_ID/$ATTEMPT_ID.json"
+    [ -f "$ACCEPTANCE_RECORD" ] || {
+      write_receipt blocked || true
+      err "Task-Spec accepted without writing the expected AcceptanceRecord/v1"
+    }
+    git add -- "$TASK_FILE" "$ACCEPTANCE_RECORD"
+    [ -f "$RESOLVED_TASKS_DIR/_metrics.jsonl" ] && git add -- "$RESOLVED_TASKS_DIR/_metrics.jsonl"
+    git commit -m "$TASK_ID: protected acceptance" \
+      -m "Task-Spec independently accepted attempt $ATTEMPT_ID before publication."
+  fi
+fi
+
 # --- external writes are a SEPARATE, policy-governed effect (WP4) ---
 # The profile denies external writes by default, yet settlement used to push and
 # open a PR unconditionally — the artifact said one thing and the code did another.
@@ -462,7 +519,6 @@ if [ "$EXTERNAL_POLICY" != "allow" ] && [ "$ALLOW_EXTERNAL" != true ]; then
   echo "SETTLED LOCALLY — the commit is on '$BRANCH'."
   echo "external_writes policy is '$EXTERNAL_POLICY', so push and PR were NOT performed."
   echo "Re-run with --allow-external-writes (or set the policy to allow) to publish."
-  write_receipt pass || true
   echo "TASK_LOOP=LOCAL_SETTLED"
   exit 0
 fi
@@ -518,9 +574,8 @@ rm -f "$PR_BODY_FILE"
 # --- the success receipt, written LAST (WP4) ---
 # Only now is the outcome it reports actually known: branch cut, authorized paths
 # staged and committed, push and PR performed under an explicit policy.
-if [ "$DRY_RUN" != true ]; then
-  write_receipt pass || true
-fi
+# The passing execution receipt was persisted before independent acceptance;
+# publication is an additional effect and never retroactively creates proof.
 
 echo "======================================================================"
 if [ "$DRY_RUN" = true ]; then

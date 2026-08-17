@@ -91,7 +91,7 @@ judgment.
 | 2 | **Structure** · [`tech-req-to-adrs`](tech-req-to-adrs/) | Inspect the live system, record only hard-to-reverse grounding decisions, and pin one domain vocabulary; no implementation plan leaks in. | `cvg/docs/adrs/*` + `CONTEXT.md` · `CHECK_ADR` |
 | 3 | **Decompose** · [`reqs-to-swimlane-plans`](reqs-to-swimlane-plans/) | Cut natural one-way seams, designate a steel thread, and split each lane into independently provable legs while staying above task/code altitude. | `cvg/swimlanes/<seam>/` tree · `CHECK_PLAN` |
 | 4 | **Consensus** · [`sketch-plans-adversarial-review`](sketch-plans-adversarial-review/) | A different model family tries to refute every plan; every objection is fixed or explicitly accepted with an owner and provenance. | Hardened plans + stamped objection log · `CHECK_CONSENSUS` + owner sign-off |
-| 5 | **Tasking** · [`task-spec`](task-spec/) | Turn accepted legs into atomic, vendor-neutral units whose runnable evals travel with the work; PRE-gate and HMAC seal prevent silent goalpost edits. | Signed Task-Spec DAG under `cvg/tasks/` · `TIER=1` for unattended execution |
+| 5 | **Tasking** · [standalone `taskspec`](https://github.com/luanmorenommaciel/task-spec) | Turn accepted legs into atomic, vendor-neutral units whose runnable evals travel with the work; PRE-gate and HMAC seal prevent silent goalpost edits. | Signed Task-Spec DAG under `cvg/tasks/` · `TIER=1` for unattended execution |
 | 6 | **Register** · [`task-specs-to-issues`](task-specs-to-issues/) · *opt-in* | Idempotently project one signed spec to one issue and mirror every `depends_on` edge as `blocked-by`; the spec remains canonical. | Tracker shadow + backlinks · `CHECK_REGISTER` parity |
 | 7 | **Bind** · [`task-to-runtime-contract`](task-to-runtime-contract/) | Bind one signed revision to least-privilege paths, hash-pinned evidence, honest runtime controls, adapters, and a minimal identifier-only worker brief. | `execution-profile.yaml` + guards + `AGENTS.task.md` · `CHECK_RUNTIME_CONTRACT` |
 | 8 | **The Loop** · [`task-loop`](task-loop/) | Run each attempt in fresh context, enforce iteration/time/token ceilings plus stagnation, persist checkpoints, and land in exactly one named state. | Green-eval PR/local commit or explicit handoff · `TASK_LOOP=<state>` + tier-2 `CHECK_VERIFY=<verdict>` |
@@ -186,9 +186,9 @@ human-led design; everything downstream is machine-led build.
 
 ## Phase 2 · Build — the machine passes
 
-### 5 · `task-spec` — Tasking · the cornerstone unit · v3.x
+### 5 · standalone `taskspec` — Tasking · the cornerstone unit · v3.x
 
-The deepest skill in the chain: atomic, vendor-neutral, **self-verifying**
+The independently installed engine is the deepest contract in the chain: atomic, vendor-neutral, **self-verifying**
 Task-Spec units. Each `tasks/T-*.md` carries YAML frontmatter + six zones +
 ≥3 runnable bash evals + an Exit Check — the definition of done travels inside
 the file. Two gates are duals: `safe-to-delegate.sh --stamp` (PRE — certifies
@@ -198,9 +198,9 @@ eval pass, blast radius, HMAC recheck, optional gold-sanity Goodhart guard).
 Locked atomic status transitions, a rebuildable state index, an append-only
 metrics ledger, an L0–L2 executor conformance suite, and dispatch recipes
 (Claude, Codex, Kimi, Gemini, taskship, anthive, custom) round out the runtime.
-**Ships:** 22 scripts · reference docs · runbooks · JSON Schemas · test + conformance suites.
+**Converge consumes:** the external CLI and its published contracts; it does not install a mirrored Task-Spec skill.
 **Gate:** every task carries a runnable eval — *no eval, not a task yet.*
-Full details: [`task-spec/README.md`](task-spec/README.md) · deep-dive PDF: [`../docs/task-spec-v0.1.pdf`](../docs/task-spec-v0.1.pdf).
+Full details: [Task-Spec repository](https://github.com/luanmorenommaciel/task-spec) · deep-dive PDF: [`../docs/task-spec-v0.1.pdf`](../docs/task-spec-v0.1.pdf).
 
 ### 6 · `task-specs-to-issues` — the tracker as state · **opt-in**
 
@@ -251,12 +251,14 @@ explicitly waived. See [`references/verification.md`](task-to-runtime-contract/r
 
 ### 8 · `task-loop` — one issue → green-eval PR
 
-The execution loop you build (the Manager that schedules it across the fleet is
-future CI/CD). Takes ONE issue (`--issue N`), verifies its Pass 7 execution
+The execution loop is the single-task worker primitive; the Manager that leases
+and schedules it across the frontier is a separate, still-future layer. It takes
+ONE issue (`--issue N`), verifies its Pass 7 execution
 profile, reads the signed Task-Spec + hash-bound evidence (**the only instruction
 source**), cuts a branch, and then **actually loops**: attempt → verify → learn →
-repeat, until the task's own eval exits 0. GREEN opens a PR that closes the issue,
-but only after the portable path guard passes.
+repeat, until the task's own eval exits 0. GREEN may publish only after the
+portable path guard passes and the standalone Task-Spec engine independently
+accepts the attempt-bound handoff and writes `AcceptanceRecord/v1`.
 **A gate is not a loop.** Until `loop-kernel.sh`, this pass ran the eval *once*
 while every spec declared `budget_iterations` and `circuit_breaker_no_progress`
 that **nothing enforced** — a control in the artifact and not in the runtime. The
