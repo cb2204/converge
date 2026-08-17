@@ -24,6 +24,10 @@ the standalone repository.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.2.0] — 2026-08-17
+
 ### Changed
 - **Task-Spec is externalized.** Converge now requires a compatible standalone
   Task-Spec 3.8 engine instead of installing or executing its historical mirror.
@@ -1361,5 +1365,6 @@ the autonomy-contract producer.
 Initial public release. The 4-zone EDD format with frontmatter + runnable bash
 evals + validation card. See git history for the full change set.
 
-[Unreleased]: https://github.com/luanmorenommaciel/converge/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/luanmorenommaciel/converge/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/luanmorenommaciel/converge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/luanmorenommaciel/converge/releases/tag/v0.1.0

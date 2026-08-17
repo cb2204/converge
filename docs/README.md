@@ -7,7 +7,7 @@ The current truth hierarchy is intentionally small:
 3. [`composed-flow.md`](composed-flow.md): prepare through settlement.
 4. [`cli-reference.md`](cli-reference.md): generated from the canonical command matrix.
 5. [`releases/v0.2.0.md`](releases/v0.2.0.md): migration and release scope.
-6. [`release-readiness.md`](release-readiness.md): evidence ledger, including open gates.
+6. [`release-readiness.md`](release-readiness.md): evidence ledger and publication policy.
 
 ## Historical evidence
 

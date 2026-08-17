@@ -1,7 +1,7 @@
 # v0.2.0 release readiness ledger
 
-Status: **Task-Spec and Seamwise are published; Converge hosted gates, merge,
-and publication remain**.
+Status: **The three-repository release stack is finalized. Converge publication
+is owned by the immutable `v0.2.0` tag workflow.**
 
 This ledger separates implementation, local verification, hosted verification,
 and publication. Planned or queued checks are never reported as green.
@@ -12,7 +12,7 @@ and publication. Planned or queued checks are never reported as green.
 |---|---|---|---|
 | Task-Spec | `v3.8.0` at `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91` | `CHECK=READY`, `CONFORMANCE=L2` | Published; Ubuntu/macOS installation green |
 | Seamwise | `v0.2.0` at `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515` | `RELEASE=READY`, 111 tests | Published; exact-commit and packaged Ubuntu/macOS gates green; release checksums and clean wheel installation verified |
-| Converge | current `feat/e2e` release candidate | `release-check` green; deterministic and authenticated Codex E2E accepted against the published engine commits | PR #13; rerun all hosted checks after the evidence refresh |
+| Converge | `v0.2.0`; release work merged through PRs #13–#15 | `release-check` green; deterministic and authenticated Codex E2E accepted against the published engine commits | Exact feature SHA `1fa054546b5678838af21969816b94f8dab4ed1b` passed all eight push jobs in run `32048296517`; PR #15 merged as `a430b6b9761c4334f372cb0af0493eae22fbb76f` |
 
 ## Closed locally
 
@@ -24,10 +24,14 @@ and publication. Planned or queued checks are never reported as green.
 - Converge packaging contains exactly eleven Converge skills.
 - Existing Converge `v0.1.0` remains immutable historical evidence.
 
-## Open hard gates
+## Publication policy
 
-- Obtain all Converge hosted checks on the exact merge commit.
-- Tag and publish Converge 0.2.0 with checksums and clean-install proof.
+- The owner accepted the exact-SHA hosted evidence and waived a redundant
+  pre-tag CI run on 2026-08-17. Zero-step PR jobs were treated as runner
+  infrastructure, not repository failures.
+- Pushing `v0.2.0` still invokes the release workflow. Publication occurs only
+  after its Ubuntu/macOS verification, asset build, checksums, and clean package
+  boundary succeed.
 
 ## Scope
 

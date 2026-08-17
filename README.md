@@ -19,19 +19,18 @@ Converge 0.2.0 | cvg 0.2.0 | Seamwise 0.2.0 | Task-Spec 3.8.0
 
 ## Release truth
 
-This checkout is the Converge 0.2.0 release candidate. The composed
-implementation, deterministic cross-engine tests, and authenticated Codex demo
-are locally verified against the exact candidate commits.
-Publication is not complete until the exact Task-Spec, Seamwise, and Converge
-commits pass hosted macOS and Linux CI and are tagged in dependency order.
+This source line is Converge 0.2.0. The composed implementation, deterministic
+cross-engine tests, and authenticated Codex demo are verified against the exact
+published Task-Spec and Seamwise commits. The immutable distribution is the
+`v0.2.0` tag; `main` may continue to move after the release.
 
 | Claim | Current evidence |
 |---|---|
 | Task-Spec 3.8.0 | Published from immutable commit `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91`; hosted Ubuntu/macOS release installation green |
 | Seamwise 0.2.0 | Published from immutable commit `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515`; exact-commit and packaged Ubuntu/macOS gates green |
-| Converge 0.2.0 implementation | Current `feat/e2e` release worktree; publication gates remain open |
-| Hosted CI | Billing and scoped cross-repository credentials are working; Converge hosted gates remain before publication |
-| Published tags | Task-Spec `v3.8.0` and Seamwise `v0.2.0` are published; Converge remains unpublished |
+| Converge 0.2.0 | Release work merged through PRs #13–#15; `v0.2.0` identifies the immutable release commit |
+| Hosted CI | All eight jobs passed on exact feature SHA `1fa054546b5678838af21969816b94f8dab4ed1b` in run `32048296517`; zero-step PR-run failures were runner infrastructure, and the owner waived a redundant pre-tag run |
+| Release publication | The `v0.2.0` tag workflow independently verifies Ubuntu/macOS, builds checksummed assets, and publishes the GitHub release |
 | Historical Converge 0.1.0 | Published and immutable; it documents the former bundled Task-Spec architecture |
 
 The release never retags or moves `v0.1.0`. See
@@ -81,7 +80,7 @@ does not sign a task, and model narration is never settlement evidence.
 - Seamwise 0.2.0 only for decomposition and `cvg compose`
 - Node 22 only for the npm door and Cockpit
 
-After the tags are published, install in dependency order:
+Install the published stack in dependency order:
 
 ```bash
 git clone --branch v3.8.0 https://github.com/luanmorenommaciel/task-spec.git
@@ -94,10 +93,6 @@ git clone --branch v0.2.0   https://github.com/luanmorenommaciel/converge.git
 bash converge/install.sh --target /absolute/path/to/your-project --copy
 ```
 
-Until hosted CI is repaired and the tags exist, use the exact release-candidate
-commits listed in [Release truth](#release-truth). Do not treat a source checkout
-as a published release.
-
 Converge also supports:
 
 ```bash
@@ -105,7 +100,7 @@ npm install -g github:luanmorenommaciel/converge
 cvg-install
 ```
 
-or, after publication:
+or:
 
 ```bash
 CVG_REF=v0.2.0   bash -c "$(curl -fsSL https://raw.githubusercontent.com/luanmorenommaciel/converge/main/install.sh)"
@@ -255,9 +250,10 @@ make demo-composed
 make release-check
 ```
 
-`release-check` is necessary but not sufficient for publication. Hosted Ubuntu,
-macOS, Cockpit, JSON, docs, package, and composed-E2E jobs must run on the exact
-commit. A zero-step GitHub job is infrastructure evidence, not a passed gate.
+`release-check` is necessary but not sufficient for publication. The tag
+workflow runs the hosted Ubuntu, macOS, Cockpit, JSON, docs, package, and
+composed-E2E boundaries before it publishes assets. A zero-step GitHub job is
+infrastructure evidence, not a passed gate.
 
 ## Scope of v0.2.0
 
