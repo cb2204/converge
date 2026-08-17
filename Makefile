@@ -1,11 +1,19 @@
 SHELL := /bin/bash
 
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# Resolve an engine to an ABSOLUTE path. tests/test-cvg-doctor-host.sh narrows
+# PATH to system directories to synthesize a missing tool, and a bare name would
+# resolve through that narrowed PATH — hiding an engine installed in ~/.local/bin
+# (install.sh --global's default) and failing 9 rows for the wrong reason. CI
+# already exports absolute paths; this makes a local `make check` match it.
+abs_engine = $(if $(filter /%,$(1)),$(1),$(shell command -v $(1) 2>/dev/null || echo $(1)))
+
 ifeq ($(origin TASKSPEC_BIN),undefined)
-TASKSPEC_BIN := $(if $(CVG_TASKSPEC_BIN),$(CVG_TASKSPEC_BIN),taskspec)
+TASKSPEC_BIN := $(call abs_engine,$(if $(CVG_TASKSPEC_BIN),$(CVG_TASKSPEC_BIN),taskspec))
 endif
 ifeq ($(origin SEAMWISE_BIN),undefined)
-SEAMWISE_BIN := $(if $(CVG_SEAMWISE_BIN),$(CVG_SEAMWISE_BIN),seamwise)
+SEAMWISE_BIN := $(call abs_engine,$(if $(CVG_SEAMWISE_BIN),$(CVG_SEAMWISE_BIN),seamwise))
 endif
 PYTHON ?= python3
 
