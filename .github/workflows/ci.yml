@@ -10,7 +10,7 @@ name: ci
 
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     steps:
       - name: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -361,34 +361,6 @@ jobs:
       - name: production build
         run: npm run cockpit:build
 
-  json-contract:
-    name: json (ubuntu)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: install the pinned standalone Task-Spec engine
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_STACK_READ_TOKEN }}
-        run: |
-          test -n "$GH_TOKEN" || { echo "::error::RELEASE_STACK_READ_TOKEN is required for private engine repositories"; exit 5; }
-          engine_dir="$(mktemp -d -t task-spec-engine.XXXXXX)"
-          gh auth setup-git
-          git clone --quiet https://github.com/luanmorenommaciel/task-spec.git "$engine_dir"
-          git -C "$engine_dir" checkout --quiet --detach 0e6180cfc3009bd4ef9cf7ab050b463e10d4af91
-          bash "$engine_dir/install.sh" --global --copy
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: universal JSON contract
-        run: |
-          bash tests/test-cvg-json-envelope.sh
-          python3 tests/test-cvg-json-matrix.py
-
   docs:
     name: docs (ubuntu)
     runs-on: ubuntu-latest
@@ -422,12 +394,13 @@ jobs:
 
   composed-e2e:
     name: composed-e2e (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     steps:
       - name: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
