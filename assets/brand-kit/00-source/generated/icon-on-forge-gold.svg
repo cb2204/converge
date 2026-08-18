@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-labelledby="title">
-  <title id="title">Converge icon on forge-gold</title>
-  <rect width="1200" height="1200" fill="#F3B64C"/>
-     <g transform="translate(88 88)" opacity="1" stroke-linejoin="round">
-    <path d="M512 72 L832 256 L832 332 L714 400 L714 338 L512 222 L310 338 L310 570 L512 686 L714 570 L714 510 L832 442 L832 652 L512 836 L192 652 L192 256 Z" fill="#070A0F" stroke="#070A0F" stroke-width="20"/>
-    <path d="M714 188 L832 256 L714 324 Z" fill="#F5F2EA" stroke="#F5F2EA" stroke-width="12"/>
-  </g>
-</svg>
