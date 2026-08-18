@@ -58,8 +58,9 @@ Composition first asks Seamwise for `SeamwiseCapabilities/v1` and verifies:
 - `materializes_tasks: false`;
 - `dispatch_authority: false`.
 
-It separately asks Task-Spec for `TaskSpecCLIResult/v1` and requires a version
-from 3.8.0 inclusive to 4.0.0 exclusive. A missing executable, malformed JSON,
+It separately asks Task-Spec for `TaskSpecCLIResult/v1` and requires a
+3.8.x engine (release pin 3.8.0). 3.9.x is not supported: `rebuild-state`
+writes an absolute `path:` into `_state.yaml`. A missing executable, malformed JSON,
 exit-code mismatch, incompatible contract, or version change during a command
 returns `COMPOSE=ENGINE_UNAVAILABLE` and changes no canonical task state.
 

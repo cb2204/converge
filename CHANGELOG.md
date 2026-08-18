@@ -24,7 +24,28 @@ the standalone repository.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Changed
+- **Task-Spec support is 3.8.x only.** 3.9.0 `rebuild-state` writes an absolute
+  `path:` into `_state.yaml`, so a committed index would embed the developer's
+  home directory. `bin/cvg`, `install.sh`, compose negotiation, and
+  `tests/test-version-unity.sh` now reject anything outside 3.8.x.
+- **Cockpit `package.json` is 0.2.0**, the same number as `VERSION`. The
+  “one package, one version” gate now reads it.
+
+### Fixed
+- **`make check` resolves engine binaries to absolute paths**, so
+  `tests/test-cvg-doctor-host.sh` no longer treats a `~/.local/bin` install as
+  missing.
+- **`docs/decks/converge-deck.html` points at `../converge-v0.2.0.pdf`** after
+  the file moved one directory deeper.
+- **Archived v0.1 binaries cannot silently re-enter the tree.** `.gitignore`
+  and `scripts/check-docs.py` defend the names; the docs inventory names all
+  six `v0.1.0` assets without calling that release immutable.
+
+### Documented
+- Repository map lists `scripts/`, `evidence/`, `assets/`, and
+  `docs/backlog.md`. Local `make check` documents the 3.8.0 / 0.2.0 engine
+  pins and the `jsonschema` requirement.
 
 ## [0.2.0] — 2026-08-17
 

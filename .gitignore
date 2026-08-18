@@ -82,8 +82,16 @@ tmp/
 # graphify — local developer tooling, not part of the shipped method. The
 # knowledge graph is a derived artifact, and `.claude/settings.json` pins an
 # absolute path to this machine's graphify binary, so neither travels.
-# NOTE: CLAUDE.md here is entirely graphify-generated. Delete that line below
-# the day you author a real project CLAUDE.md, or it will be silently ignored.
+# CLAUDE.md is authored project guidance and is tracked.
 graphify-out/
 .claude/
-CLAUDE.md
+
+# Historical v0.1 binaries live on the v0.1.0 GitHub release. A local copy
+# (especially docs/converge.pdf) must not be recommitted by git add -A.
+docs/converge.pdf
+docs/converge-v0.1.pdf
+docs/task-spec-v0.1.pdf
+docs/converge-deck.pdf
+docs/converge-v0.2.0-alpha.1.pdf
+converge-brand-kit-v1.zip
+converge-brand-concepts-round-01.zip

@@ -141,9 +141,9 @@ resolve_taskspec() {
   fi
   version="$("$candidate" version 2>/dev/null | tail -1 | tr -d '[:space:]')"
   case "$version" in
-    3.8.*|3.9.*|3.[1-9][0-9].*) ;;
+    3.8.*) ;;
     *)
-      ui_err "incompatible Task-Spec engine '$version' at $candidate — Converge 0.2 requires >=3.8.0 and <4.0.0"
+      ui_err "incompatible Task-Spec engine '$version' at $candidate — Converge 0.2 requires 3.8.x"
       return 1
       ;;
   esac

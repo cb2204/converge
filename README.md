@@ -234,7 +234,10 @@ receipt, or acceptance record.
 | `apps/cockpit/` | Read-only observer UI |
 | `templates/` | Consumer workspace templates |
 | `tests/` | Hermetic gate, install, loop, JSON, and composed-flow suites |
-| `docs/` | Architecture, composed flow, CLI reference, release notes, and archived evidence |
+| `scripts/` | Docs, package, release, and evidence tooling |
+| `evidence/` | Retained live-executor traces for named release gates |
+| `docs/` | Architecture, composed flow, CLI reference, archive inventory, and backlog |
+| `assets/` | README banner only |
 
 ## Verification
 
@@ -249,6 +252,16 @@ make check-live-evidence
 make demo-composed
 make release-check
 ```
+
+A green local `make check` needs the release pairing, not “whatever is on
+PATH”:
+
+- Task-Spec **3.8.0** at commit `0e6180cfc3009bd4ef9cf7ab050b463e10d4af91`
+  (3.9.x writes an absolute `path:` into `_state.yaml` and is not supported)
+- Seamwise **0.2.0** at commit `5a398169c3fefcb65eb1a47c0cb4f967dfdc0515`
+- a Python with `jsonschema` for `make check-composed` (CI installs
+  `.github/requirements-ci.txt`; locally set `COMPOSE_JSONSCHEMA_PYTHON` or
+  use `.venv`)
 
 `release-check` is necessary but not sufficient for publication. The tag
 workflow runs the hosted Ubuntu, macOS, Cockpit, JSON, docs, package, and
@@ -270,6 +283,7 @@ decisions.
 - [Release readiness ledger](docs/release-readiness.md)
 - [0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0)
 - [Documentation and archive inventory](docs/README.md)
+- [Reviewer-derived backlog](docs/backlog.md)
 - [Skill catalog](skills/README.md)
 - [Cockpit guide](apps/cockpit/README.md)
 

@@ -12,7 +12,7 @@
 # The fix is not to force independent products onto one number. VERSION owns the
 # Converge package; Task-Spec is now an external engine with an explicit compatible
 # range. A Converge declaration must equal VERSION, and the engine boundary must
-# resolve to >=3.8.0 and <4.0.0.
+# resolve to 3.8.x (release pin 3.8.0). 3.9.x writes absolute _state.yaml paths.
 #
 # WHAT COUNTS AS A VERSION HERE
 # RELEASE versions unify — they answer "which Converge is this?". SCHEMA/FORMAT
@@ -111,11 +111,11 @@ done
 echo
 echo "[1b] JSON manifests equal VERSION"
 for jf in .claude-plugin/plugin.json .claude-plugin/marketplace.json \
-          package.json; do
+          package.json apps/cockpit/package.json; do
   if [ ! -f "$jf" ]; then bad "$jf is missing"; continue; fi
   got="$(grep -m1 -E '"version"[[:space:]]*:' "$jf" | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
   if [ "$got" = "$PKG" ]; then
-    ok "$(basename "$jf") = $PKG"
+    ok "$jf = $PKG"
   elif [ "$SYNC" = true ]; then
     sed -i.bak -E "s/(\"version\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"/\1\"${PKG}\"/" "$jf" && rm -f "$jf.bak"
     echo "  sync — $(basename "$jf"): $got -> $PKG"
@@ -191,14 +191,14 @@ REQUIRED="$(grep -m1 '^CVG_TASKSPEC_REQUIRED=' bin/cvg | cut -d'"' -f2)"
 TASKSPEC_VERSION_BIN="${TASKSPEC_BIN:-${CVG_TASKSPEC_BIN:-taskspec}}"
 ENGINE="$("$TASKSPEC_VERSION_BIN" version 2>/dev/null | tail -1 | tr -d '[:space:]')"
 if [ "$REQUIRED" = "3.8.0" ]; then
-  ok "Converge declares the Task-Spec 3.8 compatibility floor"
+  ok "Converge declares the Task-Spec 3.8.0 pin"
 else
-  bad "CVG_TASKSPEC_REQUIRED must declare the reviewed 3.8.0 floor"
+  bad "CVG_TASKSPEC_REQUIRED must declare the reviewed 3.8.0 pin"
   SCHEMA_OK=1
 fi
 case "$ENGINE" in
-  3.8.*|3.9.*|3.[1-9][0-9].*) ok "installed Task-Spec engine is compatible ($ENGINE)" ;;
-  *) bad "installed Task-Spec engine is incompatible or missing ('$ENGINE')"; SCHEMA_OK=1 ;;
+  3.8.*) ok "installed Task-Spec engine is the supported 3.8.x pin ($ENGINE)" ;;
+  *) bad "installed Task-Spec engine is not 3.8.x ('$ENGINE') — 3.9.x writes absolute _state.yaml paths"; SCHEMA_OK=1 ;;
 esac
 
 echo

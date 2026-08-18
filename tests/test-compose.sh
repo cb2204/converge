@@ -16,6 +16,10 @@ if [ ! -x "$SEAMWISE_BIN" ] || [ ! -x "$TASKSPEC_BIN" ]; then
   echo "COMPOSE_TEST=ENGINE_UNAVAILABLE"
   exit 3
 fi
+if ! "$SCHEMA_PYTHON" -c "import jsonschema" >/dev/null 2>&1; then
+  echo "COMPOSE_TEST=JSONSCHEMA_UNAVAILABLE set COMPOSE_JSONSCHEMA_PYTHON to a python with jsonschema" >&2
+  exit 3
+fi
 
 ROOM="$(mktemp -d -t cvg-compose.XXXXXX)"
 trap 'rm -rf "$ROOM"' EXIT
