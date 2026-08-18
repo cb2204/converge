@@ -13,7 +13,7 @@
 
 Converge 0.2.0 | cvg 0.2.0 | Seamwise 0.2.0 | Task-Spec 3.8.0
 
-[Install](#install) · [First composed journey](#first-composed-journey) · [Authority model](docs/architecture.md) · [Composed flow](docs/composed-flow.md) · [CLI reference](docs/cli-reference.md)
+[Install](#install) · [First composed journey](#first-composed-journey) · [Docs](docs/index.md) · [CLI](docs/reference/cli.md)
 
 </div>
 
@@ -33,9 +33,9 @@ published Task-Spec and Seamwise commits. The immutable distribution is the
 | Release publication | The `v0.2.0` tag workflow independently verifies Ubuntu/macOS, builds checksummed assets, and publishes the GitHub release |
 | Historical Converge 0.1.0 | Published and immutable; it documents the former bundled Task-Spec architecture |
 
-The release never retags or moves `v0.1.0`. See
-[release readiness](docs/release-readiness.md) for the live gate ledger and
-[release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0) for migration details.
+The release never retags or moves `v0.1.0`. See the
+[0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0)
+for migration details.
 
 ## What Converge owns
 
@@ -67,7 +67,8 @@ flowchart LR
 
 Duplicate capability is tolerable. Duplicate authority is not. A Seamwise
 review does not authorize task dispatch, a Task-Spec materialization receipt
-does not sign a task, and model narration is never settlement evidence.
+does not sign a task, and model narration is never settlement evidence. The
+full non-authority table is in [docs/concepts/authority.md](docs/concepts/authority.md).
 
 ## Install
 
@@ -152,7 +153,9 @@ A successful loop must end in `TASK_LOOP=LOCAL_SETTLED` or
 `cvg/receipts/composition/composition-receipt.json`; it binds engine versions,
 the immutable source commit, Seamwise review/lineage/TaskPlan digests,
 Task-Spec materialization evidence, and every task hash. It always records
-`dispatch_authorized: false`.
+`dispatch_authorized: false`. Walkthrough, recovery, and the honest settle
+limits live in [getting started](docs/getting-started/first-composed-task.md)
+and [trust](docs/trust/index.md).
 
 ## Strict engine delegation
 
@@ -196,7 +199,7 @@ cvg compose --json status
 `--json` emits one `ConvergeCLIResult/v1` document, preserves the underlying
 exit code, emits no ANSI, and reports `changed` and `dry_run`. The canonical
 57-form matrix is [contracts/cli-command-matrix.json](contracts/cli-command-matrix.json);
-the human reference and test coverage derive from it.
+the human reference is [docs/reference/cli.md](docs/reference/cli.md).
 
 Stable compose states are:
 
@@ -236,7 +239,7 @@ receipt, or acceptance record.
 | `tests/` | Hermetic gate, install, loop, JSON, and composed-flow suites |
 | `scripts/` | Docs, package, release, and evidence tooling |
 | `evidence/` | Retained live-executor traces for named release gates |
-| `docs/` | Architecture, composed flow, CLI reference, archive inventory, and backlog |
+| `docs/` | Knowledge base; start at [`docs/index.md`](docs/index.md) |
 | `assets/` | README banner only |
 
 ## Verification
@@ -280,16 +283,18 @@ decisions.
 
 ## Documentation
 
-- [Architecture and authority](docs/architecture.md)
-- [Composed flow and failure semantics](docs/composed-flow.md)
-- [CLI reference](docs/cli-reference.md)
-- [Release readiness ledger](docs/release-readiness.md)
-- [0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0)
-- [Documentation and archive inventory](docs/README.md)
-- [Reviewer-derived backlog](docs/backlog.md)
-- [Skill catalog](skills/README.md)
-- [Cockpit guide](apps/cockpit/README.md)
-- [Contributing and local setup](CONTRIBUTING.md)
+| Start here | Best for |
+|---|---|
+| [Knowledge base](docs/index.md) | map and how to navigate |
+| [Getting started](docs/getting-started/index.md) | install, first composed leaf, reviewer route |
+| [Authority](docs/concepts/authority.md) | who may decide what |
+| [Trust](docs/trust/index.md) | what a receipt proves and what it does not |
+| [CLI reference](docs/reference/cli.md) | generated 57-form table |
+| [Contracts](contracts/README.md) | versioned JSON schemas |
+| [0.2.0 release notes](https://github.com/luanmorenommaciel/converge/releases/tag/v0.2.0) | migration and release scope |
+| [Skill catalog](skills/README.md) | the eleven Converge skills |
+| [Cockpit](apps/cockpit/README.md) | read-only observer |
+| [Contributing](CONTRIBUTING.md) | local bootstrap and gates |
 
 ## License
 

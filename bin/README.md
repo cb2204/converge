@@ -8,7 +8,7 @@ decomposition to external Seamwise 0.2 for `cvg compose`.
 The canonical command list is
 [../contracts/cli-command-matrix.json](../contracts/cli-command-matrix.json).
 The generated human reference is
-[../docs/cli-reference.md](../docs/cli-reference.md).
+[../docs/reference/cli.md](../docs/reference/cli.md).
 
 ## Files
 

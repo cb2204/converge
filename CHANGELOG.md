@@ -24,6 +24,19 @@ the standalone repository.
 
 ## [Unreleased]
 
+### Removed
+- **The previous product-prose tree under `docs/` is gone.** Architecture,
+  composed-flow, the root CLI dump, the release-readiness ledger, the reviewer
+  backlog, the eight model reviews, the v0.2.0 PDF, and the archived v0.1
+  decks left the working tree.
+
+### Added
+- **A thin Converge knowledge base** at `docs/index.md`: getting-started
+  (install, first composed task, reviewer route), authority and compose
+  concepts, bind/loop and recovery guides, an honest trust page, and a
+  generated `docs/reference/cli.md`. Task-Spec and Seamwise docs stay in
+  those repositories.
+
 ### Changed
 - **Task-Spec support is 3.8.x only.** 3.9.0 `rebuild-state` writes an absolute
   `path:` into `_state.yaml`, so a committed index would embed the developer's
@@ -36,16 +49,15 @@ the standalone repository.
 - **`make check` resolves engine binaries to absolute paths**, so
   `tests/test-cvg-doctor-host.sh` no longer treats a `~/.local/bin` install as
   missing.
-- **`docs/decks/converge-deck.html` points at `../converge-v0.2.0.pdf`** after
-  the file moved one directory deeper.
 - **Archived v0.1 binaries cannot silently re-enter the tree.** `.gitignore`
-  and `scripts/check-docs.py` defend the names; the docs inventory names all
-  six `v0.1.0` assets without calling that release immutable.
+  and `scripts/check-docs.py` defend the names; `check-release-assets.py`
+  holds the six `v0.1.0` asset names.
 
 ### Documented
-- Repository map lists `scripts/`, `evidence/`, `assets/`, and
-  `docs/backlog.md`. Local `make check` documents the 3.8.0 / 0.2.0 engine
-  pins and the `jsonschema` requirement.
+- Root README is the door into `docs/index.md` (getting-started, authority,
+  trust, generated CLI). Repository map lists `scripts/`, `evidence/`, and
+  `assets/`. Local `make check` documents the 3.8.0 / 0.2.0 engine pins and
+  the `jsonschema` requirement.
 
 ## [0.2.0] — 2026-08-17
 

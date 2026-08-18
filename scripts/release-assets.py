@@ -42,7 +42,7 @@ def archive_evidence(source: Path, destination: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", type=Path, required=True)
-    parser.add_argument("--pdf", type=Path, required=True)
+    parser.add_argument("--pdf", type=Path, default=None)
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
@@ -58,23 +58,27 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    for path in (args.package, args.pdf):
-        if not path.is_file():
-            raise SystemExit(f"release input is missing: {path}")
+    if not args.package.is_file():
+        raise SystemExit(f"release input is missing: {args.package}")
+    if args.pdf is not None and not args.pdf.is_file():
+        raise SystemExit(f"release input is missing: {args.pdf}")
     if not args.evidence.is_dir():
         raise SystemExit(f"stable release evidence is missing: {args.evidence}")
 
     args.out.mkdir(parents=True, exist_ok=True)
     package = args.out / args.package.name
-    guide = args.out / "converge-v0.2.0.pdf"
     evidence = args.out / "converge-v0.2.0-evidence.tar.gz"
     shutil.copyfile(args.package, package)
-    shutil.copyfile(args.pdf, guide)
     archive_evidence(args.evidence, evidence)
+    shipped = [package, evidence]
+    if args.pdf is not None:
+        guide = args.out / "converge-v0.2.0.pdf"
+        shutil.copyfile(args.pdf, guide)
+        shipped.append(guide)
 
     artifacts = []
     checksum_lines = []
-    for path in (package, guide, evidence):
+    for path in shipped:
         digest = sha256(path)
         artifacts.append(
             {"name": path.name, "sha256": digest, "bytes": path.stat().st_size}

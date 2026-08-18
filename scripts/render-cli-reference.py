@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render or verify docs/cli-reference.md from the canonical command matrix."""
+"""Render a CLI reference from the canonical command matrix, or prove it can."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MATRIX = ROOT / "contracts" / "cli-command-matrix.json"
-OUTPUT = ROOT / "docs" / "cli-reference.md"
+OUTPUT = ROOT / "docs" / "reference" / "cli.md"
 
 
 def render() -> str:
@@ -64,6 +64,7 @@ def main() -> int:
             return 1
         print("CLI_REFERENCE=READY")
         return 0
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(expected, encoding="utf-8")
     print(f"WROTE {OUTPUT}")
     return 0

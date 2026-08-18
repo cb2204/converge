@@ -48,7 +48,7 @@ ALLOWED_FILES=".briefspec.toml .gitattributes .gitignore .npmignore CHANGELOG.md
 README_REQUIRED="assets bin contracts docs evidence scripts skills templates tests"
 
 # Paths retired by the 2026-08-17 reorganization. Resurfacing is a regression.
-RETIRED="presentation brand brand-kit-v1 output test-results tmp docs/handbook docs/releases assets/brand-kit converge-brand-kit-v1.zip TODO.md"
+RETIRED="presentation brand brand-kit-v1 output test-results tmp docs/handbook docs/releases docs/reviews docs/decks assets/brand-kit converge-brand-kit-v1.zip TODO.md"
 
 echo "=================================================================="
 echo "test-repo-layout.sh — the tree shape is gated, not merely documented"

@@ -81,7 +81,6 @@ jobs:
           package="$(npm pack --pack-destination dist --silent)"
           python scripts/release-assets.py \
             --package "dist/$package" \
-            --pdf docs/converge-v0.2.0.pdf \
             --evidence evidence/releases/v0.2.0 \
             --out release-assets \
             --source-commit "$GITHUB_SHA" \

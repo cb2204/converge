@@ -3,12 +3,7 @@
 
 WHY THIS EXISTS
 On 2026-08-17 about 32 MB of historical binaries left the working tree and became
-assets on the v0.1.0 GitHub release. `scripts/check-docs.py` gates the inventory
-in docs/README.md — but it only checks that a *string* appears in the markdown.
-It never resolves the URL. So the inventory could name five artifacts, every gate
-could stay green, and all five could have been deleted from the release: the docs
-would link to 404s and nothing would say so.
-
+assets on the v0.1.0 GitHub release. The names below are the archive contract.
 A release asset is mutable. Anyone with write access can delete or replace one,
 and the release is not marked immutable. That makes the archive a real dependency,
 and an unverified dependency is not an archive — it is a hope.
@@ -24,28 +19,26 @@ Exit:  0 for OK/SKIPPED, 1 for MISSING, 2 for ERROR.
 from __future__ import annotations
 
 import json
-import pathlib
-import re
 import subprocess
 import sys
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
 RELEASE_TAG = "v0.1.0"
-ASSET_RE = re.compile(rf"releases/download/{re.escape(RELEASE_TAG)}/([^)\s]+)")
+ARCHIVED_ASSETS = (
+    "converge-v0.1.pdf",
+    "task-spec-v0.1.pdf",
+    "converge.pdf",
+    "converge-deck.pdf",
+    "converge-brand-concepts-round-01.zip",
+    "converge-v0.2.0-alpha.1.pdf",
+)
 
 
 def main() -> int:
-    inventory = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
-    expected = sorted(set(ASSET_RE.findall(inventory)))
-    if not expected:
-        print("no archived assets are referenced in docs/README.md", file=sys.stderr)
-        print("RELEASE_ASSETS=ERROR")
-        return 2
+    expected = list(ARCHIVED_ASSETS)
 
     try:
         proc = subprocess.run(
             ["gh", "release", "view", RELEASE_TAG, "--json", "assets"],
-            cwd=ROOT,
             capture_output=True,
             text=True,
             timeout=60,
@@ -69,7 +62,7 @@ def main() -> int:
 
     if missing:
         print(
-            f"\ndocs/README.md links {len(missing)} artifact(s) that are no longer on "
+            f"\n{len(missing)} archived artifact(s) are no longer on "
             f"the {RELEASE_TAG} release: {', '.join(missing)}",
             file=sys.stderr,
         )

@@ -30,8 +30,8 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-SOURCES = [ROOT / "README.md", ROOT / "docs" / "architecture.md", ROOT / "docs" / "composed-flow.md"]
-OUTPUT = ROOT / "docs" / "converge-v0.2.0.pdf"
+SOURCES = [ROOT / "README.md"]
+OUTPUT = ROOT / "tmp" / "converge-release-guide.pdf"
 MERMAID_DIR = ROOT / "tmp" / "pdfs" / "mermaid"
 INK = colors.HexColor("#14231F")
 GREEN = colors.HexColor("#176B56")

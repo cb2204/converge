@@ -34,7 +34,7 @@ fetch them and the suites that need a live engine will not run.
 | `bin/` `contracts/` `skills/` `templates/` | what ships to npm, per the `files` allowlist in `package.json` |
 | `apps/cockpit/` | the observer UI; deliberately not packaged |
 | `tests/` `scripts/` `evidence/` | what proves the thing works |
-| `docs/` | what explains it |
+| `docs/` | knowledge base; start at `docs/index.md` |
 | `assets/` | the README banner |
 
 Every directory above carries a `README.md` explaining its job. `make check-layout`
@@ -56,8 +56,9 @@ Two rules the automation enforces, worth knowing before they surprise you:
 - **A suite that exists must run in CI.** `tests/test-ci-covers-every-suite.sh`
   fails if you add `tests/test-*.sh` without wiring it into
   `.github/workflows/ci.yml`. Coverage on the tin is not coverage in the pipeline.
-- **`docs/cli-reference.md` is generated.** Edit
-  `contracts/cli-command-matrix.json` instead; `make check-docs` fails on drift.
+- **The CLI surface is `contracts/cli-command-matrix.json`.** Edit that
+  matrix and regenerate `docs/reference/cli.md` with
+  `python3 scripts/render-cli-reference.py`. `make check-docs` fails on drift.
 
 ## Conventions
 
@@ -69,6 +70,6 @@ Shell targets bash 3.2 — stock macOS still ships it, and the portability floor
 asserted in CI. No `declare -A`, no `${var^^}`, no `mapfile`.
 
 Large binaries do not belong in the tree. Historical artifacts live as assets on
-the release that owns them, and `docs/README.md` carries the inventory.
-`make check-release-assets` resolves every one of those links against the live
-release, so a deleted asset fails loudly instead of rotting into a 404.
+the release that owns them. `make check-release-assets` resolves the archived
+v0.1.0 names against the live release, so a deleted asset fails loudly instead
+of rotting into a 404.
