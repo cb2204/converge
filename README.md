@@ -241,6 +241,9 @@ receipt, or acceptance record.
 
 ## Verification
 
+`make bootstrap` assembles the pinned pairing under `.engines/` and `.venv/`,
+after which `make check` needs no exported paths. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 One Makefile owns the release entrypoints:
 
 ```bash
@@ -286,6 +289,7 @@ decisions.
 - [Reviewer-derived backlog](docs/backlog.md)
 - [Skill catalog](skills/README.md)
 - [Cockpit guide](apps/cockpit/README.md)
+- [Contributing and local setup](CONTRIBUTING.md)
 
 ## License
 

@@ -95,3 +95,8 @@ docs/converge-deck.pdf
 docs/converge-v0.2.0-alpha.1.pdf
 converge-brand-kit-v1.zip
 converge-brand-concepts-round-01.zip
+
+# `make bootstrap` assembles the pinned release pairing here. Both are derived
+# from commits recorded in scripts/bootstrap.sh, so neither travels in git.
+.engines/
+.venv/

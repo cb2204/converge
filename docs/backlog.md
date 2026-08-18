@@ -112,6 +112,19 @@ the front door is shut.
 
 ## Known defects
 
+- [ ] **`CVG_TASKSPEC_BIN` is ignored when a cvg subcommand re-enters the CLI.**
+      `cvg snapshot` shells out to `cvg next`, which resolves `taskspec` through
+      PATH instead of the override. Since the 3.8.x pin landed in `56a6478`, a
+      3.9.x on PATH is rejected inside that nested call and surfaces as
+      `cvg snapshot: \`cvg next --lane FULL --json\` returned no NEXT_PASS verdict` —
+      failing 11 of 13 rows in `tests/test-cvg-snapshot.sh` for a reason that names
+      neither the engine nor the version. Bisected: `db8c368` passes 13/13,
+      `56a6478` fails. CI does not catch it because it puts the pinned engine on
+      `$GITHUB_PATH`; the Makefile now does the same locally, which masks the
+      symptom but not the cause. The documented workflow in README ("First composed
+      journey") exports only `CVG_TASKSPEC_BIN`, so it is broken for anyone whose
+      PATH carries a different Task-Spec.
+
 - [ ] **The D1 "anchored to git root instead of workspace" defect class** — `F-glm-07`
 - [ ] **`--resume` under worktree isolation restarts at attempt 1** — `F-glm-11`, `F-openrouter-minimax-m3-08`
 - [ ] **Tier-2 judge timeout is hardcoded at 300s** — `F-glm-11`
