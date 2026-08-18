@@ -289,6 +289,12 @@ jobs:
         # came to be unrun.
         run: bash tests/test-ci-covers-every-suite.sh
 
+      - name: repository layout — the tree shape is a contract
+        # README.md documents the top level in a table. A table does not fail a
+        # build, so this gates it: an undeclared top-level entry, a home without
+        # a README, or a retired path coming back all fail here.
+        run: bash tests/test-repo-layout.sh
+
       - name: gate policy — hermetic unit + Git-integration suite
         # A Python suite, so the shell-suite coverage gate above cannot see it;
         # wired by hand like the doc lint. It proves parse_gate and the two
