@@ -1,6 +1,6 @@
 <div align="center">
 
-[![Converge - turn reviewed intent into independently proven software](assets/banner.png)](https://github.com/luanmorenommaciel/converge)
+<img src="assets/lockup-hero.png" alt="CONVERGE — Coordinate intent, decomposition, task authority, execution, and settlement without duplicating authority." width="100%">
 
 # Converge
 
