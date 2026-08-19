@@ -23,6 +23,13 @@ Factory-black plates ship as PNG only in this kit. There is no `converge-hero.sv
 | `lockup-color-dark.png` / `converge-lockup-dark.png` / `.svg` | Dark lockup for light surfaces |
 | `icon-color-dark.png` / `converge-icon-dark.png` / `.svg` | Dark icon for light surfaces |
 
+## Process plates
+
+| File | Description |
+|------|-------------|
+| `converge-authority.png` | Authority flow: Seamwise → Task-Spec → bind and loop. Settlement Fold palette. |
+| `converge-descent.png` | Descent flowchart: two phases, one barrier. Settlement Fold palette. |
+
 ## Palette
 
 - **Factory Black** #070A0F
