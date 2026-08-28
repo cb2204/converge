@@ -8,7 +8,7 @@ were removed on that basis, and remain recoverable from git history.
 
 | File | Contract | Consumed by |
 |---|---|---|
-| `cli-command-matrix.json` | `ConvergeCLICommandMatrix/v1` | source of truth for all 57 CLI forms; `docs/reference/cli.md` is generated from it |
+| `cli-command-matrix.json` | `ConvergeCLICommandMatrix/v1` | source of truth for all 60 CLI forms; `docs/reference/cli.md` is generated from it |
 | `cli-command-matrix-v1.schema.json` | schema for the above | `scripts/check-docs.py` |
 | `converge-cli-result-v1.schema.json` | `ConvergeCLIResult/v1` | every `--json` invocation |
 | `converge-composition-receipt-v1.schema.json` | `ConvergeCompositionReceipt/v1` | `cvg compose materialize` |

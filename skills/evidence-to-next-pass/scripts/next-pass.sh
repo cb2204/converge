@@ -5,7 +5,8 @@
 # never from stored state: every pass leaves its artifact in a known folder,
 # so "where are we" is always readable from the floor. Three verbs:
 #
-#   next [--lane FULL|NORMAL|FAST]   evidence board + NEXT_PASS=<N|DONE>
+#   next [--guided] [--lane FULL|NORMAL|FAST]
+#                                      evidence board + NEXT_PASS=<N|DONE>
 #   pre  <N> [--lane ...]            fail-closed door: PASS_PRE=OK|MISSING
 #   post <N>                         artifact check:   PASS_POST=OK|INCOMPLETE
 #
@@ -29,7 +30,7 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-usage: next-pass.sh next [--lane FULL|NORMAL|FAST]
+usage: next-pass.sh next [--guided] [--lane FULL|NORMAL|FAST]
        next-pass.sh pre  <pass-number> [--lane FULL|NORMAL|FAST]
        next-pass.sh post <pass-number>
 EOF
@@ -102,6 +103,32 @@ prompt_path() {
 companion_line() {
   printf '  teach it   : cvg lesson  (pass-to-lesson · %s/skills/pass-to-lesson/references/pass-prompt.md)\n' \
     "$(tool_home)"
+}
+
+# Guided mode is a CHAT boundary, not another workflow. It translates the
+# conductor's derived position into stable user choices and stops. The skill
+# owns how the agent responds; this script owns the evidence-derived position
+# and shared vocabulary. No guided-session state is persisted.
+guided_choices() {
+  local next_pass="$1"
+  echo
+  if [ "$next_pass" = "DONE" ]; then
+    echo 'guided chat — this lane has reached its evidence boundary'
+    echo '  [REVIEW]  inspect the outcome and proof; read-only'
+    echo '  [TEACH]   explain one closed pass with cvg lesson; optional'
+    echo '  [PAUSE]   stop here; change nothing'
+    echo '  agent contract: present these choices and wait; do not invent another pass'
+    printf 'GUIDED_CHAT=DONE\n'
+    return 0
+  fi
+
+  echo "guided chat — pass $next_pass · $(pass_name "$next_pass") is the safe boundary"
+  echo '  [CONTINUE] run the pre-hook, load the printed pass prompt, and do this pass only (recommended)'
+  echo '  [EXPLAIN]  explain purpose, inputs, output, and closing gate; read-only'
+  echo '  [INSPECT]  show the evidence and blockers behind this position; read-only'
+  echo '  [PAUSE]    stop here; change nothing'
+  echo '  agent contract: present these choices and wait; never infer CONTINUE'
+  printf 'GUIDED_CHAT=AWAITING_CHOICE\n'
 }
 
 gate_cmd() {
@@ -248,8 +275,10 @@ CMD="${1:-}"
 [ $# -gt 0 ] && shift
 LANE="FULL"
 TARGET=""
+GUIDED=0
 while [ $# -gt 0 ]; do
   case "$1" in
+    --guided) GUIDED=1; shift ;;
     --lane)   [ $# -ge 2 ] || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
               LANE="$2"; shift 2 ;;
     --lane=*) LANE="${1#--lane=}"; shift ;;
@@ -257,6 +286,8 @@ while [ $# -gt 0 ]; do
     *) usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2 ;;
   esac
 done
+[ "$GUIDED" -eq 0 ] || [ "$CMD" = "next" ] \
+  || { usage >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
 ORDER="$(lane_order "$LANE" 2>/dev/null)" \
   || { echo "unknown lane '$LANE' — FULL, NORMAL, or FAST" >&2; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
 
@@ -317,6 +348,7 @@ case "$CMD" in
     if [ -z "$NEXT" ]; then
       echo 'every pass in the lane has evidence on the floor'
       companion_line
+      [ "$GUIDED" -eq 0 ] || guided_choices DONE
       printf 'NEXT_PASS=DONE\n'
     else
       echo "next: pass $NEXT · $(pass_name "$NEXT")"
@@ -324,6 +356,7 @@ case "$CMD" in
       echo "  steer with : $(prompt_path "$NEXT")"
       echo "  close with : $(gate_cmd "$NEXT")"
       if [ -n "$CLOSED" ]; then companion_line; fi
+      [ "$GUIDED" -eq 0 ] || guided_choices "$NEXT"
       printf 'NEXT_PASS=%s\n' "$NEXT"
     fi
     ;;

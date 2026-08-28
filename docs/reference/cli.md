@@ -7,7 +7,7 @@ Every form accepts `--json` and `--dry-run` in any position. `--json` emits one
 `ConvergeCLIResult/v1` document and preserves the command exit code. `--dry-run`
 prevents mutations; read-only commands still execute.
 
-Declared public forms: **57**.
+Declared public forms: **60**.
 
 ## `init`
 
@@ -488,6 +488,36 @@ The descent conductor: derives which pass is current and which comes next from w
 - Delegates to: `evidence-to-next-pass/next-pass.sh`
 - Tokens: `NEXT_PASS=0-8|DONE`
 - Example: `cvg next`
+
+## `next --guided [--lane FULL|NORMAL|FAST]`
+
+Opt-in conversational view of the same evidence-derived conductor. It adds stable CONTINUE, EXPLAIN, INSPECT, and PAUSE choices at a pass boundary, instructs the agent to wait rather than infer CONTINUE, persists no chat state, and keeps NEXT_PASS as the final machine token.
+
+- Mutates: **no**
+- Converge pass: `None`
+- Delegates to: `evidence-to-next-pass/next-pass.sh`
+- Tokens: `GUIDED_CHAT=AWAITING_CHOICE|DONE`, `NEXT_PASS=0-8|DONE`
+- Example: `cvg next --guided --lane FAST`
+
+## `next pre <N> [--lane FULL|NORMAL|FAST]`
+
+Public fail-closed pre-hook for the chat conductor. It refuses pass N until every earlier pass in the selected lane has left its required evidence and never replaces the pass's authoritative gate.
+
+- Mutates: **no**
+- Converge pass: `None`
+- Delegates to: `evidence-to-next-pass/next-pass.sh`
+- Tokens: `PASS_PRE=OK|MISSING`
+- Example: `cvg next pre 5 --lane FAST`
+
+## `next post <N>`
+
+Public post-hook for the chat conductor. It verifies that pass N left its expected artifact, names the authoritative closing gate, and never treats artifact presence as a verdict.
+
+- Mutates: **no**
+- Converge pass: `None`
+- Delegates to: `evidence-to-next-pass/next-pass.sh`
+- Tokens: `PASS_POST=OK|INCOMPLETE`
+- Example: `cvg next post 5`
 
 ## `snapshot`
 

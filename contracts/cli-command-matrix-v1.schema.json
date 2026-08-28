@@ -8,11 +8,11 @@
   "properties": {
     "contract": {"const": "ConvergeCLICommandMatrix/v1"},
     "schema_version": {"const": 1},
-    "command_count": {"type": "integer", "minimum": 57},
+    "command_count": {"type": "integer", "minimum": 60},
     "source_of_truth_for": {"type": "array", "minItems": 3, "items": {"type": "string"}},
     "commands": {
       "type": "array",
-      "minItems": 57,
+      "minItems": 60,
       "items": {
         "type": "object",
         "additionalProperties": false,

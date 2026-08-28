@@ -381,7 +381,7 @@ jrun --json agent-context | python3 -c "import json,sys
 d=json.load(sys.stdin)
 assert d['contract']=='ConvergeCLIResult/v1' and d['ok'] is True
 manifest=d['data']['agent_context']
-assert manifest.get('tool')=='cvg' and len(manifest['commands'])==57" 2>/dev/null \
+assert manifest.get('tool')=='cvg' and len(manifest['commands'])==60" 2>/dev/null \
   && ok "agent-context uses the universal envelope" || bad "agent-context under --json" "missing envelope or matrix"
 
 # Help and version are no longer exceptions to the machine contract.

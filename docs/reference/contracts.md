@@ -6,7 +6,7 @@ nothing validates against it.
 
 | File | Contract | Consumed by |
 |---|---|---|
-| [`cli-command-matrix.json`](../../contracts/cli-command-matrix.json) | `ConvergeCLICommandMatrix/v1` | all 57 public CLI forms |
+| [`cli-command-matrix.json`](../../contracts/cli-command-matrix.json) | `ConvergeCLICommandMatrix/v1` | all 60 public CLI forms |
 | [`cli-command-matrix-v1.schema.json`](../../contracts/cli-command-matrix-v1.schema.json) | schema for the matrix | `scripts/check-docs.py` |
 | [`converge-cli-result-v1.schema.json`](../../contracts/converge-cli-result-v1.schema.json) | `ConvergeCLIResult/v1` | every `--json` invocation |
 | [`converge-composition-receipt-v1.schema.json`](../../contracts/converge-composition-receipt-v1.schema.json) | `ConvergeCompositionReceipt/v1` | `cvg compose materialize` |

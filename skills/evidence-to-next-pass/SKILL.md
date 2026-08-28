@@ -1,6 +1,6 @@
 ---
 name: evidence-to-next-pass
-description: Converge descent conductor — owns the canonical pass prompts and the sequence itself. Derives which pass is CURRENT and which comes NEXT from workspace evidence (never from memory), enforces order with a pre-hook (refuse pass N until pass N-1 left its artifact) and a post-hook (verify the artifact landed in the right cvg/ folder), and hands the agent the right steering prompt for each pass. Use whenever someone asks "what's next", "where are we in the descent", "continue the run", "start pass N", or before steering ANY pass in a chat session — the pre-hook runs first, the pass prompt second, the post-hook and the cvg gate last. Reduces per-session cognitive load: an agent reads ONE prompt per pass instead of the whole method. Do NOT use it to waive or replace a cvg gate (evidence presence is not a verdict — the gates stay authoritative) and do NOT use it to pick the lane (cvg lane owns that).
+description: Converge descent conductor — derives the current and next pass from workspace evidence, enforces order with fail-closed pre/post hooks, and hands the agent the owning pass prompt. Use when someone asks "what's next", "where are we", "continue", "start pass N", "guide me through Converge", or requests a step-by-step or guided chat. In guided chat, present the stable choices from `cvg next --guided` and wait at every pass boundary; never infer CONTINUE. Run the pre-hook first, the pass prompt second, and the post-hook plus authoritative gate last. Do NOT use this skill to waive a gate, treat evidence presence as a verdict, or pick a lane (`cvg lane` owns that).
 metadata:
   version: "0.2.0"
   compatibility: "Converge chain · sequence layer above all passes. Engine/tracker-agnostic; bash 3.2+ (macOS system bash safe); read-only — never mutates the workspace."
@@ -11,7 +11,7 @@ metadata:
 > **Identity:** The conductor — knows where the descent stands and what comes next, by reading the floor, not by remembering.
 > **Domain:** Sequencing, pre/post enforcement, prompt delivery. Runs above every pass, changes nothing.
 > **Converge Pass:** none — the layer that walks passes 0→8 in lane order.
-> **Engine/flags:** any session. `scripts/next-pass.sh next|pre|post`, `--lane FULL|NORMAL|FAST`.
+> **Engine/flags:** any session. `scripts/next-pass.sh next|pre|post`, `--guided`, `--lane FULL|NORMAL|FAST`.
 
 The nine passes are enforced individually by their gates — but the *order between
 them* used to live in the human's (or the conductor agent's) head. This skill makes
@@ -22,7 +22,7 @@ No state file, no memory, no drift between sessions.
 ## The three verbs
 
 ```bash
-bash scripts/next-pass.sh next [--lane FULL|NORMAL|FAST]   # where are we, what's next
+bash scripts/next-pass.sh next [--guided] [--lane FULL|NORMAL|FAST] # position + optional choices
 bash scripts/next-pass.sh pre  <N> [--lane ...]            # may pass N start?
 bash scripts/next-pass.sh post <N>                         # did pass N leave its artifact?
 ```
@@ -31,6 +31,8 @@ bash scripts/next-pass.sh post <N>                         # did pass N leave it
   then `NEXT_PASS=<N>` (or `DONE`), the steering prompt to hand the agent
   (the owning skill's `references/pass-prompt.md`), and the gate that closes it.
   Also available as **`cvg next`**.
+- **`next --guided`** adds a stable user-choice boundary without changing the
+  sequence or writing session state. Also available as **`cvg next --guided`**.
 - **`pre N`** is the fail-closed door: every lane pass before N must have left
   its evidence. `PASS_PRE=OK` or `PASS_PRE=MISSING` (exit 1) naming
   exactly what's absent.
@@ -47,6 +49,25 @@ bash scripts/next-pass.sh post <N>                         # did pass N leave it
 3. Steer the pass with its prompt file — one file, not the whole method.
 4. After the pass → `post N`, then the pass's own `cvg` gate. Both must be
    green before `next` will move on.
+
+## Guided chat mode
+
+Read [references/guided-chat-contract.md](references/guided-chat-contract.md)
+when the user asks for a guided, procedural, or step-by-step experience.
+
+The short form is:
+
+1. Run `cvg next --guided` at session start, resume, and after a green pass.
+2. Present the emitted `CONTINUE`, `EXPLAIN`, `INSPECT`, and `PAUSE` choices.
+3. Wait. Never interpret silence, enthusiasm, or a previous choice as the next
+   `CONTINUE`.
+4. On `CONTINUE`, run `cvg next pre N`, load only the printed pass prompt, and
+   perform that one pass.
+5. Run `cvg next post N` and the printed authoritative gate. A red gate stays in
+   the pass; a green gate returns to step 1.
+
+The CLI derives position, the pass skill teaches the work, and the pass gate
+decides. Chat is the human-facing control surface, not a second authority.
 
 ## The one rule
 

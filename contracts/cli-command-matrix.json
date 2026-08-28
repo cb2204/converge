@@ -1,7 +1,7 @@
 {
   "contract": "ConvergeCLICommandMatrix/v1",
   "schema_version": 1,
-  "command_count": 57,
+  "command_count": 60,
   "source_of_truth_for": [
     "agent-context",
     "CLI reference",
@@ -537,6 +537,40 @@
       "mutating": false,
       "example": "cvg next",
       "description": "The descent conductor: derives which pass is current and which comes next from workspace evidence (each pass leaves artifacts in a known cvg/ folder — no stored state), prints the evidence board, the owning skill and its installed steering prompt (skills/<pass-skill>/references/pass-prompt.md — shipped with the package, never copied into the project), and the gate that closes the pass. Evidence presence is not a verdict: the cvg gates stay authoritative. The same engine's pre/post hooks (scripts/next-pass.sh pre|post N) enforce order fail-closed."
+    },
+    {
+      "name": "next --guided [--lane FULL|NORMAL|FAST]",
+      "converge_pass": null,
+      "wraps": "evidence-to-next-pass/next-pass.sh",
+      "emits_tokens": [
+        "GUIDED_CHAT=AWAITING_CHOICE|DONE",
+        "NEXT_PASS=0-8|DONE"
+      ],
+      "mutating": false,
+      "example": "cvg next --guided --lane FAST",
+      "description": "Opt-in conversational view of the same evidence-derived conductor. It adds stable CONTINUE, EXPLAIN, INSPECT, and PAUSE choices at a pass boundary, instructs the agent to wait rather than infer CONTINUE, persists no chat state, and keeps NEXT_PASS as the final machine token."
+    },
+    {
+      "name": "next pre <N> [--lane FULL|NORMAL|FAST]",
+      "converge_pass": null,
+      "wraps": "evidence-to-next-pass/next-pass.sh",
+      "emits_tokens": [
+        "PASS_PRE=OK|MISSING"
+      ],
+      "mutating": false,
+      "example": "cvg next pre 5 --lane FAST",
+      "description": "Public fail-closed pre-hook for the chat conductor. It refuses pass N until every earlier pass in the selected lane has left its required evidence and never replaces the pass's authoritative gate."
+    },
+    {
+      "name": "next post <N>",
+      "converge_pass": null,
+      "wraps": "evidence-to-next-pass/next-pass.sh",
+      "emits_tokens": [
+        "PASS_POST=OK|INCOMPLETE"
+      ],
+      "mutating": false,
+      "example": "cvg next post 5",
+      "description": "Public post-hook for the chat conductor. It verifies that pass N left its expected artifact, names the authoritative closing gate, and never treats artifact presence as a verdict."
     },
     {
       "name": "snapshot",

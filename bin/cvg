@@ -1790,10 +1790,15 @@ cmd_help() {
   printf '  register --check         gate the mapping (1:1, DAG, no orphans); read-only\n'
   printf '\n'
   printf '%squeue%s\n' "$UI_CYAN" "$UI_RESET"
-  printf '  next [--lane FULL|NORMAL|FAST]\n'
+  printf '  next [--guided] [--lane FULL|NORMAL|FAST]\n'
   printf '                           where the descent stands and which\n'
   printf '                           pass comes next, derived from workspace evidence;\n'
   printf '                           prints the steering prompt + closing gate (NEXT_PASS)\n'
+  printf '                           --guided adds stable CONTINUE / EXPLAIN / INSPECT /\n'
+  printf '                           PAUSE choices and waits at the chat boundary\n'
+  printf '  next pre <N> [--lane FULL|NORMAL|FAST]\n'
+  printf '                           fail-closed door before starting pass N (PASS_PRE)\n'
+  printf '  next post <N>            verify pass N left its artifact, then name its gate\n'
   printf '  ready [--all]            the FRONTIER — ready AND unblocked. --all lists\n'
   printf '                           every status:ready spec, blocked or not\n'
   printf '  snapshot                 canonical read-only WorkspaceSnapshot 3.0;\n'
@@ -2512,7 +2517,11 @@ case "$CMD" in
     # from workspace evidence, never stored; read-only; gates stay authoritative.
     SEQUENCER="$CVG_HOME_DIR/skills/evidence-to-next-pass/scripts/next-pass.sh"
     [ -f "$SEQUENCER" ] || { ui_err "evidence-to-next-pass skill is incomplete under $CVG_HOME_DIR/skills"; printf 'NEXT_PASS=USAGE_ERROR\n'; exit 2; }
-    CVG_PROJECT_ROOT="$CVG_PROJECT_ROOT_DIR" exec bash "$SEQUENCER" next "$@"
+    NEXT_VERB="next"
+    case "${1:-}" in
+      pre|post) NEXT_VERB="$1"; shift ;;
+    esac
+    CVG_PROJECT_ROOT="$CVG_PROJECT_ROOT_DIR" exec bash "$SEQUENCER" "$NEXT_VERB" "$@"
     ;;
   snapshot)
     # One canonical semantic projection for observers. The builder executes

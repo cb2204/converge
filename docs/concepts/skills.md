@@ -139,15 +139,19 @@ is GREEN, path policy holds, one named terminal state.
 ## Utility · `evidence-to-next-pass`
 
 **Purpose:** Derive where the descent stands from workspace evidence, enforce
-order with pre/post hooks, and hand the agent the right pass prompt.
+order with pre/post hooks, and hand the agent the right pass prompt. Optional
+guided mode turns each boundary into stable user choices without storing chat
+state.
 
 **When:** Someone asks "what's next", "where are we in the descent", "continue
-the run", "start pass N", or before steering ANY pass in a chat session.
+the run", "start pass N", "guide me through Converge", "step by step", or
+before steering ANY pass in a chat session.
 
 **Not:** To waive or replace a `cvg` gate (evidence presence is not a verdict)
 or to pick the lane (`cvg lane` owns that).
 
-**Gate:** `NEXT_PASS=<N>` or `DONE`.
+**Gate:** `NEXT_PASS=<N>` or `DONE`; guided presentation also emits
+`GUIDED_CHAT=AWAITING_CHOICE|DONE` while leaving `NEXT_PASS` last.
 
 ## Utility · `pass-to-lesson` (optional)
 

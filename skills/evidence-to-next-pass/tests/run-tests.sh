@@ -39,6 +39,20 @@ run() {  # run <expected-exit> <args...> — captures OUT, returns 0 if exit mat
 run 0 next && printf '%s' "$OUT" | grep -q '^NEXT_PASS=0$' \
   && ok "fresh workspace: next is pass 0" || bad "fresh workspace should point at pass 0 ($OUT)"
 
+run 0 next --guided \
+  && printf '%s' "$OUT" | grep -q '^GUIDED_CHAT=AWAITING_CHOICE$' \
+  && printf '%s' "$OUT" | grep -q '\[CONTINUE\]' \
+  && printf '%s' "$OUT" | grep -q '\[EXPLAIN\]' \
+  && printf '%s' "$OUT" | grep -q '\[INSPECT\]' \
+  && printf '%s' "$OUT" | grep -q '\[PAUSE\]' \
+  && [ "$(printf '%s\n' "$OUT" | tail -1)" = "NEXT_PASS=0" ] \
+  && ok "guided mode offers stable choices and preserves NEXT_PASS last" \
+  || bad "guided mode must stop at a stable user-choice boundary ($OUT)"
+
+run 2 pre 0 --guided && printf '%s' "$OUT" | grep -q '^NEXT_PASS=USAGE_ERROR$' \
+  && ok "--guided belongs only to next" \
+  || bad "pre/post must reject the guided presentation flag ($OUT)"
+
 run 0 pre 0 && printf '%s' "$OUT" | grep -q '^PASS_PRE=OK$' \
   && ok "pass 0 has no doors before it" || bad "pre 0 should be OK on a fresh floor"
 
@@ -90,6 +104,39 @@ run 0 next && printf '%s' "$OUT" | grep -q '^NEXT_PASS=8$' \
 echo '{}' > "$T/cvg/receipts/T-20260730-first.json"
 run 0 next && printf '%s' "$OUT" | grep -q '^NEXT_PASS=DONE$' \
   && ok "receipt on the floor: the lane is DONE" || bad "after a receipt, next should be DONE"
+
+run 0 next --guided \
+  && printf '%s' "$OUT" | grep -q '^GUIDED_CHAT=DONE$' \
+  && printf '%s' "$OUT" | grep -q '\[REVIEW\]' \
+  && ! printf '%s' "$OUT" | grep -q '\[CONTINUE\]' \
+  && [ "$(printf '%s\n' "$OUT" | tail -1)" = "NEXT_PASS=DONE" ] \
+  && ok "guided completion offers review, teaching, or pause — never another pass" \
+  || bad "guided completion must not invent more workflow ($OUT)"
+
+# Public cvg routing must expose the pre/post verbs documented by the chat
+# contract. A tiny version-only Task-Spec stub keeps this row hermetic; the
+# conductor itself does not call the task engine.
+FAKE_TASKSPEC="$T/fake-taskspec"
+cat > "$FAKE_TASKSPEC" <<'SH'
+#!/usr/bin/env bash
+[ "${1:-}" = "version" ] && { echo 3.8.0; exit 0; }
+exit 99
+SH
+chmod +x "$FAKE_TASKSPEC"
+OUT="$(cd "$T" && CVG_HOME="$REPO" CVG_PROJECT_ROOT="$T" \
+  CVG_TASKSPEC_BIN="$FAKE_TASKSPEC" bash "$REPO/bin/cvg" next pre 0 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^PASS_PRE=OK$'; then
+  ok "public cvg next pre N routes to the fail-closed pre-hook"
+else
+  bad "public cvg next pre N did not reach the pre-hook ($OUT)"
+fi
+OUT="$(cd "$T" && CVG_HOME="$REPO" CVG_PROJECT_ROOT="$T" \
+  CVG_TASKSPEC_BIN="$FAKE_TASKSPEC" bash "$REPO/bin/cvg" next post 8 2>&1)"; RC=$?
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q '^PASS_POST=OK$'; then
+  ok "public cvg next post N routes to the artifact check"
+else
+  bad "public cvg next post N did not reach the post-hook ($OUT)"
+fi
 
 # --- lanes, opt-in register, contracts ---------------------------------------
 T2="$(mktemp -d -t conductor-tests2.XXXXXX)"

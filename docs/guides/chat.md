@@ -12,7 +12,7 @@ a chat session navigates the Converge method.
    tokens spent reconstructing state. Position is derived from workspace
    evidence, not from memory.
 
-2. **Before steering a pass** → `pre N`
+2. **Before steering a pass** → `cvg next pre N`
 
    The fail-closed door: every lane pass before N must have left its artifact.
    If it refuses, **the missing step IS the instruction**.
@@ -26,12 +26,39 @@ a chat session navigates the Converge method.
    `skills/<pass-skill>/references/pass-prompt.md`. Prompts ship with the
    package and are **never copied into a consuming project**.
 
-4. **After the pass** → `post N`, then the pass's `cvg` gate
+4. **After the pass** → `cvg next post N`, then the pass's `cvg` gate
 
    Both must be green before `next` will move on.
 
    - `PASS_POST=OK` — artifact landed in its folder
    - `PASS_POST=INCOMPLETE` (exit 1) — artifact missing
+
+## Opt-in guided chat
+
+When the user says “guide me through Converge”, “step by step”, or asks for a
+procedural chat, start and resume with:
+
+```bash
+cvg next --guided
+```
+
+The same conductor still derives the pass from workspace evidence. Guided mode
+only adds a conversational boundary:
+
+- `CONTINUE` — run the pre-hook and perform this pass only
+- `EXPLAIN` — explain the pass, its inputs, output, and gate without writing
+- `INSPECT` — show why the conductor selected this pass without writing
+- `PAUSE` — stop with the workspace unchanged
+
+The agent presents those choices and waits. It never infers `CONTINUE`, never
+stores a remembered pass number, and re-runs `cvg next --guided` after a pass
+closes. Host-native choice controls may render the options; a numbered list is
+the portable fallback.
+
+The full agent procedure lives with the conductor skill at
+[`guided-chat-contract.md`](../../skills/evidence-to-next-pass/references/guided-chat-contract.md).
+The CLI owns position, the pass skill owns the method, and the closing gate owns
+the verdict. Guided chat owns none of those authorities.
 
 ## The one rule
 
@@ -43,6 +70,7 @@ decide.
 
 ```bash
 cvg next                  # where are we, what's next
+cvg next --guided         # same position, plus a user-choice boundary
 cvg next pre 3            # may pass 3 start?
 cvg next post 3           # did pass 3 leave its artifact?
 ```

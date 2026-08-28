@@ -1,8 +1,9 @@
 # The Converge Skill Chain
 
-Twelve self-contained agent skills implement the Converge method — **nine spine
-skills** (the passes, including the optional Capture ⓪ and the opt-in Register),
-**three utility skills** (`evidence-to-next-pass`, `skill-creator`, `pass-to-lesson`).
+Eleven self-contained agent skills implement the Converge method — **eight
+owned spine skills** (including optional Capture ⓪ and opt-in Register; Pass 5
+uses the standalone Task-Spec engine) and **three utility skills**
+(`evidence-to-next-pass`, `skill-creator`, `pass-to-lesson`).
 Every skill passes
 the official validator (checked with
 [`skill-creator/scripts/quick_validate.py`](skill-creator/scripts/quick_validate.py)),
@@ -287,12 +288,14 @@ state, no memory, no drift between sessions. `scripts/next-pass.sh` answers
 `next` (evidence board + `NEXT_PASS=`, the steering prompt, the closing gate —
 surfaced as **`cvg next`**), `pre N` (fail-closed door: refuse pass N until
 every prior lane pass left its artifact), and `post N` (did this pass fill its
-folder?). Owns the pass→skill map that resolves each steering prompt — every
+folder?). `cvg next --guided` adds stable `CONTINUE`, `EXPLAIN`, `INSPECT`, and
+`PAUSE` choices, then requires the agent to wait. It persists no chat state and
+does not create another sequence. Owns the pass→skill map that resolves each steering prompt — every
 pass skill carries its own at `references/pass-prompt.md`, shipped with the
 package and never copied into a project. Lane-aware (`--lane FULL|NORMAL|FAST`),
 read-only, instant (presence probes, no gate execution). **Evidence presence
 is never a verdict** — the `cvg` gates stay authoritative.
-**Ships:** `next-pass.sh` · the folder-discipline map · hermetic suite (27 checks).
+**Ships:** `next-pass.sh` · the folder-discipline map · guided-chat contract · hermetic suite (44 checks).
 
 ### `pass-to-lesson` — the teaching companion (optional, after any pass)
 
@@ -317,7 +320,7 @@ grader/comparator/analyzer agents), package for distribution, and validate
 structure (`quick_validate.py` — the check every skill in this folder passes).
 **Ships:** 9 Python scripts + an eval-viewer (its own `generate_review.py`).
 
-**By the numbers:** 12 skill packages (9 spine + 3 utility), with full
-test and conformance suites in `task-spec` and `task-to-runtime-contract`.
+**By the numbers:** 11 Converge skill packages (8 owned spine + 3 utility), with
+full tests around the standalone Task-Spec boundary and runtime contracts.
 
 > *"You are converged when the eval passes — not when you feel done."*

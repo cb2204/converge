@@ -154,14 +154,14 @@ Full descent guide: [docs/guides/descent.md](docs/guides/descent.md).
 
 ## Chat experience
 
-The descent conductor ([`evidence-to-next-pass`](skills/evidence-to-next-pass/)) owns the canonical pass prompts and the sequence itself.
+The descent conductor ([`evidence-to-next-pass`](skills/evidence-to-next-pass/)) owns the canonical pass prompts and the sequence itself. When the user asks to go step by step, `cvg next --guided` turns the same evidence-derived boundary into four choices—`CONTINUE`, `EXPLAIN`, `INSPECT`, or `PAUSE`—and waits. It creates no second loop and stores no chat state.
 
 ### The four-step chat path
 
-1. **Session opens** → `cvg next` — derives where the descent stands from workspace evidence
-2. **Before a pass** → `pre N` — the missing step IS the instruction (`PASS_PRE=OK` or `PASS_PRE=MISSING`)
+1. **Session opens** → `cvg next` or opt-in `cvg next --guided` — derives where the descent stands from workspace evidence
+2. **Before a pass** → `cvg next pre N` — the missing step IS the instruction (`PASS_PRE=OK` or `PASS_PRE=MISSING`)
 3. **Steer with the pass prompt** — `skills/<pass-skill>/references/pass-prompt.md` (shipped, never copied into the consumer)
-4. **After the pass** → `post N` then the pass's `cvg` gate
+4. **After the pass** → `cvg next post N` then the pass's `cvg` gate
 
 **Evidence presence is not a verdict.** `cvg next` sequences; gates decide.
 
@@ -273,7 +273,7 @@ cvg agent-context --json
 cvg compose --json status
 ```
 
-`--json` emits one `ConvergeCLIResult/v1` document. The canonical 57-form matrix is [contracts/cli-command-matrix.json](contracts/cli-command-matrix.json); the human reference is [docs/reference/cli.md](docs/reference/cli.md).
+`--json` emits one `ConvergeCLIResult/v1` document. The canonical 60-form matrix is [contracts/cli-command-matrix.json](contracts/cli-command-matrix.json); the human reference is [docs/reference/cli.md](docs/reference/cli.md).
 
 Task-Spec pin remains **3.8.0**; 3.9.x writes an absolute `path:` into `_state.yaml` and is not supported.
 
@@ -353,11 +353,11 @@ decisions.
 | [Knowledge base](docs/index.md) | Map and how to navigate |
 | [Getting started](docs/getting-started/index.md) | Install, first composed leaf, reviewer route |
 | [Descent guide](docs/guides/descent.md) | Two phases, one barrier, workspace discovery |
-| [Chat guide](docs/guides/chat.md) | Four-step chat path, harness dests, plugin |
+| [Chat guide](docs/guides/chat.md) | Four-step path, opt-in guided choices, harness dests, plugin |
 | [Skills reference](docs/concepts/skills.md) | Eleven skills + standalone Tasking |
 | [Authority](docs/concepts/authority.md) | Who may decide what |
 | [Trust](docs/trust/index.md) | What a receipt proves and what it does not |
-| [CLI reference](docs/reference/cli.md) | Generated 57-form table |
+| [CLI reference](docs/reference/cli.md) | Generated 60-form table |
 | [Contracts](contracts/README.md) | Versioned JSON schemas |
 | [Skill catalog](skills/README.md) | Deep essays on each pass |
 | [Cockpit](apps/cockpit/README.md) | Read-only observer |

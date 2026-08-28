@@ -203,7 +203,7 @@ jsonschema.Draft202012Validator.check_schema(RESULT_SCHEMA)
 def main() -> int:
     commands = MATRIX["commands"]
     assert MATRIX["contract"] == "ConvergeCLICommandMatrix/v1"
-    assert MATRIX["command_count"] == 57 == len(commands)
+    assert MATRIX["command_count"] == 60 == len(commands)
     seen: set[str] = set()
     calls = 0
     contract_failures = 0
@@ -340,8 +340,8 @@ def main() -> int:
                 calls += 1
 
     print(
-        f"JSON_MATRIX=PASS forms={len(seen)} calls={calls} usage_failures=57 "
-        f"dependency_contract_failures=56 "
+        f"JSON_MATRIX=PASS forms={len(seen)} calls={calls} usage_failures=60 "
+        f"dependency_contract_failures=59 "
         f"serialized_contract_failures={contract_failures}"
     )
     if failed_forms:
